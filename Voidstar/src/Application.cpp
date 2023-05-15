@@ -20,4 +20,12 @@ namespace Voidstar
 		delete m_Window;
 		delete m_Renderer;
 	}
+	void Application::Run()
+	{
+		while (!m_Window->IsClosed())
+		{
+			m_Window->Update();
+			m_Renderer->Render();
+		}
+	}
 }

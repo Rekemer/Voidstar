@@ -9,7 +9,8 @@ namespace Voidstar
 	public:
 		Application(std::string appName,size_t screenWidth, size_t screenHeight);
 		~Application();
-		virtual void Run() {};
+		void Run();
+		virtual void Execute() {};
 	private:
 		size_t m_ScreenWidth, m_ScreenHeight;
 		//std::unique_ptr<Renderer> m_Renderer;

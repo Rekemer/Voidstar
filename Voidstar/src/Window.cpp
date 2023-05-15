@@ -25,6 +25,16 @@ namespace Voidstar
 		return m_Window;
 	}
 
+	 bool Window::IsClosed()
+	 {
+		 return glfwWindowShouldClose(m_Window);
+	 }
+
+	 void Window::Update()
+	 {
+		 glfwPollEvents();
+	 }
+
 
 	Window::~Window()
 	{

@@ -12,6 +12,10 @@ project "Voidstar"
     language "C++"
     targetdir ("bin/%{prj.name}"..outputdir)
     objdir ("bin-int/%{prj.name}"..outputdir)
+
+    pchheader "Prereq.h"
+	pchsource "%{prj.name}/src/Prereq.cpp"
+
     files
     {
         "%{prj.name}/src/**.cpp",
@@ -20,18 +24,15 @@ project "Voidstar"
     includedirs
     {
         os.getenv("VULKAN_SDK") .. "/Include",
-        solution().basedir .. "/Dependencies/spdlog/include",
-        solution().basedir .. "/Dependencies/GLFW/include",
-        solution().basedir .. "/Dependencies/glm/glm"
+        "%{prj.location}/Dependencies/spdlog/include",
+        "%{prj.location}/Dependencies/GLFW/include",
+        "%{prj.location}/Dependencies/glm/glm",
+        "%{prj.location}/Dependencies/spdlog/include/spdlog",
+
     }
-    libdirs {   solution().basedir .. "/Dependencies/GLFW/lib-vc2019", os.getenv("VULKAN_SDK") .. "/Lib" }
+    libdirs { "%{prj.location}/Dependencies/GLFW/lib-vc2019", os.getenv("VULKAN_SDK") .. "/Lib" }
 
     links { "glfw3.lib", "vulkan-1.lib" }
-    defines
-    {
-        "VS_RELEASE",
-        "VS_DEBUG"
-    }
     filter "configurations:Debug"
         defines "VS_DEBUG"
         symbols "On"
@@ -57,12 +58,6 @@ project "Sandbox"
     }
 
     links { "Voidstar" }
-
-    defines
-    {
-        "VS_RELEASE",
-        "VS_DEBUG"
-    }
     filter "configurations:Debug"
         defines "VS_DEBUG"
         symbols "On"

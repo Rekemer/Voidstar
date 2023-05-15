@@ -20,7 +20,8 @@ public:
 Voidstar::Application* Voidstar::CreateApplication()
 {
 	auto str = std::string("Example");
-	return new ExampleApplication(str, 16, 9);
+	const int res = 50;
+	return new ExampleApplication(str, 16 * res, 9 * res);
 }
 int main()
 {
