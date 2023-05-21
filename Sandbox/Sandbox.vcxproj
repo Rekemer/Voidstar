@@ -41,15 +41,15 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>..\bin\SandboxDebug-windows-x86_64\</OutDir>
-    <IntDir>..\bin-int\SandboxDebug-windows-x86_64\</IntDir>
+    <OutDir>..\bin\Sandbox\Debug-windows-x86_64\</OutDir>
+    <IntDir>..\bin-int\Sandbox\Debug-windows-x86_64\</IntDir>
     <TargetName>Sandbox</TargetName>
     <TargetExt>.exe</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>..\bin\SandboxRelease-windows-x86_64\</OutDir>
-    <IntDir>..\bin-int\SandboxRelease-windows-x86_64\</IntDir>
+    <OutDir>..\bin\Sandbox\Release-windows-x86_64\</OutDir>
+    <IntDir>..\bin-int\Sandbox\Release-windows-x86_64\</IntDir>
     <TargetName>Sandbox</TargetName>
     <TargetExt>.exe</TargetExt>
   </PropertyGroup>
@@ -91,8 +91,8 @@
     <ClCompile Include="src\Sandbox.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Voidstar\Voidstar.vcxproj">
-      <Project>{B16B9136-9D38-EC41-C651-DAE9B27D21D0}</Project>
+    <ProjectReference Include="..\Voidstar\Voidstar-Core.vcxproj">
+      <Project>{A7556231-1316-DE67-DC50-27E548D02244}</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -10,19 +10,39 @@
     <ClInclude Include="src\Log.h" />
     <ClInclude Include="src\Main.h" />
     <ClInclude Include="src\Prereq.h" />
+    <ClInclude Include="src\Rendering\Device.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Rendering\Instance.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
     <ClInclude Include="src\Rendering\Renderer.h">
       <Filter>Rendering</Filter>
     </ClInclude>
     <ClInclude Include="src\Voidstar.h" />
     <ClInclude Include="src\Window.h" />
+    <ClInclude Include="src\Rendering\Swapchain.h" />
+    <ClInclude Include="src\Rendering\SupportStruct.h" />
+    <ClInclude Include="src\Rendering\Vertex.h" />
+    <ClInclude Include="src\Rendering\VertexBuffer.h" />
+    <ClInclude Include="src\Rendering\VertexBufferLayout.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Application.cpp" />
     <ClCompile Include="src\Log.cpp" />
     <ClCompile Include="src\Prereq.cpp" />
+    <ClCompile Include="src\Rendering\Device.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Rendering\Instance.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
     <ClCompile Include="src\Rendering\Renderer.cpp">
       <Filter>Rendering</Filter>
     </ClCompile>
     <ClCompile Include="src\Window.cpp" />
+    <ClCompile Include="src\Rendering\Swapchain.cpp" />
+    <ClCompile Include="src\Rendering\VertexBuffer.cpp" />
+    <ClCompile Include="src\Rendering\VertexBufferLayout.cpp" />
   </ItemGroup>
 </Project>
