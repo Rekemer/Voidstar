@@ -106,15 +106,17 @@
     <ClInclude Include="src\Log.h" />
     <ClInclude Include="src\Main.h" />
     <ClInclude Include="src\Prereq.h" />
+    <ClInclude Include="src\Rendering\DescriptorSetLayout.h" />
     <ClInclude Include="src\Rendering\Device.h" />
     <ClInclude Include="src\Rendering\Instance.h" />
+    <ClInclude Include="src\Rendering\RenderContext.h" />
     <ClInclude Include="src\Rendering\Renderer.h" />
     <ClInclude Include="src\Rendering\SupportStruct.h" />
     <ClInclude Include="src\Rendering\Swapchain.h" />
     <ClInclude Include="src\Rendering\Vertex.h" />
     <ClInclude Include="src\Voidstar.h" />
     <ClInclude Include="src\Window.h" />
-    <ClInclude Include="src\Rendering\VertexBuffer.h" />
+    <ClInclude Include="src\Rendering\Buffer.h" />
     <ClInclude Include="src\Rendering\VertexBufferLayout.h" />
   </ItemGroup>
   <ItemGroup>
@@ -123,12 +125,14 @@
     <ClCompile Include="src\Prereq.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="src\Rendering\DescriptorSetLayout.cpp" />
     <ClCompile Include="src\Rendering\Device.cpp" />
     <ClCompile Include="src\Rendering\Instance.cpp" />
+    <ClCompile Include="src\Rendering\RenderContext.cpp" />
     <ClCompile Include="src\Rendering\Renderer.cpp" />
     <ClCompile Include="src\Rendering\Swapchain.cpp" />
     <ClCompile Include="src\Window.cpp" />
-    <ClCompile Include="src\Rendering\VertexBuffer.cpp" />
+    <ClCompile Include="src\Rendering\Buffer.cpp" />
     <ClCompile Include="src\Rendering\VertexBufferLayout.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

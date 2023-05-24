@@ -24,8 +24,10 @@
     <ClInclude Include="src\Rendering\Swapchain.h" />
     <ClInclude Include="src\Rendering\SupportStruct.h" />
     <ClInclude Include="src\Rendering\Vertex.h" />
-    <ClInclude Include="src\Rendering\VertexBuffer.h" />
+    <ClInclude Include="src\Rendering\Buffer.h" />
     <ClInclude Include="src\Rendering\VertexBufferLayout.h" />
+    <ClInclude Include="src\Rendering\DescriptorSetLayout.h" />
+    <ClInclude Include="src\Rendering\RenderContext.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Application.cpp" />
@@ -42,7 +44,9 @@
     </ClCompile>
     <ClCompile Include="src\Window.cpp" />
     <ClCompile Include="src\Rendering\Swapchain.cpp" />
-    <ClCompile Include="src\Rendering\VertexBuffer.cpp" />
+    <ClCompile Include="src\Rendering\Buffer.cpp" />
     <ClCompile Include="src\Rendering\VertexBufferLayout.cpp" />
+    <ClCompile Include="src\Rendering\DescriptorSetLayout.cpp" />
+    <ClCompile Include="src\Rendering\RenderContext.cpp" />
   </ItemGroup>
 </Project>

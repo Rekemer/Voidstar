@@ -1,6 +1,7 @@
 #include "Prereq.h"
-#include "VertexBuffer.h"
+#include "Buffer.h"
 #include "Device.h"
+#include "RenderContext.h"
 namespace Voidstar
 {
 	uint32_t findMemoryTypeIndex(vk::PhysicalDevice physicalDevice, uint32_t supportedMemoryIndices, vk::MemoryPropertyFlags requestedProperties) {
@@ -32,7 +33,7 @@ namespace Voidstar
 		return 0;
 	}
 
-	void VertexBuffer::AllocateBufferMemory(const BufferInputChunk& input) {
+	void Buffer::AllocateBufferMemory(const BufferInputChunk& input, Device* device) {
 
 		/*
 		// Provided by VK_VERSION_1_0
@@ -42,11 +43,11 @@ namespace Voidstar
 			uint32_t        memoryTypeBits;
 		} VkMemoryRequirements;
 		*/
-		auto& device = input.device->GetDevice();
-		auto& devicePhys = input.device->GetDevicePhys();
+		auto& deviceLog = device->GetDevice();
+		auto& devicePhys = device->GetDevicePhys();
 
 
-		vk::MemoryRequirements memoryRequirements = device.getBufferMemoryRequirements(m_Buffer);
+		vk::MemoryRequirements memoryRequirements = deviceLog.getBufferMemoryRequirements(m_Buffer);
 
 		/*
 		* // Provided by VK_VERSION_1_0
@@ -64,34 +65,35 @@ namespace Voidstar
 			vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent
 		);
 
-		m_BufferMemory = device.allocateMemory(allocInfo);
-		device.bindBufferMemory(m_Buffer, m_BufferMemory, 0);
+		m_BufferMemory = deviceLog.allocateMemory(allocInfo);
+		deviceLog.bindBufferMemory(m_Buffer, m_BufferMemory, 0);
 	}
 
-	void VertexBuffer::SetData(void* data)
+	void Buffer::SetData(void* data)
 	{
-		void* memoryLocation = m_Device->GetDevice().mapMemory(m_BufferMemory, 0, m_Size);
+		auto device = RenderContext::GetDevice();
+		void* memoryLocation = device->GetDevice().mapMemory(m_BufferMemory, 0, m_Size);
 		memcpy(memoryLocation, data, m_Size);
-		m_Device->GetDevice().unmapMemory(m_BufferMemory);
+		device->GetDevice().unmapMemory(m_BufferMemory);
 	}
 
 
-	VertexBuffer::VertexBuffer(const BufferInputChunk& input)
+	Buffer::Buffer(const BufferInputChunk& input)
 	{
 		vk::BufferCreateInfo bufferInfo;
 		bufferInfo.flags = vk::BufferCreateFlags();
 		bufferInfo.size = input.size;
 		bufferInfo.usage = input.usage;
 		bufferInfo.sharingMode = vk::SharingMode::eExclusive;
-		m_Device = input.device;
+		auto device = RenderContext::GetDevice();
 		m_Size = input.size;
-		m_Buffer = input.device->GetDevice().createBuffer(bufferInfo);
+		m_Buffer = device->GetDevice().createBuffer(bufferInfo);
 
-		AllocateBufferMemory(input);
+		AllocateBufferMemory(input,device);
 	}
-	VertexBuffer::~VertexBuffer()
+	Buffer::~Buffer()
 	{
-		auto& device = m_Device->GetDevice();
+		auto& device = RenderContext::GetDevice()->GetDevice();
 		device.destroyBuffer(m_Buffer);
 		device.freeMemory(m_BufferMemory);
 	}

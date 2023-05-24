@@ -4,6 +4,12 @@
 //				y: -1(top), 1(bottom)
 
 
+layout(binding = 0) uniform UniformBufferObject {
+    mat4 model;
+    mat4 view;
+    mat4 proj;
+} ubo;
+
 layout(location = 0) in vec3 in_pos;
 layout(location = 1) in vec4 in_color;
 
@@ -22,20 +28,8 @@ vec3 colors[3] = vec3[](
 
 void main() 
 {
-	// mat4 world;
-	// world[0]= vec4(1,0,0,0);
-	// world[1]= vec4(0,1,0,0);
-	// world[2]= vec4(0,0,1,0);
-	// world[3]= vec4(0,0,-1,1);
-	// world  = mat4
-	// (1,0,0,0,
-	//  0,1,0,0,	
-	//  0,0,1,0,
-	//  0,0,10,1
-	// );
-	//gl_Position = cameraData.viewProjection*cameraData.world*vec4(in_pos, 0, 1.0);
-	gl_Position = vec4(positions[gl_VertexIndex],0,1);
-	gl_Position = vec4(in_pos,1.0);
-	
-	
+	vec4 pos =	ubo.proj *  ubo.view * ubo.model * vec4(in_pos,1.0);
+	//gl_Position = vec4(in_pos,1.0);
+	gl_Position = pos;
+		
 }

@@ -8,24 +8,23 @@ namespace Voidstar
 	{
 		size_t size;
 		vk::BufferUsageFlagBits usage;
-		Device* device;
 		vk::MemoryPropertyFlags memoryProperties;
 	};
 
-	class VertexBuffer
+	class Buffer
 	{
 	public:
-		VertexBuffer(const BufferInputChunk& input);
-		void AllocateBufferMemory(const BufferInputChunk& input);
+		Buffer(const BufferInputChunk& input);
+		void AllocateBufferMemory(const BufferInputChunk& input, Device* device);
 		void SetData(void* data);
 		vk::Buffer& GetBuffer() { return m_Buffer; }
+		vk::DeviceMemory& GetMemory() { return m_BufferMemory; }
 		void Bind() const;
 		void Unbind() const;
 
-		~VertexBuffer();	
+		~Buffer();	
 	private:
 		uint32_t m_Size;
-		Device* m_Device;
 		vk::Buffer m_Buffer;
 		vk::DeviceMemory m_BufferMemory;
 	};

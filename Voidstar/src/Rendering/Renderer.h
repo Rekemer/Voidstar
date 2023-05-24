@@ -1,13 +1,24 @@
 #pragma once
 #include "vulkan/vulkan.hpp"
 #include "../Prereq.h"
+#include <glm.hpp>
+#include <gtc/matrix_transform.hpp>
+
 namespace Voidstar
 {
 	class Window;
 	class Surface;
 	class SwapChainSupportDetails;
-	class VertexBuffer;
+	class Buffer;
 
+
+
+
+	struct UniformBufferObject {
+		glm::mat4 model;
+		glm::mat4 view;
+		glm::mat4 proj;
+	};
 
 	struct GraphicsPipelineSpecification
 	{
@@ -31,6 +42,7 @@ namespace Voidstar
 	class Instance;
 	class Device;
 	class Swapchain;
+	class DescriptorSetLayout;
 	class Renderer
 	{
 	public:
@@ -53,6 +65,7 @@ namespace Voidstar
 		
 		
 		void RecordCommandBuffer(uint32_t imageIndex);
+		void UpdateUniformBuffer(uint32_t imageIndex);
 
 	
 	private:
@@ -60,7 +73,16 @@ namespace Voidstar
 		Instance* m_Instance;
 		Device* m_Device;
 		Swapchain* m_Swapchain;
-		VertexBuffer* m_Buffer;
+		Buffer* m_Buffer;
+		
+		
+		std::vector<Buffer*> m_UniformBuffers;
+		std::vector<void*> uniformBuffersMapped;
+		
+		DescriptorSetLayout* m_DescriptorSetLayout;
+		std::vector<vk::DescriptorSetLayout> m_DescriptorSetLayouts;
+		vk::DescriptorPool m_DescriptorPool;
+		std::vector<vk::DescriptorSet> m_DescriptorSets;
 
 		//debug callback
 		vk::DebugUtilsMessengerEXT m_DebugMessenger;
@@ -87,6 +109,9 @@ namespace Voidstar
 		vk::Fence	m_InFlightFence;
 
 		Window* m_Window;
+
+
+		
 	};
 
 }

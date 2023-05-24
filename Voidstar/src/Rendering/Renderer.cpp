@@ -10,7 +10,9 @@
 #include "Swapchain.h"
 #include "SupportStruct.h"
 #include "Vertex.h"
-#include "VertexBuffer.h"
+#include "Buffer.h"
+#include "RenderContext.h"
+#include "DescriptorSetLayout.h"
 
 namespace Voidstar
 {
@@ -26,6 +28,7 @@ namespace Voidstar
 		CreateSurface();
 
 		CreateDevice();
+		RenderContext::SetDevice(m_Device);
 
 		SwapChainSupportDetails support;
 		support.devcie = m_Device;
@@ -38,65 +41,196 @@ namespace Voidstar
 
 		m_Swapchain = Swapchain::Create(support);
 
+		constexpr size_t VertexCount = 36;
+		
+		std::array<Vertex, VertexCount> vertices;
+		// Front face
+		vertices[0] = { -1.0f, -1.0f, 1.0f,1.0,1.0,1.0,1.0 };
+		vertices[1] = { 1.0f, -1.0f, 1.0f,1.0,1.0,1.0,1.0 };
+		vertices[2] = { 1.0f, 1.0f, 1.0f,1.0,1.0,1.0,1.0 };
 
+		vertices[3] = { -1.0f, -1.0f, 1.0f ,1.0,1.0,1.0,1.0 };
+		vertices[4] = { 1.0f, 1.0f, 1.0f ,1.0,1.0,1.0,1.0 };
+		vertices[5] = { -1.0f, 1.0f, 1.0f ,1.0,1.0,1.0,1.0 };
+
+		// Back face
+		vertices[6] = { -1.0f, -1.0f, -1.0f,1.0,1.0,1.0,1.0 };
+		vertices[7] = { -1.0f, 1.0f, -1.0f,1.0,1.0,1.0,1.0 };
+		vertices[8] = { 1.0f, 1.0f, -1.0f ,1.0,1.0,1.0,1.0 };
+
+		vertices[9] = { -1.0f, -1.0f, -1.0f,1.0,1.0,1.0,1.0 };
+		vertices[10] = { 1.0f, 1.0f, -1.0f,1.0,1.0,1.0,1.0 };
+		vertices[11] = { 1.0f, -1.0f, -1.0f ,1.0,1.0,1.0,1.0 };
+
+		// Top face
+		vertices[12] = { -1.0f, 1.0f, -1.0f,1.0,1.0,1.0,1.0 };
+		vertices[13] = { -1.0f, 1.0f, 1.0f,1.0,1.0,1.0,1.0 };
+		vertices[14] = { 1.0f, 1.0f, 1.0f ,1.0,1.0,1.0,1.0 };
+
+		vertices[15] = { -1.0f, 1.0f, -1.0f,1.0,1.0,1.0,1.0 };
+		vertices[16] = { 1.0f, 1.0f, 1.0f,1.0,1.0,1.0,1.0 };
+		vertices[17] = { 1.0f, 1.0f, -1.0f ,1.0,1.0,1.0,1.0 };
+
+		// Bottom face
+		vertices[18] = { -1.0f, -1.0f, -1.0f,1.0,1.0,1.0,1.0 };
+		vertices[19] = { 1.0f, -1.0f, -1.0f,1.0,1.0,1.0,1.0 };
+		vertices[20] = { 1.0f, -1.0f, 1.0f,1.0,1.0,1.0,1.0 };
+
+		vertices[21] = { -1.0f, -1.0f, -1.0f,1.0,1.0,1.0,1.0 };
+		vertices[22] = { 1.0f, -1.0f, 1.0f,1.0,1.0,1.0,1.0 };
+		vertices[23] = { -1.0f, -1.0f, 1.0f,1.0,1.0,1.0,1.0 };
+
+		// Left face
+		vertices[24] = { -1.0f, -1.0f, -1.0f,1.0,1.0,1.0,1.0 };
+		vertices[25] = { -1.0f, -1.0f, 1.0f,1.0,1.0,1.0,1.0 };
+		vertices[26] = { -1.0f, 1.0f, 1.0f,1.0,1.0,1.0,1.0 };
+
+		vertices[27] = { -1.0f, -1.0f, -1.0f,1.0,1.0,1.0,1.0 };
+		vertices[28] = { -1.0f, 1.0f, 1.0f,1.0,1.0,1.0,1.0 };
+		vertices[29] = { -1.0f, 1.0f, -1.0f,1.0,1.0,1.0,1.0 };
+
+		// Right face
+		vertices[30] = { 1.0f, -1.0f, 1.0f,1.0,1.0,1.0,1.0 };
+		vertices[31] = { 1.0f, -1.0f, -1.0f,1.0,1.0,1.0,1.0 };
+		vertices[32] = { 1.0f, 1.0f, -1.0f,1.0,1.0,1.0,1.0 };
+
+		vertices[33] = { 1.0f, -1.0f, 1.0f,1.0,1.0,1.0,1.0 };
+		vertices[34] = { 1.0f, 1.0f, -1.0f,1.0,1.0,1.0,1.0 };
+		vertices[35] = { 1.0f, 1.0f, 1.0f,1.0,1.0,1.0,1.0 };
+
+		
+	/*	const std::vector<Vertex> vertices = {
+	{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+	{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+	{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+	{{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+		};
+		const std::vector<uint16_t> indices = {
+	0, 1, 2, 2, 3, 0
+		};*/
+
+		BufferInputChunk inputBuffer;
+
+
+		inputBuffer.size = sizeof(vertices);
+		inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+		inputBuffer.usage = vk::BufferUsageFlagBits::eVertexBuffer;
+		
+		
+
+
+		m_Buffer = new Buffer(inputBuffer);
+		void* vertexData = static_cast<void*>((vertices.data()));
+		m_Buffer->SetData(vertexData);
+
+		// create uniform buffers for each frame
+		DescrriptorSetLayoutSpec inputLayout;
+		inputLayout.type = vk::DescriptorType::eUniformBuffer;
+		inputLayout.flags = vk::ShaderStageFlagBits::eVertex;
+		
+		m_DescriptorSetLayout = DescriptorSetLayout::Create(inputLayout);
+
+		auto bufferSize = sizeof(UniformBufferObject);
+		auto framesAmount = m_Swapchain->GetFramesCount();
+		m_UniformBuffers.resize(framesAmount);
+		uniformBuffersMapped.resize(framesAmount);
+		inputBuffer.usage = vk::BufferUsageFlagBits::eUniformBuffer;
+
+		for (size_t i = 0; i < framesAmount; i++)
+		{
+			m_UniformBuffers[i] = new Buffer(inputBuffer);
+			uniformBuffersMapped[i] = m_Device->GetDevice().mapMemory(m_UniformBuffers[i]->GetMemory(), 0, bufferSize);
+	
+		}
+
+		vk::DescriptorPoolSize poolSize{};
+		poolSize.type = vk::DescriptorType::eUniformBuffer;
+		poolSize.descriptorCount = static_cast<uint32_t>(m_Swapchain->GetFramesCount());
+		
+		vk::DescriptorPoolCreateInfo poolInfo{};
+		poolInfo.sType = vk::StructureType::eDescriptorPoolCreateInfo;
+		poolInfo.poolSizeCount = 1;
+		poolInfo.pPoolSizes = &poolSize;
+		poolInfo.maxSets = m_Swapchain->GetFramesCount();
+
+		try
+		{
+			m_DescriptorPool = m_Device->GetDevice().createDescriptorPool(poolInfo);
+		}
+		catch (vk::SystemError err)
+		{
+			Log::GetLog()->error("failed to create descriptorPool");
+		}
+
+		std::vector<vk::DescriptorSetLayout> layouts(m_Swapchain->GetFramesCount(), m_DescriptorSetLayout->GetLayout());
+
+		//for (int i = 0; i < m_Swapchain->GetFramesCount(); i++)
+		//{
+			vk::DescriptorSetAllocateInfo allocationInfo;
+			/*
+				typedef struct VkDescriptorSetAllocateInfo {
+					VkStructureType                 sType;
+					const void*                     pNext;
+					VkDescriptorPool                descriptorPool;
+					uint32_t                        descriptorSetCount;
+					const VkDescriptorSetLayout*    pSetLayouts;
+				} VkDescriptorSetAllocateInfo;
+			*/
+
+			allocationInfo.descriptorPool = m_DescriptorPool;
+			allocationInfo.descriptorSetCount = m_Swapchain->GetFramesCount();
+			allocationInfo.pSetLayouts = layouts.data();
+
+			//m_DescriptorSets.resize(m_Swapchain->GetFramesCount());
+			
+			try 
+			{
+				m_DescriptorSets = m_Device->GetDevice().allocateDescriptorSets(allocationInfo);
+			}
+			catch (vk::SystemError err)
+			{	
+				Log::GetLog()->error("Failed to allocate descriptor set from pool");
+			}	
+		//}
+
+		for (int i = 0; i < m_Swapchain->GetFramesCount(); i++)
+		{
+			vk::WriteDescriptorSet writeInfo;
+			/*
+			typedef struct VkWriteDescriptorSet {
+				VkStructureType                  sType;
+				const void* pNext;
+				VkDescriptorSet                  dstSet;
+				uint32_t                         dstBinding;
+				uint32_t                         dstArrayElement;
+				uint32_t                         descriptorCount;
+				VkDescriptorType                 descriptorType;
+				const VkDescriptorImageInfo* pImageInfo;
+				const VkDescriptorBufferInfo* pBufferInfo;
+				const VkBufferView* pTexelBufferView;
+			} VkWriteDescriptorSet;
+			*/
+			vk::DescriptorBufferInfo bufferInfo{};
+			bufferInfo.buffer = m_UniformBuffers[i]->GetBuffer();
+			bufferInfo.offset = 0;
+			bufferInfo.range = sizeof(UniformBufferObject);
+
+			writeInfo.dstSet = m_DescriptorSets[i];
+			writeInfo.dstBinding = 0;
+			writeInfo.dstArrayElement = 0; //byte offset within binding for inline uniform blocks
+			writeInfo.descriptorCount = 1;
+			writeInfo.descriptorType = vk::DescriptorType::eUniformBuffer;
+			writeInfo.pBufferInfo = &bufferInfo;
+
+			m_Device->GetDevice().updateDescriptorSets(writeInfo, nullptr);
+		}
+		
+		
 		CreatePipeline();
 
 
 		CreateFramebuffers();
 
-
-		const float cubeVertices[] = {
-			// Front face
-			-0.5f, -0.5f,  0.5f, 1.f,1.f,1.f,1.f, // Vertex 0
-			 0.5f, -0.5f,  0.5f, 1.f,1.f,1.f,1.f, // Vertex 1
-			 0.5f,  0.5f,  0.5f, 1.f,1.f,1.f,1.f, // Vertex 2
-			-0.5f,  0.5f,  0.5f, 1.f,1.f,1.f,1.f, // Vertex 3
-								 
-			// Back face		 
-			-0.5f, -0.5f, -0.5f, 1.f,1.f,1.f,1.f, // Vertex 4
-			 0.5f, -0.5f, -0.5f, 1.f,1.f,1.f,1.f, // Vertex 5
-			 0.5f,  0.5f, -0.5f, 1.f,1.f,1.f,1.f, // Vertex 6
-			-0.5f,  0.5f, -0.5f, 1.f,1.f,1.f,1.f , // Vertex 7
-								 
-			// Left face		 
-			-0.5f, -0.5f,  0.5f, 1.f,1.f,1.f,1.f,// Vertex 8
-			-0.5f,  0.5f,  0.5f, 1.f,1.f,1.f,1.f,// Vertex 9
-			-0.5f,  0.5f, -0.5f, 1.f,1.f,1.f,1.f,// Vertex 10
-			-0.5f, -0.5f, -0.5f, 1.f,1.f,1.f,1.f, // Vertex 11
-								 
-			// Right face		 
-			 0.5f, -0.5f,  0.5f, 1.f,1.f,1.f,1.f, // Vertex 12
-			 0.5f,  0.5f,  0.5f, 1.f,1.f,1.f,1.f, // Vertex 13
-			 0.5f,  0.5f, -0.5f, 1.f,1.f,1.f,1.f, // Vertex 14
-			 0.5f, -0.5f, -0.5f, 1.f,1.f,1.f,1.f,  // Vertex 15
-
-			 // Top face
-			 - 0.5f,  0.5f,  0.5f,1.f,1.f,1.f,1.f, // Vertex 16
-			  0.5f,  0.5f,  0.5f,1.f,1.f,1.f,1.f, // Vertex 17
-			  0.5f,  0.5f, -0.5f,1.f,1.f,1.f,1.f, // Vertex 18
-			 -0.5f,  0.5f, -0.5f,1.f,1.f,1.f,1.f , // Vertex 19
-
-			// Bottom face
-			-0.5f, -0.5f,  0.5f, 1.f,1.f,1.f,1.f, // Vertex 20
-			 0.5f, -0.5f,  0.5f, 1.f,1.f,1.f,1.f,// Vertex 21
-			 0.5f, -0.5f, -0.5f, 1.f,1.f,1.f,1.f,// Vertex 22
-			-0.5f, -0.5f, -0.5f, 1.f,1.f,1.f,1.f // Vertex 23
-		};
-
-		BufferInputChunk input;
-
-
-		input.size = sizeof(cubeVertices);
-		input.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
-		input.usage = vk::BufferUsageFlagBits::eVertexBuffer;
-		input.device = m_Device;
-		
-		
-
-
-		m_Buffer = new VertexBuffer(input);
-		void* vertexData = static_cast<void*>(const_cast<float*>(cubeVertices));
-		m_Buffer->SetData(vertexData);
 		CreateCommandPool();
 		CreateCommandBuffer();
 		CreateSyncObjects();
@@ -132,6 +266,19 @@ namespace Voidstar
 
 	
 	}
+
+
+	void Renderer::UpdateUniformBuffer(uint32_t imageIndex)
+	{
+		UniformBufferObject ubo{};
+		ubo.model = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		ubo.view = glm::lookAt(glm::vec3(-2.0f, 0.0f, 4.0f), glm::vec3(0.5f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f));
+		auto extent = m_Swapchain->GetExtent();
+		ubo.proj = glm::perspective(glm::radians(45.0f), extent.width / (float)extent.height, 0.0001f, 10.0f);
+		ubo.proj[1][1] *= -1,
+		memcpy(uniformBuffersMapped[imageIndex], &ubo, sizeof(ubo));
+	}
+
 	void Renderer::RecordCommandBuffer(uint32_t imageIndex)
 	{
 		vk::CommandBufferBeginInfo beginInfo = {};
@@ -157,6 +304,7 @@ namespace Voidstar
 
 		//m_CommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineLayout, 0, m_SwapchainFrames[imageIndex].descriptorSet, nullptr);
 
+		m_CommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PipelineLayout, 0, m_DescriptorSets[imageIndex], nullptr);
 		m_CommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_Pipeline);
 		vk::DeviceSize offsets[] = { 0 };
 		vk::Buffer vertexBuffers[] = { m_Buffer->GetBuffer()};
@@ -179,6 +327,8 @@ namespace Voidstar
 		m_Device->GetDevice().acquireNextImageKHR(swapchain, UINT64_MAX, m_ImageAvailableSemaphore, nullptr, &imageIndex);
 		
 		m_CommandBuffer.reset();
+
+		UpdateUniformBuffer(imageIndex);
 
 		RecordCommandBuffer(imageIndex);
 
@@ -301,6 +451,9 @@ namespace Voidstar
 		specs.bindingDescription = Vertex::GetBindingDescription();
 		specs.attributeDescription = Vertex::GetAttributeDescriptions();
 
+		m_DescriptorSetLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout() };
+
+		specs.descriptorSetLayout = m_DescriptorSetLayouts;
 		auto pipline = CreatePipeline(specs);
 		m_Pipeline = pipline.pipeline;
 		m_PipelineLayout= pipline.layout;
@@ -429,6 +582,7 @@ namespace Voidstar
 		//The info for the graphics pipeline
 		vk::GraphicsPipelineCreateInfo pipelineInfo = {};
 		pipelineInfo.flags = vk::PipelineCreateFlags();
+		
 
 		//Shader stages, to be populated later
 		std::vector<vk::PipelineShaderStageCreateInfo> shaderStages;
@@ -592,10 +746,23 @@ namespace Voidstar
 	Renderer::~Renderer()
 	{
 		m_Device->GetDevice().waitIdle();
-		delete m_Swapchain;
-		delete m_Buffer;
 		
+		delete m_Buffer;
 
+
+		for (size_t i = 0; i < m_Swapchain->GetFramesCount(); i++) {
+			delete m_UniformBuffers[i];
+		}
+		
+		delete m_DescriptorSetLayout;
+		m_Device->GetDevice().destroyDescriptorPool(m_DescriptorPool);
+
+		for (int i = 0; i < m_DescriptorSetLayouts.size(); i++)
+		{
+			m_Device->GetDevice().destroyDescriptorSetLayout(m_DescriptorSetLayouts[i]);
+		}
+	
+	
 		m_Device->GetDevice().destroyCommandPool(m_CommandPool);
 		m_Device->GetDevice().destroySemaphore(m_ImageAvailableSemaphore);
 		m_Device->GetDevice().destroySemaphore(m_RenderFinishedSemaphore);
@@ -603,11 +770,13 @@ namespace Voidstar
 
 		m_Device->GetDevice().destroyPipeline(m_Pipeline);
 		m_Device->GetDevice().destroyPipelineLayout(m_PipelineLayout);
+		delete m_Swapchain;
 		m_Device->GetDevice().destroyRenderPass(m_RenderPass);
 
-		m_Instance->GetInstance().destroyDebugUtilsMessengerEXT(m_DebugMessenger, nullptr, m_Dldi);
-		m_Instance->GetInstance().destroySurfaceKHR(m_Surface);
 		m_Device->GetDevice().destroy();
+
+		m_Instance->GetInstance().destroySurfaceKHR(m_Surface);
+		m_Instance->GetInstance().destroyDebugUtilsMessengerEXT(m_DebugMessenger, nullptr, m_Dldi);
 		m_Instance->GetInstance().destroy();
 	}
 	void Renderer::CreateDevice()

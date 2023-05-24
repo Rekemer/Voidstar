@@ -3,6 +3,7 @@
 #include"SupportStruct.h"
 #include"Device.h"
 #include"../Log.h"
+#include"RenderContext.h"
 namespace Voidstar
 {
 	vk::SurfaceFormatKHR GetSurfaceFormat(vk::Format format, vk::ColorSpaceKHR colorSpace, SwapChainSupportDetails& support);
@@ -61,7 +62,6 @@ namespace Voidstar
 		createInfo.oldSwapchain = vk::SwapchainKHR(nullptr);
 
 		Swapchain* swapchain = new Swapchain();
-		swapchain->m_Device = &(device->GetDevice());
 		try 
 		{
 			swapchain->m_Swapchain = device->GetDevice().createSwapchainKHR(createInfo);
@@ -117,15 +117,16 @@ namespace Voidstar
 
 		Swapchain::~Swapchain()
 		{
+			auto device = RenderContext::GetDevice()->GetDevice();
 			for (auto& frame : m_SwapchainFrames) {
 
-				m_Device->destroyImageView(frame.imageView);
-				m_Device->destroyFramebuffer(frame.framebuffer);
+				device.destroyImageView(frame.imageView);
+				device.destroyFramebuffer(frame.framebuffer);
 
 
 			}
 			// cannot not use detroy image on  presentable image
-			m_Device->destroySwapchainKHR(m_Swapchain);
+			device.destroySwapchainKHR(m_Swapchain);
 		}
 		
 

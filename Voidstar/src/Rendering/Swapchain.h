@@ -24,7 +24,7 @@ namespace Voidstar
 		{
 			return m_SwapchainExtent;
 		}
-		vk::Format GetFormat()
+		vk::Format& GetFormat()
 		{
 			return m_SwapchainFormat;
 		}
@@ -32,11 +32,12 @@ namespace Voidstar
 		{
 			return m_Swapchain;
 		}
+		size_t GetFramesCount() { return m_SwapchainFrames.size(); }
 	private:
 		vk::SwapchainKHR m_Swapchain{ VK_NULL_HANDLE };
 		std::vector<SwapChainFrame> m_SwapchainFrames;
 		vk::Format m_SwapchainFormat;
 		vk::Extent2D m_SwapchainExtent;
-		vk::Device* m_Device;
+	
 	};
 }
