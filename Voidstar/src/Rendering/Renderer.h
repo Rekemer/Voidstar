@@ -10,7 +10,8 @@ namespace Voidstar
 	class Surface;
 	class SwapChainSupportDetails;
 	class Buffer;
-
+	class Camera;
+	class Application;
 
 
 
@@ -46,7 +47,7 @@ namespace Voidstar
 	class Renderer
 	{
 	public:
-		Renderer(size_t screenWidth, size_t screenHeight, Window* window);
+		Renderer(size_t screenWidth, size_t screenHeight, std::shared_ptr<Window> window, Application* app );
 		void Render();
 		~Renderer();
 	private:
@@ -74,8 +75,10 @@ namespace Voidstar
 		Device* m_Device;
 		Swapchain* m_Swapchain;
 		Buffer* m_Buffer;
+		Buffer* m_IndexBuffer;
+		Application* m_App;
 		
-		
+		// can be in one buffer?
 		std::vector<Buffer*> m_UniformBuffers;
 		std::vector<void*> uniformBuffersMapped;
 		
@@ -108,7 +111,7 @@ namespace Voidstar
 		vk::Semaphore m_RenderFinishedSemaphore;
 		vk::Fence	m_InFlightFence;
 
-		Window* m_Window;
+		std::shared_ptr<Window> m_Window;
 
 
 		

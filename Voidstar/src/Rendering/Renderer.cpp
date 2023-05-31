@@ -13,11 +13,13 @@
 #include "Buffer.h"
 #include "RenderContext.h"
 #include "DescriptorSetLayout.h"
+#include "Camera.h"
+#include "../Application.h"
 
 namespace Voidstar
 {
-	Renderer::Renderer(size_t screenWidth, size_t screenHeight, Window* window) :
-		m_Window{window}, m_ViewportWidth(screenWidth), m_ViewportHeight(screenHeight)
+	Renderer::Renderer(size_t screenWidth, size_t screenHeight, std::shared_ptr<Window> window, Application* app) :
+		m_Window{ window }, m_ViewportWidth(screenWidth), m_ViewportHeight(screenHeight), m_App{app}
 	{
 		
 		// create instance
@@ -41,8 +43,33 @@ namespace Voidstar
 
 		m_Swapchain = Swapchain::Create(support);
 
-		constexpr size_t VertexCount = 36;
+#if 1
+		//Vertex{ {-0.5f, -0.5f,0.},{1.0f, 0.0f, 0.0f,1.0f} };
+		//Vertex{ {0.5f, -0.5f,0. }, { 0.0f, 1.0f, 0.0f,1.0f }};
+		//Vertex{ {0.5f, 0.5f,0.},{0.0f, 0.0f, 1.0f,1.0f} };
+		//Vertex{ {-0.5f, 0.5f,0.},{1.0f, 1.0f, 1.0f,1.0f } };
+
+		constexpr size_t VertexCount = 4;
+
+		std::array<Vertex, VertexCount> vertices;
 		
+		vertices[0] = { -0.5f, -0.5f, 1.0f,1.0,1.0,1.0,1.0 };
+		vertices[1] = { 0.5f, -0.5f, 1.0f,1.0,1.0,1.0,1.0 };
+		vertices[2] = { 0.5f, 0.5f, 1.0f,1.0,1.0,1.0,1.0 };
+
+		vertices[3] = { -0.5f, 0.5f, 1.0f ,1.0,1.0,1.0,1.0 };
+		//vertices[4] = { 1.0f, 1.0f, 1.0f ,1.0,1.0,1.0,1.0 };
+		//vertices[5] = { -1.0f, 1.0f, 1.0f ,1.0,1.0,1.0,1.0 };
+		const std::vector<uint32_t> indices =
+		{
+		0, 1, 2, 2, 3, 0
+		};
+
+		
+	
+#else
+		constexpr size_t VertexCount = 36;
+
 		std::array<Vertex, VertexCount> vertices;
 		// Front face
 		vertices[0] = { -1.0f, -1.0f, 1.0f,1.0,1.0,1.0,1.0 };
@@ -98,30 +125,15 @@ namespace Voidstar
 		vertices[34] = { 1.0f, 1.0f, -1.0f,1.0,1.0,1.0,1.0 };
 		vertices[35] = { 1.0f, 1.0f, 1.0f,1.0,1.0,1.0,1.0 };
 
-		
-	/*	const std::vector<Vertex> vertices = {
-	{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-	{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-	{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-	{{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
-		};
-		const std::vector<uint16_t> indices = {
-	0, 1, 2, 2, 3, 0
-		};*/
 
-		BufferInputChunk inputBuffer;
+	
 
+#endif 
 
-		inputBuffer.size = sizeof(vertices);
-		inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
-		inputBuffer.usage = vk::BufferUsageFlagBits::eVertexBuffer;
 		
 		
-
-
-		m_Buffer = new Buffer(inputBuffer);
-		void* vertexData = static_cast<void*>((vertices.data()));
-		m_Buffer->SetData(vertexData);
+		 
+	
 
 		// create uniform buffers for each frame
 		DescrriptorSetLayoutSpec inputLayout;
@@ -134,6 +146,11 @@ namespace Voidstar
 		auto framesAmount = m_Swapchain->GetFramesCount();
 		m_UniformBuffers.resize(framesAmount);
 		uniformBuffersMapped.resize(framesAmount);
+
+
+		BufferInputChunk inputBuffer;
+		inputBuffer.size = bufferSize;
+		inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
 		inputBuffer.usage = vk::BufferUsageFlagBits::eUniformBuffer;
 
 		for (size_t i = 0; i < framesAmount; i++)
@@ -234,6 +251,114 @@ namespace Voidstar
 		CreateCommandPool();
 		CreateCommandBuffer();
 		CreateSyncObjects();
+
+		{
+			Buffer* stagingBuffer;
+			{
+
+				BufferInputChunk inputBuffer;
+				inputBuffer.size = sizeof(indices);
+				inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+				inputBuffer.usage = vk::BufferUsageFlagBits::eTransferSrc;
+
+				stagingBuffer = new Buffer(inputBuffer);
+			}
+
+			{
+				BufferInputChunk inputBuffer;
+				inputBuffer.size = sizeof(indices);
+				inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+				inputBuffer.usage = vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst;
+				m_IndexBuffer = new Buffer(inputBuffer);
+
+			}
+
+			m_CommandBuffer.reset();
+
+			vk::CommandBufferBeginInfo beginInfo;
+			beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
+			m_CommandBuffer.begin(beginInfo);
+
+
+			auto memory = m_Device->GetDevice().mapMemory(stagingBuffer->GetMemory(), 0, sizeof(indices));
+			memcpy(memory, indices.data(), (size_t)sizeof(indices));
+			m_Device->GetDevice().unmapMemory(stagingBuffer->GetMemory());
+
+
+			vk::BufferCopy copyRegion{};
+			copyRegion.srcOffset = 0; // Optional
+			copyRegion.dstOffset = 0; // Optional
+			copyRegion.size = sizeof(indices);
+			m_CommandBuffer.copyBuffer(stagingBuffer->GetBuffer(), m_IndexBuffer->GetBuffer(), copyRegion);
+
+
+			m_CommandBuffer.end();
+
+			vk::SubmitInfo submitInfo;
+			submitInfo.commandBufferCount = 1;
+			submitInfo.pCommandBuffers = &m_CommandBuffer;
+			m_Device->GetGraphicsQueue().submit(1, &submitInfo, nullptr);
+
+			m_Device->GetGraphicsQueue().waitIdle();
+
+			delete stagingBuffer;
+		}
+
+
+		void* vertexData = const_cast<void*>(static_cast<const void*>(vertices.data()));
+		//m_Buffer->SetData(vertexData);
+		Buffer* stagingBuffer;
+		{
+
+			BufferInputChunk inputBuffer;
+			inputBuffer.size = sizeof(vertices);
+			inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+			inputBuffer.usage = vk::BufferUsageFlagBits::eTransferSrc;
+
+			stagingBuffer = new Buffer(inputBuffer);
+		}
+
+		{
+			BufferInputChunk inputBuffer;
+			inputBuffer.size = sizeof(vertices);
+			inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+			inputBuffer.usage = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer;
+
+			m_Buffer = new Buffer(inputBuffer);
+		}
+
+		m_CommandBuffer.reset();
+
+		vk::CommandBufferBeginInfo beginInfo;
+		beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
+		m_CommandBuffer.begin(beginInfo);
+
+
+		bufferSize = sizeof(vertices);
+		auto memory = m_Device->GetDevice().mapMemory(stagingBuffer->GetMemory(), 0, bufferSize);
+		memcpy(memory, vertexData, (size_t)bufferSize);
+		m_Device->GetDevice().unmapMemory(stagingBuffer->GetMemory());
+
+
+		vk::BufferCopy copyRegion{};
+		copyRegion.srcOffset = 0; // Optional
+		copyRegion.dstOffset = 0; // Optional
+		copyRegion.size = sizeof(vertices);
+		m_CommandBuffer.copyBuffer(stagingBuffer->GetBuffer(), m_Buffer->GetBuffer(), copyRegion);
+
+
+		m_CommandBuffer.end();
+
+		vk::SubmitInfo submitInfo;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &m_CommandBuffer;
+		m_Device->GetGraphicsQueue().submit(1, &submitInfo, nullptr);
+
+		m_Device->GetGraphicsQueue().waitIdle();
+
+
+		delete stagingBuffer;
+
 	}
 
 	void Renderer::CreateSyncObjects()
@@ -271,11 +396,17 @@ namespace Voidstar
 	void Renderer::UpdateUniformBuffer(uint32_t imageIndex)
 	{
 		UniformBufferObject ubo{};
+		
+		auto cameraView = m_App->GetCamera()->GetView();
+		auto cameraProj = m_App->GetCamera()->GetProj();
+
 		ubo.model = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 		ubo.view = glm::lookAt(glm::vec3(-2.0f, 0.0f, 4.0f), glm::vec3(0.5f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f));
+		//ubo.proj = glm::perspective(glm::radians(45.0f), extent.width / (float)extent.height, 0.0001f, 10.0f);
+		ubo.view = cameraView;
+		ubo.proj = cameraProj;
 		auto extent = m_Swapchain->GetExtent();
-		ubo.proj = glm::perspective(glm::radians(45.0f), extent.width / (float)extent.height, 0.0001f, 10.0f);
-		ubo.proj[1][1] *= -1,
+		//ubo.proj[1][1] *= -1,
 		memcpy(uniformBuffersMapped[imageIndex], &ubo, sizeof(ubo));
 	}
 
@@ -309,9 +440,10 @@ namespace Voidstar
 		vk::DeviceSize offsets[] = { 0 };
 		vk::Buffer vertexBuffers[] = { m_Buffer->GetBuffer()};
 		m_CommandBuffer.bindVertexBuffers(0, 1, vertexBuffers, offsets);
-	
-		//commandBuffer.draw(6, 1, 0, 0);
-		m_CommandBuffer.draw(23, 1, 0, 0);
+		m_CommandBuffer.bindIndexBuffer(m_IndexBuffer->GetBuffer(),0, vk::IndexType::eUint32);
+		//m_CommandBuffer.draw(6, 1, 0, 0);
+		//m_CommandBuffer.draw(23, 1, 0, 0);
+		m_CommandBuffer.drawIndexed(6,1,0,0,0);
 
 		m_CommandBuffer.endRenderPass();
 		
@@ -319,6 +451,7 @@ namespace Voidstar
 	}
 	void Renderer::Render()	
 	{
+		
 		m_Device->GetDevice().waitForFences(m_InFlightFence, VK_TRUE, std::numeric_limits<uint64_t>::max());
 		m_Device->GetDevice().resetFences(m_InFlightFence);
 
@@ -748,6 +881,7 @@ namespace Voidstar
 		m_Device->GetDevice().waitIdle();
 		
 		delete m_Buffer;
+		delete m_IndexBuffer;
 
 
 		for (size_t i = 0; i < m_Swapchain->GetFramesCount(); i++) {

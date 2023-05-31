@@ -7,7 +7,7 @@ namespace Voidstar
 	struct BufferInputChunk 
 	{
 		size_t size;
-		vk::BufferUsageFlagBits usage;
+		vk::BufferUsageFlags usage;
 		vk::MemoryPropertyFlags memoryProperties;
 	};
 

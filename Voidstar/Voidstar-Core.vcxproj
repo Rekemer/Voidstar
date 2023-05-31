@@ -103,9 +103,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="src\Application.h" />
+    <ClInclude Include="src\Input.h" />
+    <ClInclude Include="src\Keys.h" />
     <ClInclude Include="src\Log.h" />
     <ClInclude Include="src\Main.h" />
     <ClInclude Include="src\Prereq.h" />
+    <ClInclude Include="src\Rendering\Camera.h" />
     <ClInclude Include="src\Rendering\DescriptorSetLayout.h" />
     <ClInclude Include="src\Rendering\Device.h" />
     <ClInclude Include="src\Rendering\Instance.h" />
@@ -121,10 +124,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Application.cpp" />
+    <ClCompile Include="src\Input.cpp" />
     <ClCompile Include="src\Log.cpp" />
     <ClCompile Include="src\Prereq.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="src\Rendering\Camera.cpp" />
     <ClCompile Include="src\Rendering\DescriptorSetLayout.cpp" />
     <ClCompile Include="src\Rendering\Device.cpp" />
     <ClCompile Include="src\Rendering\Instance.cpp" />

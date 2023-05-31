@@ -3,6 +3,9 @@
 #include "Window.h"
 #include "Log.h"
 #include "Rendering/Renderer.h"
+#include "Input.h"
+
+#include "Rendering/Camera.h"
 namespace Voidstar
 {
 	Application::Application(std::string appName ,size_t screenWidth, size_t screenHeight) :
@@ -10,21 +13,27 @@ namespace Voidstar
 	{
 		Log::Init();
 		// init Window
-		m_Window = new Window(appName, screenWidth, screenHeight);
+		m_Window = std::make_shared<Window>(appName, screenWidth, screenHeight);
 		// init Renderer
-		m_Renderer = new Renderer(screenWidth, screenHeight, m_Window);
+		m_Renderer =std::make_unique<Renderer>(screenWidth, screenHeight, m_Window,this);
+		m_Camera = std::make_unique<Camera>();
+		m_Camera->UpdateProj(screenWidth, screenHeight);
+		Input::Init(m_Window);
 
 	}
 	Application::~Application()
 	{
-		delete m_Window;
-		delete m_Renderer;
+		
+		
 	}
 	void Application::Run()
 	{
 		while (!m_Window->IsClosed())
 		{
-			m_Window->Update();
+			Input::Update();
+			float deltaTime = 0;
+			m_Window->Update(deltaTime);
+			m_Camera->Update(deltaTime);
 			m_Renderer->Render();
 		}
 	}

@@ -30,8 +30,12 @@ namespace Voidstar
 		 return glfwWindowShouldClose(m_Window);
 	 }
 
-	 void Window::Update()
+    float lastFrameTimeStart = 0;
+	 void Window::Update(float& deltaTime)
 	 {
+		 float timeAppStart = (float)glfwGetTime();
+		 deltaTime = (timeAppStart - lastFrameTimeStart) / 1000.0f;
+		 lastFrameTimeStart = timeAppStart;
 		 glfwPollEvents();
 	 }
 
