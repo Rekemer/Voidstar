@@ -8,6 +8,7 @@ namespace Voidstar
 		Window(std::string windowName, size_t screenWidth, size_t screenHeight);
 		GLFWwindow* GetRaw() const;
 		bool IsClosed();
+		void Close();
 		void Update(float& deltaTime);
 		~Window();
 	private:

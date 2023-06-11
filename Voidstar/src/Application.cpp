@@ -13,10 +13,10 @@ namespace Voidstar
 	{
 		Log::Init();
 		// init Window
-		m_Window = std::make_shared<Window>(appName, screenWidth, screenHeight);
+		m_Window = CreateSPtr<Window>(appName, screenWidth, screenHeight);
 		// init Renderer
-		m_Renderer =std::make_unique<Renderer>(screenWidth, screenHeight, m_Window,this);
-		m_Camera = std::make_unique<Camera>();
+		m_Renderer = CreateUPtr<Renderer>(screenWidth, screenHeight, m_Window,this);
+		m_Camera = CreateUPtr<Camera>();
 		m_Camera->UpdateProj(screenWidth, screenHeight);
 		Input::Init(m_Window);
 
@@ -31,6 +31,11 @@ namespace Voidstar
 		while (!m_Window->IsClosed())
 		{
 			Input::Update();
+			bool shouldClose = Input::IsKeyPressed(VS_KEY_ESCAPE);
+			if (shouldClose)
+			{
+				m_Window->Close();
+			}
 			float deltaTime = 0;
 			m_Window->Update(deltaTime);
 			m_Camera->Update(deltaTime);

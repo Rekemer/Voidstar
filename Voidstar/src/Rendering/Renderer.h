@@ -3,7 +3,8 @@
 #include "../Prereq.h"
 #include <glm.hpp>
 #include <gtc/matrix_transform.hpp>
-
+#include"Queue.h"
+#include"../Types.h"
 namespace Voidstar
 {
 	class Window;
@@ -64,7 +65,6 @@ namespace Voidstar
 		void CreateCommandBuffer();
 		void CreateSyncObjects();
 		
-		
 		void RecordCommandBuffer(uint32_t imageIndex);
 		void UpdateUniformBuffer(uint32_t imageIndex);
 
@@ -103,15 +103,14 @@ namespace Voidstar
 		vk::RenderPass m_RenderPass;
 		vk::PipelineLayout m_PipelineLayout;
 		vk::Pipeline m_Pipeline;
-		vk::CommandPool m_CommandPool;
-		vk::CommandBuffer m_CommandBuffer;
+		UPtr<Queue> m_GraphicsQueue;
 
 
 		vk::Semaphore m_ImageAvailableSemaphore;
 		vk::Semaphore m_RenderFinishedSemaphore;
 		vk::Fence	m_InFlightFence;
 
-		std::shared_ptr<Window> m_Window;
+		SPtr<Window> m_Window;
 
 
 		

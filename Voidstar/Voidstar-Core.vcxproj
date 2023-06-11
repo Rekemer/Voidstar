@@ -112,11 +112,13 @@
     <ClInclude Include="src\Rendering\DescriptorSetLayout.h" />
     <ClInclude Include="src\Rendering\Device.h" />
     <ClInclude Include="src\Rendering\Instance.h" />
+    <ClInclude Include="src\Rendering\Queue.h" />
     <ClInclude Include="src\Rendering\RenderContext.h" />
     <ClInclude Include="src\Rendering\Renderer.h" />
     <ClInclude Include="src\Rendering\SupportStruct.h" />
     <ClInclude Include="src\Rendering\Swapchain.h" />
     <ClInclude Include="src\Rendering\Vertex.h" />
+    <ClInclude Include="src\Types.h" />
     <ClInclude Include="src\Voidstar.h" />
     <ClInclude Include="src\Window.h" />
     <ClInclude Include="src\Rendering\Buffer.h" />
@@ -133,6 +135,7 @@
     <ClCompile Include="src\Rendering\DescriptorSetLayout.cpp" />
     <ClCompile Include="src\Rendering\Device.cpp" />
     <ClCompile Include="src\Rendering\Instance.cpp" />
+    <ClCompile Include="src\Rendering\Queue.cpp" />
     <ClCompile Include="src\Rendering\RenderContext.cpp" />
     <ClCompile Include="src\Rendering\Renderer.cpp" />
     <ClCompile Include="src\Rendering\Swapchain.cpp" />

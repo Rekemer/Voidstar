@@ -11,7 +11,7 @@ namespace Voidstar {
 	bool Input::m_keysCurrentFrame[1024];
 	bool Input::m_keysLastFrame[1024];
 	bool Input::m_keysTyped[1024];
-	std::shared_ptr<Window> Input::m_currentWindow;
+	SPtr<Window> Input::m_currentWindow;
 	void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 	{
 
@@ -29,7 +29,7 @@ namespace Voidstar {
 		//EventSystem::OnEvent((Event&&)OnScrollingEvent { (float)yoffset });
 	}
 	
-	void Input::Init(std::shared_ptr<Window> window)
+	void Input::Init( SPtr<Window> window)
 	{
 		m_currentWindow = window;
 		glfwSetScrollCallback(window->GetRaw(), ScrollCallback);

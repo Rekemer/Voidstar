@@ -16,9 +16,9 @@ namespace Voidstar
 	private:
 		size_t m_ScreenWidth, m_ScreenHeight;
 
-		std::unique_ptr<Camera> m_Camera;
-		std::unique_ptr<Renderer> m_Renderer;
-		std::shared_ptr<Window> m_Window;
+		UPtr<Camera> m_Camera;
+		UPtr<Renderer> m_Renderer;
+		SPtr<Window> m_Window;
 	};
 
 	Application* CreateApplication();

@@ -1,5 +1,6 @@
 #pragma once
 #include "Prereq.h"
+#include "Keys.h"
 struct GLFWwindow;
 namespace Voidstar
 {
@@ -24,7 +25,7 @@ namespace Voidstar
 			static bool m_keysCurrentFrame[1024];
 			static bool m_keysLastFrame[1024];
 			static bool m_keysTyped[1024];
-			static std::shared_ptr<Window> m_currentWindow;
+			static SPtr<Window> m_currentWindow;
 
 			friend class Application;
 

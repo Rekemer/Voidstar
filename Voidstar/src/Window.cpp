@@ -15,6 +15,8 @@ namespace Voidstar
 		glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
 		m_Window = glfwCreateWindow(screenWidth, screenHeight, windowName.c_str(), nullptr, nullptr);
+
+		glfwSetInputMode(m_Window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 		if (!m_Window)
 		{
 			Log::GetLog()->error("Window is not created!");
@@ -28,6 +30,11 @@ namespace Voidstar
 	 bool Window::IsClosed()
 	 {
 		 return glfwWindowShouldClose(m_Window);
+	 }
+
+	 void Window::Close()
+	 {
+		 glfwSetWindowShouldClose(m_Window, GL_TRUE);
 	 }
 
     float lastFrameTimeStart = 0;

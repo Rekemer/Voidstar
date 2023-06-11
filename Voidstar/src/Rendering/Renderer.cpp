@@ -244,12 +244,11 @@ namespace Voidstar
 		
 		
 		CreatePipeline();
-
+		m_GraphicsQueue = CreateUPtr<Queue>();
 
 		CreateFramebuffers();
-
-		CreateCommandPool();
-		CreateCommandBuffer();
+		m_GraphicsQueue->CreateCommandPool();
+		m_GraphicsQueue->CreateCommandBuffer();
 		CreateSyncObjects();
 
 		{
@@ -273,34 +272,12 @@ namespace Voidstar
 
 			}
 
-			m_CommandBuffer.reset();
+			m_GraphicsQueue->BeginTransfering();
+			m_GraphicsQueue->Transfer(stagingBuffer,m_IndexBuffer, (void*)indices.data(),sizeof(indices));
+			m_GraphicsQueue->EndTransfering();
+			
 
-			vk::CommandBufferBeginInfo beginInfo;
-			beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
-			m_CommandBuffer.begin(beginInfo);
-
-
-			auto memory = m_Device->GetDevice().mapMemory(stagingBuffer->GetMemory(), 0, sizeof(indices));
-			memcpy(memory, indices.data(), (size_t)sizeof(indices));
-			m_Device->GetDevice().unmapMemory(stagingBuffer->GetMemory());
-
-
-			vk::BufferCopy copyRegion{};
-			copyRegion.srcOffset = 0; // Optional
-			copyRegion.dstOffset = 0; // Optional
-			copyRegion.size = sizeof(indices);
-			m_CommandBuffer.copyBuffer(stagingBuffer->GetBuffer(), m_IndexBuffer->GetBuffer(), copyRegion);
-
-
-			m_CommandBuffer.end();
-
-			vk::SubmitInfo submitInfo;
-			submitInfo.commandBufferCount = 1;
-			submitInfo.pCommandBuffers = &m_CommandBuffer;
-			m_Device->GetGraphicsQueue().submit(1, &submitInfo, nullptr);
-
-			m_Device->GetGraphicsQueue().waitIdle();
-
+			
 			delete stagingBuffer;
 		}
 
@@ -327,34 +304,10 @@ namespace Voidstar
 			m_Buffer = new Buffer(inputBuffer);
 		}
 
-		m_CommandBuffer.reset();
-
-		vk::CommandBufferBeginInfo beginInfo;
-		beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
-		m_CommandBuffer.begin(beginInfo);
-
-
-		bufferSize = sizeof(vertices);
-		auto memory = m_Device->GetDevice().mapMemory(stagingBuffer->GetMemory(), 0, bufferSize);
-		memcpy(memory, vertexData, (size_t)bufferSize);
-		m_Device->GetDevice().unmapMemory(stagingBuffer->GetMemory());
-
-
-		vk::BufferCopy copyRegion{};
-		copyRegion.srcOffset = 0; // Optional
-		copyRegion.dstOffset = 0; // Optional
-		copyRegion.size = sizeof(vertices);
-		m_CommandBuffer.copyBuffer(stagingBuffer->GetBuffer(), m_Buffer->GetBuffer(), copyRegion);
-
-
-		m_CommandBuffer.end();
-
-		vk::SubmitInfo submitInfo;
-		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers = &m_CommandBuffer;
-		m_Device->GetGraphicsQueue().submit(1, &submitInfo, nullptr);
-
-		m_Device->GetGraphicsQueue().waitIdle();
+		m_GraphicsQueue->BeginTransfering();
+		m_GraphicsQueue->Transfer(stagingBuffer, m_Buffer, (void*)vertices.data(), sizeof(vertices));
+		m_GraphicsQueue->EndTransfering();
+		
 
 
 		delete stagingBuffer;
@@ -412,42 +365,15 @@ namespace Voidstar
 
 	void Renderer::RecordCommandBuffer(uint32_t imageIndex)
 	{
-		vk::CommandBufferBeginInfo beginInfo = {};
-
-	
-		m_CommandBuffer.begin(beginInfo);
-	
-
-		vk::RenderPassBeginInfo renderPassInfo = {};
-		auto swapChainExtent = m_Swapchain->GetExtent();
-		renderPassInfo.renderPass = m_RenderPass;
-		renderPassInfo.framebuffer = m_Swapchain->GetFrames()[imageIndex].framebuffer;
-		renderPassInfo.renderArea.offset.x = 0;
-		renderPassInfo.renderArea.offset.y = 0;
-		renderPassInfo.renderArea.extent = swapChainExtent;
-
-		vk::ClearValue clearColor = { std::array<float, 4>{0.1f, .3f, 0.1f, 1.0f} };
-		renderPassInfo.clearValueCount = 1;
-		renderPassInfo.pClearValues = &clearColor;
-
-		m_CommandBuffer.beginRenderPass(&renderPassInfo, vk::SubpassContents::eInline);
-
-
-		//m_CommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineLayout, 0, m_SwapchainFrames[imageIndex].descriptorSet, nullptr);
-
-		m_CommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PipelineLayout, 0, m_DescriptorSets[imageIndex], nullptr);
-		m_CommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_Pipeline);
-		vk::DeviceSize offsets[] = { 0 };
-		vk::Buffer vertexBuffers[] = { m_Buffer->GetBuffer()};
-		m_CommandBuffer.bindVertexBuffers(0, 1, vertexBuffers, offsets);
-		m_CommandBuffer.bindIndexBuffer(m_IndexBuffer->GetBuffer(),0, vk::IndexType::eUint32);
-		//m_CommandBuffer.draw(6, 1, 0, 0);
-		//m_CommandBuffer.draw(23, 1, 0, 0);
-		m_CommandBuffer.drawIndexed(6,1,0,0,0);
-
-		m_CommandBuffer.endRenderPass();
 		
-		m_CommandBuffer.end();
+		m_GraphicsQueue->BeginRenderPass(&m_RenderPass, &m_Swapchain->GetFrames()[imageIndex].framebuffer, &m_Swapchain->GetExtent());
+
+
+		m_GraphicsQueue->RecordCommand(m_Buffer, m_IndexBuffer, &m_Pipeline, &m_PipelineLayout, &m_DescriptorSets[imageIndex]);
+
+
+		m_GraphicsQueue->EndRenderPass();
+		
 	}
 	void Renderer::Render()	
 	{
@@ -459,28 +385,22 @@ namespace Voidstar
 		auto swapchain = m_Swapchain->GetSwapChain();
 		m_Device->GetDevice().acquireNextImageKHR(swapchain, UINT64_MAX, m_ImageAvailableSemaphore, nullptr, &imageIndex);
 		
-		m_CommandBuffer.reset();
+	
+		m_GraphicsQueue->BeginRendering();
+
 
 		UpdateUniformBuffer(imageIndex);
 
 		RecordCommandBuffer(imageIndex);
-
-		vk::SubmitInfo submitInfo = {};
-
 		vk::Semaphore waitSemaphores[] = { m_ImageAvailableSemaphore };
-		vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
-		submitInfo.waitSemaphoreCount = 1;
-		submitInfo.pWaitSemaphores = waitSemaphores;
-		submitInfo.pWaitDstStageMask = waitStages;
-
-		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers = &m_CommandBuffer;
-
 		vk::Semaphore signalSemaphores[] = { m_RenderFinishedSemaphore };
-		submitInfo.signalSemaphoreCount = 1;
-		submitInfo.pSignalSemaphores = signalSemaphores;
+		m_GraphicsQueue->Submit(waitSemaphores, signalSemaphores, &m_InFlightFence);
+		m_GraphicsQueue->EndRendering();
 
-		m_Device->GetGraphicsQueue().submit(submitInfo, m_InFlightFence);
+		
+
+		
+		
 
 		vk::PresentInfoKHR presentInfo = {};
 		presentInfo.waitSemaphoreCount = 1;
@@ -501,44 +421,7 @@ namespace Voidstar
 
 	}
 
-	void Renderer::CreateCommandBuffer()
-	{
-		vk::CommandBufferAllocateInfo allocInfo = {};
-		allocInfo.commandPool = m_CommandPool;
-		allocInfo.level = vk::CommandBufferLevel::ePrimary;
-		allocInfo.commandBufferCount = 1;
-
-
-
-		//Make a "main" command buffer for the engine
-		try 
-		{
-			 m_CommandBuffer = m_Device->GetDevice().allocateCommandBuffers(allocInfo)[0];
-		}
-		catch (vk::SystemError err)
-		{
-			Log::GetLog()->error("Failed to allocate  command buffer ");
-		}
-	}
-
-	void Renderer::CreateCommandPool()
-	{
-		
-
-		vk::CommandPoolCreateInfo poolInfo;
-		poolInfo.flags = vk::CommandPoolCreateFlags() | vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
-		poolInfo.queueFamilyIndex = m_Device->GetGraphicsIndex();
-		try 
-		{
-			m_CommandPool = m_Device->GetDevice().createCommandPool(poolInfo);
-			
-		}
-		catch (vk::SystemError err) 
-		{
-
-			Log::GetLog()->error("Failed to create Command Pool");
-		}
-	}
+	
 	void Renderer::CreateFramebuffers()
 	{
 		auto& frames = m_Swapchain->GetFrames();
@@ -884,6 +767,9 @@ namespace Voidstar
 		delete m_IndexBuffer;
 
 
+
+		m_GraphicsQueue.reset();
+
 		for (size_t i = 0; i < m_Swapchain->GetFramesCount(); i++) {
 			delete m_UniformBuffers[i];
 		}
@@ -897,7 +783,7 @@ namespace Voidstar
 		}
 	
 	
-		m_Device->GetDevice().destroyCommandPool(m_CommandPool);
+		
 		m_Device->GetDevice().destroySemaphore(m_ImageAvailableSemaphore);
 		m_Device->GetDevice().destroySemaphore(m_RenderFinishedSemaphore);
 		m_Device->GetDevice().destroyFence(m_InFlightFence);
