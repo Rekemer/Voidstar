@@ -15,13 +15,12 @@ namespace Voidstar
 	{
 	public:
 		Buffer(const BufferInputChunk& input);
+		static SPtr<Buffer> CreateStagingBuffer(size_t dataSize);
 		void AllocateBufferMemory(const BufferInputChunk& input, Device* device);
 		void SetData(void* data);
 		vk::Buffer& GetBuffer() { return m_Buffer; }
 		vk::DeviceMemory& GetMemory() { return m_BufferMemory; }
-		void Bind() const;
-		void Unbind() const;
-
+		
 		~Buffer();	
 	private:
 		uint32_t m_Size;

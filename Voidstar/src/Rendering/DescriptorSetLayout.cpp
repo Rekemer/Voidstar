@@ -25,7 +25,7 @@ namespace Voidstar
 			vk::DescriptorSetLayoutBinding layoutBinding;
 			layoutBinding.binding =0;
 			layoutBinding.descriptorType = specs.type;
-			layoutBinding.stageFlags = specs.flags;
+			layoutBinding.stageFlags = specs.stages;
 			layoutBinding.descriptorCount = 1;
 			layoutBindings.push_back(layoutBinding);
 		

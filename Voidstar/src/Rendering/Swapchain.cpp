@@ -4,6 +4,7 @@
 #include"Device.h"
 #include"../Log.h"
 #include"RenderContext.h"
+#include"Image.h"
 namespace Voidstar
 {
 	vk::SurfaceFormatKHR GetSurfaceFormat(vk::Format format, vk::ColorSpaceKHR colorSpace, SwapChainSupportDetails& support);
@@ -92,22 +93,10 @@ namespace Voidstar
 				, subresourceRange( subresourceRange_ )
 			*/
 
-			vk::ImageViewCreateInfo createInfo = {};
-			createInfo.image = images[i];
-			createInfo.viewType = vk::ImageViewType::e2D;
-			createInfo.format = format.format;
-			createInfo.components.r = vk::ComponentSwizzle::eIdentity;
-			createInfo.components.g = vk::ComponentSwizzle::eIdentity;
-			createInfo.components.b = vk::ComponentSwizzle::eIdentity;
-			createInfo.components.a = vk::ComponentSwizzle::eIdentity;
-			createInfo.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-			createInfo.subresourceRange.baseMipLevel = 0;
-			createInfo.subresourceRange.levelCount = 1;
-			createInfo.subresourceRange.baseArrayLayer = 0;
-			createInfo.subresourceRange.layerCount = 1;
+		
 
 			swapchain->m_SwapchainFrames[i].image = images[i];
-			swapchain->m_SwapchainFrames[i].imageView = device->GetDevice().createImageView(createInfo);
+			swapchain->m_SwapchainFrames[i].imageView = Image::CreateImageView(images[i], format.format);
 		}
 
 		swapchain->m_SwapchainFormat = format.format;

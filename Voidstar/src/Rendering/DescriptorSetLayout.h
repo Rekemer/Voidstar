@@ -5,7 +5,7 @@ namespace Voidstar
 	struct DescrriptorSetLayoutSpec
 	{
 		vk::DescriptorType type;
-		vk::ShaderStageFlags flags;
+		vk::ShaderStageFlags stages;
 	};
 	class DescriptorSetLayout
 	{

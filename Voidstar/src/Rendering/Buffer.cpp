@@ -91,6 +91,16 @@ namespace Voidstar
 
 		AllocateBufferMemory(input,device);
 	}
+	SPtr<Buffer> Buffer::CreateStagingBuffer(size_t dataSize)
+	{
+		BufferInputChunk inputBuffer;
+		inputBuffer.size = dataSize;
+		inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+		inputBuffer.usage = vk::BufferUsageFlagBits::eTransferSrc;
+
+		SPtr<Buffer> buffer =CreateSPtr<Buffer>(inputBuffer);
+		return buffer;
+	}
 	Buffer::~Buffer()
 	{
 		auto& device = RenderContext::GetDevice()->GetDevice();

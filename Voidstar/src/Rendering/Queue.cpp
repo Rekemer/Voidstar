@@ -3,6 +3,7 @@
 #include"RenderContext.h"
 #include"Device.h"
 #include"Buffer.h"
+#include"IndexBuffer.h"
 #include"Log.h"
 namespace Voidstar
 {
@@ -67,17 +68,17 @@ namespace Voidstar
 		m_CommandBuffer.beginRenderPass(&renderPassInfo, vk::SubpassContents::eInline);
 	}
 
-	void Queue::RecordCommand(Buffer* vertexBuffer, Buffer* indexBuffer, vk::Pipeline* m_Pipeline, vk::PipelineLayout* m_PipelineLayout, vk::DescriptorSet* descriptorSet)
+	void Queue::RecordCommand(Buffer* vertexBuffer, IndexBuffer* indexBuffer, vk::Pipeline* m_Pipeline, vk::PipelineLayout* m_PipelineLayout, vk::DescriptorSet* descriptorSet, vk::DescriptorSet* descriptorSetTex)
 	{
 		m_CommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_PipelineLayout, 0, *descriptorSet, nullptr);
+		m_CommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_PipelineLayout, 1, *descriptorSetTex, nullptr);
 		m_CommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *m_Pipeline);
 		vk::DeviceSize offsets[] = { 0 };
 		vk::Buffer vertexBuffers[] = { vertexBuffer->GetBuffer() };
 		m_CommandBuffer.bindVertexBuffers(0, 1, vertexBuffers, offsets);
-		m_CommandBuffer.bindIndexBuffer(indexBuffer->GetBuffer(), 0, vk::IndexType::eUint32);
-		//m_CommandBuffer.draw(6, 1, 0, 0);
-		//m_CommandBuffer.draw(23, 1, 0, 0);
-		m_CommandBuffer.drawIndexed(6, 1, 0, 0, 0);
+		m_CommandBuffer.bindIndexBuffer(indexBuffer->GetBuffer(), 0, indexBuffer->GetIndexType());
+		auto amount = indexBuffer->GetIndexAmount();
+		m_CommandBuffer.drawIndexed(static_cast<uint32_t>(amount), 1, 0, 0, 0);
 	}
 
 	void Queue::EndRenderPass()
@@ -137,6 +138,95 @@ namespace Voidstar
 		copyRegion.size = dataSize;
 		m_CommandBuffer.copyBuffer(src->GetBuffer(), target->GetBuffer(), copyRegion);
 
+	}
+	void Queue::ChangeImageLayout(vk::Image* image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout)
+	{
+
+
+		/*
+			typedef struct VkImageSubresourceRange {
+			VkImageAspectFlags    aspectMask;
+			uint32_t              baseMipLevel;
+			uint32_t              levelCount;
+			uint32_t              baseArrayLayer;
+			uint32_t              layerCount;
+		} VkImageSubresourceRange;
+		*/
+			vk::ImageSubresourceRange access;
+		access.aspectMask = vk::ImageAspectFlagBits::eColor;
+		access.baseMipLevel = 0;
+		access.levelCount = 1;
+		access.baseArrayLayer = 0;
+		access.layerCount = 1;
+
+		/*
+		typedef struct VkImageMemoryBarrier {
+			VkStructureType            sType;
+			const void* pNext;
+			VkAccessFlags              srcAccessMask;
+			VkAccessFlags              dstAccessMask;
+			VkImageLayout              oldLayout;
+			VkImageLayout              newLayout;
+			uint32_t                   srcQueueFamilyIndex;
+			uint32_t                   dstQueueFamilyIndex;
+			VkImage                    image;
+			VkImageSubresourceRange    subresourceRange;
+		} VkImageMemoryBarrier;
+		*/
+		vk::ImageMemoryBarrier barrier;
+		barrier.oldLayout = oldLayout;
+		barrier.newLayout = newLayout;
+		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.image = *image;
+		barrier.subresourceRange = access;
+
+		vk::PipelineStageFlags sourceStage, destinationStage;
+
+		if (oldLayout == vk::ImageLayout::eUndefined
+			&& newLayout == vk::ImageLayout::eTransferDstOptimal) {
+
+			barrier.srcAccessMask = vk::AccessFlagBits::eNoneKHR;
+			barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+
+			sourceStage = vk::PipelineStageFlagBits::eTopOfPipe;
+			destinationStage = vk::PipelineStageFlagBits::eTransfer;
+		}
+		else {
+
+			barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+			barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+
+			sourceStage = vk::PipelineStageFlagBits::eTransfer;
+			destinationStage = vk::PipelineStageFlagBits::eFragmentShader;
+		}
+
+		m_CommandBuffer.pipelineBarrier(sourceStage, destinationStage, vk::DependencyFlags(), nullptr, nullptr, barrier);
+	}
+	void Queue::CopyBufferToImage(Buffer* buffer, vk::Image* image, int width, int height)
+	{
+		vk::BufferImageCopy copy;
+		copy.bufferOffset = 0;
+		copy.bufferRowLength = 0;
+		copy.bufferImageHeight = 0;
+
+		vk::ImageSubresourceLayers access;
+		access.aspectMask = vk::ImageAspectFlagBits::eColor;
+		access.mipLevel = 0;
+		access.baseArrayLayer = 0;
+		access.layerCount = 1;
+		copy.imageSubresource = access;
+
+		copy.imageOffset = vk::Offset3D(0, 0, 0);
+		copy.imageExtent = vk::Extent3D(
+			width,
+			height,
+			1.0f
+		);
+
+		m_CommandBuffer.copyBufferToImage(
+			buffer->GetBuffer(), *image, vk::ImageLayout::eTransferDstOptimal, copy
+		);
 	}
 	void Queue::EndTransfering()
 	{

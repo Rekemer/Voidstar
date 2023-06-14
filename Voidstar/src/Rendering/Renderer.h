@@ -13,6 +13,8 @@ namespace Voidstar
 	class Buffer;
 	class Camera;
 	class Application;
+	class Image;
+	class DescriptorPool;
 
 
 
@@ -31,7 +33,7 @@ namespace Voidstar
 		vk::Extent2D swapchainExtent;
 		vk::Format swapchainImageFormat;
 		vk::VertexInputBindingDescription bindingDescription;
-		std::array<vk::VertexInputAttributeDescription, 2>  attributeDescription;
+		std::array<vk::VertexInputAttributeDescription, 3>  attributeDescription;
 		std::vector<vk::DescriptorSetLayout> descriptorSetLayout;
 	};
 
@@ -56,13 +58,10 @@ namespace Voidstar
 		void CreateDebugMessenger();
 		void CreateSurface();
 		void CreateDevice();
-		void CreateSwapchain();
 		void CreatePipeline();
 		void CreateFramebuffers();
 		GraphicsPipeline CreatePipeline(GraphicsPipelineSpecification& spec);
 		void DestroySwapchain();
-		void CreateCommandPool();
-		void CreateCommandBuffer();
 		void CreateSyncObjects();
 		
 		void RecordCommandBuffer(uint32_t imageIndex);
@@ -75,17 +74,26 @@ namespace Voidstar
 		Device* m_Device;
 		Swapchain* m_Swapchain;
 		Buffer* m_Buffer;
-		Buffer* m_IndexBuffer;
+		IndexBuffer* m_IndexBuffer;
 		Application* m_App;
 		
+		SPtr<Image> m_Image;
+		SPtr<Image> m_DepthImage;
+		SPtr<DescriptorPool> m_DescriptorPool;
+
 		// can be in one buffer?
 		std::vector<Buffer*> m_UniformBuffers;
 		std::vector<void*> uniformBuffersMapped;
 		
 		DescriptorSetLayout* m_DescriptorSetLayout;
+		DescriptorSetLayout* m_DescriptorSetLayoutTex;
 		std::vector<vk::DescriptorSetLayout> m_DescriptorSetLayouts;
-		vk::DescriptorPool m_DescriptorPool;
 		std::vector<vk::DescriptorSet> m_DescriptorSets;
+
+
+		SPtr<DescriptorPool> m_DescriptorPoolTex;
+		vk::DescriptorSet m_DescriptorSetTex;
+
 
 		//debug callback
 		vk::DebugUtilsMessengerEXT m_DebugMessenger;

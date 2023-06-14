@@ -139,4 +139,32 @@ namespace Voidstar
 		device->m_PresentQueue = device->m_Device.getQueue(presentFamily, 0);
 		return device;
 	}
+	uint32_t Device::FindMemoryTypeIndex( uint32_t supportedMemoryIndices, vk::MemoryPropertyFlags requestedProperties)
+	{
+		/*
+		* // Provided by VK_VERSION_1_0
+		typedef struct VkPhysicalDeviceMemoryProperties {
+			uint32_t        memoryTypeCount;
+			VkMemoryType    memoryTypes[VK_MAX_MEMORY_TYPES];
+			uint32_t        memoryHeapCount;
+			VkMemoryHeap    memoryHeaps[VK_MAX_MEMORY_HEAPS];
+		} VkPhysicalDeviceMemoryProperties;
+		*/
+		vk::PhysicalDeviceMemoryProperties memoryProperties = m_PhysicalDevice.getMemoryProperties();
+
+		for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; i++) {
+
+			//bit i of supportedMemoryIndices is set if that memory type is supported by the device
+			bool supported{ static_cast<bool>(supportedMemoryIndices & (1 << i)) };
+
+			//propertyFlags holds all the memory properties supported by this memory type
+			bool sufficient{ (memoryProperties.memoryTypes[i].propertyFlags & requestedProperties) == requestedProperties };
+
+			if (supported && sufficient) {
+				return i;
+			}
+		}
+
+		return 0;
+	}
 }

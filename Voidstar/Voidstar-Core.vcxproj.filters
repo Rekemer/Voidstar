@@ -25,7 +25,6 @@
     <ClInclude Include="src\Rendering\SupportStruct.h" />
     <ClInclude Include="src\Rendering\Vertex.h" />
     <ClInclude Include="src\Rendering\Buffer.h" />
-    <ClInclude Include="src\Rendering\VertexBufferLayout.h" />
     <ClInclude Include="src\Rendering\DescriptorSetLayout.h" />
     <ClInclude Include="src\Rendering\RenderContext.h" />
     <ClInclude Include="src\Rendering\Camera.h" />
@@ -33,6 +32,10 @@
     <ClInclude Include="src\Keys.h" />
     <ClInclude Include="src\Rendering\Queue.h" />
     <ClInclude Include="src\Types.h" />
+    <ClInclude Include="src\Rendering\Image.h" />
+    <ClInclude Include="vendor\stb_image.h" />
+    <ClInclude Include="src\Rendering\DescriptorPool.h" />
+    <ClInclude Include="src\Rendering\IndexBuffer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Application.cpp" />
@@ -50,11 +53,12 @@
     <ClCompile Include="src\Window.cpp" />
     <ClCompile Include="src\Rendering\Swapchain.cpp" />
     <ClCompile Include="src\Rendering\Buffer.cpp" />
-    <ClCompile Include="src\Rendering\VertexBufferLayout.cpp" />
     <ClCompile Include="src\Rendering\DescriptorSetLayout.cpp" />
     <ClCompile Include="src\Rendering\RenderContext.cpp" />
     <ClCompile Include="src\Rendering\Camera.cpp" />
     <ClCompile Include="src\Input.cpp" />
     <ClCompile Include="src\Rendering\Queue.cpp" />
+    <ClCompile Include="src\Rendering\Image.cpp" />
+    <ClCompile Include="src\Rendering\DescriptorPool.cpp" />
   </ItemGroup>
 </Project>

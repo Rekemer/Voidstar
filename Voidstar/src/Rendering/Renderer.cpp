@@ -11,9 +11,12 @@
 #include "SupportStruct.h"
 #include "Vertex.h"
 #include "Buffer.h"
+#include "IndexBuffer.h"
 #include "RenderContext.h"
 #include "DescriptorSetLayout.h"
 #include "Camera.h"
+#include "Image.h"
+#include "DescriptorPool.h"
 #include "../Application.h"
 
 namespace Voidstar
@@ -49,20 +52,57 @@ namespace Voidstar
 		//Vertex{ {0.5f, 0.5f,0.},{0.0f, 0.0f, 1.0f,1.0f} };
 		//Vertex{ {-0.5f, 0.5f,0.},{1.0f, 1.0f, 1.0f,1.0f } };
 
-		constexpr size_t VertexCount = 4;
+		constexpr size_t VertexCount = 8;
 
 		std::array<Vertex, VertexCount> vertices;
 		
-		vertices[0] = { -0.5f, -0.5f, 1.0f,1.0,1.0,1.0,1.0 };
-		vertices[1] = { 0.5f, -0.5f, 1.0f,1.0,1.0,1.0,1.0 };
-		vertices[2] = { 0.5f, 0.5f, 1.0f,1.0,1.0,1.0,1.0 };
+		/*vertices[0] = { -1, -1, -1,
+						1.0,1.0,1.0,1.0,
+						0.0,1.0};
+		vertices[1] = { 1, -1, -1,
+						1.0,1.0,1.0,1.0, 
+						1.0,1.0 };
+		vertices[2] = { 1, 1, -1,
+						1.0,1.0,1.0,1.0,
+						1.0,0.0 };
 
-		vertices[3] = { -0.5f, 0.5f, 1.0f ,1.0,1.0,1.0,1.0 };
-		//vertices[4] = { 1.0f, 1.0f, 1.0f ,1.0,1.0,1.0,1.0 };
-		//vertices[5] = { -1.0f, 1.0f, 1.0f ,1.0,1.0,1.0,1.0 };
+		vertices[3] = { -1, 1, -1 ,
+						1.0,1.0,1.0,1.0,
+						0.0,0.0 };
+		vertices[4] = { -1, -1, 1
+						,1.0,1.0,1.0,1.0,
+						0.0,0.0 };
+		vertices[5] = { 1, -1, 1 ,
+						1.0,1.0,1.0,1.0,
+						0.0,0.0 };
+		vertices[6] = { 1, 1, 1 ,
+						1.0,1.0,1.0,1.0,
+						0.0,0.0 };
+		vertices[7] = { -1, 1, 1 ,
+						1.0,1.0,1.0,1.0,
+						0.0,0.0 };*/
+		vertices[0] = { -1, -1, -1, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0 };
+		vertices[1] = { 1, -1, -1, 0.0, 1.0, 0.0, 1.0, 1.0, 1.0 };
+		vertices[2] = { 1, 1, -1, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0 };
+		vertices[3] = { -1, 1, -1, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0 };
+		vertices[4] = { -1, -1, 1, 1.0, 0.0, 1.0, 1.0, 0.0, 0.0 };
+		vertices[5] = { 1, -1, 1, 0.0, 1.0, 1.0, 1.0, 0.0, 0.0 };
+		vertices[6] = { 1, 1, 1, 0.5, 0.5, 0.5, 1.0, 0.0, 0.0 };
+		vertices[7] = { -1, 1, 1, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0 };
+
+		//const std::vector<uint32_t> indices =
+		//{
+		//0, 1, 2, 2, 3, 0
+		//};
+
 		const std::vector<uint32_t> indices =
 		{
-		0, 1, 2, 2, 3, 0
+			0, 1, 3, 3, 1, 2,
+			1, 5, 2, 2, 5, 6,
+			5, 4, 6, 6, 4, 7,
+			4, 0, 7, 7, 0, 3,
+			3, 2, 7, 7, 2, 6,
+			4, 5, 0, 0, 5, 1
 		};
 
 		
@@ -138,7 +178,7 @@ namespace Voidstar
 		// create uniform buffers for each frame
 		DescrriptorSetLayoutSpec inputLayout;
 		inputLayout.type = vk::DescriptorType::eUniformBuffer;
-		inputLayout.flags = vk::ShaderStageFlagBits::eVertex;
+		inputLayout.stages = vk::ShaderStageFlagBits::eVertex;
 		
 		m_DescriptorSetLayout = DescriptorSetLayout::Create(inputLayout);
 
@@ -160,73 +200,25 @@ namespace Voidstar
 	
 		}
 
-		vk::DescriptorPoolSize poolSize{};
-		poolSize.type = vk::DescriptorType::eUniformBuffer;
-		poolSize.descriptorCount = static_cast<uint32_t>(m_Swapchain->GetFramesCount());
-		
-		vk::DescriptorPoolCreateInfo poolInfo{};
-		poolInfo.sType = vk::StructureType::eDescriptorPoolCreateInfo;
-		poolInfo.poolSizeCount = 1;
-		poolInfo.pPoolSizes = &poolSize;
-		poolInfo.maxSets = m_Swapchain->GetFramesCount();
 
-		try
-		{
-			m_DescriptorPool = m_Device->GetDevice().createDescriptorPool(poolInfo);
-		}
-		catch (vk::SystemError err)
-		{
-			Log::GetLog()->error("failed to create descriptorPool");
-		}
+		m_DescriptorPool = DescriptorPool::Create(vk::DescriptorType::eUniformBuffer, static_cast<uint32_t>(m_Swapchain->GetFramesCount()), m_Swapchain->GetFramesCount());
+		
 
 		std::vector<vk::DescriptorSetLayout> layouts(m_Swapchain->GetFramesCount(), m_DescriptorSetLayout->GetLayout());
 
-		//for (int i = 0; i < m_Swapchain->GetFramesCount(); i++)
-		//{
-			vk::DescriptorSetAllocateInfo allocationInfo;
-			/*
-				typedef struct VkDescriptorSetAllocateInfo {
-					VkStructureType                 sType;
-					const void*                     pNext;
-					VkDescriptorPool                descriptorPool;
-					uint32_t                        descriptorSetCount;
-					const VkDescriptorSetLayout*    pSetLayouts;
-				} VkDescriptorSetAllocateInfo;
-			*/
-
-			allocationInfo.descriptorPool = m_DescriptorPool;
-			allocationInfo.descriptorSetCount = m_Swapchain->GetFramesCount();
-			allocationInfo.pSetLayouts = layouts.data();
-
-			//m_DescriptorSets.resize(m_Swapchain->GetFramesCount());
+		
+			m_DescriptorSets =  m_DescriptorPool->AllocateDescriptorSets(m_Swapchain->GetFramesCount(), layouts.data());
 			
-			try 
-			{
-				m_DescriptorSets = m_Device->GetDevice().allocateDescriptorSets(allocationInfo);
-			}
-			catch (vk::SystemError err)
-			{	
-				Log::GetLog()->error("Failed to allocate descriptor set from pool");
-			}	
-		//}
+
+			
+		
+			
+
 
 		for (int i = 0; i < m_Swapchain->GetFramesCount(); i++)
 		{
 			vk::WriteDescriptorSet writeInfo;
-			/*
-			typedef struct VkWriteDescriptorSet {
-				VkStructureType                  sType;
-				const void* pNext;
-				VkDescriptorSet                  dstSet;
-				uint32_t                         dstBinding;
-				uint32_t                         dstArrayElement;
-				uint32_t                         descriptorCount;
-				VkDescriptorType                 descriptorType;
-				const VkDescriptorImageInfo* pImageInfo;
-				const VkDescriptorBufferInfo* pBufferInfo;
-				const VkBufferView* pTexelBufferView;
-			} VkWriteDescriptorSet;
-			*/
+			
 			vk::DescriptorBufferInfo bufferInfo{};
 			bufferInfo.buffer = m_UniformBuffers[i]->GetBuffer();
 			bufferInfo.offset = 0;
@@ -242,62 +234,70 @@ namespace Voidstar
 			m_Device->GetDevice().updateDescriptorSets(writeInfo, nullptr);
 		}
 		
-		
-		CreatePipeline();
-		m_GraphicsQueue = CreateUPtr<Queue>();
-
-		CreateFramebuffers();
-		m_GraphicsQueue->CreateCommandPool();
-		m_GraphicsQueue->CreateCommandBuffer();
-		CreateSyncObjects();
 
 		{
-			Buffer* stagingBuffer;
+
+
+			m_DescriptorPoolTex = DescriptorPool::Create(vk::DescriptorType::eCombinedImageSampler,1,1);
+
+			std::vector<vk::DescriptorSetLayout> layoutBindings;
+			layoutBindings.resize(1);
+			
+			DescrriptorSetLayoutSpec layout;
+			layout.type = vk::DescriptorType::eCombinedImageSampler;
+			layout.stages = vk::ShaderStageFlagBits::eFragment;
+
+			m_DescriptorSetLayoutTex = DescriptorSetLayout::Create(layout);
+
+			layoutBindings[0] = m_DescriptorSetLayoutTex->GetLayout();
+
+			m_DescriptorSetTex = m_DescriptorPoolTex->AllocateDescriptorSets(1, layoutBindings.data())[0];
+		}
+
+		m_GraphicsQueue = CreateUPtr<Queue>();
+		m_GraphicsQueue->CreateCommandPool();
+		m_GraphicsQueue->CreateCommandBuffer();
+		RenderContext::SetGraphicsQueue(m_GraphicsQueue.get());
+		CreateSyncObjects();
+
+		m_Image = Image::CreateImage("res/coffee.jpg", m_DescriptorSetTex);
+
+
+
+
+
+
+		CreatePipeline();
+		CreateFramebuffers();
+		
+		auto indexSize = indices.size() * sizeof(indices[0]);
+		{
+			SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(indexSize);
+		
+
 			{
-
 				BufferInputChunk inputBuffer;
-				inputBuffer.size = sizeof(indices);
-				inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
-				inputBuffer.usage = vk::BufferUsageFlagBits::eTransferSrc;
-
-				stagingBuffer = new Buffer(inputBuffer);
-			}
-
-			{
-				BufferInputChunk inputBuffer;
-				inputBuffer.size = sizeof(indices);
+				inputBuffer.size = indexSize;
 				inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
 				inputBuffer.usage = vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst;
-				m_IndexBuffer = new Buffer(inputBuffer);
+				m_IndexBuffer = new IndexBuffer(inputBuffer, indices.size(),vk::IndexType::eUint32);
 
 			}
 
 			m_GraphicsQueue->BeginTransfering();
-			m_GraphicsQueue->Transfer(stagingBuffer,m_IndexBuffer, (void*)indices.data(),sizeof(indices));
+			m_GraphicsQueue->Transfer(stagingBuffer.get(), m_IndexBuffer, (void*)indices.data(), indexSize);
 			m_GraphicsQueue->EndTransfering();
 			
-
+		
 			
-			delete stagingBuffer;
 		}
 
-
+		auto vertexSize = vertices.size() * sizeof(Vertex);
 		void* vertexData = const_cast<void*>(static_cast<const void*>(vertices.data()));
-		//m_Buffer->SetData(vertexData);
-		Buffer* stagingBuffer;
-		{
-
-			BufferInputChunk inputBuffer;
-			inputBuffer.size = sizeof(vertices);
-			inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
-			inputBuffer.usage = vk::BufferUsageFlagBits::eTransferSrc;
-
-			stagingBuffer = new Buffer(inputBuffer);
-		}
-
+		SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(vertexSize);
 		{
 			BufferInputChunk inputBuffer;
-			inputBuffer.size = sizeof(vertices);
+			inputBuffer.size = vertexSize;
 			inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
 			inputBuffer.usage = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer;
 
@@ -305,12 +305,14 @@ namespace Voidstar
 		}
 
 		m_GraphicsQueue->BeginTransfering();
-		m_GraphicsQueue->Transfer(stagingBuffer, m_Buffer, (void*)vertices.data(), sizeof(vertices));
+		m_GraphicsQueue->Transfer(stagingBuffer.get(), m_Buffer, (void*)vertices.data(), vertexSize);
 		m_GraphicsQueue->EndTransfering();
 		
 
 
-		delete stagingBuffer;
+
+		
+
 
 	}
 
@@ -369,8 +371,8 @@ namespace Voidstar
 		m_GraphicsQueue->BeginRenderPass(&m_RenderPass, &m_Swapchain->GetFrames()[imageIndex].framebuffer, &m_Swapchain->GetExtent());
 
 
-		m_GraphicsQueue->RecordCommand(m_Buffer, m_IndexBuffer, &m_Pipeline, &m_PipelineLayout, &m_DescriptorSets[imageIndex]);
-
+		m_GraphicsQueue->RecordCommand(m_Buffer, m_IndexBuffer, &m_Pipeline, &m_PipelineLayout, &m_DescriptorSets[imageIndex],&m_DescriptorSetTex);
+			
 
 		m_GraphicsQueue->EndRenderPass();
 		
@@ -467,7 +469,7 @@ namespace Voidstar
 		specs.bindingDescription = Vertex::GetBindingDescription();
 		specs.attributeDescription = Vertex::GetAttributeDescriptions();
 
-		m_DescriptorSetLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout() };
+		m_DescriptorSetLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutTex->GetLayout()};
 
 		specs.descriptorSetLayout = m_DescriptorSetLayouts;
 		auto pipline = CreatePipeline(specs);
@@ -765,6 +767,7 @@ namespace Voidstar
 		
 		delete m_Buffer;
 		delete m_IndexBuffer;
+		m_Image.reset();
 
 
 
@@ -775,7 +778,11 @@ namespace Voidstar
 		}
 		
 		delete m_DescriptorSetLayout;
-		m_Device->GetDevice().destroyDescriptorPool(m_DescriptorPool);
+		delete m_DescriptorSetLayoutTex;
+		m_DescriptorPool.reset();
+		m_DescriptorPoolTex.reset();
+		
+	
 
 		for (int i = 0; i < m_DescriptorSetLayouts.size(); i++)
 		{
@@ -806,11 +813,6 @@ namespace Voidstar
 	
 	
 
-	void Renderer::CreateSwapchain()
-	{
-
-		
-	}
 
 	
 	void Renderer::CreateSurface()

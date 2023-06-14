@@ -2,6 +2,11 @@
 
 layout(location = 0) out vec4  outColor;
 
+layout(location = 0) in vec2 uv ;
+layout(location = 1) in vec4 color;
+layout(set = 1, binding = 0) uniform sampler2D u_Tex;
+
+
 vec4 random_color(vec4 st)
 {
 	float dotProduct1 = dot(st, vec4(127.1, 311.7, 23423.1, 98.2));
@@ -15,8 +20,12 @@ vec4 random_color(vec4 st)
     return fract(multiplied);
 }
 
+
 void main() 
 {
-	outColor = random_color(vec4(1,1,1,1));
+	//outColor = random_color(vec4(1,1,1,1));
 	outColor.a = 1;
+    outColor.xyz=color.xyz;
+    //outColor = vec4(uv.x,uv.y,0,1);
+    //outColor = texture(u_Tex, uv);
 }

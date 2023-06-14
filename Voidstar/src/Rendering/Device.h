@@ -13,6 +13,7 @@ namespace Voidstar
 		size_t GetGraphicsIndex() { return m_GraphicFamily; }
 		vk::Queue& GetPresentQueue() { return m_PresentQueue;}
 		size_t GetPresentsIndex() { return m_PresentFamily; }
+		uint32_t FindMemoryTypeIndex (uint32_t supportedMemoryIndices, vk::MemoryPropertyFlags requestedProperties);
 	private:
 		vk::PhysicalDevice m_PhysicalDevice = VK_NULL_HANDLE;
 		vk::Device m_Device = VK_NULL_HANDLE;

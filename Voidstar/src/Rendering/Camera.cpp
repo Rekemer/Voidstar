@@ -18,6 +18,8 @@ namespace Voidstar
     void Camera::UpdateProj(float width, float height)
     {
         m_Proj = glm::perspective(glm::radians(45.0f), width / height, 0.0001f, 100.0f);
+        m_Proj[1][1] *= -1;
+
     }
 
     std::ostream& operator<<(std::ostream& os, const glm::vec3& vec)
@@ -76,7 +78,9 @@ namespace Voidstar
         double currentYPos = std::get<1>(position);
         float xoffset = currentXPos - lastX;
         float yoffset = currentYPos - lastY;
-       // yoffset *= -1;    
+
+        // because up is negative in vulkan
+        yoffset *= -1;    
         lastX = currentXPos;
         lastY = currentYPos;
         glm::vec3 direction;
