@@ -431,7 +431,8 @@ namespace Voidstar
 		for (int i = 0; i < frames.size(); ++i) {
 
 			std::vector<vk::ImageView> attachments = {
-				frames[i].imageView
+				frames[i].imageView,
+				frames[i].imageDepthView,
 			};
 
 			vk::FramebufferCreateInfo framebufferInfo;
@@ -514,7 +515,7 @@ namespace Voidstar
 		}
 	}
 
-	vk::RenderPass MakeRenderPass(vk::Device device, vk::Format swapchainImageFormat) {
+	vk::RenderPass MakeRenderPass(vk::Device device, vk::Format swapchainImageFormat, vk::Format depthFormat) {
 
 		//Define a general attachment, with its load/store operations
 		vk::AttachmentDescription colorAttachment = {};
@@ -533,30 +534,49 @@ namespace Voidstar
 		colorAttachmentRef.attachment = 0;
 		colorAttachmentRef.layout = vk::ImageLayout::eColorAttachmentOptimal;
 
+
+		vk::AttachmentDescription depthAttachment = {};
+		depthAttachment.flags = vk::AttachmentDescriptionFlags();
+		depthAttachment.format = depthFormat;
+		depthAttachment.samples = vk::SampleCountFlagBits::e1;
+		depthAttachment.loadOp = vk::AttachmentLoadOp::eClear;
+		depthAttachment.storeOp = vk::AttachmentStoreOp::eStore;
+		depthAttachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
+		depthAttachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
+		depthAttachment.initialLayout = vk::ImageLayout::eUndefined;
+		depthAttachment.finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+
+		vk::AttachmentReference depthAttachmentRef = {};
+		depthAttachmentRef.attachment = 1;
+		depthAttachmentRef.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+
 		//Renderpasses are broken down into subpasses, there's always at least one.
 		vk::SubpassDescription subpass = {};
 		subpass.flags = vk::SubpassDescriptionFlags();
 		subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
 		subpass.colorAttachmentCount = 1;
 		subpass.pColorAttachments = &colorAttachmentRef;
+		subpass.pDepthStencilAttachment= &depthAttachmentRef;
 
 
 		vk::SubpassDependency dependency{};
 		dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
 		dependency.dstSubpass = 0;
 		// define order of subpasses?
-		dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+		dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests;
 		dependency.srcAccessMask = vk::AccessFlagBits::eNone;
 		// define rights of subpasses?
-		dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-		dependency.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
+		dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput| vk::PipelineStageFlagBits::eEarlyFragmentTests;
+		dependency.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
 
 		//Now create the renderpass
 		vk::RenderPassCreateInfo renderpassInfo = {};
+
+		std::vector<vk::AttachmentDescription> attachments = { colorAttachment ,depthAttachment };
 		// to be able to map NDC to screen coordinates - Viewport ans Scissors Transform
 		renderpassInfo.flags = vk::RenderPassCreateFlags();
-		renderpassInfo.attachmentCount = 1;
-		renderpassInfo.pAttachments = &colorAttachment;
+		renderpassInfo.attachmentCount = attachments.size();
+		renderpassInfo.pAttachments = attachments.data();
 		renderpassInfo.subpassCount = 1;
 		renderpassInfo.pSubpasses = &subpass;
 		renderpassInfo.dependencyCount = 1;
@@ -685,6 +705,17 @@ namespace Voidstar
 		pipelineInfo.stageCount = shaderStages.size();
 		pipelineInfo.pStages = shaderStages.data();
 
+
+
+		vk::PipelineDepthStencilStateCreateInfo depthState;
+		depthState.flags = vk::PipelineDepthStencilStateCreateFlags();
+		depthState.depthTestEnable = true;
+		depthState.depthWriteEnable = true;
+		depthState.depthCompareOp = vk::CompareOp::eLess;
+		depthState.depthBoundsTestEnable = false;
+		depthState.stencilTestEnable = false;
+		pipelineInfo.pDepthStencilState = &depthState;
+
 		//Multisampling
 		vk::PipelineMultisampleStateCreateInfo multisampling = {};
 		multisampling.flags = vk::PipelineMultisampleStateCreateFlags();
@@ -720,9 +751,12 @@ namespace Voidstar
 		vk::PipelineLayout m_pipelineLayout = MakePipelineLayout(spec.device, spec.descriptorSetLayout);
 		pipelineInfo.layout = m_pipelineLayout;
 
+
+
+
 		//Renderpass
 		
-		vk::RenderPass renderpass = MakeRenderPass(spec.device, spec.swapchainImageFormat);
+		vk::RenderPass renderpass = MakeRenderPass(spec.device, spec.swapchainImageFormat,m_Swapchain->GetFrames()[0].depthFormat);
 		pipelineInfo.renderPass = renderpass;
 		pipelineInfo.subpass = 0;
 

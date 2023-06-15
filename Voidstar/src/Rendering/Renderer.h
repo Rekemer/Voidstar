@@ -78,7 +78,8 @@ namespace Voidstar
 		Application* m_App;
 		
 		SPtr<Image> m_Image;
-		SPtr<Image> m_DepthImage;
+
+
 		SPtr<DescriptorPool> m_DescriptorPool;
 
 		// can be in one buffer?

@@ -6,6 +6,12 @@ namespace Voidstar
 	struct SwapChainFrame {
 		vk::Image image;
 		vk::ImageView imageView;
+
+		VkDeviceMemory depthImageMemory;
+		vk::Image imageDepth;
+		vk::ImageView imageDepthView;
+		vk::Format depthFormat;
+		
 		vk::Framebuffer framebuffer;
 	};
 

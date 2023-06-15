@@ -62,8 +62,14 @@ namespace Voidstar
 		renderPassInfo.renderArea.extent = swapChainExtent;
 
 		vk::ClearValue clearColor = { std::array<float, 4>{0.1f, .3f, 0.1f, 1.0f} };
-		renderPassInfo.clearValueCount = 1;
-		renderPassInfo.pClearValues = &clearColor;
+
+		vk::ClearValue depthClear;
+
+		depthClear.depthStencil = vk::ClearDepthStencilValue({ 1.0f, 0 });
+		std::vector<vk::ClearValue> clearValues = { {clearColor, depthClear} };
+
+		renderPassInfo.clearValueCount = clearValues.size();
+		renderPassInfo.pClearValues = clearValues.data();
 
 		m_CommandBuffer.beginRenderPass(&renderPassInfo, vk::SubpassContents::eInline);
 	}

@@ -9,7 +9,7 @@
 #include "Queue.h"
 namespace Voidstar
 {
-	VkImageView Image::CreateImageView(vk::Image& image, vk::Format format)
+	VkImageView Image::CreateImageView(vk::Image& image, vk::Format format, vk::ImageAspectFlags aspect)
 	{
 		vk::ImageViewCreateInfo createInfo = {};
 		createInfo.image = image;
@@ -19,13 +19,47 @@ namespace Voidstar
 		createInfo.components.g = vk::ComponentSwizzle::eIdentity;
 		createInfo.components.b = vk::ComponentSwizzle::eIdentity;
 		createInfo.components.a = vk::ComponentSwizzle::eIdentity;
-		createInfo.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+		createInfo.subresourceRange.aspectMask = aspect;
 		createInfo.subresourceRange.baseMipLevel = 0;
 		createInfo.subresourceRange.levelCount = 1;
 		createInfo.subresourceRange.baseArrayLayer = 0;
 		createInfo.subresourceRange.layerCount = 1;
+
 		auto device = RenderContext::GetDevice();
-		return  device->GetDevice().createImageView(createInfo);
+		return device->GetDevice().createImageView(createInfo);
+	}
+	vk::Image Image::CreateVKImage(ImageSpecs& specs)
+	{
+		auto device = RenderContext::GetDevice();
+		vk::ImageCreateInfo imageInfo;
+		imageInfo.flags = vk::ImageCreateFlagBits();
+		imageInfo.imageType = vk::ImageType::e2D;
+		imageInfo.extent = vk::Extent3D(specs.width, specs.height, 1);
+		imageInfo.mipLevels = 1;
+		imageInfo.arrayLayers = 1;
+		imageInfo.format = specs.format;
+		imageInfo.tiling = specs.tiling;
+		imageInfo.initialLayout = vk::ImageLayout::eUndefined;
+		imageInfo.usage = specs.usage;
+		imageInfo.sharingMode = vk::SharingMode::eExclusive;
+		imageInfo.samples = vk::SampleCountFlagBits::e1;
+		return device->GetDevice().createImage(imageInfo);
+	}
+	vk::DeviceMemory Image::CreateMemory(vk::Image& image, ImageSpecs& specs)
+	{
+		auto device = RenderContext::GetDevice();
+		vk::MemoryRequirements requirements = device->GetDevice().getImageMemoryRequirements(image);
+
+		vk::MemoryAllocateInfo allocation;
+		allocation.allocationSize = requirements.size;
+		allocation.memoryTypeIndex = device->FindMemoryTypeIndex(
+		 requirements.memoryTypeBits, specs.memoryProperties
+		);
+
+		vk::DeviceMemory imageMemory = device->GetDevice().allocateMemory(allocation);
+		device->GetDevice().bindImageMemory(image, imageMemory, 0);
+		return imageMemory;
+		
 	}
 	SPtr<Image> Image::CreateImage(std::string path,vk::DescriptorSet descriptorSet)
 	{
@@ -36,40 +70,50 @@ namespace Voidstar
 		if (!pixels) {
 			Log::GetLog()->error("Unable to load: {0}",path);
 		}
-		vk::ImageCreateInfo imageInfo;
-		imageInfo.flags = vk::ImageCreateFlagBits();
-		imageInfo.imageType = vk::ImageType::e2D;
-		imageInfo.extent = vk::Extent3D(image->m_Width, image->m_Height, 1);
-		imageInfo.mipLevels = 1;
-		imageInfo.arrayLayers = 1;
-		imageInfo.format = vk::Format::eR8G8B8A8Unorm;
-		imageInfo.tiling = vk::ImageTiling::eOptimal;
-		imageInfo.initialLayout = vk::ImageLayout::eUndefined;
-		imageInfo.usage = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled;
-		imageInfo.sharingMode = vk::SharingMode::eExclusive;
-		imageInfo.samples = vk::SampleCountFlagBits::e1;
+
+
+		//vk::ImageCreateInfo imageInfo;
+		//imageInfo.flags = vk::ImageCreateFlagBits();
+		//imageInfo.imageType = vk::ImageType::e2D;
+		//imageInfo.extent = vk::Extent3D(image->m_Width, image->m_Height, 1);
+		//imageInfo.mipLevels = 1;
+		//imageInfo.arrayLayers = 1;
+		//imageInfo.format = vk::Format::eR8G8B8A8Unorm;
+		//imageInfo.tiling = vk::ImageTiling::eOptimal;
+		//imageInfo.initialLayout = vk::ImageLayout::eUndefined;
+		//imageInfo.usage = vk::ImageUsageFlagBits::eTransferDst | //vk::ImageUsageFlagBits::eSampled;
+		//imageInfo.sharingMode = vk::SharingMode::eExclusive;
+		//imageInfo.samples = vk::SampleCountFlagBits::e1;
 		//memory prop = vk::MemoryPropertyFlagBits::eDeviceLocal
+
 		auto device = RenderContext::GetDevice();
+		ImageSpecs specs;
+		specs.width = image->m_Width;
+		specs.height = image->m_Height;
+		specs.format = vk::Format::eR8G8B8A8Unorm;
+		specs.tiling = vk::ImageTiling::eOptimal;
+		specs.usage = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled;
+		specs.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+		image->m_Format = specs.format;
 		try {
-			image->m_Image = device->GetDevice().createImage(imageInfo);
+			image->m_Image = CreateVKImage(specs);
 		}
 		catch (vk::SystemError err)
 		{
 			Log::GetLog()->error("Unable to make image: {0}", path);
 		}
 
-		vk::MemoryRequirements requirements = device->GetDevice().getImageMemoryRequirements(image->m_Image);
-
-		vk::MemoryAllocateInfo allocation;
-		allocation.allocationSize = requirements.size;
-
-
-		allocation.memoryTypeIndex = device->FindMemoryTypeIndex(requirements.memoryTypeBits, vk::MemoryPropertyFlagBits::eDeviceLocal
-		);
+		//vk::MemoryRequirements requirements = device->GetDevice().getImageMemoryRequirements(image->m_Image);
+		//
+		//vk::MemoryAllocateInfo allocation;
+		//allocation.allocationSize = requirements.size;
+		//
+		//
+		//allocation.memoryTypeIndex = device->FindMemoryTypeIndex(requirements.memoryTypeBits, //vk::MemoryPropertyFlagBits::eDeviceLocal
+		//);
 		try 
 		{
-			image->m_ImageMemory = device->GetDevice().allocateMemory(allocation);
-			device->GetDevice().bindImageMemory(image->m_Image, image->m_ImageMemory, 0);
+			image->m_ImageMemory = CreateMemory(image->m_Image,specs);
 		}
 		catch (vk::SystemError err) 
 		{
@@ -114,7 +158,7 @@ namespace Voidstar
 		free(pixels);
 
 
-		image->m_ImageView = CreateImageView(image->m_Image, vk::Format::eR8G8B8A8Unorm);
+		image->m_ImageView = CreateImageView(image->m_Image, vk::Format::eR8G8B8A8Unorm, vk::ImageAspectFlagBits::eColor);
 
 
 		/*
@@ -195,5 +239,32 @@ namespace Voidstar
 		logicalDevice.destroyImage(m_Image);
 		logicalDevice.destroyImageView(m_ImageView);
 		logicalDevice.destroySampler(m_Sampler);
+	}
+	vk::Format Image::GetFormat(vk::PhysicalDevice physicalDevice, const std::vector<vk::Format>& candidates, vk::ImageTiling tiling, vk::FormatFeatureFlags features)
+	{
+		for (vk::Format format : candidates) {
+
+			vk::FormatProperties properties = physicalDevice.getFormatProperties(format);
+
+			/*
+			typedef struct VkFormatProperties {
+				VkFormatFeatureFlags    linearTilingFeatures;
+				VkFormatFeatureFlags    optimalTilingFeatures;
+				VkFormatFeatureFlags    bufferFeatures;
+			} VkFormatProperties;
+			*/
+
+			if (tiling == vk::ImageTiling::eLinear
+				&& (properties.linearTilingFeatures & features) == features) {
+				return format;
+			}
+
+			if (tiling == vk::ImageTiling::eOptimal
+				&& (properties.optimalTilingFeatures & features) == features) {
+				return format;
+			}
+
+			std::runtime_error("Unable to find suitable format");
+		}
 	}
 }

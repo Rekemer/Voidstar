@@ -96,7 +96,31 @@ namespace Voidstar
 		
 
 			swapchain->m_SwapchainFrames[i].image = images[i];
-			swapchain->m_SwapchainFrames[i].imageView = Image::CreateImageView(images[i], format.format);
+			swapchain->m_SwapchainFrames[i].imageView = Image::CreateImageView(images[i], format.format, vk::ImageAspectFlagBits::eColor);
+
+			auto depthFormat = Image::GetFormat(
+				device->GetDevicePhys(),
+				{ vk::Format::eD32Sfloat, vk::Format::eD24UnormS8Uint },
+				vk::ImageTiling::eOptimal,
+				vk::FormatFeatureFlagBits::eDepthStencilAttachment
+			);
+
+			ImageSpecs imageInfo;
+			
+			imageInfo.tiling = vk::ImageTiling::eOptimal;
+			imageInfo.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment;
+			imageInfo.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+			imageInfo.width = viewportWidth;
+			imageInfo.height = viewportHeight;
+			imageInfo.format = depthFormat;
+			swapchain->m_SwapchainFrames[i].imageDepth= Image::CreateVKImage(imageInfo);
+			swapchain->m_SwapchainFrames[i].depthImageMemory = Image::CreateMemory(swapchain->m_SwapchainFrames[i].imageDepth,imageInfo);
+			swapchain->m_SwapchainFrames[i].imageDepthView = Image::CreateImageView(
+				swapchain->m_SwapchainFrames[i].imageDepth, depthFormat, vk::ImageAspectFlagBits::eDepth
+			);
+
+			swapchain->m_SwapchainFrames[i].depthFormat = depthFormat;
+
 		}
 
 		swapchain->m_SwapchainFormat = format.format;
@@ -111,7 +135,9 @@ namespace Voidstar
 
 				device.destroyImageView(frame.imageView);
 				device.destroyFramebuffer(frame.framebuffer);
-
+				device.freeMemory(frame.depthImageMemory);
+				device.destroyImage(frame.imageDepth);
+				device.destroyImageView(frame.imageDepthView);
 
 			}
 			// cannot not use detroy image on  presentable image
