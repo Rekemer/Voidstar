@@ -57,7 +57,7 @@
       <PrecompiledHeaderFile>Prereq.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>VS_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>src;..\Dependencies\glm\glm;C:\VulkanSDK\1.3.216.0\Include;Dependencies\spdlog\include;Dependencies\GLFW\include;Dependencies\glm\glm;Dependencies\spdlog\include\spdlog;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>src;..\Dependencies\glm\glm;C:\VulkanSDK\1.3.216.0\Include;Dependencies\spdlog\include;Dependencies\GLFW\include;Dependencies\glm\glm;Dependencies\spdlog\include\spdlog;Dependencies;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
       <ExternalWarningLevel>Level3</ExternalWarningLevel>
@@ -80,7 +80,7 @@
       <PrecompiledHeaderFile>Prereq.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>VS_RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>src;..\Dependencies\glm\glm;C:\VulkanSDK\1.3.216.0\Include;Dependencies\spdlog\include;Dependencies\GLFW\include;Dependencies\glm\glm;Dependencies\spdlog\include\spdlog;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>src;..\Dependencies\glm\glm;C:\VulkanSDK\1.3.216.0\Include;Dependencies\spdlog\include;Dependencies\GLFW\include;Dependencies\glm\glm;Dependencies\spdlog\include\spdlog;Dependencies;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -94,7 +94,7 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <Lib>
-      <AdditionalDependencies>..\bin\Voidstar-Core\Release-windows-x86_64\Voidstar-Core.lib;glfw3.lib;vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>glfw3.lib;vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>Dependencies\GLFW\lib-vc2019;C:\VulkanSDK\1.3.216.0\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Lib>
     <ProjectReference>
@@ -108,6 +108,7 @@
     <ClInclude Include="src\Log.h" />
     <ClInclude Include="src\Main.h" />
     <ClInclude Include="src\Prereq.h" />
+    <ClInclude Include="src\Rendering\Buffer.h" />
     <ClInclude Include="src\Rendering\Camera.h" />
     <ClInclude Include="src\Rendering\DescriptorPool.h" />
     <ClInclude Include="src\Rendering\DescriptorSetLayout.h" />
@@ -115,17 +116,17 @@
     <ClInclude Include="src\Rendering\Image.h" />
     <ClInclude Include="src\Rendering\IndexBuffer.h" />
     <ClInclude Include="src\Rendering\Instance.h" />
+    <ClInclude Include="src\Rendering\Model.h" />
     <ClInclude Include="src\Rendering\Queue.h" />
     <ClInclude Include="src\Rendering\RenderContext.h" />
     <ClInclude Include="src\Rendering\Renderer.h" />
     <ClInclude Include="src\Rendering\SupportStruct.h" />
     <ClInclude Include="src\Rendering\Swapchain.h" />
     <ClInclude Include="src\Rendering\Vertex.h" />
+    <ClInclude Include="src\Transform.h" />
     <ClInclude Include="src\Types.h" />
     <ClInclude Include="src\Voidstar.h" />
     <ClInclude Include="src\Window.h" />
-    <ClInclude Include="src\Rendering\Buffer.h" />
-    <ClInclude Include="vendor\stb_image.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Application.cpp" />
@@ -133,19 +134,21 @@
     <ClCompile Include="src\Log.cpp" />
     <ClCompile Include="src\Prereq.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="src\Rendering\Buffer.cpp" />
     <ClCompile Include="src\Rendering\Camera.cpp" />
     <ClCompile Include="src\Rendering\DescriptorPool.cpp" />
     <ClCompile Include="src\Rendering\DescriptorSetLayout.cpp" />
     <ClCompile Include="src\Rendering\Device.cpp" />
     <ClCompile Include="src\Rendering\Image.cpp" />
     <ClCompile Include="src\Rendering\Instance.cpp" />
+    <ClCompile Include="src\Rendering\Model.cpp" />
     <ClCompile Include="src\Rendering\Queue.cpp" />
     <ClCompile Include="src\Rendering\RenderContext.cpp" />
     <ClCompile Include="src\Rendering\Renderer.cpp" />
     <ClCompile Include="src\Rendering\Swapchain.cpp" />
     <ClCompile Include="src\Window.cpp" />
-    <ClCompile Include="src\Rendering\Buffer.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

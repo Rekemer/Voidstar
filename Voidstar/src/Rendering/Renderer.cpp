@@ -17,6 +17,7 @@
 #include "Camera.h"
 #include "Image.h"
 #include "DescriptorPool.h"
+#include "Model.h"
 #include "../Application.h"
 
 namespace Voidstar
@@ -260,8 +261,9 @@ namespace Voidstar
 		RenderContext::SetGraphicsQueue(m_GraphicsQueue.get());
 		CreateSyncObjects();
 
-		m_Image = Image::CreateImage("res/coffee.jpg", m_DescriptorSetTex);
-
+		m_Image = Image::CreateImage("res/viking_room/viking_room.png", m_DescriptorSetTex);
+		std::string modelPath = "res/viking_room/viking_room.obj";
+		m_Model = Model::Load(modelPath);
 
 
 
@@ -270,7 +272,10 @@ namespace Voidstar
 		CreatePipeline();
 		CreateFramebuffers();
 		
-		auto indexSize = indices.size() * sizeof(indices[0]);
+
+
+
+		auto indexSize = m_Model->indices.size() * sizeof(m_Model->indices[0]);
 		{
 			SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(indexSize);
 		
@@ -280,20 +285,20 @@ namespace Voidstar
 				inputBuffer.size = indexSize;
 				inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
 				inputBuffer.usage = vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst;
-				m_IndexBuffer = new IndexBuffer(inputBuffer, indices.size(),vk::IndexType::eUint32);
+				m_IndexBuffer = new IndexBuffer(inputBuffer, m_Model->indices.size(),vk::IndexType::eUint32);
 
 			}
 
 			m_GraphicsQueue->BeginTransfering();
-			m_GraphicsQueue->Transfer(stagingBuffer.get(), m_IndexBuffer, (void*)indices.data(), indexSize);
+			m_GraphicsQueue->Transfer(stagingBuffer.get(), m_IndexBuffer, (void*)m_Model->indices.data(), indexSize);
 			m_GraphicsQueue->EndTransfering();
 			
 		
 			
 		}
 
-		auto vertexSize = vertices.size() * sizeof(Vertex);
-		void* vertexData = const_cast<void*>(static_cast<const void*>(vertices.data()));
+		auto vertexSize = m_Model->vertices.size() * sizeof(Vertex);
+		void* vertexData = const_cast<void*>(static_cast<const void*>(m_Model->vertices.data()));
 		SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(vertexSize);
 		{
 			BufferInputChunk inputBuffer;
@@ -305,7 +310,7 @@ namespace Voidstar
 		}
 
 		m_GraphicsQueue->BeginTransfering();
-		m_GraphicsQueue->Transfer(stagingBuffer.get(), m_Buffer, (void*)vertices.data(), vertexSize);
+		m_GraphicsQueue->Transfer(stagingBuffer.get(), m_Buffer, (void*)m_Model->vertices.data(), vertexSize);
 		m_GraphicsQueue->EndTransfering();
 		
 

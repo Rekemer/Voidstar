@@ -27,5 +27,5 @@ void main()
 	outColor.a = 1;
     outColor.xyz=color.xyz;
     //outColor = vec4(uv.x,uv.y,0,1);
-    //outColor = texture(u_Tex, uv);
+    outColor = texture(u_Tex, uv);
 }

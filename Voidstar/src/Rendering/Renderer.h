@@ -15,6 +15,8 @@ namespace Voidstar
 	class Application;
 	class Image;
 	class DescriptorPool;
+	class Model;
+
 
 
 
@@ -78,6 +80,7 @@ namespace Voidstar
 		Application* m_App;
 		
 		SPtr<Image> m_Image;
+		SPtr<Model> m_Model;
 
 
 		SPtr<DescriptorPool> m_DescriptorPool;

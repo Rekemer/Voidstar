@@ -3,7 +3,7 @@
 #include "Image.h"
 #include "RenderContext.h"
 #include "Device.h"
-#include "../../vendor/stb_image.h"
+#include "stb_image.h"
 #include "Log.h"
 #include "Buffer.h"
 #include "Queue.h"
@@ -68,7 +68,7 @@ namespace Voidstar
 		stbi_set_flip_vertically_on_load(true);
 		auto pixels = stbi_load(path.c_str(), &image->m_Width, &image->m_Height, &image->m_Channels, STBI_rgb_alpha);
 		if (!pixels) {
-			Log::GetLog()->error("Unable to load: {0}",path);
+			Log::GetLog()->error("Unable to load: {0}", path);
 		}
 
 

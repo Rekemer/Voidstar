@@ -7,58 +7,102 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Application.h" />
+    <ClInclude Include="src\Input.h" />
+    <ClInclude Include="src\Keys.h" />
     <ClInclude Include="src\Log.h" />
     <ClInclude Include="src\Main.h" />
     <ClInclude Include="src\Prereq.h" />
+    <ClInclude Include="src\Rendering\Buffer.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Rendering\Camera.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Rendering\DescriptorPool.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Rendering\DescriptorSetLayout.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
     <ClInclude Include="src\Rendering\Device.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Rendering\Image.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Rendering\IndexBuffer.h">
       <Filter>Rendering</Filter>
     </ClInclude>
     <ClInclude Include="src\Rendering\Instance.h">
       <Filter>Rendering</Filter>
     </ClInclude>
+    <ClInclude Include="src\Rendering\Model.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Rendering\Queue.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Rendering\RenderContext.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
     <ClInclude Include="src\Rendering\Renderer.h">
       <Filter>Rendering</Filter>
     </ClInclude>
+    <ClInclude Include="src\Rendering\SupportStruct.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Rendering\Swapchain.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Rendering\Vertex.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Transform.h" />
+    <ClInclude Include="src\Types.h" />
     <ClInclude Include="src\Voidstar.h" />
     <ClInclude Include="src\Window.h" />
-    <ClInclude Include="src\Rendering\Swapchain.h" />
-    <ClInclude Include="src\Rendering\SupportStruct.h" />
-    <ClInclude Include="src\Rendering\Vertex.h" />
-    <ClInclude Include="src\Rendering\Buffer.h" />
-    <ClInclude Include="src\Rendering\DescriptorSetLayout.h" />
-    <ClInclude Include="src\Rendering\RenderContext.h" />
-    <ClInclude Include="src\Rendering\Camera.h" />
-    <ClInclude Include="src\Input.h" />
-    <ClInclude Include="src\Keys.h" />
-    <ClInclude Include="src\Rendering\Queue.h" />
-    <ClInclude Include="src\Types.h" />
-    <ClInclude Include="src\Rendering\Image.h" />
-    <ClInclude Include="vendor\stb_image.h" />
-    <ClInclude Include="src\Rendering\DescriptorPool.h" />
-    <ClInclude Include="src\Rendering\IndexBuffer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Application.cpp" />
+    <ClCompile Include="src\Input.cpp" />
     <ClCompile Include="src\Log.cpp" />
     <ClCompile Include="src\Prereq.cpp" />
+    <ClCompile Include="src\Rendering\Buffer.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Rendering\Camera.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Rendering\DescriptorPool.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Rendering\DescriptorSetLayout.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
     <ClCompile Include="src\Rendering\Device.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Rendering\Image.cpp">
       <Filter>Rendering</Filter>
     </ClCompile>
     <ClCompile Include="src\Rendering\Instance.cpp">
       <Filter>Rendering</Filter>
     </ClCompile>
+    <ClCompile Include="src\Rendering\Model.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Rendering\Queue.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Rendering\RenderContext.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
     <ClCompile Include="src\Rendering\Renderer.cpp">
       <Filter>Rendering</Filter>
     </ClCompile>
+    <ClCompile Include="src\Rendering\Swapchain.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
     <ClCompile Include="src\Window.cpp" />
-    <ClCompile Include="src\Rendering\Swapchain.cpp" />
-    <ClCompile Include="src\Rendering\Buffer.cpp" />
-    <ClCompile Include="src\Rendering\DescriptorSetLayout.cpp" />
-    <ClCompile Include="src\Rendering\RenderContext.cpp" />
-    <ClCompile Include="src\Rendering\Camera.cpp" />
-    <ClCompile Include="src\Input.cpp" />
-    <ClCompile Include="src\Rendering\Queue.cpp" />
-    <ClCompile Include="src\Rendering\Image.cpp" />
-    <ClCompile Include="src\Rendering\DescriptorPool.cpp" />
   </ItemGroup>
 </Project>

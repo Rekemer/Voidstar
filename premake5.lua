@@ -40,21 +40,24 @@ project "Voidstar-Core"
     targetdir ("bin/%{prj.name}/"..outputdir)
     objdir ("bin-int/%{prj.name}/"..outputdir)
 
-    pchheader "Prereq.h"
-	pchsource "%{prj.name}/src/Prereq.cpp"
-
     files
     {
         "%{prj.location}/src/**.cpp",
         "%{prj.location}/src/**.h"
     }
+
+    pchheader "Prereq.h"
+	pchsource "%{prj.name}/src/Prereq.cpp"
+
+   
     includedirs
     {
         os.getenv("VULKAN_SDK") .. "/Include",
         "%{prj.location}/Dependencies/spdlog/include",
         "%{prj.location}/Dependencies/GLFW/include",
-        "%{prj.location}/vendor/glm/glm",
+        "%{prj.location}/Dependencies/glm/glm",
         "%{prj.location}/Dependencies/spdlog/include/spdlog",
+        "%{prj.location}/Dependencies/",
 
     }
     libdirs { "%{prj.location}/Dependencies/GLFW/lib-vc2019", os.getenv("VULKAN_SDK") .. "/Lib" }
