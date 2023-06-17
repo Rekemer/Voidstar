@@ -9,7 +9,7 @@
 #include "Queue.h"
 namespace Voidstar
 {
-	VkImageView Image::CreateImageView(vk::Image& image, vk::Format format, vk::ImageAspectFlags aspect)
+	VkImageView Image::CreateImageView(vk::Image& image, vk::Format format, vk::ImageAspectFlags aspect, int mipmap)
 	{
 		vk::ImageViewCreateInfo createInfo = {};
 		createInfo.image = image;
@@ -21,28 +21,28 @@ namespace Voidstar
 		createInfo.components.a = vk::ComponentSwizzle::eIdentity;
 		createInfo.subresourceRange.aspectMask = aspect;
 		createInfo.subresourceRange.baseMipLevel = 0;
-		createInfo.subresourceRange.levelCount = 1;
+		createInfo.subresourceRange.levelCount = mipmap;
 		createInfo.subresourceRange.baseArrayLayer = 0;
 		createInfo.subresourceRange.layerCount = 1;
 
 		auto device = RenderContext::GetDevice();
 		return device->GetDevice().createImageView(createInfo);
 	}
-	vk::Image Image::CreateVKImage(ImageSpecs& specs)
+	vk::Image Image::CreateVKImage(ImageSpecs& specs, vk::SampleCountFlagBits samples, int mipmap )
 	{
 		auto device = RenderContext::GetDevice();
 		vk::ImageCreateInfo imageInfo;
 		imageInfo.flags = vk::ImageCreateFlagBits();
 		imageInfo.imageType = vk::ImageType::e2D;
 		imageInfo.extent = vk::Extent3D(specs.width, specs.height, 1);
-		imageInfo.mipLevels = 1;
+		imageInfo.mipLevels = mipmap;
 		imageInfo.arrayLayers = 1;
 		imageInfo.format = specs.format;
 		imageInfo.tiling = specs.tiling;
 		imageInfo.initialLayout = vk::ImageLayout::eUndefined;
 		imageInfo.usage = specs.usage;
 		imageInfo.sharingMode = vk::SharingMode::eExclusive;
-		imageInfo.samples = vk::SampleCountFlagBits::e1;
+		imageInfo.samples = samples;
 		return device->GetDevice().createImage(imageInfo);
 	}
 	vk::DeviceMemory Image::CreateMemory(vk::Image& image, ImageSpecs& specs)
@@ -71,20 +71,8 @@ namespace Voidstar
 			Log::GetLog()->error("Unable to load: {0}", path);
 		}
 
-
-		//vk::ImageCreateInfo imageInfo;
-		//imageInfo.flags = vk::ImageCreateFlagBits();
-		//imageInfo.imageType = vk::ImageType::e2D;
-		//imageInfo.extent = vk::Extent3D(image->m_Width, image->m_Height, 1);
-		//imageInfo.mipLevels = 1;
-		//imageInfo.arrayLayers = 1;
-		//imageInfo.format = vk::Format::eR8G8B8A8Unorm;
-		//imageInfo.tiling = vk::ImageTiling::eOptimal;
-		//imageInfo.initialLayout = vk::ImageLayout::eUndefined;
-		//imageInfo.usage = vk::ImageUsageFlagBits::eTransferDst | //vk::ImageUsageFlagBits::eSampled;
-		//imageInfo.sharingMode = vk::SharingMode::eExclusive;
-		//imageInfo.samples = vk::SampleCountFlagBits::e1;
-		//memory prop = vk::MemoryPropertyFlagBits::eDeviceLocal
+		auto mipMaps = static_cast<uint32_t>(std::floor(std::log2(std::max(image->m_Width, image->m_Height)))) + 1;
+	
 
 		auto device = RenderContext::GetDevice();
 		ImageSpecs specs;
@@ -92,25 +80,17 @@ namespace Voidstar
 		specs.height = image->m_Height;
 		specs.format = vk::Format::eR8G8B8A8Unorm;
 		specs.tiling = vk::ImageTiling::eOptimal;
-		specs.usage = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled;
+		specs.usage = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eSampled;
 		specs.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
 		image->m_Format = specs.format;
 		try {
-			image->m_Image = CreateVKImage(specs);
+			image->m_Image = CreateVKImage(specs,vk::SampleCountFlagBits::e1, mipMaps);
 		}
 		catch (vk::SystemError err)
 		{
 			Log::GetLog()->error("Unable to make image: {0}", path);
 		}
 
-		//vk::MemoryRequirements requirements = device->GetDevice().getImageMemoryRequirements(image->m_Image);
-		//
-		//vk::MemoryAllocateInfo allocation;
-		//allocation.allocationSize = requirements.size;
-		//
-		//
-		//allocation.memoryTypeIndex = device->FindMemoryTypeIndex(requirements.memoryTypeBits, //vk::MemoryPropertyFlagBits::eDeviceLocal
-		//);
 		try 
 		{
 			image->m_ImageMemory = CreateMemory(image->m_Image,specs);
@@ -126,9 +106,6 @@ namespace Voidstar
 
 
 
-		
-		//graphicsQueue->Transfer(stagingBuffer.get(), m_Buffer, (void*)vertices.data(), sizeof(vertices));
-
 
 
 
@@ -141,7 +118,7 @@ namespace Voidstar
 		//then transfer it to image memory
 		auto graphicsQueue = RenderContext::GetGraphicsQueue();
 		graphicsQueue->BeginTransfering();
-		graphicsQueue->ChangeImageLayout(&image->m_Image, vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);
+		graphicsQueue->ChangeImageLayout(&image->m_Image, vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal,mipMaps);
 		graphicsQueue->EndTransfering();
 
 		graphicsQueue->BeginTransfering();
@@ -150,15 +127,18 @@ namespace Voidstar
 		
 
 		
-		graphicsQueue->BeginTransfering();
-		graphicsQueue->ChangeImageLayout(&image->m_Image, vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal);
-		graphicsQueue->EndTransfering();
+		//graphicsQueue->BeginTransfering();
+		//graphicsQueue->ChangeImageLayout(&image->m_Image, vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal, mipMaps);
+		//graphicsQueue->EndTransfering();
+
+
+		image->GenerateMipmaps(image->m_Image, (VkFormat)image->m_Format, image->m_Width, image->m_Height,mipMaps);
 
 
 		free(pixels);
 
 
-		image->m_ImageView = CreateImageView(image->m_Image, vk::Format::eR8G8B8A8Unorm, vk::ImageAspectFlagBits::eColor);
+		image->m_ImageView = CreateImageView(image->m_Image, vk::Format::eR8G8B8A8Unorm, vk::ImageAspectFlagBits::eColor, mipMaps);
 
 
 		/*
@@ -202,7 +182,8 @@ namespace Voidstar
 		samplerInfo.mipmapMode = vk::SamplerMipmapMode::eLinear;
 		samplerInfo.mipLodBias = 0.0f;
 		samplerInfo.minLod = 0.0f;
-		samplerInfo.maxLod = 0.0f;
+		samplerInfo.maxLod = (float)mipMaps;
+		//samplerInfo.maxLod = 0;
 
 		try 
 		{
@@ -266,5 +247,99 @@ namespace Voidstar
 
 			std::runtime_error("Unable to find suitable format");
 		}
+	}
+	void Image::GenerateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels)
+	{
+		
+		// Check if image format supports linear blitting
+
+		auto physicalDevice = RenderContext::GetDevice()->GetDevicePhys();
+		VkFormatProperties formatProperties;
+		vkGetPhysicalDeviceFormatProperties(physicalDevice, imageFormat, &formatProperties);
+
+		if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
+			throw std::runtime_error("texture image format does not support linear blitting!");
+		}
+
+		auto graphicsQueue = RenderContext::GetGraphicsQueue();
+		auto commandBuffer = graphicsQueue->BeginTransfering();
+		graphicsQueue->BeginTransfering();
+		VkImageMemoryBarrier barrier{};
+		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		barrier.image = image;
+		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		barrier.subresourceRange.baseArrayLayer = 0;
+		barrier.subresourceRange.layerCount = 1;
+		barrier.subresourceRange.levelCount = 1;
+
+
+		int32_t mipWidth = texWidth;
+		int32_t mipHeight = texHeight;
+
+		for (uint32_t i = 1; i < mipLevels; i++)
+		{
+			barrier.subresourceRange.baseMipLevel = i - 1;
+			barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+			barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+
+			vkCmdPipelineBarrier(commandBuffer,
+				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+				0, nullptr,
+				0, nullptr,
+				1, &barrier);
+
+
+			VkImageBlit blit{};
+			blit.srcOffsets[0] = { 0, 0, 0 };
+			blit.srcOffsets[1] = { mipWidth, mipHeight, 1 };
+			blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			blit.srcSubresource.mipLevel = i - 1;
+			blit.srcSubresource.baseArrayLayer = 0;
+			blit.srcSubresource.layerCount = 1;
+			blit.dstOffsets[0] = { 0, 0, 0 };
+			blit.dstOffsets[1] = { mipWidth > 1 ? mipWidth / 2 : 1, mipHeight > 1 ? mipHeight / 2 : 1, 1 };
+			blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			blit.dstSubresource.mipLevel = i;
+			blit.dstSubresource.baseArrayLayer = 0;
+			blit.dstSubresource.layerCount = 1;
+
+
+			vkCmdBlitImage(commandBuffer,
+				image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				1, &blit,
+				VK_FILTER_LINEAR);
+
+			barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+			barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+			vkCmdPipelineBarrier(commandBuffer,
+				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
+				0, nullptr,
+				0, nullptr,
+				1, &barrier);
+			if (mipWidth > 1) mipWidth /= 2;
+			if (mipHeight > 1) mipHeight /= 2;
+
+			
+		}
+		barrier.subresourceRange.baseMipLevel = mipLevels - 1;
+		barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+		vkCmdPipelineBarrier(commandBuffer,
+			VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
+			0, nullptr,
+			0, nullptr,
+			1, &barrier);
+		graphicsQueue->EndTransfering();
 	}
 }

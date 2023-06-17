@@ -32,6 +32,7 @@ namespace Voidstar
 			if (requiredExtensions.empty())
 			{
 				device->m_PhysicalDevice = physicalDevice;
+				device->m_MsaaSamples = device->GetMaxUsableSampleCount();
 				auto name = physicalDevice.getProperties().deviceName;
 				Log::GetLog()->info("PhysicalDevice is found: {0} ", name);
 
@@ -138,6 +139,23 @@ namespace Voidstar
 		device->m_GraphicsQueue = device->m_Device.getQueue(graphicFamily, 0);
 		device->m_PresentQueue = device->m_Device.getQueue(presentFamily, 0);
 		return device;
+	}
+	vk::SampleCountFlagBits Device::GetMaxUsableSampleCount()
+	{
+		
+		vk::PhysicalDeviceProperties physicalDeviceProperties = m_PhysicalDevice.getProperties();
+
+		vk::SampleCountFlags counts = physicalDeviceProperties.limits.framebufferColorSampleCounts &
+			physicalDeviceProperties.limits.framebufferDepthSampleCounts;
+
+		if (counts & vk::SampleCountFlagBits::e64) { return vk::SampleCountFlagBits::e64; }
+		if (counts & vk::SampleCountFlagBits::e32) { return vk::SampleCountFlagBits::e32; }
+		if (counts & vk::SampleCountFlagBits::e16) { return vk::SampleCountFlagBits::e16; }
+		if (counts & vk::SampleCountFlagBits::e8) { return vk::SampleCountFlagBits::e8; }
+		if (counts & vk::SampleCountFlagBits::e4) { return vk::SampleCountFlagBits::e4; }
+		if (counts & vk::SampleCountFlagBits::e2) { return vk::SampleCountFlagBits::e2; }
+
+		return vk::SampleCountFlagBits::e1;
 	}
 	uint32_t Device::FindMemoryTypeIndex( uint32_t supportedMemoryIndices, vk::MemoryPropertyFlags requestedProperties)
 	{

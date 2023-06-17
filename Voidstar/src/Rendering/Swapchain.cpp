@@ -113,7 +113,10 @@ namespace Voidstar
 			imageInfo.width = viewportWidth;
 			imageInfo.height = viewportHeight;
 			imageInfo.format = depthFormat;
-			swapchain->m_SwapchainFrames[i].imageDepth= Image::CreateVKImage(imageInfo);
+
+
+			auto samples = RenderContext::GetDevice()->GetSamples();
+			swapchain->m_SwapchainFrames[i].imageDepth= Image::CreateVKImage(imageInfo, samples);
 			swapchain->m_SwapchainFrames[i].depthImageMemory = Image::CreateMemory(swapchain->m_SwapchainFrames[i].imageDepth,imageInfo);
 			swapchain->m_SwapchainFrames[i].imageDepthView = Image::CreateImageView(
 				swapchain->m_SwapchainFrames[i].imageDepth, depthFormat, vk::ImageAspectFlagBits::eDepth

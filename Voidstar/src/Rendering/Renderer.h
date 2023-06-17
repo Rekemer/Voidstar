@@ -32,6 +32,7 @@ namespace Voidstar
 		vk::Device device;
 		std::string vertexFilepath;
 		std::string fragmentFilepath;
+		vk::SampleCountFlagBits samples;
 		vk::Extent2D swapchainExtent;
 		vk::Format swapchainImageFormat;
 		vk::VertexInputBindingDescription bindingDescription;
@@ -65,6 +66,7 @@ namespace Voidstar
 		GraphicsPipeline CreatePipeline(GraphicsPipelineSpecification& spec);
 		void DestroySwapchain();
 		void CreateSyncObjects();
+		void CreateMSAAFrame();
 		
 		void RecordCommandBuffer(uint32_t imageIndex);
 		void UpdateUniformBuffer(uint32_t imageIndex);
@@ -81,6 +83,11 @@ namespace Voidstar
 		
 		SPtr<Image> m_Image;
 		SPtr<Model> m_Model;
+
+
+		vk::Image m_MsaaImage;
+		vk::DeviceMemory m_MsaaImageMemory;
+		vk::ImageView m_MsaaImageView;
 
 
 		SPtr<DescriptorPool> m_DescriptorPool;

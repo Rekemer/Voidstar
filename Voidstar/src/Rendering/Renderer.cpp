@@ -268,7 +268,7 @@ namespace Voidstar
 
 
 
-
+		CreateMSAAFrame();
 		CreatePipeline();
 		CreateFramebuffers();
 		
@@ -352,6 +352,23 @@ namespace Voidstar
 	
 	}
 
+	void Renderer::CreateMSAAFrame()
+	{
+		ImageSpecs specs;
+		auto extent = m_Swapchain->GetExtent();
+		auto swapchainFormat = m_Swapchain->GetFormat();
+		specs.width = extent.width;
+		specs.height= extent.height;
+		specs.tiling = vk::ImageTiling::eOptimal;
+		specs.usage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransientAttachment;
+		specs.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+		specs.format= swapchainFormat;
+		auto samples = RenderContext::GetDevice()->GetSamples();
+		m_MsaaImage = Image::CreateVKImage(specs,samples);
+		m_MsaaImageMemory = Image::CreateMemory(m_MsaaImage,specs);
+		m_MsaaImageView = Image::CreateImageView(m_MsaaImage,swapchainFormat,vk::ImageAspectFlagBits::eColor);
+	}
+
 
 	void Renderer::UpdateUniformBuffer(uint32_t imageIndex)
 	{
@@ -365,6 +382,15 @@ namespace Voidstar
 		//ubo.proj = glm::perspective(glm::radians(45.0f), extent.width / (float)extent.height, 0.0001f, 10.0f);
 		ubo.view = cameraView;
 		ubo.proj = cameraProj;
+		auto model = glm::mat4(1.f);
+		glm::mat4 blenderToLH = glm::mat4(1.0f);
+		blenderToLH[2][2] = -1.0f;  // Flip Z-axis
+		blenderToLH[3][2] = 1.0f;
+		//model = blenderToLH * model;
+		// blender: z  is up, y is forward
+		model = glm::rotate(model,glm::radians(-90.f) , glm::vec3(1, 0, 0));
+		model = glm::rotate(model,glm::radians(90.f) , glm::vec3(0, 0, 1));
+		ubo.model = model;
 		auto extent = m_Swapchain->GetExtent();
 		//ubo.proj[1][1] *= -1,
 		memcpy(uniformBuffersMapped[imageIndex], &ubo, sizeof(ubo));
@@ -436,8 +462,9 @@ namespace Voidstar
 		for (int i = 0; i < frames.size(); ++i) {
 
 			std::vector<vk::ImageView> attachments = {
-				frames[i].imageView,
+				m_MsaaImageView,
 				frames[i].imageDepthView,
+				frames[i].imageView,
 			};
 
 			vk::FramebufferCreateInfo framebufferInfo;
@@ -465,6 +492,7 @@ namespace Voidstar
 	void Renderer::CreatePipeline()
 	{
 		GraphicsPipelineSpecification specs;
+
 		auto swapchainFormat = m_Swapchain->GetFormat();
 		auto swapChainExtent = m_Swapchain->GetExtent();
 		specs.device = m_Device->GetDevice();
@@ -475,6 +503,8 @@ namespace Voidstar
 		specs.bindingDescription = Vertex::GetBindingDescription();
 		specs.attributeDescription = Vertex::GetAttributeDescriptions();
 
+		auto samples = RenderContext::GetDevice()->GetSamples();
+		specs.samples = samples;
 		m_DescriptorSetLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutTex->GetLayout()};
 
 		specs.descriptorSetLayout = m_DescriptorSetLayouts;
@@ -522,28 +552,30 @@ namespace Voidstar
 
 	vk::RenderPass MakeRenderPass(vk::Device device, vk::Format swapchainImageFormat, vk::Format depthFormat) {
 
+		auto samples = RenderContext::GetDevice()->GetSamples();
 		//Define a general attachment, with its load/store operations
-		vk::AttachmentDescription colorAttachment = {};
-		colorAttachment.flags = vk::AttachmentDescriptionFlags();
-		colorAttachment.format = swapchainImageFormat;
-		colorAttachment.samples = vk::SampleCountFlagBits::e1;
-		colorAttachment.loadOp = vk::AttachmentLoadOp::eClear;
-		colorAttachment.storeOp = vk::AttachmentStoreOp::eStore;
-		colorAttachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
-		colorAttachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
-		colorAttachment.initialLayout = vk::ImageLayout::eUndefined;
-		colorAttachment.finalLayout = vk::ImageLayout::ePresentSrcKHR;
-
-		//Declare that attachment to be color buffer 0 of the framebuffer
-		vk::AttachmentReference colorAttachmentRef = {};
-		colorAttachmentRef.attachment = 0;
-		colorAttachmentRef.layout = vk::ImageLayout::eColorAttachmentOptimal;
+		vk::AttachmentDescription msaaAttachment = {};
+		msaaAttachment.flags = vk::AttachmentDescriptionFlags();
+		msaaAttachment.format = swapchainImageFormat;
+		msaaAttachment.samples = samples;
+		msaaAttachment.loadOp = vk::AttachmentLoadOp::eClear;
+		msaaAttachment.storeOp = vk::AttachmentStoreOp::eStore;
+		msaaAttachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
+		msaaAttachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
+		msaaAttachment.initialLayout = vk::ImageLayout::eUndefined;
+		msaaAttachment.finalLayout = vk::ImageLayout::eColorAttachmentOptimal;
+		
+		
+		vk::AttachmentReference msaaAttachmentRef = {};
+		msaaAttachmentRef.attachment = 0;
+		msaaAttachmentRef.layout = vk::ImageLayout::eColorAttachmentOptimal;
+		
 
 
 		vk::AttachmentDescription depthAttachment = {};
 		depthAttachment.flags = vk::AttachmentDescriptionFlags();
 		depthAttachment.format = depthFormat;
-		depthAttachment.samples = vk::SampleCountFlagBits::e1;
+		depthAttachment.samples = samples;
 		depthAttachment.loadOp = vk::AttachmentLoadOp::eClear;
 		depthAttachment.storeOp = vk::AttachmentStoreOp::eStore;
 		depthAttachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
@@ -555,13 +587,32 @@ namespace Voidstar
 		depthAttachmentRef.attachment = 1;
 		depthAttachmentRef.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
 
+		//Define a general attachment, with its load/store operations
+		vk::AttachmentDescription colorAttachmentResolve = {};
+		colorAttachmentResolve.flags = vk::AttachmentDescriptionFlags();
+		colorAttachmentResolve.format = swapchainImageFormat;
+		colorAttachmentResolve.samples = vk::SampleCountFlagBits::e1;
+		colorAttachmentResolve.loadOp = vk::AttachmentLoadOp::eClear;
+		colorAttachmentResolve.storeOp = vk::AttachmentStoreOp::eStore;
+		colorAttachmentResolve.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
+		colorAttachmentResolve.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
+		colorAttachmentResolve.initialLayout = vk::ImageLayout::eUndefined;
+		colorAttachmentResolve.finalLayout = vk::ImageLayout::ePresentSrcKHR;
+
+		//Declare that attachment to be color buffer 0 of the framebuffer
+		vk::AttachmentReference colorAttachmentRef = {};
+		colorAttachmentRef.attachment = 2;
+		colorAttachmentRef.layout = vk::ImageLayout::eColorAttachmentOptimal;
+
+
 		//Renderpasses are broken down into subpasses, there's always at least one.
 		vk::SubpassDescription subpass = {};
 		subpass.flags = vk::SubpassDescriptionFlags();
 		subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
 		subpass.colorAttachmentCount = 1;
-		subpass.pColorAttachments = &colorAttachmentRef;
+		subpass.pColorAttachments = &msaaAttachmentRef;
 		subpass.pDepthStencilAttachment= &depthAttachmentRef;
+		subpass.pResolveAttachments= &colorAttachmentRef;
 
 
 		vk::SubpassDependency dependency{};
@@ -577,7 +628,7 @@ namespace Voidstar
 		//Now create the renderpass
 		vk::RenderPassCreateInfo renderpassInfo = {};
 
-		std::vector<vk::AttachmentDescription> attachments = { colorAttachment ,depthAttachment };
+		std::vector<vk::AttachmentDescription> attachments = {  msaaAttachment,depthAttachment,colorAttachmentResolve };
 		// to be able to map NDC to screen coordinates - Viewport ans Scissors Transform
 		renderpassInfo.flags = vk::RenderPassCreateFlags();
 		renderpassInfo.attachmentCount = attachments.size();
@@ -725,7 +776,7 @@ namespace Voidstar
 		vk::PipelineMultisampleStateCreateInfo multisampling = {};
 		multisampling.flags = vk::PipelineMultisampleStateCreateFlags();
 		multisampling.sampleShadingEnable = VK_FALSE;
-		multisampling.rasterizationSamples = vk::SampleCountFlagBits::e1;
+		multisampling.rasterizationSamples = spec.samples;
 		pipelineInfo.pMultisampleState = &multisampling;
 
 		//Color Blend
@@ -807,7 +858,7 @@ namespace Voidstar
 		delete m_Buffer;
 		delete m_IndexBuffer;
 		m_Image.reset();
-
+		
 
 
 		m_GraphicsQueue.reset();

@@ -116,13 +116,14 @@ namespace Voidstar
 	}
 
 
-	void Queue::BeginTransfering()
+	vk::CommandBuffer Queue::BeginTransfering()
 	{
 		m_CommandBuffer.reset();
 
 		vk::CommandBufferBeginInfo beginInfo;
 		beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
 		m_CommandBuffer.begin(beginInfo);
+		return m_CommandBuffer;
 	}
 	void Queue::Transfer(Buffer* src, Buffer* target,void* data,size_t  dataSize)
 	{
@@ -145,7 +146,7 @@ namespace Voidstar
 		m_CommandBuffer.copyBuffer(src->GetBuffer(), target->GetBuffer(), copyRegion);
 
 	}
-	void Queue::ChangeImageLayout(vk::Image* image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout)
+	void Queue::ChangeImageLayout(vk::Image* image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout, int mipMap )
 	{
 
 
@@ -161,7 +162,7 @@ namespace Voidstar
 			vk::ImageSubresourceRange access;
 		access.aspectMask = vk::ImageAspectFlagBits::eColor;
 		access.baseMipLevel = 0;
-		access.levelCount = 1;
+		access.levelCount = mipMap;
 		access.baseArrayLayer = 0;
 		access.layerCount = 1;
 
