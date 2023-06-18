@@ -16,7 +16,7 @@ namespace Voidstar
 
 		m_Window = glfwCreateWindow(screenWidth, screenHeight, windowName.c_str(), nullptr, nullptr);
 
-		glfwSetInputMode(m_Window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+		glfwSetInputMode(m_Window, GLFW_CURSOR, GLFW_CURSOR);
 		if (!m_Window)
 		{
 			Log::GetLog()->error("Window is not created!");

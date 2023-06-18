@@ -6,19 +6,17 @@
 
 namespace Voidstar
 {
-	SPtr<DescriptorPool> DescriptorPool::Create(vk::DescriptorType type, uint32_t descriptorCount, uint32_t maxSets)
+	SPtr<DescriptorPool> DescriptorPool::Create(std::vector<vk::DescriptorPoolSize> poolSizes, uint32_t maxSets)
 	{
 		auto pool = CreateSPtr<DescriptorPool>();
 		auto device = RenderContext::GetDevice();
 
 		vk::DescriptorPoolSize poolSize{};
-		poolSize.type = type;
-		poolSize.descriptorCount = descriptorCount;
-
+	
 		vk::DescriptorPoolCreateInfo poolInfo{};
 		poolInfo.sType = vk::StructureType::eDescriptorPoolCreateInfo;
-		poolInfo.poolSizeCount = 1;
-		poolInfo.pPoolSizes = &poolSize;
+		poolInfo.poolSizeCount = poolSizes.size();
+		poolInfo.pPoolSizes = poolSizes.data();
 		poolInfo.maxSets = maxSets;
 
 		try
@@ -49,7 +47,7 @@ namespace Voidstar
 		}
 		catch (vk::SystemError err)
 		{
-			Log::GetLog()->error("Failed to allocate descriptor set from pool for textures");
+			Log::GetLog()->error("Failed to allocate descriptor set from pool for textures {0}", err.what());
 		}
 
 		

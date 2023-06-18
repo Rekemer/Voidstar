@@ -34,6 +34,7 @@ namespace Voidstar
 		try
 		{
 			m_CommandBuffer = device->GetDevice().allocateCommandBuffers(allocInfo)[0];
+
 		}
 		catch (vk::SystemError err)
 		{
@@ -66,7 +67,7 @@ namespace Voidstar
 		vk::ClearValue depthClear;
 
 		depthClear.depthStencil = vk::ClearDepthStencilValue({ 1.0f, 0 });
-		std::vector<vk::ClearValue> clearValues = { {clearColor, depthClear} };
+		std::vector<vk::ClearValue> clearValues = { {clearColor, depthClear,clearColor} };
 
 		renderPassInfo.clearValueCount = clearValues.size();
 		renderPassInfo.pClearValues = clearValues.data();
@@ -82,9 +83,10 @@ namespace Voidstar
 		vk::DeviceSize offsets[] = { 0 };
 		vk::Buffer vertexBuffers[] = { vertexBuffer->GetBuffer() };
 		m_CommandBuffer.bindVertexBuffers(0, 1, vertexBuffers, offsets);
-		m_CommandBuffer.bindIndexBuffer(indexBuffer->GetBuffer(), 0, indexBuffer->GetIndexType());
-		auto amount = indexBuffer->GetIndexAmount();
-		m_CommandBuffer.drawIndexed(static_cast<uint32_t>(amount), 1, 0, 0, 0);
+		//m_CommandBuffer.bindIndexBuffer(indexBuffer->GetBuffer(), 0, indexBuffer->GetIndexType());
+//		auto amount = indexBuffer->GetIndexAmount();
+		//m_CommandBuffer.drawIndexed(static_cast<uint32_t>(amount), 1, 0, 0, 0);
+		m_CommandBuffer.draw(8192, 1, 0, 0);
 	}
 
 	void Queue::EndRenderPass()
@@ -96,10 +98,10 @@ namespace Voidstar
 
 	void Queue::Submit(vk::Semaphore* waitSemaphores, vk::Semaphore* signalSemaphores, vk::Fence* fence)
 	{
-		vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
+		vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput,vk::PipelineStageFlagBits::eVertexInput };
 		vk::SubmitInfo submitInfo = {};
 
-		submitInfo.waitSemaphoreCount = 1;
+		submitInfo.waitSemaphoreCount = 2;
 		submitInfo.pWaitSemaphores = waitSemaphores;
 		submitInfo.pWaitDstStageMask = waitStages;
 

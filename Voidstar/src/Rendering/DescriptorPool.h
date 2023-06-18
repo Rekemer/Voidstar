@@ -4,10 +4,15 @@
 
 namespace Voidstar
 {
+
+	
+
 	class DescriptorPool
 	{
 	public:
-		static SPtr<DescriptorPool> Create(vk::DescriptorType type, uint32_t descriptorCount, uint32_t maxSets);
+
+
+		static SPtr<DescriptorPool> Create(std::vector<vk::DescriptorPoolSize> poolSizes, uint32_t maxSets);
 		inline vk::DescriptorPool& GetPool() {
 			return m_DescriptorPool;
 		}

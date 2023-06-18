@@ -10,7 +10,7 @@ namespace Voidstar
 	class DescriptorSetLayout
 	{
 	public:
-		static DescriptorSetLayout* Create(DescrriptorSetLayoutSpec& specs);
+		static DescriptorSetLayout* Create(std::vector<vk::DescriptorSetLayoutBinding>& bindings);
 		inline vk::DescriptorSetLayout& GetLayout() { return m_Layout; }
 	private:
 		vk::DescriptorSetLayout m_Layout;

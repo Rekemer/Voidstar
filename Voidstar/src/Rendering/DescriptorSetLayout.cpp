@@ -5,9 +5,8 @@
 #include"Log.h"
 namespace Voidstar
 {
-	DescriptorSetLayout* DescriptorSetLayout::Create(DescrriptorSetLayoutSpec& specs)
+	DescriptorSetLayout* DescriptorSetLayout::Create(std::vector<vk::DescriptorSetLayoutBinding>& bindings)
 	{
-		std::vector<vk::DescriptorSetLayoutBinding> layoutBindings;
 		
 
 		auto device = RenderContext::GetDevice();
@@ -21,13 +20,8 @@ namespace Voidstar
 					const VkSampler*      pImmutableSamplers;
 				} VkDescriptorSetLayoutBinding;
 			*/
-
-			vk::DescriptorSetLayoutBinding layoutBinding;
-			layoutBinding.binding =0;
-			layoutBinding.descriptorType = specs.type;
-			layoutBinding.stageFlags = specs.stages;
-			layoutBinding.descriptorCount = 1;
-			layoutBindings.push_back(layoutBinding);
+			
+			
 		
 		//layoutBindings[0].descriptorCount = bindings.counts[0];
 		/*
@@ -41,8 +35,8 @@ namespace Voidstar
 		*/
 		vk::DescriptorSetLayoutCreateInfo layoutInfo;
 		layoutInfo.flags = vk::DescriptorSetLayoutCreateFlagBits();
-		layoutInfo.bindingCount = 1;
-		layoutInfo.pBindings = layoutBindings.data();
+		layoutInfo.bindingCount = bindings.size();
+		layoutInfo.pBindings = bindings.data();
 		DescriptorSetLayout* layout = new DescriptorSetLayout();
 	
 

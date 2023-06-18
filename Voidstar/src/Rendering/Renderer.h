@@ -26,6 +26,38 @@ namespace Voidstar
 		glm::mat4 proj;
 	};
 
+	struct Particle {
+		glm::vec2 position;
+		glm::vec2 velocity;
+		glm::vec4 color;
+
+		static vk::VertexInputBindingDescription GetBindingDescription() {
+			vk::VertexInputBindingDescription bindingDescription{};
+			bindingDescription.binding = 0;
+			bindingDescription.stride = sizeof(Particle);
+			bindingDescription.inputRate = vk::VertexInputRate::eVertex;
+			return bindingDescription;
+		}
+
+		static std::array<vk::VertexInputAttributeDescription, 2> GetAttributeDescriptions() {
+			std::array<vk::VertexInputAttributeDescription, 2> attributeDescriptions{};
+
+			attributeDescriptions[0].binding = 0;
+			attributeDescriptions[0].location = 0;
+			attributeDescriptions[0].format = vk::Format::eR32G32Sfloat;
+			attributeDescriptions[0].offset = offsetof(Particle, position);
+
+			attributeDescriptions[1].binding = 0;
+			attributeDescriptions[1].location = 1;
+			attributeDescriptions[1].format = vk::Format::eR32G32B32A32Sfloat;
+			attributeDescriptions[1].offset = offsetof(Particle, color);
+
+			return attributeDescriptions;
+		}
+
+	};
+
+
 	struct GraphicsPipelineSpecification
 	{
 		
@@ -36,7 +68,7 @@ namespace Voidstar
 		vk::Extent2D swapchainExtent;
 		vk::Format swapchainImageFormat;
 		vk::VertexInputBindingDescription bindingDescription;
-		std::array<vk::VertexInputAttributeDescription, 3>  attributeDescription;
+		std::array<vk::VertexInputAttributeDescription, 2>  attributeDescription;
 		std::vector<vk::DescriptorSetLayout> descriptorSetLayout;
 	};
 
@@ -100,12 +132,15 @@ namespace Voidstar
 		DescriptorSetLayout* m_DescriptorSetLayoutTex;
 		std::vector<vk::DescriptorSetLayout> m_DescriptorSetLayouts;
 		std::vector<vk::DescriptorSet> m_DescriptorSets;
-
+		std::vector<UPtr<Buffer>> m_ShaderStorageBuffers;
+		vk::CommandPool m_CommandComputePool;
+		std::vector<vk::CommandBuffer> m_CommandComputeBuffers;
 
 		SPtr<DescriptorPool> m_DescriptorPoolTex;
 		vk::DescriptorSet m_DescriptorSetTex;
-
-
+		SPtr<DescriptorPool> m_ComputePool;
+		DescriptorSetLayout* m_ComputeSetLayout;
+		std::vector<vk::DescriptorSet> m_ComputeDescriptorSets;
 		//debug callback
 		vk::DebugUtilsMessengerEXT m_DebugMessenger;
 		//dynamic instance dispatcher
@@ -121,13 +156,18 @@ namespace Voidstar
 
 		vk::RenderPass m_RenderPass;
 		vk::PipelineLayout m_PipelineLayout;
+		vk::PipelineLayout m_ComputePipelineLayout;
 		vk::Pipeline m_Pipeline;
+		vk::Pipeline m_ComputePipeline;
 		UPtr<Queue> m_GraphicsQueue;
 
 
 		vk::Semaphore m_ImageAvailableSemaphore;
 		vk::Semaphore m_RenderFinishedSemaphore;
 		vk::Fence	m_InFlightFence;
+
+		std::vector<vk::Semaphore> m_ComputeFinishedSemaphores;
+		std::vector<vk::Fence> m_ComputeInFlightFences;
 
 		SPtr<Window> m_Window;
 

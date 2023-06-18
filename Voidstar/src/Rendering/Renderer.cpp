@@ -19,9 +19,11 @@
 #include "DescriptorPool.h"
 #include "Model.h"
 #include "../Application.h"
-
+#include <random>
 namespace Voidstar
 {
+	vk::ShaderModule CreateModule(std::string filename, vk::Device device);
+	const uint32_t PARTICLE_COUNT = 8192;
 	Renderer::Renderer(size_t screenWidth, size_t screenHeight, std::shared_ptr<Window> window, Application* app) :
 		m_Window{ window }, m_ViewportWidth(screenWidth), m_ViewportHeight(screenHeight), m_App{app}
 	{
@@ -177,11 +179,16 @@ namespace Voidstar
 	
 
 		// create uniform buffers for each frame
-		DescrriptorSetLayoutSpec inputLayout;
-		inputLayout.type = vk::DescriptorType::eUniformBuffer;
-		inputLayout.stages = vk::ShaderStageFlagBits::eVertex;
+	
 		
-		m_DescriptorSetLayout = DescriptorSetLayout::Create(inputLayout);
+		vk::DescriptorSetLayoutBinding layoutBinding;
+		layoutBinding.binding = 0;
+		layoutBinding.descriptorType = vk::DescriptorType::eUniformBuffer;
+		layoutBinding.stageFlags = vk::ShaderStageFlagBits::eVertex;
+		layoutBinding.descriptorCount = 1;
+
+		std::vector<vk::DescriptorSetLayoutBinding> layoutBindings{ layoutBinding };
+		m_DescriptorSetLayout = DescriptorSetLayout::Create(layoutBindings);
 
 		auto bufferSize = sizeof(UniformBufferObject);
 		auto framesAmount = m_Swapchain->GetFramesCount();
@@ -202,7 +209,18 @@ namespace Voidstar
 		}
 
 
-		m_DescriptorPool = DescriptorPool::Create(vk::DescriptorType::eUniformBuffer, static_cast<uint32_t>(m_Swapchain->GetFramesCount()), m_Swapchain->GetFramesCount());
+
+
+		{
+
+			vk::DescriptorPoolSize poolSize;
+			poolSize.type = vk::DescriptorType::eUniformBuffer;
+			poolSize.descriptorCount = static_cast<uint32_t>(m_Swapchain->GetFramesCount());
+			
+			std::vector<vk::DescriptorPoolSize> poolSizes{ poolSize };
+			
+			m_DescriptorPool = DescriptorPool::Create(poolSizes, m_Swapchain->GetFramesCount());
+		}
 		
 
 		std::vector<vk::DescriptorSetLayout> layouts(m_Swapchain->GetFramesCount(), m_DescriptorSetLayout->GetLayout());
@@ -238,63 +256,221 @@ namespace Voidstar
 
 		{
 
+			vk::DescriptorPoolSize poolSize;
+			poolSize.type = vk::DescriptorType::eCombinedImageSampler;
+			poolSize.descriptorCount = 1;
+		
+			std::vector<vk::DescriptorPoolSize> poolSizes{poolSize};
 
-			m_DescriptorPoolTex = DescriptorPool::Create(vk::DescriptorType::eCombinedImageSampler,1,1);
+			m_DescriptorPoolTex = DescriptorPool::Create(poolSizes,1);
 
-			std::vector<vk::DescriptorSetLayout> layoutBindings;
-			layoutBindings.resize(1);
+			std::vector<vk::DescriptorSetLayout> layouts;
+			layouts.resize(1);
 			
-			DescrriptorSetLayoutSpec layout;
-			layout.type = vk::DescriptorType::eCombinedImageSampler;
-			layout.stages = vk::ShaderStageFlagBits::eFragment;
+		
 
-			m_DescriptorSetLayoutTex = DescriptorSetLayout::Create(layout);
+			vk::DescriptorSetLayoutBinding layoutBinding;
+			layoutBinding.binding = 0;
+			layoutBinding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+			layoutBinding.stageFlags = vk::ShaderStageFlagBits::eFragment;
+			layoutBinding.descriptorCount = 1;
 
-			layoutBindings[0] = m_DescriptorSetLayoutTex->GetLayout();
+			std::vector<vk::DescriptorSetLayoutBinding> layoutBindings{ layoutBinding };
 
-			m_DescriptorSetTex = m_DescriptorPoolTex->AllocateDescriptorSets(1, layoutBindings.data())[0];
+			m_DescriptorSetLayoutTex = DescriptorSetLayout::Create(layoutBindings);
+
+			layouts[0] = m_DescriptorSetLayoutTex->GetLayout();
+			//auto check = m_DescriptorPoolTex->AllocateDescriptorSets(2, layouts.data());
+			m_DescriptorSetTex = m_DescriptorPoolTex->AllocateDescriptorSets(1, layouts.data())[0];
 		}
+
+
+
+
+
 
 		m_GraphicsQueue = CreateUPtr<Queue>();
 		m_GraphicsQueue->CreateCommandPool();
 		m_GraphicsQueue->CreateCommandBuffer();
+
+
+		
+
 		RenderContext::SetGraphicsQueue(m_GraphicsQueue.get());
 		CreateSyncObjects();
 
-		m_Image = Image::CreateImage("res/viking_room/viking_room.png", m_DescriptorSetTex);
-		std::string modelPath = "res/viking_room/viking_room.obj";
-		m_Model = Model::Load(modelPath);
+
+
+		{
+			vk::DescriptorPoolSize poolSize;
+			poolSize.type = vk::DescriptorType::eStorageBuffer;
+			poolSize.descriptorCount = m_Swapchain->GetFramesCount()  *2;
+
+			std::vector<vk::DescriptorPoolSize> poolSizes{ poolSize };
+
+			m_ComputePool = DescriptorPool::Create(poolSizes, m_Swapchain->GetFramesCount());
+
+			vk::DescriptorSetLayoutBinding layoutBinding;
+			layoutBinding.binding = 0;
+			layoutBinding.descriptorType = vk::DescriptorType::eStorageBuffer;
+			layoutBinding.stageFlags = vk::ShaderStageFlagBits::eCompute;
+			layoutBinding.descriptorCount = 1;
+			vk::DescriptorSetLayoutBinding layoutBinding1;
+			layoutBinding1.binding = 1;
+			layoutBinding1.descriptorType = vk::DescriptorType::eStorageBuffer;
+			layoutBinding1.stageFlags = vk::ShaderStageFlagBits::eCompute;
+			layoutBinding1.descriptorCount =1;
+
+			std::vector<vk::DescriptorSetLayoutBinding> layoutBindings{ layoutBinding,layoutBinding1 };
+
+			m_ComputeSetLayout = DescriptorSetLayout::Create(layoutBindings);
+
+			std::vector<vk::DescriptorSetLayout> layouts(m_Swapchain->GetFramesCount(), m_ComputeSetLayout->GetLayout());
+			/*VkDescriptorSetAllocateInfo allocInfo{};
+			allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+			allocInfo.descriptorPool = m_ComputePool->GetPool();
+			allocInfo.descriptorSetCount = static_cast<uint32_t>(m_Swapchain->GetFramesCount());
+			allocInfo.pSetLayouts = layouts.data();*/
+
+			m_ComputeDescriptorSets = m_ComputePool->AllocateDescriptorSets(m_Swapchain->GetFramesCount(), layouts.data());
+
+			//m_DescriptorSetTex = m_DescriptorPoolTex->AllocateDescriptorSets(1, layouts.data())[0];
+			
+		}
+
+
+		std::default_random_engine rndEngine((unsigned)time(nullptr));
+		std::uniform_real_distribution<float> rndDist(-1.0f, 1.0f);
+
+		// Initial particle positions on a circle
+		std::vector<Particle> particles(PARTICLE_COUNT);
+		for (auto& particle : particles) {
+			float r = 0.25f * sqrt(rndDist(rndEngine));
+			float theta = rndDist(rndEngine) * 2 * 3.14159265358979323846;
+			float x = r * cos(theta) * m_ViewportHeight/ m_ViewportWidth;
+			float y = r * sin(theta);
+			particle.position = glm::vec2(x, y);
+			particle.velocity = glm::normalize(glm::vec2(x, y)) * 2.f* rndDist(rndEngine);
+			particle.color = glm::vec4(rndDist(rndEngine), rndDist(rndEngine), rndDist(rndEngine), 1.0f);
+		}
+		auto size = sizeof(Particle) * PARTICLE_COUNT;
+		m_ShaderStorageBuffers.resize(3);
+		m_CommandComputeBuffers.resize(3);
+		for (size_t i = 0; i < m_Swapchain->GetFramesCount(); i++)
+		{
+			SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(size);
+
+
+			{
+				BufferInputChunk inputBuffer;
+				inputBuffer.size = size;
+				inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+				inputBuffer.usage = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eStorageBuffer;
+				m_ShaderStorageBuffers[i] = CreateUPtr<Buffer>(inputBuffer);
+			}
+			
+
+
+			m_GraphicsQueue->BeginTransfering();
+			m_GraphicsQueue->Transfer(stagingBuffer.get(), m_ShaderStorageBuffers[i].get(), (void*)particles.data(), size);
+			m_GraphicsQueue->EndTransfering();
+
+
+
+		}
+		auto device = RenderContext::GetDevice();
+		vk::CommandPoolCreateInfo poolInfo;
+		poolInfo.flags = vk::CommandPoolCreateFlags() | vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
+		poolInfo.queueFamilyIndex = device->GetGraphicsIndex();
+		try
+		{
+			m_CommandComputePool = device->GetDevice().createCommandPool(poolInfo);
+
+		}
+		catch (vk::SystemError err)
+		{
+
+			Log::GetLog()->error("Failed to create Command Pool");
+		}
+
+
+		vk::CommandBufferAllocateInfo allocInfo = {};
+		allocInfo.commandPool = m_CommandComputePool;
+		allocInfo.level = vk::CommandBufferLevel::ePrimary;
+		allocInfo.commandBufferCount = 3;
+		try
+		{
+			m_CommandComputeBuffers = device->GetDevice().allocateCommandBuffers(allocInfo);
+
+		}
+		catch (vk::SystemError err)
+		{
+			Log::GetLog()->error("Failed to allocate  command buffer ");
+		}
+
+
+		for (size_t i = 0; i < m_Swapchain->GetFramesCount(); i++)
+		{
+			std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
+			VkDescriptorBufferInfo storageBufferInfoLastFrame{};
+			storageBufferInfoLastFrame.buffer = m_ShaderStorageBuffers[(i - 1) % m_Swapchain->GetFramesCount()]->GetBuffer();
+			storageBufferInfoLastFrame.offset = 0;
+			storageBufferInfoLastFrame.range = sizeof(Particle) * PARTICLE_COUNT;
+
+			descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrites[0].dstSet = m_ComputeDescriptorSets[i];
+			descriptorWrites[0].dstBinding = 0;
+			descriptorWrites[0].dstArrayElement = 0;
+			descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+			descriptorWrites[0].descriptorCount = 1;
+			descriptorWrites[0].pBufferInfo = &storageBufferInfoLastFrame;
+
+			VkDescriptorBufferInfo storageBufferInfoCurrentFrame{};
+			storageBufferInfoCurrentFrame.buffer = m_ShaderStorageBuffers[i]->GetBuffer();
+			storageBufferInfoCurrentFrame.offset = 0;
+			storageBufferInfoCurrentFrame.range = sizeof(Particle) * PARTICLE_COUNT;
+
+			descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrites[1].dstSet = m_ComputeDescriptorSets[i];
+			descriptorWrites[1].dstBinding = 1;
+			descriptorWrites[1].dstArrayElement = 0;
+			descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+			descriptorWrites[1].descriptorCount = 1;
+			descriptorWrites[1].pBufferInfo = &storageBufferInfoCurrentFrame;
+
+			auto device = RenderContext::GetDevice()->GetDevice();
+			vkUpdateDescriptorSets(device, 2, descriptorWrites.data(), 0, nullptr);
+		}
 
 
 
 
-		CreateMSAAFrame();
-		CreatePipeline();
-		CreateFramebuffers();
-		
+
+		//m_Image = Image::CreateImage("res/viking_room/viking_room.png", m_DescriptorSetTex);
+		//std::string modelPath = "res/viking_room/viking_room.obj";
+		//m_Model = Model::Load(modelPath);
 
 
-
-		auto indexSize = m_Model->indices.size() * sizeof(m_Model->indices[0]);
+	/*	auto indexSize = m_Model->indices.size() * sizeof(m_Model->indices[0]);
 		{
 			SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(indexSize);
-		
+
 
 			{
 				BufferInputChunk inputBuffer;
 				inputBuffer.size = indexSize;
 				inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
 				inputBuffer.usage = vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst;
-				m_IndexBuffer = new IndexBuffer(inputBuffer, m_Model->indices.size(),vk::IndexType::eUint32);
+				m_IndexBuffer = new IndexBuffer(inputBuffer, m_Model->indices.size(), vk::IndexType::eUint32);
 
 			}
 
 			m_GraphicsQueue->BeginTransfering();
 			m_GraphicsQueue->Transfer(stagingBuffer.get(), m_IndexBuffer, (void*)m_Model->indices.data(), indexSize);
 			m_GraphicsQueue->EndTransfering();
-			
-		
-			
+
+
+
 		}
 
 		auto vertexSize = m_Model->vertices.size() * sizeof(Vertex);
@@ -311,7 +487,46 @@ namespace Voidstar
 
 		m_GraphicsQueue->BeginTransfering();
 		m_GraphicsQueue->Transfer(stagingBuffer.get(), m_Buffer, (void*)m_Model->vertices.data(), vertexSize);
-		m_GraphicsQueue->EndTransfering();
+		m_GraphicsQueue->EndTransfering();*/
+
+
+
+
+		auto computeShaderModule = CreateModule("../Shaders/compute.spv", device->GetDevice());
+
+		vk::PipelineShaderStageCreateInfo computeShaderStageInfo{};
+		computeShaderStageInfo.flags = vk::PipelineShaderStageCreateFlags();
+		computeShaderStageInfo.stage = vk::ShaderStageFlagBits::eCompute;
+		computeShaderStageInfo.module = computeShaderModule;
+		computeShaderStageInfo.pName = "main";
+
+
+		vk::PipelineLayoutCreateInfo pipelineLayoutInfo{};
+		pipelineLayoutInfo.sType = vk::StructureType::ePipelineLayoutCreateInfo;
+		pipelineLayoutInfo.setLayoutCount = 1;
+		pipelineLayoutInfo.pSetLayouts = const_cast<const vk::DescriptorSetLayout*>(&m_ComputeSetLayout->GetLayout());
+		m_ComputePipelineLayout = device->GetDevice().createPipelineLayout(pipelineLayoutInfo, nullptr);
+
+
+		vk::ComputePipelineCreateInfo pipelineInfo{};
+
+		pipelineInfo.sType = vk::StructureType::eComputePipelineCreateInfo;
+		pipelineInfo.layout = m_ComputePipelineLayout;
+		pipelineInfo.stage = computeShaderStageInfo;
+		m_ComputePipeline = device->GetDevice().createComputePipeline(nullptr, pipelineInfo).value;
+
+		
+
+		vkDestroyShaderModule(device->GetDevice(), computeShaderModule, nullptr);
+
+
+		CreateMSAAFrame();
+		CreatePipeline();
+		CreateFramebuffers();
+		
+
+
+
 		
 
 
@@ -347,8 +562,20 @@ namespace Voidstar
 		{
 			Log::GetLog()->error("failed to create fence");
 		}
+		auto frameAmount = m_Swapchain->GetFramesCount();
+		m_ComputeInFlightFences.resize(frameAmount);
+		m_ComputeFinishedSemaphores.resize(frameAmount);
+		for (int i = 0; i < frameAmount; i++)
+		{
+			vk::SemaphoreCreateInfo semaphoreInfo = {};
+			semaphoreInfo.flags = vk::SemaphoreCreateFlags();
+			m_ComputeFinishedSemaphores[i] = m_Device->GetDevice().createSemaphore(semaphoreInfo);
 
+			vk::FenceCreateInfo fenceInfo = {};
+			fenceInfo.flags = vk::FenceCreateFlags() | vk::FenceCreateFlagBits::eSignaled;
 
+			m_ComputeInFlightFences[i] = m_Device->GetDevice().createFence(fenceInfo);
+		}
 	
 	}
 
@@ -402,15 +629,52 @@ namespace Voidstar
 		m_GraphicsQueue->BeginRenderPass(&m_RenderPass, &m_Swapchain->GetFrames()[imageIndex].framebuffer, &m_Swapchain->GetExtent());
 
 
-		m_GraphicsQueue->RecordCommand(m_Buffer, m_IndexBuffer, &m_Pipeline, &m_PipelineLayout, &m_DescriptorSets[imageIndex],&m_DescriptorSetTex);
+		m_GraphicsQueue->RecordCommand(m_ShaderStorageBuffers[imageIndex].get(), m_IndexBuffer, &m_Pipeline, &m_PipelineLayout, &m_DescriptorSets[imageIndex], &m_DescriptorSetTex);
 			
 
 		m_GraphicsQueue->EndRenderPass();
 		
 	}
+
+	size_t currentFrame = 0;
 	void Renderer::Render()	
 	{
 		
+		m_Device->GetDevice().waitForFences(m_ComputeInFlightFences[currentFrame], VK_TRUE, std::numeric_limits<uint64_t>::max());
+		m_Device->GetDevice().resetFences(m_ComputeInFlightFences[currentFrame]);
+
+
+
+
+		m_CommandComputeBuffers[currentFrame].reset();
+
+		vk::CommandBufferBeginInfo beginInfo;
+		beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
+		m_CommandComputeBuffers[currentFrame].begin(beginInfo);
+
+
+
+		vkCmdBindPipeline(m_CommandComputeBuffers[currentFrame], VK_PIPELINE_BIND_POINT_COMPUTE, m_ComputePipeline);
+		auto descSet = const_cast<const vk::DescriptorSet*>(&m_ComputeDescriptorSets[currentFrame]);
+		m_CommandComputeBuffers[currentFrame].bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_ComputePipelineLayout, 0, 1, descSet, 0, 0);
+
+		vkCmdDispatch(m_CommandComputeBuffers[currentFrame], PARTICLE_COUNT / 256, 1, 1);
+
+
+
+		if (vkEndCommandBuffer(m_CommandComputeBuffers[currentFrame]) != VK_SUCCESS)
+		{
+			throw std::runtime_error("failed to record command buffer!");
+		}
+		vk::SubmitInfo submitInfo = {};
+
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &m_CommandComputeBuffers[currentFrame];
+		submitInfo.signalSemaphoreCount = 1;
+		submitInfo.pSignalSemaphores = &m_ComputeFinishedSemaphores[currentFrame];
+
+		m_Device->GetGraphicsQueue().submit(submitInfo, m_ComputeInFlightFences[currentFrame]);
+
 		m_Device->GetDevice().waitForFences(m_InFlightFence, VK_TRUE, std::numeric_limits<uint64_t>::max());
 		m_Device->GetDevice().resetFences(m_InFlightFence);
 
@@ -418,14 +682,19 @@ namespace Voidstar
 		auto swapchain = m_Swapchain->GetSwapChain();
 		m_Device->GetDevice().acquireNextImageKHR(swapchain, UINT64_MAX, m_ImageAvailableSemaphore, nullptr, &imageIndex);
 		
+		UpdateUniformBuffer(imageIndex);
 	
+
+
+
+
+
 		m_GraphicsQueue->BeginRendering();
 
 
-		UpdateUniformBuffer(imageIndex);
 
 		RecordCommandBuffer(imageIndex);
-		vk::Semaphore waitSemaphores[] = { m_ImageAvailableSemaphore };
+		vk::Semaphore waitSemaphores[] = { m_ImageAvailableSemaphore,m_ComputeFinishedSemaphores[currentFrame] };
 		vk::Semaphore signalSemaphores[] = { m_RenderFinishedSemaphore };
 		m_GraphicsQueue->Submit(waitSemaphores, signalSemaphores, &m_InFlightFence);
 		m_GraphicsQueue->EndRendering();
@@ -451,7 +720,7 @@ namespace Voidstar
 		catch (vk::OutOfDateKHRError error) {
 			present = vk::Result::eErrorOutOfDateKHR;
 		}
-
+		currentFrame = (currentFrame + 1) % m_Swapchain->GetFramesCount();
 	}
 
 	
@@ -500,8 +769,9 @@ namespace Voidstar
 		specs.fragmentFilepath = "../Shaders/fragment.spv";
 		specs.swapchainExtent = swapChainExtent;
 		specs.swapchainImageFormat = swapchainFormat;
-		specs.bindingDescription = Vertex::GetBindingDescription();
-		specs.attributeDescription = Vertex::GetAttributeDescriptions();
+		specs.bindingDescription = Particle::GetBindingDescription();
+		//specs.attributeDescription = Vertex::GetAttributeDescriptions();
+		specs.attributeDescription = Particle::GetAttributeDescriptions();
 
 		auto samples = RenderContext::GetDevice()->GetSamples();
 		specs.samples = samples;
@@ -700,11 +970,15 @@ namespace Voidstar
 		//Input Assembly
 		vk::PipelineInputAssemblyStateCreateInfo inputAssemblyInfo = {};
 		inputAssemblyInfo.flags = vk::PipelineInputAssemblyStateCreateFlags();
-		inputAssemblyInfo.topology = vk::PrimitiveTopology::eTriangleList;
+		inputAssemblyInfo.topology = vk::PrimitiveTopology::ePointList;
+		
 		pipelineInfo.pInputAssemblyState = &inputAssemblyInfo;
 
 		
 		
+		
+
+
 		vk::ShaderModule vertexShader = CreateModule(
 			spec.vertexFilepath, spec.device
 		);
@@ -760,6 +1034,11 @@ namespace Voidstar
 		//Now both shaders have been made, we can declare them to the pipeline info
 		pipelineInfo.stageCount = shaderStages.size();
 		pipelineInfo.pStages = shaderStages.data();
+
+
+
+
+		
 
 
 
@@ -859,7 +1138,9 @@ namespace Voidstar
 		delete m_IndexBuffer;
 		m_Image.reset();
 		
-
+		m_Device->GetDevice().freeMemory(m_MsaaImageMemory);
+		m_Device->GetDevice().destroyImage(m_MsaaImage);
+		m_Device->GetDevice().destroyImageView(m_MsaaImageView);
 
 		m_GraphicsQueue.reset();
 

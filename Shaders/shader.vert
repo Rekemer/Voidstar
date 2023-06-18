@@ -45,10 +45,11 @@ vec4 random_color(vec4 st)
 
 void main() 
 {
-	vec4 pos =	ubo.proj *  ubo.view * ubo.model * vec4(in_pos,1.0);
+	gl_PointSize = 14.0;
+	//vec4 pos =	ubo.proj *  ubo.view * ubo.model * vec4(in_pos,1.0);
 	//vec4 pos =	 ubo.proj*ubo.view *vec4(in_pos,1.0);
-	//gl_Position = vec4(in_pos,1.0);
-	gl_Position = pos;
+	gl_Position = vec4(in_pos.xy,.8,1.0);
+	//gl_Position = pos;
 	uv = in_uv;
 	uv = vec2(in_uv.x,in_uv.y);
 	color = in_color;

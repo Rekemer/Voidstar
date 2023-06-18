@@ -57,7 +57,7 @@ namespace Voidstar
 
 		
 
-			if (queueFamily.queueFlags & vk::QueueFlagBits::eGraphics) {
+			if (queueFamily.queueFlags & vk::QueueFlagBits::eGraphics && (queueFamily.queueFlags & vk::QueueFlagBits::eCompute)) {
 				graphicFamily = i;
 
 			}
