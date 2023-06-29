@@ -20,7 +20,7 @@ namespace Voidstar
 	class Swapchain
 	{
 	public:
-		static Swapchain* Create(SwapChainSupportDetails& info);
+		static UPtr<Swapchain> Create(SwapChainSupportDetails& info);
 		~Swapchain();
 		std::vector<SwapChainFrame>& GetFrames()
 		{

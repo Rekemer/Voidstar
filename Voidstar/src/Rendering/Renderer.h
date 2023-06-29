@@ -102,14 +102,14 @@ namespace Voidstar
 		
 		void RecordCommandBuffer(uint32_t imageIndex);
 		void UpdateUniformBuffer(uint32_t imageIndex);
-
+		void RecreateSwapchain();
 	
 	private:
-		size_t m_ViewportWidth, m_ViewportHeight;
+		int m_ViewportWidth, m_ViewportHeight;
 		Instance* m_Instance;
 		Device* m_Device;
-		Swapchain* m_Swapchain;
-		Buffer* m_Buffer;
+		UPtr<Swapchain> m_Swapchain;
+		Buffer* m_Buffer{nullptr};
 		IndexBuffer* m_IndexBuffer;
 		Application* m_App;
 		

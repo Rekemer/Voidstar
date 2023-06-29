@@ -13,7 +13,7 @@ namespace Voidstar
 
 	vk::PresentModeKHR GetPresentMode(vk::PresentModeKHR presentMode, SwapChainSupportDetails& support);
 
-	Swapchain* Swapchain::Create(SwapChainSupportDetails& support)
+	UPtr<Swapchain> Swapchain::Create(SwapChainSupportDetails& support)
 	{
 		auto device = support.devcie;
 		auto surface = support.surface;
@@ -62,7 +62,7 @@ namespace Voidstar
 
 		createInfo.oldSwapchain = vk::SwapchainKHR(nullptr);
 
-		Swapchain* swapchain = new Swapchain();
+		auto swapchain = CreateUPtr<Swapchain>();
 		try 
 		{
 			swapchain->m_Swapchain = device->GetDevice().createSwapchainKHR(createInfo);

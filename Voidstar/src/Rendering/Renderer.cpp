@@ -623,13 +623,60 @@ namespace Voidstar
 		memcpy(uniformBuffersMapped[imageIndex], &ubo, sizeof(ubo));
 	}
 
+	void Renderer::RecreateSwapchain()
+	{
+		m_ViewportWidth = 0;
+		m_ViewportHeight = 0;
+		while (m_ViewportWidth == 0 || m_ViewportHeight == 0) {
+			glfwGetFramebufferSize(m_Window->GetRaw(), &m_ViewportWidth, &m_ViewportHeight);
+			glfwWaitEvents();
+		}
+
+
+		m_Device->GetDevice().waitIdle();
+		m_Swapchain.reset();
+
+		m_Device->GetDevice().freeMemory(m_MsaaImageMemory);
+		m_Device->GetDevice().destroyImage(m_MsaaImage);
+		m_Device->GetDevice().destroyImageView(m_MsaaImageView);
+
+		SwapChainSupportDetails support;
+		support.devcie = m_Device;
+		support.surface = &m_Surface;
+		support.capabilities = m_Device->GetDevicePhys().getSurfaceCapabilitiesKHR(m_Surface);
+		support.formats = m_Device->GetDevicePhys().getSurfaceFormatsKHR(m_Surface);
+		support.presentModes = m_Device->GetDevicePhys().getSurfacePresentModesKHR(m_Surface);
+		support.viewportWidth = m_ViewportWidth;
+		support.viewportHeight = m_ViewportHeight;
+		m_Swapchain = Swapchain::Create(support);
+		CreateMSAAFrame();
+
+
+
+		CreateFramebuffers();
+		auto& camera = m_App->GetCamera();
+		camera->UpdateProj(m_ViewportWidth, m_ViewportHeight);
+	}
+
+
 	void Renderer::RecordCommandBuffer(uint32_t imageIndex)
 	{
 		
 		m_GraphicsQueue->BeginRenderPass(&m_RenderPass, &m_Swapchain->GetFrames()[imageIndex].framebuffer, &m_Swapchain->GetExtent());
+		
+		vk::Viewport viewport;
+		viewport.x = 0;
+		viewport.y = 0;
+		viewport.minDepth = 0;
+		viewport.maxDepth = 1;
+		viewport.height = m_ViewportHeight;
+		viewport.width = m_ViewportWidth;
 
+		vk::Rect2D scissors;
+		scissors.offset = vk::Offset2D{(uint32_t)0,(uint32_t)0};
+		scissors.extent= vk::Extent2D{ (uint32_t)m_ViewportWidth,(uint32_t)m_ViewportHeight};
 
-		m_GraphicsQueue->RecordCommand(m_ShaderStorageBuffers[imageIndex].get(), m_IndexBuffer, &m_Pipeline, &m_PipelineLayout, &m_DescriptorSets[imageIndex], &m_DescriptorSetTex);
+		m_GraphicsQueue->RecordCommand(m_ShaderStorageBuffers[imageIndex].get(), m_IndexBuffer, &m_Pipeline, &m_PipelineLayout, &m_DescriptorSets[imageIndex], &m_DescriptorSetTex, viewport, scissors);
 			
 
 		m_GraphicsQueue->EndRenderPass();
@@ -720,6 +767,12 @@ namespace Voidstar
 		catch (vk::OutOfDateKHRError error) {
 			present = vk::Result::eErrorOutOfDateKHR;
 		}
+		if (present == vk::Result::eErrorOutOfDateKHR)
+		{
+			RecreateSwapchain();
+		}
+
+		
 		currentFrame = (currentFrame + 1) % m_Swapchain->GetFramesCount();
 	}
 
@@ -1009,6 +1062,19 @@ namespace Voidstar
 		viewportState.pScissors = &scissor;
 		pipelineInfo.pViewportState = &viewportState;
 
+		const vk::DynamicState dynamicStates[] = {
+		vk::DynamicState::eViewport,
+		vk::DynamicState::eScissor
+		};
+		vk::PipelineDynamicStateCreateInfo createInfo{};
+		createInfo.pNext = nullptr;
+		createInfo.flags = {};
+		createInfo.dynamicStateCount = 2;
+		createInfo.pDynamicStates = &dynamicStates[0];
+
+		pipelineInfo.pDynamicState = &createInfo;
+
+
 		//Rasterizer
 		vk::PipelineRasterizationStateCreateInfo rasterizer = {};
 		rasterizer.flags = vk::PipelineRasterizationStateCreateFlags();
@@ -1132,10 +1198,15 @@ namespace Voidstar
 
 	Renderer::~Renderer()
 	{
-		m_Device->GetDevice().waitIdle();
+		auto device = m_Device->GetDevice();
+		device.waitIdle();
 		
-		delete m_Buffer;
-		delete m_IndexBuffer;
+		if (m_Buffer != nullptr)
+		{
+			delete m_Buffer;
+			delete m_IndexBuffer;
+
+		}
 		m_Image.reset();
 		
 		m_Device->GetDevice().freeMemory(m_MsaaImageMemory);
@@ -1147,29 +1218,47 @@ namespace Voidstar
 		for (size_t i = 0; i < m_Swapchain->GetFramesCount(); i++) {
 			delete m_UniformBuffers[i];
 		}
+		for (auto& buffer : m_ShaderStorageBuffers)
+		{
+			buffer.reset();
+		}
+		device.destroyCommandPool(m_CommandComputePool);
 		
 		delete m_DescriptorSetLayout;
 		delete m_DescriptorSetLayoutTex;
 		m_DescriptorPool.reset();
 		m_DescriptorPoolTex.reset();
-		
+		m_ComputePool.reset();
+		m_Device->GetDevice().destroyDescriptorSetLayout(m_ComputeSetLayout->GetLayout());
 	
 
 		for (int i = 0; i < m_DescriptorSetLayouts.size(); i++)
 		{
 			m_Device->GetDevice().destroyDescriptorSetLayout(m_DescriptorSetLayouts[i]);
 		}
-	
+		
 	
 		
 		m_Device->GetDevice().destroySemaphore(m_ImageAvailableSemaphore);
 		m_Device->GetDevice().destroySemaphore(m_RenderFinishedSemaphore);
 		m_Device->GetDevice().destroyFence(m_InFlightFence);
 
+		for (auto& semaphore : m_ComputeFinishedSemaphores)
+		{
+			m_Device->GetDevice().destroySemaphore(semaphore);
+		}
+		for (auto& fence : m_ComputeInFlightFences)
+		{
+			m_Device->GetDevice().destroyFence(fence);
+		}
 		m_Device->GetDevice().destroyPipeline(m_Pipeline);
 		m_Device->GetDevice().destroyPipelineLayout(m_PipelineLayout);
-		delete m_Swapchain;
+		m_Swapchain.reset();
 		m_Device->GetDevice().destroyRenderPass(m_RenderPass);
+
+		m_Device->GetDevice().destroyPipeline(m_ComputePipeline);
+		m_Device->GetDevice().destroyPipelineLayout(m_ComputePipelineLayout);
+
 
 		m_Device->GetDevice().destroy();
 

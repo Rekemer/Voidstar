@@ -15,7 +15,7 @@ namespace Voidstar
 		void BeginRendering();
 	
 		void BeginRenderPass(vk::RenderPass* renderPass, vk::Framebuffer* framebuffer, vk::Extent2D* extent);
-		void RecordCommand(Buffer* vertexBuffer, IndexBuffer* indexBuffer, vk::Pipeline* m_Pipeline, vk::PipelineLayout* m_PipelineLayout, vk::DescriptorSet* descriptorSet, vk::DescriptorSet* descriptorSetTex);
+		void RecordCommand(Buffer* vertexBuffer, IndexBuffer* indexBuffer, vk::Pipeline* m_Pipeline, vk::PipelineLayout* m_PipelineLayout, vk::DescriptorSet* descriptorSet, vk::DescriptorSet* descriptorSetTex, vk::Viewport viewport, vk::Rect2D scissor);
 		void EndRenderPass();
 		void Submit(vk::Semaphore* waitSemaphores, vk::Semaphore* signalSemaphores, vk::Fence* fence);
 	

@@ -75,7 +75,7 @@ namespace Voidstar
 		m_CommandBuffer.beginRenderPass(&renderPassInfo, vk::SubpassContents::eInline);
 	}
 
-	void Queue::RecordCommand(Buffer* vertexBuffer, IndexBuffer* indexBuffer, vk::Pipeline* m_Pipeline, vk::PipelineLayout* m_PipelineLayout, vk::DescriptorSet* descriptorSet, vk::DescriptorSet* descriptorSetTex)
+	void Queue::RecordCommand(Buffer* vertexBuffer, IndexBuffer* indexBuffer, vk::Pipeline* m_Pipeline, vk::PipelineLayout* m_PipelineLayout, vk::DescriptorSet* descriptorSet, vk::DescriptorSet* descriptorSetTex, vk::Viewport viewport, vk::Rect2D scissor)
 	{
 		m_CommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_PipelineLayout, 0, *descriptorSet, nullptr);
 		m_CommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_PipelineLayout, 1, *descriptorSetTex, nullptr);
@@ -83,6 +83,12 @@ namespace Voidstar
 		vk::DeviceSize offsets[] = { 0 };
 		vk::Buffer vertexBuffers[] = { vertexBuffer->GetBuffer() };
 		m_CommandBuffer.bindVertexBuffers(0, 1, vertexBuffers, offsets);
+
+
+		
+		m_CommandBuffer.setViewport(0,1,&viewport);	
+		m_CommandBuffer.setScissor(0,1,&scissor);
+
 		//m_CommandBuffer.bindIndexBuffer(indexBuffer->GetBuffer(), 0, indexBuffer->GetIndexType());
 //		auto amount = indexBuffer->GetIndexAmount();
 		//m_CommandBuffer.drawIndexed(static_cast<uint32_t>(amount), 1, 0, 0, 0);
