@@ -43,13 +43,12 @@ project "Voidstar-Core"
     files
     {
         "%{prj.location}/src/**.cpp",
-        "%{prj.location}/src/**.h"
+        "%{prj.location}/src/**.h",
+        "%{prj.location}/Dependencies/Tracy/public/TracyClient.cpp",
     }
 
     pchheader "Prereq.h"
-	pchsource "%{prj.name}/src/Prereq.cpp"
-
-   
+	pchsource "Voidstar/src/Prereq.cpp"
     includedirs
     {
         os.getenv("VULKAN_SDK") .. "/Include",
@@ -58,11 +57,16 @@ project "Voidstar-Core"
         "%{prj.location}/Dependencies/glm/glm",
         "%{prj.location}/Dependencies/spdlog/include/spdlog",
         "%{prj.location}/Dependencies/",
-
+        
     }
     libdirs { "%{prj.location}/Dependencies/GLFW/lib-vc2019", os.getenv("VULKAN_SDK") .. "/Lib" }
-
+    
     links { "glfw3.lib", "vulkan-1.lib"}
+
+    -- Exclude tracy.cpp from using precompiled headers
+    filter "files:Voidstar/Dependencies/Tracy/public/**.cpp"
+    flags { "NoPCH" }
+    
     filter "configurations:Debug"
         defines "VS_DEBUG"
         symbols "On"
