@@ -57,7 +57,7 @@
       <PrecompiledHeaderFile>Prereq.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>VS_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>src;..\Dependencies\glm\glm;C:\VulkanSDK\1.3.216.0\Include;Dependencies\spdlog\include;Dependencies\GLFW\include;Dependencies\glm\glm;Dependencies\spdlog\include\spdlog;Dependencies;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>src;..\Dependencies\glm\glm;C:\VulkanSDK\1.3.216.0\Include;Dependencies\spdlog\include;Dependencies\GLFW\include;Dependencies\glm\glm;Dependencies\spdlog\include\spdlog;Dependencies;Dependencies\Tracy\public;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
       <ExternalWarningLevel>Level3</ExternalWarningLevel>
@@ -79,8 +79,8 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>Prereq.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
-      <PreprocessorDefinitions>VS_RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>src;..\Dependencies\glm\glm;C:\VulkanSDK\1.3.216.0\Include;Dependencies\spdlog\include;Dependencies\GLFW\include;Dependencies\glm\glm;Dependencies\spdlog\include\spdlog;Dependencies;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>VS_RELEASE;TRACY_ENABLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>src;..\Dependencies\glm\glm;C:\VulkanSDK\1.3.216.0\Include;Dependencies\spdlog\include;Dependencies\GLFW\include;Dependencies\glm\glm;Dependencies\spdlog\include\spdlog;Dependencies;Dependencies\Tracy\public;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -102,6 +102,7 @@
     </ProjectReference>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Dependencies\Tracy\public\tracy\TracyVulkan.hpp" />
     <ClInclude Include="src\Application.h" />
     <ClInclude Include="src\Input.h" />
     <ClInclude Include="src\Keys.h" />

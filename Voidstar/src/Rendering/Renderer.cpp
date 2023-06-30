@@ -20,8 +20,11 @@
 #include "Model.h"
 #include "../Application.h"
 #include <random>
+#include"tracy/Tracy.hpp"
+#include"tracy/TracyVulkan.hpp"
 namespace Voidstar
 {
+	TracyVkCtx ctx;
 	vk::ShaderModule CreateModule(std::string filename, vk::Device device);
 	const uint32_t PARTICLE_COUNT = 8192;
 	Renderer::Renderer(size_t screenWidth, size_t screenHeight, std::shared_ptr<Window> window, Application* app) :
@@ -48,6 +51,7 @@ namespace Voidstar
 		support.viewportHeight = m_ViewportHeight;
 
 		m_Swapchain = Swapchain::Create(support);
+		
 
 #if 1
 		//Vertex{ {-0.5f, -0.5f,0.},{1.0f, 0.0f, 0.0f,1.0f} };
@@ -526,9 +530,17 @@ namespace Voidstar
 		
 
 
+		auto physDev = m_Device->GetDevicePhys();
+		auto dev = m_Device->GetDevice();
+		auto queue = m_Device->GetGraphicsQueue();
+		auto commandBuffer = m_GraphicsQueue->GetCommandBuffer();
 
-		
+		auto instance = m_Instance->GetInstance();
+		PFN_vkGetPhysicalDeviceCalibrateableTimeDomainsEXT vkGetPhysicalDeviceCalibrateableTimeDomainsEXT = reinterpret_cast<PFN_vkGetPhysicalDeviceCalibrateableTimeDomainsEXT>(vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceCalibrateableTimeDomainsEXT"));
+		PFN_vkGetCalibratedTimestampsEXT vkGetCalibratedTimestampsEXT = reinterpret_cast<PFN_vkGetCalibratedTimestampsEXT>(vkGetDeviceProcAddr(dev, "vkGetCalibratedTimestampsEXT"));
 
+		ctx = TracyVkContextCalibrated(physDev,dev,queue,commandBuffer, 
+			vkGetPhysicalDeviceCalibrateableTimeDomainsEXT, vkGetCalibratedTimestampsEXT);
 
 
 		
@@ -661,9 +673,15 @@ namespace Voidstar
 
 	void Renderer::RecordCommandBuffer(uint32_t imageIndex)
 	{
-		
+
+		vk::CommandBufferBeginInfo beginInfo = {};
+
+		auto commandBuffer = m_GraphicsQueue->GetCommandBuffer();
+
+		commandBuffer.begin(beginInfo);
+		{
+			TracyVkZone(ctx, commandBuffer, "Rendering");
 		m_GraphicsQueue->BeginRenderPass(&m_RenderPass, &m_Swapchain->GetFrames()[imageIndex].framebuffer, &m_Swapchain->GetExtent());
-		
 		vk::Viewport viewport;
 		viewport.x = 0;
 		viewport.y = 0;
@@ -675,11 +693,13 @@ namespace Voidstar
 		vk::Rect2D scissors;
 		scissors.offset = vk::Offset2D{(uint32_t)0,(uint32_t)0};
 		scissors.extent= vk::Extent2D{ (uint32_t)m_ViewportWidth,(uint32_t)m_ViewportHeight};
-
 		m_GraphicsQueue->RecordCommand(m_ShaderStorageBuffers[imageIndex].get(), m_IndexBuffer, &m_Pipeline, &m_PipelineLayout, &m_DescriptorSets[imageIndex], &m_DescriptorSetTex, viewport, scissors);
-			
+		}
 
-		m_GraphicsQueue->EndRenderPass();
+
+			m_GraphicsQueue->EndRenderPass();
+			TracyVkCollect(ctx, commandBuffer);
+		commandBuffer.end();
 		
 	}
 
@@ -687,7 +707,12 @@ namespace Voidstar
 	void Renderer::Render()	
 	{
 		
+
+		{
+			ZoneScopedN("Waiting for fence ");
+			
 		m_Device->GetDevice().waitForFences(m_ComputeInFlightFences[currentFrame], VK_TRUE, std::numeric_limits<uint64_t>::max());
+		}
 		m_Device->GetDevice().resetFences(m_ComputeInFlightFences[currentFrame]);
 
 
@@ -695,24 +720,32 @@ namespace Voidstar
 
 		m_CommandComputeBuffers[currentFrame].reset();
 
-		vk::CommandBufferBeginInfo beginInfo;
-		beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
-		m_CommandComputeBuffers[currentFrame].begin(beginInfo);
 
-
-
-		vkCmdBindPipeline(m_CommandComputeBuffers[currentFrame], VK_PIPELINE_BIND_POINT_COMPUTE, m_ComputePipeline);
-		auto descSet = const_cast<const vk::DescriptorSet*>(&m_ComputeDescriptorSets[currentFrame]);
-		m_CommandComputeBuffers[currentFrame].bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_ComputePipelineLayout, 0, 1, descSet, 0, 0);
-
-		vkCmdDispatch(m_CommandComputeBuffers[currentFrame], PARTICLE_COUNT / 256, 1, 1);
-
-
-
-		if (vkEndCommandBuffer(m_CommandComputeBuffers[currentFrame]) != VK_SUCCESS)
 		{
-			throw std::runtime_error("failed to record command buffer!");
+
+			vk::CommandBufferBeginInfo beginInfo;
+			beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
+
+			
+
+			m_CommandComputeBuffers[currentFrame].begin(beginInfo);
+			TracyVkZone(ctx, m_CommandComputeBuffers[currentFrame], "Compute");
+			vkCmdBindPipeline(m_CommandComputeBuffers[currentFrame], VK_PIPELINE_BIND_POINT_COMPUTE,	m_ComputePipeline);
+			auto descSet = const_cast<const vk::DescriptorSet*>(&m_ComputeDescriptorSets[currentFrame]);
+			m_CommandComputeBuffers[currentFrame].bindDescriptorSets(vk::PipelineBindPoint::eCompute,	m_ComputePipelineLayout, 0, 1, descSet, 0, 0);
+
+			vkCmdDispatch(m_CommandComputeBuffers[currentFrame], PARTICLE_COUNT / 256, 1, 1);
 		}
+		TracyVkCollect(ctx, m_CommandComputeBuffers[currentFrame]);
+			if (vkEndCommandBuffer(m_CommandComputeBuffers[currentFrame]) != VK_SUCCESS)
+			{
+				throw std::runtime_error("failed to record command buffer!");
+			}
+			
+
+
+
+		
 		vk::SubmitInfo submitInfo = {};
 
 		submitInfo.commandBufferCount = 1;
@@ -722,33 +755,43 @@ namespace Voidstar
 
 		m_Device->GetGraphicsQueue().submit(submitInfo, m_ComputeInFlightFences[currentFrame]);
 
-		m_Device->GetDevice().waitForFences(m_InFlightFence, VK_TRUE, std::numeric_limits<uint64_t>::max());
+		{
+
+			ZoneScopedN("Waiting for fence");
+			m_Device->GetDevice().waitForFences(m_InFlightFence, VK_TRUE, std::numeric_limits<uint64_t>::max());
+		}
 		m_Device->GetDevice().resetFences(m_InFlightFence);
 
 		uint32_t imageIndex;
 		auto swapchain = m_Swapchain->GetSwapChain();
-		m_Device->GetDevice().acquireNextImageKHR(swapchain, UINT64_MAX, m_ImageAvailableSemaphore, nullptr, &imageIndex);
+		{
+			ZoneScopedN("Acquiring new Image");
+			m_Device->GetDevice().acquireNextImageKHR(swapchain, UINT64_MAX, m_ImageAvailableSemaphore, nullptr, &imageIndex);
+		}
+		{
+			ZoneScopedN("Updating uniform buffer");
+
+			UpdateUniformBuffer(imageIndex);
+		}
 		
-		UpdateUniformBuffer(imageIndex);
 	
 
+		
+			vk::Semaphore waitSemaphores[] = { m_ImageAvailableSemaphore,m_ComputeFinishedSemaphores[currentFrame] };
+			vk::Semaphore signalSemaphores[] = { m_RenderFinishedSemaphore };
 
-
-
-
-		m_GraphicsQueue->BeginRendering();
-
-
-
-		RecordCommandBuffer(imageIndex);
-		vk::Semaphore waitSemaphores[] = { m_ImageAvailableSemaphore,m_ComputeFinishedSemaphores[currentFrame] };
-		vk::Semaphore signalSemaphores[] = { m_RenderFinishedSemaphore };
-		m_GraphicsQueue->Submit(waitSemaphores, signalSemaphores, &m_InFlightFence);
-		m_GraphicsQueue->EndRendering();
+		{
+			ZoneScopedN("Sumbit render commands");
+			m_GraphicsQueue->BeginRendering();
+			RecordCommandBuffer(imageIndex);
+			m_GraphicsQueue->Submit(waitSemaphores, signalSemaphores, &m_InFlightFence);
+			m_GraphicsQueue->EndRendering();
+		}
 
 		
 
 		
+
 		
 
 		vk::PresentInfoKHR presentInfo = {};
@@ -762,6 +805,7 @@ namespace Voidstar
 		presentInfo.pImageIndices = &imageIndex;
 		vk::Result present;
 		try {
+			ZoneScopedN("Presenting");
 			present = m_Device->GetPresentQueue().presentKHR(presentInfo);
 		}
 		catch (vk::OutOfDateKHRError error) {
@@ -769,11 +813,15 @@ namespace Voidstar
 		}
 		if (present == vk::Result::eErrorOutOfDateKHR)
 		{
+			ZoneScopedN("Recreating swapchain");
 			RecreateSwapchain();
 		}
 
-		
 		currentFrame = (currentFrame + 1) % m_Swapchain->GetFramesCount();
+
+
+		
+		FrameMark;
 	}
 
 	
@@ -1198,9 +1246,11 @@ namespace Voidstar
 
 	Renderer::~Renderer()
 	{
+
 		auto device = m_Device->GetDevice();
 		device.waitIdle();
 		
+		TracyVkDestroy(ctx)
 		if (m_Buffer != nullptr)
 		{
 			delete m_Buffer;
@@ -1317,11 +1367,13 @@ namespace Voidstar
 		}
 
 		info.extensions.push_back("VK_EXT_debug_utils");
+		//tracy
+		info.extensions.push_back("VK_EXT_calibrated_timestamps");
 
 		info.layers.push_back("VK_LAYER_KHRONOS_validation");
 
 		m_Instance = Instance::Create(info);
-
+		
 	
 	}
 

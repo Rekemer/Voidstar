@@ -33,7 +33,7 @@ namespace Voidstar
 
 		void EndTransfering();
 
-		
+		vk::CommandBuffer& GetCommandBuffer() { return m_CommandBuffer; }
 
 		~Queue();
 	private:

@@ -57,6 +57,7 @@ project "Voidstar-Core"
         "%{prj.location}/Dependencies/glm/glm",
         "%{prj.location}/Dependencies/spdlog/include/spdlog",
         "%{prj.location}/Dependencies/",
+        "%{prj.location}/Dependencies/Tracy/public",
         
     }
     libdirs { "%{prj.location}/Dependencies/GLFW/lib-vc2019", os.getenv("VULKAN_SDK") .. "/Lib" }
@@ -73,4 +74,5 @@ project "Voidstar-Core"
         
     filter "configurations:Release"
         defines "VS_RELEASE"
+        defines "TRACY_ENABLE"
         optimize "On"

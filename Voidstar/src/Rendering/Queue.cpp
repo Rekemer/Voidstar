@@ -48,10 +48,7 @@ namespace Voidstar
 
 	void Queue::BeginRenderPass(vk::RenderPass* renderPass, vk::Framebuffer* framebuffer, vk::Extent2D* extent)
 	{
-		vk::CommandBufferBeginInfo beginInfo = {};
-
-
-		m_CommandBuffer.begin(beginInfo);
+		
 
 
 		vk::RenderPassBeginInfo renderPassInfo = {};
@@ -99,7 +96,6 @@ namespace Voidstar
 	{
 		m_CommandBuffer.endRenderPass();
 
-		m_CommandBuffer.end();
 	}
 
 	void Queue::Submit(vk::Semaphore* waitSemaphores, vk::Semaphore* signalSemaphores, vk::Fence* fence)
