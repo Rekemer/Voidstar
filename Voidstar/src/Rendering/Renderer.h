@@ -3,7 +3,7 @@
 #include "../Prereq.h"
 #include <glm.hpp>
 #include <gtc/matrix_transform.hpp>
-#include"Queue.h"
+#include"CommandBuffer.h"
 #include"../Types.h"
 namespace Voidstar
 {
@@ -82,11 +82,17 @@ namespace Voidstar
 	class Device;
 	class Swapchain;
 	class DescriptorSetLayout;
+	class CommandPoolManager;
 	class Renderer
 	{
 	public:
-		Renderer(size_t screenWidth, size_t screenHeight, std::shared_ptr<Window> window, Application* app );
+		void Init(size_t screenWidth, size_t screenHeight, std::shared_ptr<Window> window, Application* app );
+		static Renderer* Instance();
 		void Render();
+		CommandPoolManager* GetCommandPoolManager()
+		{
+			return m_CommandPoolManager.get();
+		}
 		~Renderer();
 	private:
 		void CreateInstance();
@@ -103,10 +109,10 @@ namespace Voidstar
 		void RecordCommandBuffer(uint32_t imageIndex);
 		void UpdateUniformBuffer(uint32_t imageIndex);
 		void RecreateSwapchain();
-	
+		void Shutdown();
 	private:
+		Voidstar::Instance* m_Instance;
 		int m_ViewportWidth, m_ViewportHeight;
-		Instance* m_Instance;
 		Device* m_Device;
 		UPtr<Swapchain> m_Swapchain;
 		Buffer* m_Buffer{nullptr};
@@ -126,6 +132,7 @@ namespace Voidstar
 
 		// can be in one buffer?
 		std::vector<Buffer*> m_UniformBuffers;
+		std::vector<CommandBuffer> m_CommandBuffers;
 		std::vector<void*> uniformBuffersMapped;
 		
 		DescriptorSetLayout* m_DescriptorSetLayout;
@@ -159,8 +166,9 @@ namespace Voidstar
 		vk::PipelineLayout m_ComputePipelineLayout;
 		vk::Pipeline m_Pipeline;
 		vk::Pipeline m_ComputePipeline;
-		UPtr<Queue> m_GraphicsQueue;
+		CommandBuffer m_GraphicsCommandBuffer;
 
+		UPtr<CommandPoolManager> m_CommandPoolManager;
 
 		vk::Semaphore m_ImageAvailableSemaphore;
 		vk::Semaphore m_RenderFinishedSemaphore;

@@ -4,23 +4,50 @@ namespace Voidstar
 {
 	class Buffer;
 	class IndexBuffer;
-	class Queue
+	class CommandBuffer
 	{
 	public:
+		CommandBuffer() = default;
+		CommandBuffer(CommandBuffer& commandBuffer)
+		{
+			m_CommandPool = commandBuffer.m_CommandPool;
+			m_CommandBuffer= commandBuffer.m_CommandBuffer;
+		}
 		
-		void CreateCommandPool();
-		void CreateCommandBuffer();
-		
+		CommandBuffer(CommandBuffer&& commandBuffer) noexcept
+			: m_CommandPool(commandBuffer.m_CommandPool),
+			m_CommandBuffer(commandBuffer.m_CommandBuffer)
+		{
+			commandBuffer.m_CommandPool = nullptr;
+			commandBuffer.m_CommandBuffer = nullptr;
+		}
+		CommandBuffer& operator=(CommandBuffer&& other) noexcept
+		{
+			// Step 1: Check for self-assignment
+			if (this == &other) {
+				return *this;
+			}
+
+			
+			
+
+			// Step 3: Transfer ownership
+			m_CommandPool = std::move(other.m_CommandPool);
+			m_CommandBuffer = std::move(other.m_CommandBuffer);
+
+			return *this;
+		}
 		//rendering 
 		void BeginRendering();
 	
 		void BeginRenderPass(vk::RenderPass* renderPass, vk::Framebuffer* framebuffer, vk::Extent2D* extent);
-		void RecordCommand(Buffer* vertexBuffer, IndexBuffer* indexBuffer, vk::Pipeline* m_Pipeline, vk::PipelineLayout* m_PipelineLayout, vk::DescriptorSet* descriptorSet, vk::DescriptorSet* descriptorSetTex, vk::Viewport viewport, vk::Rect2D scissor);
+	
 		void EndRenderPass();
 		void Submit(vk::Semaphore* waitSemaphores, vk::Semaphore* signalSemaphores, vk::Fence* fence);
 	
 		void EndRendering();
-
+		void Free();
+		static CommandBuffer CreateBuffer(vk::CommandPool commandPool, vk::CommandBufferLevel level);
 
 		// transfering operations
 		vk::CommandBuffer BeginTransfering();
@@ -35,7 +62,7 @@ namespace Voidstar
 
 		vk::CommandBuffer& GetCommandBuffer() { return m_CommandBuffer; }
 
-		~Queue();
+		~CommandBuffer();
 	private:
 		vk::CommandPool m_CommandPool;
 		vk::CommandBuffer m_CommandBuffer;

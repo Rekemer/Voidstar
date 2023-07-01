@@ -48,5 +48,6 @@ namespace Voidstar
 		vk::DeviceMemory m_ImageMemory;
 		vk::ImageView m_ImageView;
 		vk::Sampler m_Sampler;
+		vk::CommandPool m_CommandPool;
 	};
 }

@@ -2,17 +2,17 @@
 namespace Voidstar
 {
 	class Device;
-	class Queue;
+	class CommandBuffer;
 	class RenderContext
 	{
 	public:
 		static Device* GetDevice();
 		static void SetDevice(Device* device);
 
-		static Queue* GetGraphicsQueue();
-		static  void SetGraphicsQueue(Queue* device);
+		static CommandBuffer* GetGraphicsCommandBuffer();
+		static  void SetGraphicsCommandBuffer(CommandBuffer* device);
 	private:
 		static Device* m_Device;
-		static Queue* m_GraphicsQueue;
+		static CommandBuffer* m_GraphicsCommandBuffer;
 	};
 }

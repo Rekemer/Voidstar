@@ -15,10 +15,10 @@ namespace Voidstar
 		// init Window
 		m_Window = CreateSPtr<Window>(appName, screenWidth, screenHeight);
 		// init Renderer
-		m_Renderer = CreateUPtr<Renderer>(screenWidth, screenHeight, m_Window,this);
 		m_Camera = CreateUPtr<Camera>();
 		m_Camera->UpdateProj(screenWidth, screenHeight);
 		Input::Init(m_Window);
+		Renderer::Instance()->Init(screenWidth, screenHeight, m_Window, this);
 
 	}
 	Application::~Application()
@@ -39,7 +39,7 @@ namespace Voidstar
 			float deltaTime = 0;
 			m_Window->Update(deltaTime);
 			//m_Camera->Update(deltaTime);
-			m_Renderer->Render();
+			Renderer::Instance()->Render();
 		}
 	}
 }

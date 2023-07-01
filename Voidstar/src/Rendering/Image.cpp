@@ -6,7 +6,9 @@
 #include "stb_image.h"
 #include "Log.h"
 #include "Buffer.h"
-#include "Queue.h"
+#include "CommandBuffer.h"
+#include "CommandPoolManager.h"
+#include "Renderer.h"
 namespace Voidstar
 {
 	VkImageView Image::CreateImageView(vk::Image& image, vk::Format format, vk::ImageAspectFlags aspect, int mipmap)
@@ -63,8 +65,9 @@ namespace Voidstar
 	}
 	SPtr<Image> Image::CreateImage(std::string path,vk::DescriptorSet descriptorSet)
 	{
-
+		
 		auto image = CreateUPtr<Image>();
+		image->m_CommandPool = Renderer::Instance()->GetCommandPoolManager()->GetFreePool();
 		stbi_set_flip_vertically_on_load(true);
 		auto pixels = stbi_load(path.c_str(), &image->m_Width, &image->m_Height, &image->m_Channels, STBI_rgb_alpha);
 		if (!pixels) {
@@ -116,16 +119,19 @@ namespace Voidstar
 		device->GetDevice().unmapMemory(buffer->GetMemory());
 
 		//then transfer it to image memory
-		auto graphicsQueue = RenderContext::GetGraphicsQueue();
-		graphicsQueue->BeginTransfering();
-		graphicsQueue->ChangeImageLayout(&image->m_Image, vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal,mipMaps);
-		graphicsQueue->EndTransfering();
+		auto commandBuffer = CommandBuffer::CreateBuffer(image->m_CommandPool,vk::CommandBufferLevel::ePrimary);
 
-		graphicsQueue->BeginTransfering();
-		graphicsQueue->CopyBufferToImage(buffer.get(), &image->m_Image, image->m_Width, image->m_Height);
-		graphicsQueue->EndTransfering();
+
+		commandBuffer.BeginTransfering();
+		commandBuffer.ChangeImageLayout(&image->m_Image, vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal,mipMaps);
+		commandBuffer.EndTransfering();
+
+		commandBuffer.BeginTransfering();
+		commandBuffer.CopyBufferToImage(buffer.get(), &image->m_Image, image->m_Width, image->m_Height);
+		commandBuffer.EndTransfering();
 		
-
+		commandBuffer.Free();
+		Renderer::Instance()->GetCommandPoolManager()->FreePool(image->m_CommandPool);
 		
 		//graphicsQueue->BeginTransfering();
 		//graphicsQueue->ChangeImageLayout(&image->m_Image, vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal, mipMaps);
@@ -260,10 +266,9 @@ namespace Voidstar
 		if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
 			throw std::runtime_error("texture image format does not support linear blitting!");
 		}
-
-		auto graphicsQueue = RenderContext::GetGraphicsQueue();
-		auto commandBuffer = graphicsQueue->BeginTransfering();
-		graphicsQueue->BeginTransfering();
+		assert(m_CommandPool);
+		auto commandBuffer = CommandBuffer::CreateBuffer(m_CommandPool,vk::CommandBufferLevel::ePrimary);
+		commandBuffer.BeginTransfering();
 		VkImageMemoryBarrier barrier{};
 		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 		barrier.image = image;
@@ -286,7 +291,7 @@ namespace Voidstar
 			barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 			barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 
-			vkCmdPipelineBarrier(commandBuffer,
+			vkCmdPipelineBarrier(commandBuffer.GetCommandBuffer(),
 				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
 				0, nullptr,
 				0, nullptr,
@@ -308,7 +313,7 @@ namespace Voidstar
 			blit.dstSubresource.layerCount = 1;
 
 
-			vkCmdBlitImage(commandBuffer,
+			vkCmdBlitImage(commandBuffer.GetCommandBuffer(),
 				image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 				image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				1, &blit,
@@ -319,7 +324,7 @@ namespace Voidstar
 			barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
-			vkCmdPipelineBarrier(commandBuffer,
+			vkCmdPipelineBarrier(commandBuffer.GetCommandBuffer(),
 				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
 				0, nullptr,
 				0, nullptr,
@@ -335,11 +340,11 @@ namespace Voidstar
 		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
-		vkCmdPipelineBarrier(commandBuffer,
+		vkCmdPipelineBarrier(commandBuffer.GetCommandBuffer(),
 			VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
 			0, nullptr,
 			0, nullptr,
 			1, &barrier);
-		graphicsQueue->EndTransfering();
+		commandBuffer.EndTransfering();
 	}
 }

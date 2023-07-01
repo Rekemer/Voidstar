@@ -63,7 +63,7 @@
     <ClInclude Include="src\Rendering\Model.h">
       <Filter>src\Rendering</Filter>
     </ClInclude>
-    <ClInclude Include="src\Rendering\Queue.h">
+    <ClInclude Include="src\Rendering\CommandBuffer.h">
       <Filter>src\Rendering</Filter>
     </ClInclude>
     <ClInclude Include="src\Rendering\RenderContext.h">
@@ -93,7 +93,7 @@
     <ClInclude Include="src\Window.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="Dependencies\Tracy\public\tracy\TracyVulkan.hpp" />
+    <ClInclude Include="src\Rendering\CommandPoolManager.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Dependencies\Tracy\public\TracyClient.cpp">
@@ -135,7 +135,7 @@
     <ClCompile Include="src\Rendering\Model.cpp">
       <Filter>src\Rendering</Filter>
     </ClCompile>
-    <ClCompile Include="src\Rendering\Queue.cpp">
+    <ClCompile Include="src\Rendering\CommandBuffer.cpp">
       <Filter>src\Rendering</Filter>
     </ClCompile>
     <ClCompile Include="src\Rendering\RenderContext.cpp">
@@ -150,5 +150,6 @@
     <ClCompile Include="src\Window.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="src\Rendering\CommandPoolManager.cpp" />
   </ItemGroup>
 </Project>

@@ -20,6 +20,7 @@
 #include "Model.h"
 #include "../Application.h"
 #include <random>
+#include "CommandPoolManager.h"
 #include"tracy/Tracy.hpp"
 #include"tracy/TracyVulkan.hpp"
 namespace Voidstar
@@ -27,10 +28,15 @@ namespace Voidstar
 	TracyVkCtx ctx;
 	vk::ShaderModule CreateModule(std::string filename, vk::Device device);
 	const uint32_t PARTICLE_COUNT = 8192;
-	Renderer::Renderer(size_t screenWidth, size_t screenHeight, std::shared_ptr<Window> window, Application* app) :
-		m_Window{ window }, m_ViewportWidth(screenWidth), m_ViewportHeight(screenHeight), m_App{app}
-	{
+
+	void Renderer::Init(size_t screenWidth, size_t screenHeight, std::shared_ptr<Window> window, Application* app) 
 		
+	{
+		m_Window=window; 
+		m_ViewportWidth = screenWidth;
+		m_ViewportHeight = screenHeight;
+		m_App = app;
+		m_CommandPoolManager = CreateUPtr<CommandPoolManager>();
 		// create instance
 		CreateInstance();
 
@@ -291,16 +297,13 @@ namespace Voidstar
 
 
 
-
-
-		m_GraphicsQueue = CreateUPtr<Queue>();
-		m_GraphicsQueue->CreateCommandPool();
-		m_GraphicsQueue->CreateCommandBuffer();
+		auto commandPool = m_CommandPoolManager->GetFreePool();
+		m_GraphicsCommandBuffer = CommandBuffer::CreateBuffer(commandPool,vk::CommandBufferLevel::ePrimary);
 
 
 		
 
-		RenderContext::SetGraphicsQueue(m_GraphicsQueue.get());
+		//RenderContext::SetGraphicsCommandBuffer(&m_GraphicsCommandBuffer);
 		CreateSyncObjects();
 
 
@@ -374,10 +377,9 @@ namespace Voidstar
 			}
 			
 
-
-			m_GraphicsQueue->BeginTransfering();
-			m_GraphicsQueue->Transfer(stagingBuffer.get(), m_ShaderStorageBuffers[i].get(), (void*)particles.data(), size);
-			m_GraphicsQueue->EndTransfering();
+			m_GraphicsCommandBuffer.BeginTransfering();
+			m_GraphicsCommandBuffer.Transfer(stagingBuffer.get(), m_ShaderStorageBuffers[i].get(), (void*)particles.data(), size);
+			m_GraphicsCommandBuffer.EndTransfering();
 
 
 
@@ -533,7 +535,7 @@ namespace Voidstar
 		auto physDev = m_Device->GetDevicePhys();
 		auto dev = m_Device->GetDevice();
 		auto queue = m_Device->GetGraphicsQueue();
-		auto commandBuffer = m_GraphicsQueue->GetCommandBuffer();
+		auto commandBuffer = m_GraphicsCommandBuffer.GetCommandBuffer();
 
 		auto instance = m_Instance->GetInstance();
 		PFN_vkGetPhysicalDeviceCalibrateableTimeDomainsEXT vkGetPhysicalDeviceCalibrateableTimeDomainsEXT = reinterpret_cast<PFN_vkGetPhysicalDeviceCalibrateableTimeDomainsEXT>(vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceCalibrateableTimeDomainsEXT"));
@@ -670,41 +672,71 @@ namespace Voidstar
 		camera->UpdateProj(m_ViewportWidth, m_ViewportHeight);
 	}
 
+	void Renderer::Shutdown()
+	{
+		m_CommandPoolManager->Release();
+	}
+
 
 	void Renderer::RecordCommandBuffer(uint32_t imageIndex)
 	{
 
 		vk::CommandBufferBeginInfo beginInfo = {};
 
-		auto commandBuffer = m_GraphicsQueue->GetCommandBuffer();
+		auto commandBuffer = m_GraphicsCommandBuffer.GetCommandBuffer();
+		//auto commandBuffer = m_CommandBuffers[imageIndex];
 
 		commandBuffer.begin(beginInfo);
 		{
 			TracyVkZone(ctx, commandBuffer, "Rendering");
-		m_GraphicsQueue->BeginRenderPass(&m_RenderPass, &m_Swapchain->GetFrames()[imageIndex].framebuffer, &m_Swapchain->GetExtent());
-		vk::Viewport viewport;
-		viewport.x = 0;
-		viewport.y = 0;
-		viewport.minDepth = 0;
-		viewport.maxDepth = 1;
-		viewport.height = m_ViewportHeight;
-		viewport.width = m_ViewportWidth;
+			m_GraphicsCommandBuffer.BeginRenderPass(&m_RenderPass, &m_Swapchain->GetFrames()[imageIndex].framebuffer, &m_Swapchain->GetExtent());
+			vk::Viewport viewport;
+			viewport.x = 0;
+			viewport.y = 0;
+			viewport.minDepth = 0;
+			viewport.maxDepth = 1;
+			viewport.height = m_ViewportHeight;
+			viewport.width = m_ViewportWidth;
 
-		vk::Rect2D scissors;
-		scissors.offset = vk::Offset2D{(uint32_t)0,(uint32_t)0};
-		scissors.extent= vk::Extent2D{ (uint32_t)m_ViewportWidth,(uint32_t)m_ViewportHeight};
-		m_GraphicsQueue->RecordCommand(m_ShaderStorageBuffers[imageIndex].get(), m_IndexBuffer, &m_Pipeline, &m_PipelineLayout, &m_DescriptorSets[imageIndex], &m_DescriptorSetTex, viewport, scissors);
+			vk::Rect2D scissors;
+			scissors.offset = vk::Offset2D{(uint32_t)0,(uint32_t)0};
+			scissors.extent= vk::Extent2D{ (uint32_t)m_ViewportWidth,(uint32_t)m_ViewportHeight};
+
+			commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PipelineLayout, 0, m_DescriptorSets[imageIndex],nullptr);
+			commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PipelineLayout, 1, m_DescriptorSetTex, nullptr);
+			
+			commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_Pipeline);
+			vk::DeviceSize offsets[] = { 0 };
+			vk::Buffer vertexBuffers[] = { m_ShaderStorageBuffers[imageIndex]->GetBuffer() };
+			commandBuffer.bindVertexBuffers(0, 1, vertexBuffers, offsets);
+
+
+
+			commandBuffer.setViewport(0, 1, &viewport);
+			commandBuffer.setScissor(0, 1, &scissors);
+
+			//m_CommandBuffer.bindIndexBuffer(indexBuffer->GetBuffer(), 0, indexBuffer->GetIndexType());
+            //auto amount = indexBuffer->GetIndexAmount();
+			//m_CommandBuffer.drawIndexed(static_cast<uint32_t>(amount), 1, 0, 0, 0);
+			commandBuffer.draw(8192, 1, 0, 0);
+
+		
 		}
 
 
-			m_GraphicsQueue->EndRenderPass();
+		m_GraphicsCommandBuffer.EndRenderPass();
 			TracyVkCollect(ctx, commandBuffer);
 		commandBuffer.end();
 		
 	}
 
 	size_t currentFrame = 0;
-	void Renderer::Render()	
+	Renderer* Renderer::Instance()
+	{
+		static Renderer* s_Renderer = new Renderer();
+		return s_Renderer;
+	}
+	void Renderer::Render()
 	{
 		
 
@@ -782,10 +814,10 @@ namespace Voidstar
 
 		{
 			ZoneScopedN("Sumbit render commands");
-			m_GraphicsQueue->BeginRendering();
+			m_GraphicsCommandBuffer.BeginRendering();
 			RecordCommandBuffer(imageIndex);
-			m_GraphicsQueue->Submit(waitSemaphores, signalSemaphores, &m_InFlightFence);
-			m_GraphicsQueue->EndRendering();
+			m_GraphicsCommandBuffer.Submit(waitSemaphores, signalSemaphores, &m_InFlightFence);
+			m_GraphicsCommandBuffer.EndRendering();
 		}
 
 		
@@ -1247,9 +1279,14 @@ namespace Voidstar
 	Renderer::~Renderer()
 	{
 
+
+
 		auto device = m_Device->GetDevice();
 		device.waitIdle();
 		
+
+		Shutdown();
+
 		TracyVkDestroy(ctx)
 		if (m_Buffer != nullptr)
 		{
@@ -1263,7 +1300,7 @@ namespace Voidstar
 		m_Device->GetDevice().destroyImage(m_MsaaImage);
 		m_Device->GetDevice().destroyImageView(m_MsaaImageView);
 
-		m_GraphicsQueue.reset();
+		m_GraphicsCommandBuffer.GetCommandBuffer().reset();
 
 		for (size_t i = 0; i < m_Swapchain->GetFramesCount(); i++) {
 			delete m_UniformBuffers[i];

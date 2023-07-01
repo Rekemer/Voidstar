@@ -24,7 +24,7 @@ project "Sandbox"
         solution().basedir .. "/Dependencies/glm/glm"
     }
 
-    links { "Voidstar-Core", }
+    links { "Voidstar-Core" }
     filter "configurations:Debug"
         defines "VS_DEBUG"
         symbols "On"

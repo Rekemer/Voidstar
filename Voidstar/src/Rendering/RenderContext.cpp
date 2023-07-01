@@ -1,11 +1,11 @@
 #include"Prereq.h"
 #include"RenderContext.h"
 #include"Device.h"
-#include"Queue.h"
+#include"CommandBuffer.h"
 namespace Voidstar
 {
 	Device* RenderContext::m_Device;
-	Queue* RenderContext::m_GraphicsQueue;
+	CommandBuffer* RenderContext::m_GraphicsCommandBuffer;
 
 	Device* RenderContext::GetDevice()
 	{
@@ -15,12 +15,12 @@ namespace Voidstar
 	{
 		m_Device = device;
 	}
-	Queue* RenderContext::GetGraphicsQueue()
+	CommandBuffer* RenderContext::GetGraphicsCommandBuffer()
 	{
-		return m_GraphicsQueue;
+		return m_GraphicsCommandBuffer;
 	}
-	void RenderContext::SetGraphicsQueue(Queue* queue)
+	void RenderContext::SetGraphicsCommandBuffer(CommandBuffer* CommandBuffer)
 	{
-		m_GraphicsQueue = queue;
+		m_GraphicsCommandBuffer = CommandBuffer;
 	}
 }

@@ -17,7 +17,6 @@ namespace Voidstar
 		size_t m_ScreenWidth, m_ScreenHeight;
 
 		UPtr<Camera> m_Camera;
-		UPtr<Renderer> m_Renderer;
 		SPtr<Window> m_Window;
 	};
 

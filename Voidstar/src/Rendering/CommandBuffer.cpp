@@ -1,52 +1,21 @@
 #include"Prereq.h"
-#include"Queue.h"
+#include"CommandBuffer.h"
 #include"RenderContext.h"
 #include"Device.h"
 #include"Buffer.h"
 #include"IndexBuffer.h"
+#include"CommandPoolManager.h"
+#include"Renderer.h"
 #include"Log.h"
 namespace Voidstar
 {
-	void Queue::CreateCommandPool()
-	{
-		auto device = RenderContext::GetDevice();
-		vk::CommandPoolCreateInfo poolInfo;
-		poolInfo.flags = vk::CommandPoolCreateFlags() | vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
-		poolInfo.queueFamilyIndex = device->GetGraphicsIndex();
-		try
-		{
-			m_CommandPool = device->GetDevice().createCommandPool(poolInfo);
 
-		}
-		catch (vk::SystemError err)
-		{
-
-			Log::GetLog()->error("Failed to create Command Pool");
-		}
-	}
-	void Queue::CreateCommandBuffer()
-	{
-		auto device = RenderContext::GetDevice();
-		vk::CommandBufferAllocateInfo allocInfo = {};
-		allocInfo.commandPool = m_CommandPool;
-		allocInfo.level = vk::CommandBufferLevel::ePrimary;
-		allocInfo.commandBufferCount = 1;
-		try
-		{
-			m_CommandBuffer = device->GetDevice().allocateCommandBuffers(allocInfo)[0];
-
-		}
-		catch (vk::SystemError err)
-		{
-			Log::GetLog()->error("Failed to allocate  command buffer ");
-		}
-	}
-	void Queue::BeginRendering()
+	void CommandBuffer::BeginRendering()
 	{
 		m_CommandBuffer.reset();
 	}
 
-	void Queue::BeginRenderPass(vk::RenderPass* renderPass, vk::Framebuffer* framebuffer, vk::Extent2D* extent)
+	void CommandBuffer::BeginRenderPass(vk::RenderPass* renderPass, vk::Framebuffer* framebuffer, vk::Extent2D* extent)
 	{
 		
 
@@ -72,33 +41,15 @@ namespace Voidstar
 		m_CommandBuffer.beginRenderPass(&renderPassInfo, vk::SubpassContents::eInline);
 	}
 
-	void Queue::RecordCommand(Buffer* vertexBuffer, IndexBuffer* indexBuffer, vk::Pipeline* m_Pipeline, vk::PipelineLayout* m_PipelineLayout, vk::DescriptorSet* descriptorSet, vk::DescriptorSet* descriptorSetTex, vk::Viewport viewport, vk::Rect2D scissor)
-	{
-		m_CommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_PipelineLayout, 0, *descriptorSet, nullptr);
-		m_CommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, *m_PipelineLayout, 1, *descriptorSetTex, nullptr);
-		m_CommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *m_Pipeline);
-		vk::DeviceSize offsets[] = { 0 };
-		vk::Buffer vertexBuffers[] = { vertexBuffer->GetBuffer() };
-		m_CommandBuffer.bindVertexBuffers(0, 1, vertexBuffers, offsets);
+	
 
-
-		
-		m_CommandBuffer.setViewport(0,1,&viewport);	
-		m_CommandBuffer.setScissor(0,1,&scissor);
-
-		//m_CommandBuffer.bindIndexBuffer(indexBuffer->GetBuffer(), 0, indexBuffer->GetIndexType());
-//		auto amount = indexBuffer->GetIndexAmount();
-		//m_CommandBuffer.drawIndexed(static_cast<uint32_t>(amount), 1, 0, 0, 0);
-		m_CommandBuffer.draw(8192, 1, 0, 0);
-	}
-
-	void Queue::EndRenderPass()
+	void CommandBuffer::EndRenderPass()
 	{
 		m_CommandBuffer.endRenderPass();
 
 	}
 
-	void Queue::Submit(vk::Semaphore* waitSemaphores, vk::Semaphore* signalSemaphores, vk::Fence* fence)
+	void CommandBuffer::Submit(vk::Semaphore* waitSemaphores, vk::Semaphore* signalSemaphores, vk::Fence* fence)
 	{
 		vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput,vk::PipelineStageFlagBits::eVertexInput };
 		vk::SubmitInfo submitInfo = {};
@@ -115,21 +66,46 @@ namespace Voidstar
 		auto device = RenderContext::GetDevice();
 		device->GetGraphicsQueue().submit(submitInfo, *fence);
 	}
-	void Queue::EndRendering()
+	void CommandBuffer::EndRendering()
 	{
 	}
 
-
-	vk::CommandBuffer Queue::BeginTransfering()
+	void CommandBuffer::Free()
 	{
-		m_CommandBuffer.reset();
+		RenderContext::GetDevice()->GetDevice().freeCommandBuffers(m_CommandPool, m_CommandBuffer);
+	}
+
+	CommandBuffer CommandBuffer::CreateBuffer(vk::CommandPool commandPool, vk::CommandBufferLevel level)
+	{
+		CommandBuffer cmdBuffer;
+		cmdBuffer.m_CommandPool = commandPool;
+		vk::CommandBufferAllocateInfo cmdBufAllocateInfo;
+		cmdBufAllocateInfo.commandPool = commandPool;
+		cmdBufAllocateInfo.level = level;
+		cmdBufAllocateInfo.commandBufferCount = 1;
+		try
+		{
+			cmdBuffer.m_CommandBuffer = RenderContext::GetDevice()->GetDevice().allocateCommandBuffers(cmdBufAllocateInfo)[0];
+			return cmdBuffer;
+		}
+		catch (vk::SystemError err)
+		{
+			Log::GetLog()->error("Failed to allocate command buffer");
+		}
+		
+	}
+
+
+	 vk::CommandBuffer CommandBuffer::BeginTransfering()
+	{
+
 
 		vk::CommandBufferBeginInfo beginInfo;
 		beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
 		m_CommandBuffer.begin(beginInfo);
 		return m_CommandBuffer;
 	}
-	void Queue::Transfer(Buffer* src, Buffer* target,void* data,size_t  dataSize)
+	void CommandBuffer::Transfer(Buffer* src, Buffer* target,void* data,size_t  dataSize)
 	{
 		m_CommandBuffer.reset();
 
@@ -150,7 +126,7 @@ namespace Voidstar
 		m_CommandBuffer.copyBuffer(src->GetBuffer(), target->GetBuffer(), copyRegion);
 
 	}
-	void Queue::ChangeImageLayout(vk::Image* image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout, int mipMap )
+	void CommandBuffer::ChangeImageLayout(vk::Image* image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout, int mipMap )
 	{
 
 
@@ -214,7 +190,7 @@ namespace Voidstar
 
 		m_CommandBuffer.pipelineBarrier(sourceStage, destinationStage, vk::DependencyFlags(), nullptr, nullptr, barrier);
 	}
-	void Queue::CopyBufferToImage(Buffer* buffer, vk::Image* image, int width, int height)
+	void CommandBuffer::CopyBufferToImage(Buffer* buffer, vk::Image* image, int width, int height)
 	{
 		vk::BufferImageCopy copy;
 		copy.bufferOffset = 0;
@@ -239,7 +215,7 @@ namespace Voidstar
 			buffer->GetBuffer(), *image, vk::ImageLayout::eTransferDstOptimal, copy
 		);
 	}
-	void Queue::EndTransfering()
+	void CommandBuffer::EndTransfering()
 	{
 		m_CommandBuffer.end();
 		auto device = RenderContext::GetDevice();
@@ -252,7 +228,8 @@ namespace Voidstar
 		device->GetGraphicsQueue().waitIdle();
 
 	}
-	Queue::~Queue()
+
+	CommandBuffer::~CommandBuffer()
 	{
 		auto device = RenderContext::GetDevice();
 		device->GetDevice().destroyCommandPool(m_CommandPool);
