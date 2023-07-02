@@ -72,7 +72,10 @@ namespace Voidstar
 
 	void CommandBuffer::Free()
 	{
-		RenderContext::GetDevice()->GetDevice().freeCommandBuffers(m_CommandPool, m_CommandBuffer);
+		if (m_CommandPool)
+		{
+			RenderContext::GetDevice()->GetDevice().freeCommandBuffers(m_CommandPool, m_CommandBuffer);
+		}
 	}
 
 	CommandBuffer CommandBuffer::CreateBuffer(vk::CommandPool commandPool, vk::CommandBufferLevel level)
@@ -93,6 +96,31 @@ namespace Voidstar
 			Log::GetLog()->error("Failed to allocate command buffer");
 		}
 		
+	}
+
+	std::vector<CommandBuffer> CommandBuffer::CreateBuffers(vk::CommandPool commandPool, vk::CommandBufferLevel level, uint32_t count)
+	{
+		std::vector<CommandBuffer> commandBuffers;
+		commandBuffers.reserve(count);
+		vk::CommandBufferAllocateInfo allocInfo = {};
+		allocInfo.commandPool = commandPool;
+		allocInfo.level = level;
+		allocInfo.commandBufferCount = count;
+		try
+		{
+			auto vkCommandBuffers = RenderContext::GetDevice()->GetDevice().allocateCommandBuffers(allocInfo);
+
+			for (auto& vkCommandBuffer : vkCommandBuffers)
+			{
+				commandBuffers.emplace_back(std::move(vkCommandBuffer));
+			}
+			return commandBuffers;
+
+		}
+		catch (vk::SystemError err)
+		{
+			Log::GetLog()->error("Failed to allocate  command buffer ");
+		}
 	}
 
 
@@ -232,6 +260,6 @@ namespace Voidstar
 	CommandBuffer::~CommandBuffer()
 	{
 		auto device = RenderContext::GetDevice();
-		device->GetDevice().destroyCommandPool(m_CommandPool);
+		Free();
 	}
 }

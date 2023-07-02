@@ -21,22 +21,23 @@ namespace Voidstar
 			commandBuffer.m_CommandPool = nullptr;
 			commandBuffer.m_CommandBuffer = nullptr;
 		}
+		CommandBuffer(vk::CommandBuffer&& commandBuffer)
+		{
+			m_CommandBuffer = commandBuffer;
+			commandBuffer = nullptr;
+		}
 		CommandBuffer& operator=(CommandBuffer&& other) noexcept
 		{
-			// Step 1: Check for self-assignment
 			if (this == &other) {
 				return *this;
 			}
-
-			
-			
-
-			// Step 3: Transfer ownership
 			m_CommandPool = std::move(other.m_CommandPool);
 			m_CommandBuffer = std::move(other.m_CommandBuffer);
-
+			other.m_CommandPool = nullptr;
+			other.m_CommandBuffer = nullptr;
 			return *this;
 		}
+		
 		//rendering 
 		void BeginRendering();
 	
@@ -48,6 +49,7 @@ namespace Voidstar
 		void EndRendering();
 		void Free();
 		static CommandBuffer CreateBuffer(vk::CommandPool commandPool, vk::CommandBufferLevel level);
+		static std::vector<CommandBuffer> CreateBuffers(vk::CommandPool commandPool, vk::CommandBufferLevel level, uint32_t count);
 
 		// transfering operations
 		vk::CommandBuffer BeginTransfering();

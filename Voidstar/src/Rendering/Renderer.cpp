@@ -298,12 +298,9 @@ namespace Voidstar
 
 
 		auto commandPool = m_CommandPoolManager->GetFreePool();
-		m_GraphicsCommandBuffer = CommandBuffer::CreateBuffer(commandPool,vk::CommandBufferLevel::ePrimary);
+		m_RenderCommandBuffer = CommandBuffer::CreateBuffers(commandPool, vk::CommandBufferLevel::ePrimary, 3);
+		m_TransferCommandBuffer = CommandBuffer::CreateBuffers(commandPool, vk::CommandBufferLevel::ePrimary, 3);
 
-
-		
-
-		//RenderContext::SetGraphicsCommandBuffer(&m_GraphicsCommandBuffer);
 		CreateSyncObjects();
 
 
@@ -333,12 +330,7 @@ namespace Voidstar
 			m_ComputeSetLayout = DescriptorSetLayout::Create(layoutBindings);
 
 			std::vector<vk::DescriptorSetLayout> layouts(m_Swapchain->GetFramesCount(), m_ComputeSetLayout->GetLayout());
-			/*VkDescriptorSetAllocateInfo allocInfo{};
-			allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-			allocInfo.descriptorPool = m_ComputePool->GetPool();
-			allocInfo.descriptorSetCount = static_cast<uint32_t>(m_Swapchain->GetFramesCount());
-			allocInfo.pSetLayouts = layouts.data();*/
-
+			
 			m_ComputeDescriptorSets = m_ComputePool->AllocateDescriptorSets(m_Swapchain->GetFramesCount(), layouts.data());
 
 			//m_DescriptorSetTex = m_DescriptorPoolTex->AllocateDescriptorSets(1, layouts.data())[0];
@@ -377,42 +369,17 @@ namespace Voidstar
 			}
 			
 
-			m_GraphicsCommandBuffer.BeginTransfering();
-			m_GraphicsCommandBuffer.Transfer(stagingBuffer.get(), m_ShaderStorageBuffers[i].get(), (void*)particles.data(), size);
-			m_GraphicsCommandBuffer.EndTransfering();
+			m_TransferCommandBuffer[0].BeginTransfering();
+			m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_ShaderStorageBuffers[i].get(), (void*)particles.data(), size);
+			m_TransferCommandBuffer[0].EndTransfering();
 
 
 
 		}
 		auto device = RenderContext::GetDevice();
-		vk::CommandPoolCreateInfo poolInfo;
-		poolInfo.flags = vk::CommandPoolCreateFlags() | vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
-		poolInfo.queueFamilyIndex = device->GetGraphicsIndex();
-		try
-		{
-			m_CommandComputePool = device->GetDevice().createCommandPool(poolInfo);
-
-		}
-		catch (vk::SystemError err)
-		{
-
-			Log::GetLog()->error("Failed to create Command Pool");
-		}
-
-
-		vk::CommandBufferAllocateInfo allocInfo = {};
-		allocInfo.commandPool = m_CommandComputePool;
-		allocInfo.level = vk::CommandBufferLevel::ePrimary;
-		allocInfo.commandBufferCount = 3;
-		try
-		{
-			m_CommandComputeBuffers = device->GetDevice().allocateCommandBuffers(allocInfo);
-
-		}
-		catch (vk::SystemError err)
-		{
-			Log::GetLog()->error("Failed to allocate  command buffer ");
-		}
+		m_CommandComputePool = m_CommandPoolManager->GetFreePool();
+		m_CommandComputeBuffers = CommandBuffer::CreateBuffers(m_CommandComputePool, vk::CommandBufferLevel::ePrimary,3);
+		
 
 
 		for (size_t i = 0; i < m_Swapchain->GetFramesCount(); i++)
@@ -535,13 +502,14 @@ namespace Voidstar
 		auto physDev = m_Device->GetDevicePhys();
 		auto dev = m_Device->GetDevice();
 		auto queue = m_Device->GetGraphicsQueue();
-		auto commandBuffer = m_GraphicsCommandBuffer.GetCommandBuffer();
+		auto commandPoolTracy = m_CommandPoolManager->GetFreePool();
+		m_TracyCommandBuffer = CommandBuffer::CreateBuffer(commandPoolTracy,vk::CommandBufferLevel::ePrimary);
 
 		auto instance = m_Instance->GetInstance();
 		PFN_vkGetPhysicalDeviceCalibrateableTimeDomainsEXT vkGetPhysicalDeviceCalibrateableTimeDomainsEXT = reinterpret_cast<PFN_vkGetPhysicalDeviceCalibrateableTimeDomainsEXT>(vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceCalibrateableTimeDomainsEXT"));
 		PFN_vkGetCalibratedTimestampsEXT vkGetCalibratedTimestampsEXT = reinterpret_cast<PFN_vkGetCalibratedTimestampsEXT>(vkGetDeviceProcAddr(dev, "vkGetCalibratedTimestampsEXT"));
 
-		ctx = TracyVkContextCalibrated(physDev,dev,queue,commandBuffer, 
+		ctx = TracyVkContextCalibrated(physDev,dev,queue, m_TracyCommandBuffer.GetCommandBuffer(),
 			vkGetPhysicalDeviceCalibrateableTimeDomainsEXT, vkGetCalibratedTimestampsEXT);
 
 
@@ -674,6 +642,7 @@ namespace Voidstar
 
 	void Renderer::Shutdown()
 	{
+
 		m_CommandPoolManager->Release();
 	}
 
@@ -683,13 +652,13 @@ namespace Voidstar
 
 		vk::CommandBufferBeginInfo beginInfo = {};
 
-		auto commandBuffer = m_GraphicsCommandBuffer.GetCommandBuffer();
+		auto commandBuffer = m_RenderCommandBuffer[imageIndex].GetCommandBuffer();
 		//auto commandBuffer = m_CommandBuffers[imageIndex];
 
 		commandBuffer.begin(beginInfo);
 		{
 			TracyVkZone(ctx, commandBuffer, "Rendering");
-			m_GraphicsCommandBuffer.BeginRenderPass(&m_RenderPass, &m_Swapchain->GetFrames()[imageIndex].framebuffer, &m_Swapchain->GetExtent());
+			m_RenderCommandBuffer[imageIndex].BeginRenderPass(&m_RenderPass, &m_Swapchain->GetFrames()[imageIndex].framebuffer, &m_Swapchain->GetExtent());
 			vk::Viewport viewport;
 			viewport.x = 0;
 			viewport.y = 0;
@@ -724,8 +693,8 @@ namespace Voidstar
 		}
 
 
-		m_GraphicsCommandBuffer.EndRenderPass();
-			TracyVkCollect(ctx, commandBuffer);
+		m_RenderCommandBuffer[imageIndex].EndRenderPass();
+		TracyVkCollect(ctx, commandBuffer);
 		commandBuffer.end();
 		
 	}
@@ -745,14 +714,20 @@ namespace Voidstar
 			
 		m_Device->GetDevice().waitForFences(m_ComputeInFlightFences[currentFrame], VK_TRUE, std::numeric_limits<uint64_t>::max());
 		}
+		auto& tractCmdBuffer = m_TracyCommandBuffer.GetCommandBuffer();
+		tractCmdBuffer.reset();
+		vk::CommandBufferBeginInfo beginInfo;
+		beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
+		tractCmdBuffer.begin(beginInfo);
+
 		m_Device->GetDevice().resetFences(m_ComputeInFlightFences[currentFrame]);
 
 
+		auto& computeCmdBuffer = m_CommandComputeBuffers[currentFrame].GetCommandBuffer();
 
+		computeCmdBuffer.reset();
 
-		m_CommandComputeBuffers[currentFrame].reset();
-
-
+		
 		{
 
 			vk::CommandBufferBeginInfo beginInfo;
@@ -760,20 +735,20 @@ namespace Voidstar
 
 			
 
-			m_CommandComputeBuffers[currentFrame].begin(beginInfo);
-			TracyVkZone(ctx, m_CommandComputeBuffers[currentFrame], "Compute");
-			vkCmdBindPipeline(m_CommandComputeBuffers[currentFrame], VK_PIPELINE_BIND_POINT_COMPUTE,	m_ComputePipeline);
+			computeCmdBuffer.begin(beginInfo);
+			TracyVkZone(ctx, computeCmdBuffer, "Compute");
+			vkCmdBindPipeline(computeCmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE,	m_ComputePipeline);
 			auto descSet = const_cast<const vk::DescriptorSet*>(&m_ComputeDescriptorSets[currentFrame]);
-			m_CommandComputeBuffers[currentFrame].bindDescriptorSets(vk::PipelineBindPoint::eCompute,	m_ComputePipelineLayout, 0, 1, descSet, 0, 0);
+			computeCmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute,	m_ComputePipelineLayout, 0, 1, descSet, 0, 0);
 
-			vkCmdDispatch(m_CommandComputeBuffers[currentFrame], PARTICLE_COUNT / 256, 1, 1);
+			vkCmdDispatch(computeCmdBuffer, PARTICLE_COUNT / 256, 1, 1);
 		}
-		TracyVkCollect(ctx, m_CommandComputeBuffers[currentFrame]);
-			if (vkEndCommandBuffer(m_CommandComputeBuffers[currentFrame]) != VK_SUCCESS)
+		
+			TracyVkCollect(ctx, computeCmdBuffer);
+			if (vkEndCommandBuffer(computeCmdBuffer) != VK_SUCCESS)
 			{
 				throw std::runtime_error("failed to record command buffer!");
 			}
-			
 
 
 
@@ -781,7 +756,7 @@ namespace Voidstar
 		vk::SubmitInfo submitInfo = {};
 
 		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers = &m_CommandComputeBuffers[currentFrame];
+		submitInfo.pCommandBuffers = &computeCmdBuffer;
 		submitInfo.signalSemaphoreCount = 1;
 		submitInfo.pSignalSemaphores = &m_ComputeFinishedSemaphores[currentFrame];
 
@@ -812,12 +787,14 @@ namespace Voidstar
 			vk::Semaphore waitSemaphores[] = { m_ImageAvailableSemaphore,m_ComputeFinishedSemaphores[currentFrame] };
 			vk::Semaphore signalSemaphores[] = { m_RenderFinishedSemaphore };
 
+		auto& renderCommandBuffer = m_RenderCommandBuffer[imageIndex];
 		{
 			ZoneScopedN("Sumbit render commands");
-			m_GraphicsCommandBuffer.BeginRendering();
+			renderCommandBuffer.BeginRendering();
 			RecordCommandBuffer(imageIndex);
-			m_GraphicsCommandBuffer.Submit(waitSemaphores, signalSemaphores, &m_InFlightFence);
-			m_GraphicsCommandBuffer.EndRendering();
+			
+			renderCommandBuffer.Submit(waitSemaphores, signalSemaphores, &m_InFlightFence);
+			renderCommandBuffer.EndRendering();
 		}
 
 		
@@ -851,7 +828,7 @@ namespace Voidstar
 
 		currentFrame = (currentFrame + 1) % m_Swapchain->GetFramesCount();
 
-
+		
 		
 		FrameMark;
 	}
@@ -1300,7 +1277,8 @@ namespace Voidstar
 		m_Device->GetDevice().destroyImage(m_MsaaImage);
 		m_Device->GetDevice().destroyImageView(m_MsaaImageView);
 
-		m_GraphicsCommandBuffer.GetCommandBuffer().reset();
+		//m_GraphicsCommandBuffer.GetCommandBuffer().reset();
+		//m_GraphicsCommandBuffer.Free();
 
 		for (size_t i = 0; i < m_Swapchain->GetFramesCount(); i++) {
 			delete m_UniformBuffers[i];

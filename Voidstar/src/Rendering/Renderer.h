@@ -132,7 +132,10 @@ namespace Voidstar
 
 		// can be in one buffer?
 		std::vector<Buffer*> m_UniformBuffers;
-		std::vector<CommandBuffer> m_CommandBuffers;
+		std::vector<CommandBuffer> m_RenderCommandBuffer, m_TransferCommandBuffer;
+		CommandBuffer m_TracyCommandBuffer;
+
+
 		std::vector<void*> uniformBuffersMapped;
 		
 		DescriptorSetLayout* m_DescriptorSetLayout;
@@ -141,7 +144,7 @@ namespace Voidstar
 		std::vector<vk::DescriptorSet> m_DescriptorSets;
 		std::vector<UPtr<Buffer>> m_ShaderStorageBuffers;
 		vk::CommandPool m_CommandComputePool;
-		std::vector<vk::CommandBuffer> m_CommandComputeBuffers;
+		std::vector<CommandBuffer> m_CommandComputeBuffers;
 
 		SPtr<DescriptorPool> m_DescriptorPoolTex;
 		vk::DescriptorSet m_DescriptorSetTex;
@@ -166,9 +169,9 @@ namespace Voidstar
 		vk::PipelineLayout m_ComputePipelineLayout;
 		vk::Pipeline m_Pipeline;
 		vk::Pipeline m_ComputePipeline;
-		CommandBuffer m_GraphicsCommandBuffer;
 
 		UPtr<CommandPoolManager> m_CommandPoolManager;
+		
 
 		vk::Semaphore m_ImageAvailableSemaphore;
 		vk::Semaphore m_RenderFinishedSemaphore;
