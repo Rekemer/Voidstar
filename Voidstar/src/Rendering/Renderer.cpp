@@ -23,15 +23,109 @@
 #include "CommandPoolManager.h"
 #include"tracy/Tracy.hpp"
 #include"tracy/TracyVulkan.hpp"
+#include <filesystem>
 namespace Voidstar
 {
+
+
 	TracyVkCtx ctx;
 	vk::ShaderModule CreateModule(std::string filename, vk::Device device);
 	const uint32_t PARTICLE_COUNT = 8192;
+	std::string BASE_SHADER_PATH = "../Shader/";
+	std::string BASE_RES_PATH = "res";
+
+	template<typename T>
+	const uint64_t SizeOfBuffer(const uint64_t bufferSize,const T& bufferElement) 
+	{
+		return bufferSize * sizeof(bufferElement);
+	}
+
+	std::vector<Vertex> GeneratePlane(float detail, std::vector<IndexType>& indices)
+	{
+		std::vector<Vertex> vertices;
+
+		int numDivisions = static_cast<int>(detail);
+		float stepSize = 1.0f / numDivisions;
+
+		for (int i = 0; i <= numDivisions; ++i)
+		{
+			for (int j = 0; j <= numDivisions; ++j)
+			{
+				Vertex vertex;
+
+				// Calculate vertex position
+				vertex.x = i * stepSize - 0.5f;
+				vertex.y = 0.0f;
+				vertex.z = j * stepSize - 0.5f;
+
+				//// Calculate vertex normal
+				//vertex.nx = 0.0f;
+				//vertex.ny = 1.0f;
+				//vertex.nz = 0.0f;
+
+				// Calculate texture coordinates
+				vertex.u = static_cast<float>(i) / numDivisions;
+				vertex.v = static_cast<float>(j) / numDivisions;
+
+				// Add the vertex to the vector
+				vertices.push_back(vertex);
+			}
+		}
+		// Generate indices for the plane
+		for (int i = 0; i < numDivisions; ++i)
+		{
+			for (int j = 0; j < numDivisions; ++j)
+			{
+				// Calculate indices for the current quad
+				unsigned int topLeft = i * (numDivisions + 1) + j;
+				unsigned int topRight = topLeft + 1;
+				unsigned int bottomLeft = topLeft + (numDivisions + 1);
+				unsigned int bottomRight = bottomLeft + 1;
+
+				// Add the indices to the vector
+				indices.push_back(topLeft);
+				indices.push_back(bottomLeft);
+				indices.push_back(topRight);
+
+				indices.push_back(topRight);
+				indices.push_back(bottomLeft);
+				indices.push_back(bottomRight);
+			}
+		}
+
+		return vertices;
+	}
+
+
+	std::string InitFilePath()
+	{
+		std::string baseShaderPath = "";
+
+		// Check if running within Visual Studio
+		const char* visualStudioEnvVar = std::getenv("VSLANG");
+		if (visualStudioEnvVar != nullptr)
+		{
+			// Set the base shader path relative to the project directory
+			BASE_SHADER_PATH = "../Shaders/";
+			BASE_RES_PATH = "../res/";
+
+		}
+		else
+		{
+			// Set the base shader path relative to the executable directory
+			std::filesystem::path executablePath = std::filesystem::current_path();
+			BASE_SHADER_PATH = executablePath.parent_path().string() + "../../../Shaders/";
+			BASE_RES_PATH = executablePath.parent_path().string() + "../../../res/";
+		}
+
+		return baseShaderPath;
+	}
+
 
 	void Renderer::Init(size_t screenWidth, size_t screenHeight, std::shared_ptr<Window> window, Application* app) 
 		
 	{
+		InitFilePath();
 		m_Window=window; 
 		m_ViewportWidth = screenWidth;
 		m_ViewportHeight = screenHeight;
@@ -59,131 +153,97 @@ namespace Voidstar
 		m_Swapchain = Swapchain::Create(support);
 		
 
-#if 1
-		//Vertex{ {-0.5f, -0.5f,0.},{1.0f, 0.0f, 0.0f,1.0f} };
-		//Vertex{ {0.5f, -0.5f,0. }, { 0.0f, 1.0f, 0.0f,1.0f }};
-		//Vertex{ {0.5f, 0.5f,0.},{0.0f, 0.0f, 1.0f,1.0f} };
-		//Vertex{ {-0.5f, 0.5f,0.},{1.0f, 1.0f, 1.0f,1.0f } };
+//		std::vector<Vertex> vertices;
+//#if 1
+//	
+//		//constexpr size_t VertexCount = 8;
+//		//
+//		//
+//		//vertices[0] = { -1, -1, -1, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0 };
+//		//vertices[1] = { 1, -1, -1, 0.0, 1.0, 0.0, 1.0, 1.0, 1.0 };
+//		//vertices[2] = { 1, 1, -1, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0 };
+//		//vertices[3] = { -1, 1, -1, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0 };
+//		//vertices[4] = { -1, -1, 1, 1.0, 0.0, 1.0, 1.0, 0.0, 0.0 };
+//		//vertices[5] = { 1, -1, 1, 0.0, 1.0, 1.0, 1.0, 0.0, 0.0 };
+//		//vertices[6] = { 1, 1, 1, 0.5, 0.5, 0.5, 1.0, 0.0, 0.0 };
+//		//vertices[7] = { -1, 1, 1, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0 };
+//		//
+//		//
+//		//const std::vector<uint32_t> indices =
+//		//{
+//		//	0, 1, 3, 3, 1, 2,
+//		//	1, 5, 2, 2, 5, 6,
+//		//	5, 4, 6, 6, 4, 7,
+//		//	4, 0, 7, 7, 0, 3,
+//		//	3, 2, 7, 7, 2, 6,
+//		//	4, 5, 0, 0, 5, 1
+//		//};
+//
+//		
+//	
+//#else
+//		constexpr size_t VertexCount = 36;
+//
+//		std::array<Vertex, VertexCount> vertices;
+//		// Front face
+//		vertices[0] = { -1.0f, -1.0f, 1.0f,1.0,1.0,1.0,1.0 };
+//		vertices[1] = { 1.0f, -1.0f, 1.0f,1.0,1.0,1.0,1.0 };
+//		vertices[2] = { 1.0f, 1.0f, 1.0f,1.0,1.0,1.0,1.0 };
+//
+//		vertices[3] = { -1.0f, -1.0f, 1.0f ,1.0,1.0,1.0,1.0 };
+//		vertices[4] = { 1.0f, 1.0f, 1.0f ,1.0,1.0,1.0,1.0 };
+//		vertices[5] = { -1.0f, 1.0f, 1.0f ,1.0,1.0,1.0,1.0 };
+//
+//		// Back face
+//		vertices[6] = { -1.0f, -1.0f, -1.0f,1.0,1.0,1.0,1.0 };
+//		vertices[7] = { -1.0f, 1.0f, -1.0f,1.0,1.0,1.0,1.0 };
+//		vertices[8] = { 1.0f, 1.0f, -1.0f ,1.0,1.0,1.0,1.0 };
+//
+//		vertices[9] = { -1.0f, -1.0f, -1.0f,1.0,1.0,1.0,1.0 };
+//		vertices[10] = { 1.0f, 1.0f, -1.0f,1.0,1.0,1.0,1.0 };
+//		vertices[11] = { 1.0f, -1.0f, -1.0f ,1.0,1.0,1.0,1.0 };
+//
+//		// Top face
+//		vertices[12] = { -1.0f, 1.0f, -1.0f,1.0,1.0,1.0,1.0 };
+//		vertices[13] = { -1.0f, 1.0f, 1.0f,1.0,1.0,1.0,1.0 };
+//		vertices[14] = { 1.0f, 1.0f, 1.0f ,1.0,1.0,1.0,1.0 };
+//
+//		vertices[15] = { -1.0f, 1.0f, -1.0f,1.0,1.0,1.0,1.0 };
+//		vertices[16] = { 1.0f, 1.0f, 1.0f,1.0,1.0,1.0,1.0 };
+//		vertices[17] = { 1.0f, 1.0f, -1.0f ,1.0,1.0,1.0,1.0 };
+//
+//		// Bottom face
+//		vertices[18] = { -1.0f, -1.0f, -1.0f,1.0,1.0,1.0,1.0 };
+//		vertices[19] = { 1.0f, -1.0f, -1.0f,1.0,1.0,1.0,1.0 };
+//		vertices[20] = { 1.0f, -1.0f, 1.0f,1.0,1.0,1.0,1.0 };
+//
+//		vertices[21] = { -1.0f, -1.0f, -1.0f,1.0,1.0,1.0,1.0 };
+//		vertices[22] = { 1.0f, -1.0f, 1.0f,1.0,1.0,1.0,1.0 };
+//		vertices[23] = { -1.0f, -1.0f, 1.0f,1.0,1.0,1.0,1.0 };
+//
+//		// Left face
+//		vertices[24] = { -1.0f, -1.0f, -1.0f,1.0,1.0,1.0,1.0 };
+//		vertices[25] = { -1.0f, -1.0f, 1.0f,1.0,1.0,1.0,1.0 };
+//		vertices[26] = { -1.0f, 1.0f, 1.0f,1.0,1.0,1.0,1.0 };
+//
+//		vertices[27] = { -1.0f, -1.0f, -1.0f,1.0,1.0,1.0,1.0 };
+//		vertices[28] = { -1.0f, 1.0f, 1.0f,1.0,1.0,1.0,1.0 };
+//		vertices[29] = { -1.0f, 1.0f, -1.0f,1.0,1.0,1.0,1.0 };
+//
+//		// Right face
+//		vertices[30] = { 1.0f, -1.0f, 1.0f,1.0,1.0,1.0,1.0 };
+//		vertices[31] = { 1.0f, -1.0f, -1.0f,1.0,1.0,1.0,1.0 };
+//		vertices[32] = { 1.0f, 1.0f, -1.0f,1.0,1.0,1.0,1.0 };
+//
+//		vertices[33] = { 1.0f, -1.0f, 1.0f,1.0,1.0,1.0,1.0 };
+//		vertices[34] = { 1.0f, 1.0f, -1.0f,1.0,1.0,1.0,1.0 };
+//		vertices[35] = { 1.0f, 1.0f, 1.0f,1.0,1.0,1.0,1.0 };
+//
+//
+//	
+//
+//#endif 
 
-		constexpr size_t VertexCount = 8;
-
-		std::array<Vertex, VertexCount> vertices;
-		
-		/*vertices[0] = { -1, -1, -1,
-						1.0,1.0,1.0,1.0,
-						0.0,1.0};
-		vertices[1] = { 1, -1, -1,
-						1.0,1.0,1.0,1.0, 
-						1.0,1.0 };
-		vertices[2] = { 1, 1, -1,
-						1.0,1.0,1.0,1.0,
-						1.0,0.0 };
-
-		vertices[3] = { -1, 1, -1 ,
-						1.0,1.0,1.0,1.0,
-						0.0,0.0 };
-		vertices[4] = { -1, -1, 1
-						,1.0,1.0,1.0,1.0,
-						0.0,0.0 };
-		vertices[5] = { 1, -1, 1 ,
-						1.0,1.0,1.0,1.0,
-						0.0,0.0 };
-		vertices[6] = { 1, 1, 1 ,
-						1.0,1.0,1.0,1.0,
-						0.0,0.0 };
-		vertices[7] = { -1, 1, 1 ,
-						1.0,1.0,1.0,1.0,
-						0.0,0.0 };*/
-		vertices[0] = { -1, -1, -1, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0 };
-		vertices[1] = { 1, -1, -1, 0.0, 1.0, 0.0, 1.0, 1.0, 1.0 };
-		vertices[2] = { 1, 1, -1, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0 };
-		vertices[3] = { -1, 1, -1, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0 };
-		vertices[4] = { -1, -1, 1, 1.0, 0.0, 1.0, 1.0, 0.0, 0.0 };
-		vertices[5] = { 1, -1, 1, 0.0, 1.0, 1.0, 1.0, 0.0, 0.0 };
-		vertices[6] = { 1, 1, 1, 0.5, 0.5, 0.5, 1.0, 0.0, 0.0 };
-		vertices[7] = { -1, 1, 1, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0 };
-
-		//const std::vector<uint32_t> indices =
-		//{
-		//0, 1, 2, 2, 3, 0
-		//};
-
-		const std::vector<uint32_t> indices =
-		{
-			0, 1, 3, 3, 1, 2,
-			1, 5, 2, 2, 5, 6,
-			5, 4, 6, 6, 4, 7,
-			4, 0, 7, 7, 0, 3,
-			3, 2, 7, 7, 2, 6,
-			4, 5, 0, 0, 5, 1
-		};
-
-		
-	
-#else
-		constexpr size_t VertexCount = 36;
-
-		std::array<Vertex, VertexCount> vertices;
-		// Front face
-		vertices[0] = { -1.0f, -1.0f, 1.0f,1.0,1.0,1.0,1.0 };
-		vertices[1] = { 1.0f, -1.0f, 1.0f,1.0,1.0,1.0,1.0 };
-		vertices[2] = { 1.0f, 1.0f, 1.0f,1.0,1.0,1.0,1.0 };
-
-		vertices[3] = { -1.0f, -1.0f, 1.0f ,1.0,1.0,1.0,1.0 };
-		vertices[4] = { 1.0f, 1.0f, 1.0f ,1.0,1.0,1.0,1.0 };
-		vertices[5] = { -1.0f, 1.0f, 1.0f ,1.0,1.0,1.0,1.0 };
-
-		// Back face
-		vertices[6] = { -1.0f, -1.0f, -1.0f,1.0,1.0,1.0,1.0 };
-		vertices[7] = { -1.0f, 1.0f, -1.0f,1.0,1.0,1.0,1.0 };
-		vertices[8] = { 1.0f, 1.0f, -1.0f ,1.0,1.0,1.0,1.0 };
-
-		vertices[9] = { -1.0f, -1.0f, -1.0f,1.0,1.0,1.0,1.0 };
-		vertices[10] = { 1.0f, 1.0f, -1.0f,1.0,1.0,1.0,1.0 };
-		vertices[11] = { 1.0f, -1.0f, -1.0f ,1.0,1.0,1.0,1.0 };
-
-		// Top face
-		vertices[12] = { -1.0f, 1.0f, -1.0f,1.0,1.0,1.0,1.0 };
-		vertices[13] = { -1.0f, 1.0f, 1.0f,1.0,1.0,1.0,1.0 };
-		vertices[14] = { 1.0f, 1.0f, 1.0f ,1.0,1.0,1.0,1.0 };
-
-		vertices[15] = { -1.0f, 1.0f, -1.0f,1.0,1.0,1.0,1.0 };
-		vertices[16] = { 1.0f, 1.0f, 1.0f,1.0,1.0,1.0,1.0 };
-		vertices[17] = { 1.0f, 1.0f, -1.0f ,1.0,1.0,1.0,1.0 };
-
-		// Bottom face
-		vertices[18] = { -1.0f, -1.0f, -1.0f,1.0,1.0,1.0,1.0 };
-		vertices[19] = { 1.0f, -1.0f, -1.0f,1.0,1.0,1.0,1.0 };
-		vertices[20] = { 1.0f, -1.0f, 1.0f,1.0,1.0,1.0,1.0 };
-
-		vertices[21] = { -1.0f, -1.0f, -1.0f,1.0,1.0,1.0,1.0 };
-		vertices[22] = { 1.0f, -1.0f, 1.0f,1.0,1.0,1.0,1.0 };
-		vertices[23] = { -1.0f, -1.0f, 1.0f,1.0,1.0,1.0,1.0 };
-
-		// Left face
-		vertices[24] = { -1.0f, -1.0f, -1.0f,1.0,1.0,1.0,1.0 };
-		vertices[25] = { -1.0f, -1.0f, 1.0f,1.0,1.0,1.0,1.0 };
-		vertices[26] = { -1.0f, 1.0f, 1.0f,1.0,1.0,1.0,1.0 };
-
-		vertices[27] = { -1.0f, -1.0f, -1.0f,1.0,1.0,1.0,1.0 };
-		vertices[28] = { -1.0f, 1.0f, 1.0f,1.0,1.0,1.0,1.0 };
-		vertices[29] = { -1.0f, 1.0f, -1.0f,1.0,1.0,1.0,1.0 };
-
-		// Right face
-		vertices[30] = { 1.0f, -1.0f, 1.0f,1.0,1.0,1.0,1.0 };
-		vertices[31] = { 1.0f, -1.0f, -1.0f,1.0,1.0,1.0,1.0 };
-		vertices[32] = { 1.0f, 1.0f, -1.0f,1.0,1.0,1.0,1.0 };
-
-		vertices[33] = { 1.0f, -1.0f, 1.0f,1.0,1.0,1.0,1.0 };
-		vertices[34] = { 1.0f, 1.0f, -1.0f,1.0,1.0,1.0,1.0 };
-		vertices[35] = { 1.0f, 1.0f, 1.0f,1.0,1.0,1.0,1.0 };
-
-
-	
-
-#endif 
-
-		
 		
 		 
 	
@@ -236,7 +296,7 @@ namespace Voidstar
 		std::vector<vk::DescriptorSetLayout> layouts(m_Swapchain->GetFramesCount(), m_DescriptorSetLayout->GetLayout());
 
 		
-			m_DescriptorSets =  m_DescriptorPool->AllocateDescriptorSets(m_Swapchain->GetFramesCount(), layouts.data());
+		m_DescriptorSets =  m_DescriptorPool->AllocateDescriptorSets(m_Swapchain->GetFramesCount(), layouts.data());
 			
 
 			
@@ -290,7 +350,6 @@ namespace Voidstar
 			m_DescriptorSetLayoutTex = DescriptorSetLayout::Create(layoutBindings);
 
 			layouts[0] = m_DescriptorSetLayoutTex->GetLayout();
-			//auto check = m_DescriptorPoolTex->AllocateDescriptorSets(2, layouts.data());
 			m_DescriptorSetTex = m_DescriptorPoolTex->AllocateDescriptorSets(1, layouts.data())[0];
 		}
 
@@ -306,7 +365,7 @@ namespace Voidstar
 
 
 		{
-			vk::DescriptorPoolSize poolSize;
+			/*vk::DescriptorPoolSize poolSize;
 			poolSize.type = vk::DescriptorType::eStorageBuffer;
 			poolSize.descriptorCount = m_Swapchain->GetFramesCount()  *2;
 
@@ -331,100 +390,101 @@ namespace Voidstar
 
 			std::vector<vk::DescriptorSetLayout> layouts(m_Swapchain->GetFramesCount(), m_ComputeSetLayout->GetLayout());
 			
-			m_ComputeDescriptorSets = m_ComputePool->AllocateDescriptorSets(m_Swapchain->GetFramesCount(), layouts.data());
+			m_ComputeDescriptorSets = m_ComputePool->AllocateDescriptorSets(m_Swapchain->GetFramesCount(), layouts.data());*/
 
 			//m_DescriptorSetTex = m_DescriptorPoolTex->AllocateDescriptorSets(1, layouts.data())[0];
 			
 		}
 
 
-		std::default_random_engine rndEngine((unsigned)time(nullptr));
-		std::uniform_real_distribution<float> rndDist(-1.0f, 1.0f);
+		//std::default_random_engine rndEngine((unsigned)time(nullptr));
+		//std::uniform_real_distribution<float> rndDist(-1.0f, 1.0f);
 
-		// Initial particle positions on a circle
-		std::vector<Particle> particles(PARTICLE_COUNT);
-		for (auto& particle : particles) {
-			float r = 0.25f * sqrt(rndDist(rndEngine));
-			float theta = rndDist(rndEngine) * 2 * 3.14159265358979323846;
-			float x = r * cos(theta) * m_ViewportHeight/ m_ViewportWidth;
-			float y = r * sin(theta);
-			particle.position = glm::vec2(x, y);
-			particle.velocity = glm::normalize(glm::vec2(x, y)) * 2.f* rndDist(rndEngine);
-			particle.color = glm::vec4(rndDist(rndEngine), rndDist(rndEngine), rndDist(rndEngine), 1.0f);
-		}
-		auto size = sizeof(Particle) * PARTICLE_COUNT;
-		m_ShaderStorageBuffers.resize(3);
-		m_CommandComputeBuffers.resize(3);
-		for (size_t i = 0; i < m_Swapchain->GetFramesCount(); i++)
-		{
-			SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(size);
-
-
-			{
-				BufferInputChunk inputBuffer;
-				inputBuffer.size = size;
-				inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
-				inputBuffer.usage = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eStorageBuffer;
-				m_ShaderStorageBuffers[i] = CreateUPtr<Buffer>(inputBuffer);
-			}
-			
-
-			m_TransferCommandBuffer[0].BeginTransfering();
-			m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_ShaderStorageBuffers[i].get(), (void*)particles.data(), size);
-			m_TransferCommandBuffer[0].EndTransfering();
+		//// Initial particle positions on a circle
+		//std::vector<Particle> particles(PARTICLE_COUNT);
+		//for (auto& particle : particles) {
+		//	float r = 0.25f * sqrt(rndDist(rndEngine));
+		//	float theta = rndDist(rndEngine) * 2 * 3.14159265358979323846;
+		//	float x = r * cos(theta) * m_ViewportHeight/ m_ViewportWidth;
+		//	float y = r * sin(theta);
+		//	particle.position = glm::vec2(x, y);
+		//	particle.velocity = glm::normalize(glm::vec2(x, y)) * 2.f* rndDist(rndEngine);
+		//	particle.color = glm::vec4(rndDist(rndEngine), rndDist(rndEngine), rndDist(rndEngine), 1.0f);
+		//}
+		//auto size = sizeof(Particle) * PARTICLE_COUNT;
+		//m_ShaderStorageBuffers.resize(3);
+		//m_CommandComputeBuffers.resize(3);
+		//for (size_t i = 0; i < m_Swapchain->GetFramesCount(); i++)
+		//{
+		//	SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(size);
 
 
+		//	{
+		//		BufferInputChunk inputBuffer;
+		//		inputBuffer.size = size;
+		//		inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+		//		inputBuffer.usage = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eStorageBuffer;
+		//		m_ShaderStorageBuffers[i] = CreateUPtr<Buffer>(inputBuffer);
+		//	}
+		//	
 
-		}
-		auto device = RenderContext::GetDevice();
-		m_CommandComputePool = m_CommandPoolManager->GetFreePool();
-		m_CommandComputeBuffers = CommandBuffer::CreateBuffers(m_CommandComputePool, vk::CommandBufferLevel::ePrimary,3);
-		
-
-
-		for (size_t i = 0; i < m_Swapchain->GetFramesCount(); i++)
-		{
-			std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
-			VkDescriptorBufferInfo storageBufferInfoLastFrame{};
-			storageBufferInfoLastFrame.buffer = m_ShaderStorageBuffers[(i - 1) % m_Swapchain->GetFramesCount()]->GetBuffer();
-			storageBufferInfoLastFrame.offset = 0;
-			storageBufferInfoLastFrame.range = sizeof(Particle) * PARTICLE_COUNT;
-
-			descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrites[0].dstSet = m_ComputeDescriptorSets[i];
-			descriptorWrites[0].dstBinding = 0;
-			descriptorWrites[0].dstArrayElement = 0;
-			descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-			descriptorWrites[0].descriptorCount = 1;
-			descriptorWrites[0].pBufferInfo = &storageBufferInfoLastFrame;
-
-			VkDescriptorBufferInfo storageBufferInfoCurrentFrame{};
-			storageBufferInfoCurrentFrame.buffer = m_ShaderStorageBuffers[i]->GetBuffer();
-			storageBufferInfoCurrentFrame.offset = 0;
-			storageBufferInfoCurrentFrame.range = sizeof(Particle) * PARTICLE_COUNT;
-
-			descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrites[1].dstSet = m_ComputeDescriptorSets[i];
-			descriptorWrites[1].dstBinding = 1;
-			descriptorWrites[1].dstArrayElement = 0;
-			descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-			descriptorWrites[1].descriptorCount = 1;
-			descriptorWrites[1].pBufferInfo = &storageBufferInfoCurrentFrame;
-
-			auto device = RenderContext::GetDevice()->GetDevice();
-			vkUpdateDescriptorSets(device, 2, descriptorWrites.data(), 0, nullptr);
-		}
+		//	m_TransferCommandBuffer[0].BeginTransfering();
+		//	m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_ShaderStorageBuffers[i].get(), (void*)particles.data(), size);
+		//	m_TransferCommandBuffer[0].EndTransfering();
 
 
 
+		//}
+		//auto device = RenderContext::GetDevice();
+		//m_CommandComputePool = m_CommandPoolManager->GetFreePool();
+		//m_CommandComputeBuffers = CommandBuffer::CreateBuffers(m_CommandComputePool, vk::CommandBufferLevel::ePrimary,3);
+		//
 
 
-		//m_Image = Image::CreateImage("res/viking_room/viking_room.png", m_DescriptorSetTex);
-		//std::string modelPath = "res/viking_room/viking_room.obj";
-		//m_Model = Model::Load(modelPath);
+		//for (size_t i = 0; i < m_Swapchain->GetFramesCount(); i++)
+		//{
+		//	std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
+		//	VkDescriptorBufferInfo storageBufferInfoLastFrame{};
+		//	storageBufferInfoLastFrame.buffer = m_ShaderStorageBuffers[(i - 1) % m_Swapchain->GetFramesCount()]->GetBuffer();
+		//	storageBufferInfoLastFrame.offset = 0;
+		//	storageBufferInfoLastFrame.range = sizeof(Particle) * PARTICLE_COUNT;
+
+		//	descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		//	descriptorWrites[0].dstSet = m_ComputeDescriptorSets[i];
+		//	descriptorWrites[0].dstBinding = 0;
+		//	descriptorWrites[0].dstArrayElement = 0;
+		//	descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		//	descriptorWrites[0].descriptorCount = 1;
+		//	descriptorWrites[0].pBufferInfo = &storageBufferInfoLastFrame;
+
+		//	VkDescriptorBufferInfo storageBufferInfoCurrentFrame{};
+		//	storageBufferInfoCurrentFrame.buffer = m_ShaderStorageBuffers[i]->GetBuffer();
+		//	storageBufferInfoCurrentFrame.offset = 0;
+		//	storageBufferInfoCurrentFrame.range = sizeof(Particle) * PARTICLE_COUNT;
+
+		//	descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		//	descriptorWrites[1].dstSet = m_ComputeDescriptorSets[i];
+		//	descriptorWrites[1].dstBinding = 1;
+		//	descriptorWrites[1].dstArrayElement = 0;
+		//	descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		//	descriptorWrites[1].descriptorCount = 1;
+		//	descriptorWrites[1].pBufferInfo = &storageBufferInfoCurrentFrame;
+
+		//	auto device = RenderContext::GetDevice()->GetDevice();
+		//	vkUpdateDescriptorSets(device, 2, descriptorWrites.data(), 0, nullptr);
+		//}
 
 
-	/*	auto indexSize = m_Model->indices.size() * sizeof(m_Model->indices[0]);
+
+
+
+		m_Image = Image::CreateImage(BASE_RES_PATH+"viking_room/viking_room.png", m_DescriptorSetTex);
+		std::string modelPath = BASE_RES_PATH+"viking_room/viking_room.obj";
+		m_Model = Model::Load(modelPath);
+
+		std::vector<IndexType> indices;
+		auto vertices = GeneratePlane(100, indices);
+		auto indexSize = SizeOfBuffer(indices.size(),indices[0]);
 		{
 			SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(indexSize);
 
@@ -434,20 +494,20 @@ namespace Voidstar
 				inputBuffer.size = indexSize;
 				inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
 				inputBuffer.usage = vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst;
-				m_IndexBuffer = new IndexBuffer(inputBuffer, m_Model->indices.size(), vk::IndexType::eUint32);
+				m_IndexBuffer = new IndexBuffer(inputBuffer, indices.size(), vk::IndexType::eUint32);
 
 			}
 
-			m_GraphicsQueue->BeginTransfering();
-			m_GraphicsQueue->Transfer(stagingBuffer.get(), m_IndexBuffer, (void*)m_Model->indices.data(), indexSize);
-			m_GraphicsQueue->EndTransfering();
+			m_TransferCommandBuffer[0].BeginTransfering();
+			m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_IndexBuffer, (void*)indices.data(), indexSize);
+			m_TransferCommandBuffer[0].EndTransfering();
 
 
 
 		}
 
-		auto vertexSize = m_Model->vertices.size() * sizeof(Vertex);
-		void* vertexData = const_cast<void*>(static_cast<const void*>(m_Model->vertices.data()));
+		auto vertexSize = SizeOfBuffer(vertices.size(), vertices[0]);
+		void* vertexData = const_cast<void*>(static_cast<const void*>(vertices.data()));
 		SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(vertexSize);
 		{
 			BufferInputChunk inputBuffer;
@@ -458,14 +518,14 @@ namespace Voidstar
 			m_Buffer = new Buffer(inputBuffer);
 		}
 
-		m_GraphicsQueue->BeginTransfering();
-		m_GraphicsQueue->Transfer(stagingBuffer.get(), m_Buffer, (void*)m_Model->vertices.data(), vertexSize);
-		m_GraphicsQueue->EndTransfering();*/
+		m_TransferCommandBuffer[0].BeginTransfering();
+		m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_Buffer, (void*)vertices.data(), vertexSize);
+		m_TransferCommandBuffer[0].EndTransfering();
 
 
 
 
-		auto computeShaderModule = CreateModule("../Shaders/compute.spv", device->GetDevice());
+		/*auto computeShaderModule = CreateModule("../Shaders/compute.spv", m_Device->GetDevice());
 
 		vk::PipelineShaderStageCreateInfo computeShaderStageInfo{};
 		computeShaderStageInfo.flags = vk::PipelineShaderStageCreateFlags();
@@ -490,7 +550,7 @@ namespace Voidstar
 
 		
 
-		vkDestroyShaderModule(device->GetDevice(), computeShaderModule, nullptr);
+		vkDestroyShaderModule(device->GetDevice(), computeShaderModule, nullptr);*/
 
 
 		CreateMSAAFrame();
@@ -653,7 +713,6 @@ namespace Voidstar
 		vk::CommandBufferBeginInfo beginInfo = {};
 
 		auto commandBuffer = m_RenderCommandBuffer[imageIndex].GetCommandBuffer();
-		//auto commandBuffer = m_CommandBuffers[imageIndex];
 
 		commandBuffer.begin(beginInfo);
 		{
@@ -676,7 +735,7 @@ namespace Voidstar
 			
 			commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_Pipeline);
 			vk::DeviceSize offsets[] = { 0 };
-			vk::Buffer vertexBuffers[] = { m_ShaderStorageBuffers[imageIndex]->GetBuffer() };
+			vk::Buffer vertexBuffers[] = { m_Buffer->GetBuffer() };
 			commandBuffer.bindVertexBuffers(0, 1, vertexBuffers, offsets);
 
 
@@ -684,10 +743,10 @@ namespace Voidstar
 			commandBuffer.setViewport(0, 1, &viewport);
 			commandBuffer.setScissor(0, 1, &scissors);
 
-			//m_CommandBuffer.bindIndexBuffer(indexBuffer->GetBuffer(), 0, indexBuffer->GetIndexType());
-            //auto amount = indexBuffer->GetIndexAmount();
-			//m_CommandBuffer.drawIndexed(static_cast<uint32_t>(amount), 1, 0, 0, 0);
-			commandBuffer.draw(8192, 1, 0, 0);
+			commandBuffer.bindIndexBuffer(m_IndexBuffer->GetBuffer(), 0, m_IndexBuffer->GetIndexType());
+            auto amount = m_IndexBuffer->GetIndexAmount();
+			commandBuffer.drawIndexed(static_cast<uint32_t>(amount), 1, 0, 0, 0);
+			//commandBuffer.draw(8192, 1, 0, 0);
 
 		
 		}
@@ -709,7 +768,7 @@ namespace Voidstar
 	{
 		
 
-		{
+		/*{
 			ZoneScopedN("Waiting for fence ");
 			
 		m_Device->GetDevice().waitForFences(m_ComputeInFlightFences[currentFrame], VK_TRUE, std::numeric_limits<uint64_t>::max());
@@ -760,7 +819,7 @@ namespace Voidstar
 		submitInfo.signalSemaphoreCount = 1;
 		submitInfo.pSignalSemaphores = &m_ComputeFinishedSemaphores[currentFrame];
 
-		m_Device->GetGraphicsQueue().submit(submitInfo, m_ComputeInFlightFences[currentFrame]);
+		m_Device->GetGraphicsQueue().submit(submitInfo, m_ComputeInFlightFences[currentFrame]);*/
 
 		{
 
@@ -784,7 +843,7 @@ namespace Voidstar
 	
 
 		
-			vk::Semaphore waitSemaphores[] = { m_ImageAvailableSemaphore,m_ComputeFinishedSemaphores[currentFrame] };
+			vk::Semaphore waitSemaphores[] = { m_ImageAvailableSemaphore };
 			vk::Semaphore signalSemaphores[] = { m_RenderFinishedSemaphore };
 
 		auto& renderCommandBuffer = m_RenderCommandBuffer[imageIndex];
@@ -875,13 +934,14 @@ namespace Voidstar
 		auto swapchainFormat = m_Swapchain->GetFormat();
 		auto swapChainExtent = m_Swapchain->GetExtent();
 		specs.device = m_Device->GetDevice();
-		specs.vertexFilepath = "../Shaders/vertex.spv";
-		specs.fragmentFilepath = "../Shaders/fragment.spv";
+		
+		specs.vertexFilepath = BASE_SHADER_PATH+"vertex.spv";
+		specs.fragmentFilepath = BASE_SHADER_PATH+"fragment.spv";
 		specs.swapchainExtent = swapChainExtent;
 		specs.swapchainImageFormat = swapchainFormat;
-		specs.bindingDescription = Particle::GetBindingDescription();
-		//specs.attributeDescription = Vertex::GetAttributeDescriptions();
-		specs.attributeDescription = Particle::GetAttributeDescriptions();
+		specs.bindingDescription = Vertex::GetBindingDescription();
+		specs.attributeDescription = Vertex::GetAttributeDescriptions();
+		//specs.attributeDescription = Particle::GetAttributeDescriptions();
 
 		auto samples = RenderContext::GetDevice()->GetSamples();
 		specs.samples = samples;
@@ -1080,7 +1140,7 @@ namespace Voidstar
 		//Input Assembly
 		vk::PipelineInputAssemblyStateCreateInfo inputAssemblyInfo = {};
 		inputAssemblyInfo.flags = vk::PipelineInputAssemblyStateCreateFlags();
-		inputAssemblyInfo.topology = vk::PrimitiveTopology::ePointList;
+		inputAssemblyInfo.topology = vk::PrimitiveTopology::eTriangleList;
 		
 		pipelineInfo.pInputAssemblyState = &inputAssemblyInfo;
 

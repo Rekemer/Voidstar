@@ -38,7 +38,7 @@ namespace Voidstar
 			}
 			float deltaTime = 0;
 			m_Window->Update(deltaTime);
-			//m_Camera->Update(deltaTime);
+			m_Camera->Update(deltaTime);
 			Renderer::Instance()->Render();
 		}
 	}

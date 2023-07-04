@@ -54,7 +54,7 @@ namespace Voidstar
 		vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput,vk::PipelineStageFlagBits::eVertexInput };
 		vk::SubmitInfo submitInfo = {};
 
-		submitInfo.waitSemaphoreCount = 2;
+		submitInfo.waitSemaphoreCount = 1;
 		submitInfo.pWaitSemaphores = waitSemaphores;
 		submitInfo.pWaitDstStageMask = waitStages;
 
@@ -259,7 +259,7 @@ namespace Voidstar
 
 	CommandBuffer::~CommandBuffer()
 	{
-		auto device = RenderContext::GetDevice();
-		Free();
+		//auto device = RenderContext::GetDevice();
+		//Free();
 	}
 }

@@ -1,5 +1,7 @@
 workspace "Voidstar"
     architecture "x64"
+    language "C++"
+    cppdialect "C++17"
     configurations
     {
         "Debug",
@@ -37,6 +39,7 @@ project "Voidstar-Core"
     location "Voidstar"
     kind "StaticLib"
     language "C++"
+    cppdialect "C++17"
     targetdir ("bin/%{prj.name}/"..outputdir)
     objdir ("bin-int/%{prj.name}/"..outputdir)
 

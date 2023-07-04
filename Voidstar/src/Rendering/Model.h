@@ -6,6 +6,7 @@
 namespace Voidstar
 {
 	class Buffer;
+	typedef uint32_t IndexType;
 	class Model
 	{
 	public:
@@ -13,7 +14,7 @@ namespace Voidstar
 	private:
 		friend class Renderer;
 		std::vector<Vertex> vertices;
-		std::vector<uint32_t> indices;
+		std::vector<IndexType> indices;
 		UPtr<Buffer> vertexBuffer;
 		
 	};

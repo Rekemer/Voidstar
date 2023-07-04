@@ -18,7 +18,11 @@ namespace Voidstar
 	class Model;
 
 
-
+	enum class RenderPrimitive
+	{
+		Plane,
+		Cube,
+	};
 
 	struct UniformBufferObject {
 		glm::mat4 model;
@@ -68,7 +72,7 @@ namespace Voidstar
 		vk::Extent2D swapchainExtent;
 		vk::Format swapchainImageFormat;
 		vk::VertexInputBindingDescription bindingDescription;
-		std::array<vk::VertexInputAttributeDescription, 2>  attributeDescription;
+		std::array<vk::VertexInputAttributeDescription, 3>  attributeDescription;
 		std::vector<vk::DescriptorSetLayout> descriptorSetLayout;
 	};
 
@@ -182,7 +186,7 @@ namespace Voidstar
 
 		SPtr<Window> m_Window;
 
-
+		RenderPrimitive m_RenderPrimitive = RenderPrimitive::Plane;
 		
 	};
 

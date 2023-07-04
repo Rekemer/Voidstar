@@ -4,9 +4,17 @@ namespace Voidstar
 {
 	struct Vertex
 	{
-		float Position[3];
+		union
+		{
+			float Position[3];
+			float x, y, z;
+		};
 		float Color[4];
-		alignas(8)float UV[2];
+		union
+		{
+			alignas(8)float UV[2];
+			float u, v;
+		};
 
 
 		static vk::VertexInputBindingDescription GetBindingDescription() {
