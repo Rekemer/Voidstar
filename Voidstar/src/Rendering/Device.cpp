@@ -103,7 +103,7 @@ namespace Voidstar
 
 		vk::PhysicalDeviceFeatures deviceFeatures = vk::PhysicalDeviceFeatures();
 
-
+		deviceFeatures.fillModeNonSolid = true;
 
 		std::vector<const char*> enabledLayers;
 

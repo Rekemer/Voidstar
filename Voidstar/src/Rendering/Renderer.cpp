@@ -24,6 +24,7 @@
 #include"tracy/Tracy.hpp"
 #include"tracy/TracyVulkan.hpp"
 #include <filesystem>
+#include <cstdlib>
 namespace Voidstar
 {
 
@@ -31,14 +32,109 @@ namespace Voidstar
 	TracyVkCtx ctx;
 	vk::ShaderModule CreateModule(std::string filename, vk::Device device);
 	const uint32_t PARTICLE_COUNT = 8192;
-	std::string BASE_SHADER_PATH = "../Shader/";
+	std::string BASE_SHADER_PATH = "../Shaders/";
 	std::string BASE_RES_PATH = "res";
+	const std::string SPIRV_COMPILER_PATH = "C:/VulkanSDK/1.3.216.0/Bin/glslc.exe";
+	const std::string BASE_SPIRV_OUTPUT = BASE_SHADER_PATH+"Binary/";
+
 
 	template<typename T>
 	const uint64_t SizeOfBuffer(const uint64_t bufferSize,const T& bufferElement) 
 	{
 		return bufferSize * sizeof(bufferElement);
 	}
+	std::string GetFileNameWithoutExtension(const std::string& filepath)
+	{
+		size_t extensionIndex = filepath.find_last_of('.');
+		return filepath.substr(0, extensionIndex);
+	}
+
+	std::string CreateCommand(std::string shader,const char* extension)
+	{
+		auto name = GetFileNameWithoutExtension(shader);
+		std::string shaderPath = BASE_SHADER_PATH + shader.c_str();
+		std::string shaderOutput = BASE_SPIRV_OUTPUT + name.c_str() + extension;
+		std::string command = SPIRV_COMPILER_PATH + " " + shaderPath + " -o " + shaderOutput;
+		return command;
+	}
+
+	void CompileAllShaders()
+	{
+		for (auto& shader : std::filesystem::directory_iterator(BASE_SHADER_PATH))
+		{
+			if (!shader.is_directory())
+			{
+				auto extension= shader.path().extension().string();
+				auto shaderString = shader.path().filename().string();
+				std::string command="";
+				if (extension == ".vert") {
+					// Handle vertex shader
+					const char* extension = ".spvV";
+					command = CreateCommand(shaderString, extension);
+				}
+				else if (extension == ".frag") {
+					const char* extension = ".spvF";
+					command = CreateCommand(shaderString, extension);
+				}
+				else {
+					// Handle other cases
+				}
+				if (command != "")
+				{
+					int result = std::system(command.c_str());
+					if (result != 0)
+					{
+						Log::GetLog()->error("shader {0} is not compiled!", shaderString);
+					}
+				}
+				
+			}
+		}
+	}
+
+	std::vector<std::string> CompileShader(const std::vector<std::string>& shaderFilenames)
+	{
+		//C:\VulkanSDK\1.3.216.0\Bin\glslc.exe shader.vert -o vertex.spv
+		//C:\VulkanSDK\1.3.216.0\Bin\glslc.exe shader.frag - o fragment.spv
+		//C : \VulkanSDK\1.3.216.0\Bin\glslc.exe - c shader.comp - o compute.spv
+		
+		auto& vertexShader = shaderFilenames[0];
+		const char* extension = ".spvV";
+		auto command = CreateCommand(vertexShader, extension);
+		
+
+		// Execute the command
+		int result = std::system(command.c_str());
+		// Check the result of the command execution
+		if (result == 0)
+		{
+			// Command executed successfully
+			// Handle the compiled SPIR-V code or other tasks
+		}
+		else
+		{
+			// Command execution failed
+			// Handle the failure scenario
+		}
+		auto& fragmentShader = shaderFilenames[1];
+		extension = ".spvF";
+		command = CreateCommand(fragmentShader, extension);
+
+		// Execute the command
+		result = std::system(command.c_str());
+		if (result == 0)
+		{
+			// Command executed successfully
+			// Handle the compiled SPIR-V code or other tasks
+		}
+		else
+		{
+			// Command execution failed
+			// Handle the failure scenario
+		}
+		return {};
+	}
+
 
 	std::vector<Vertex> GeneratePlane(float detail, std::vector<IndexType>& indices)
 	{
@@ -55,8 +151,8 @@ namespace Voidstar
 
 				// Calculate vertex position
 				vertex.x = i * stepSize - 0.5f;
-				vertex.y = 0.0f;
-				vertex.z = j * stepSize - 0.5f;
+				vertex.y = j * stepSize - 0.5f;
+				vertex.z = 0.0;
 
 				//// Calculate vertex normal
 				//vertex.nx = 0.0f;
@@ -126,6 +222,8 @@ namespace Voidstar
 		
 	{
 		InitFilePath();
+		//CompileShader({ "shader.vert","shader.frag" });
+		CompileAllShaders();
 		m_Window=window; 
 		m_ViewportWidth = screenWidth;
 		m_ViewportHeight = screenHeight;
@@ -935,8 +1033,8 @@ namespace Voidstar
 		auto swapChainExtent = m_Swapchain->GetExtent();
 		specs.device = m_Device->GetDevice();
 		
-		specs.vertexFilepath = BASE_SHADER_PATH+"vertex.spv";
-		specs.fragmentFilepath = BASE_SHADER_PATH+"fragment.spv";
+		specs.vertexFilepath = BASE_SPIRV_OUTPUT +"noise.spvV";
+		specs.fragmentFilepath = BASE_SPIRV_OUTPUT +"default.spvF";
 		specs.swapchainExtent = swapChainExtent;
 		specs.swapchainImageFormat = swapchainFormat;
 		specs.bindingDescription = Vertex::GetBindingDescription();
@@ -1197,7 +1295,7 @@ namespace Voidstar
 		rasterizer.flags = vk::PipelineRasterizationStateCreateFlags();
 		rasterizer.depthClampEnable = VK_FALSE; //discard out of bounds fragments, don't clamp them
 		rasterizer.rasterizerDiscardEnable = VK_FALSE; //This flag would disable fragment output
-		rasterizer.polygonMode = vk::PolygonMode::eFill;
+		rasterizer.polygonMode = vk::PolygonMode::eLine;
 		rasterizer.lineWidth = 1.0f;
 		rasterizer.cullMode = vk::CullModeFlagBits::eNone;
 		rasterizer.frontFace = vk::FrontFace::eClockwise;

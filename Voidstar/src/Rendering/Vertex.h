@@ -7,7 +7,10 @@ namespace Voidstar
 		union
 		{
 			float Position[3];
-			float x, y, z;
+			struct
+			{
+				float x, y, z;
+			};
 		};
 		float Color[4];
 		union

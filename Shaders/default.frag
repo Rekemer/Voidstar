@@ -26,6 +26,7 @@ void main()
 	//outColor = random_color(vec4(1,1,1,1));
 	outColor.a = 1;
     outColor.xyz=color.xyz;
+    outColor.xyz=vec3(1,1,1);
     //outColor = vec4(uv.x,uv.y,0,1);
     //outColor = texture(u_Tex, uv);
 }
