@@ -16,7 +16,11 @@ namespace Voidstar
 		union
 		{
 			alignas(8)float UV[2];
-			float u, v;
+			struct
+			{
+				float u, v;
+			};
+			
 		};
 
 
@@ -27,6 +31,7 @@ namespace Voidstar
 			bindingDescription.inputRate = vk::VertexInputRate::eVertex;
 			return bindingDescription;
 		}
+
 
 		static std::array<vk::VertexInputAttributeDescription, 3> GetAttributeDescriptions() {
 			std::array<vk::VertexInputAttributeDescription, 3> attributeDescriptions{};

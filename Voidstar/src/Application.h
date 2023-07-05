@@ -15,7 +15,7 @@ namespace Voidstar
 		virtual void Execute() {};
 	private:
 		size_t m_ScreenWidth, m_ScreenHeight;
-
+		
 		UPtr<Camera> m_Camera;
 		SPtr<Window> m_Window;
 	};

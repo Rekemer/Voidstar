@@ -23,7 +23,13 @@ namespace Voidstar
 		Plane,
 		Cube,
 	};
-
+	struct InstanceData {
+		glm::vec3 pos;
+		float scale;
+		uint32_t texIndex;
+		InstanceData(const glm::vec3& position, float scaling, uint32_t textureIndex)
+			: pos(position), scale(scaling), texIndex(textureIndex) {}
+	};
 	struct UniformBufferObject {
 		glm::mat4 model;
 		glm::mat4 view;
@@ -71,8 +77,8 @@ namespace Voidstar
 		vk::SampleCountFlagBits samples;
 		vk::Extent2D swapchainExtent;
 		vk::Format swapchainImageFormat;
-		vk::VertexInputBindingDescription bindingDescription;
-		std::array<vk::VertexInputAttributeDescription, 3>  attributeDescription;
+		std::vector<vk::VertexInputBindingDescription> bindingDescription;
+		std::vector<vk::VertexInputAttributeDescription>  attributeDescription;
 		std::vector<vk::DescriptorSetLayout> descriptorSetLayout;
 	};
 
@@ -97,6 +103,10 @@ namespace Voidstar
 		{
 			return m_CommandPoolManager.get();
 		}
+
+		void SubmitInstanceData(const InstanceData& instance);
+	
+
 		~Renderer();
 	private:
 		void CreateInstance();
@@ -119,10 +129,12 @@ namespace Voidstar
 		int m_ViewportWidth, m_ViewportHeight;
 		Device* m_Device;
 		UPtr<Swapchain> m_Swapchain;
-		Buffer* m_Buffer{nullptr};
-		IndexBuffer* m_IndexBuffer;
+		UPtr<Buffer> m_ModelBuffer{nullptr};
+		UPtr<IndexBuffer> m_IndexBuffer;
 		Application* m_App;
 		
+		UPtr<Buffer> m_InstancedDataBuffer;
+
 		SPtr<Image> m_Image;
 		SPtr<Model> m_Model;
 
@@ -187,7 +199,14 @@ namespace Voidstar
 		SPtr<Window> m_Window;
 
 		RenderPrimitive m_RenderPrimitive = RenderPrimitive::Plane;
-		
+		vk::PolygonMode m_PolygoneMode = vk::PolygonMode::eFill;
+
+
+		vk::BufferMemoryBarrier	m_InstanceBarrier;
+		std::vector<InstanceData> m_InstanceData;
+		std::vector<vk::DescriptorSet> m_InstanceDescriptorSets;
+		void* m_InstancedPtr;
+
 	};
 
 }
