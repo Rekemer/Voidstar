@@ -917,63 +917,211 @@ namespace Voidstar
 			
 		}
 	}
+	//tile scale is width and height of tile
+	void GenerateLeftTopChildren(std::vector<InstanceData>& tiles,glm::vec3 centerOfParentTile,float tileScale)
+	{
+		glm::vec3 leftTop;
+		leftTop.x = centerOfParentTile.x +tileScale*2 - tileScale /2;
+		leftTop.y = 0.f;
+		leftTop.z = centerOfParentTile.z + tileScale * 2  - tileScale / 2;
+		glm::vec3 rightTop;
+		
+		rightTop.x = centerOfParentTile.x+tileScale / 2;
+		rightTop.y = 0.f;
+		rightTop.z = centerOfParentTile.z + tileScale + tileScale / 2;
+		
+		glm::vec3 leftBottom;
+		
+		leftBottom.x = centerOfParentTile.x + tileScale * 2 - tileScale / 2;
+		leftBottom.y = 0.f;
+		leftBottom.z = centerOfParentTile.z+tileScale / 2;
+		
+		
+		glm::vec3 rightBottom;
+		
+		
+		rightBottom.x = centerOfParentTile.x + tileScale / 2;
+		rightBottom.y = 0.f;
+		rightBottom.z = centerOfParentTile.z+tileScale / 2;
 
+		tiles.emplace_back(leftTop, tileScale, 0);
+		tiles.emplace_back(rightTop, tileScale, 0);
+		tiles.emplace_back(leftBottom, tileScale, 0);
+		tiles.emplace_back(rightBottom, tileScale, 0);
+	}
+	void GenerateRightTopChildren(std::vector<InstanceData>& tiles, glm::vec3 centerOfParentTile, float tileScale)
+	{
+		glm::vec3 leftTop;
+		leftTop.x = centerOfParentTile.x - tileScale  + tileScale / 2;
+		leftTop.y = 0.f;
+		leftTop.z = centerOfParentTile.z + tileScale * 2 - tileScale / 2;
+		glm::vec3 rightTop;
+
+		rightTop.x = centerOfParentTile.x - tileScale *2 + tileScale / 2;
+		rightTop.y = 0.f;
+		rightTop.z = centerOfParentTile.z + tileScale * 2 - tileScale / 2;
+
+		glm::vec3 leftBottom;
+
+		leftBottom.x = centerOfParentTile.x - tileScale + tileScale / 2;
+		leftBottom.y = 0.f;
+		leftBottom.z = centerOfParentTile.z + tileScale / 2;
+
+
+		glm::vec3 rightBottom;
+
+
+		rightBottom.x = centerOfParentTile.x - tileScale * 2 + tileScale / 2;
+		rightBottom.y = 0.f;
+		rightBottom.z = centerOfParentTile.z + tileScale / 2;
+
+		tiles.emplace_back(leftTop, tileScale, 0);
+		tiles.emplace_back(rightTop, tileScale, 0);
+		tiles.emplace_back(leftBottom, tileScale, 0);
+		tiles.emplace_back(rightBottom, tileScale, 0);
+	}
+
+	void GenerateRightBottomChildren(std::vector<InstanceData>& tiles, glm::vec3 centerOfParentTile, float tileScale)
+	{
+		glm::vec3 leftTop;
+		leftTop.x = centerOfParentTile.x - tileScale + tileScale / 2;
+		leftTop.y = 0.f;
+		leftTop.z = centerOfParentTile.z -  tileScale / 2;
+		glm::vec3 rightTop;
+
+		rightTop.x = centerOfParentTile.x - tileScale * 2 + tileScale / 2;
+		rightTop.y = 0.f;
+		rightTop.z = centerOfParentTile.z - tileScale / 2;
+
+		glm::vec3 leftBottom;
+
+		leftBottom.x = centerOfParentTile.x - tileScale/2;
+		leftBottom.y = 0.f;
+		leftBottom.z = centerOfParentTile.z - tileScale * 2 + tileScale / 2;
+
+
+		glm::vec3 rightBottom;
+
+
+		rightBottom.x = centerOfParentTile.x - tileScale * 2 + tileScale / 2;
+		rightBottom.y = 0.f;
+		rightBottom.z = centerOfParentTile.z - tileScale * 2 + tileScale / 2;
+
+		tiles.emplace_back(leftTop, tileScale, 0);
+		tiles.emplace_back(rightTop, tileScale, 0);
+		tiles.emplace_back(leftBottom, tileScale, 0);
+		tiles.emplace_back(rightBottom, tileScale, 0);
+	}
+	void GenerateLeftBottomChildren(std::vector<InstanceData>& tiles, glm::vec3 centerOfParentTile, float tileScale)
+	{
+		glm::vec3 leftTop;
+		leftTop.x = centerOfParentTile.x + tileScale * 2 - tileScale / 2;
+		leftTop.y = 0.f;
+		leftTop.z = centerOfParentTile.z - tileScale / 2;
+		glm::vec3 rightTop;
+
+		rightTop.x = centerOfParentTile.x + tileScale / 2;
+		rightTop.y = 0.f;
+		rightTop.z = centerOfParentTile.z - tileScale / 2;
+
+		glm::vec3 leftBottom;
+
+		leftBottom.x = centerOfParentTile.x + tileScale * 2 - tileScale / 2;
+		leftBottom.y = 0.f;
+		leftBottom.z = centerOfParentTile.z - tileScale * 2 + tileScale / 2;
+
+
+		glm::vec3 rightBottom;
+
+
+		rightBottom.x = centerOfParentTile.x - tileScale / 2;
+		rightBottom.y = 0.f;
+		rightBottom.z = centerOfParentTile.z - tileScale * 2 + tileScale / 2;
+
+		tiles.emplace_back(leftTop, tileScale, 0);
+		tiles.emplace_back(rightTop, tileScale, 0);
+		tiles.emplace_back(leftBottom, tileScale, 0);
+		tiles.emplace_back(rightBottom, tileScale, 0);
+	}
 	void Renderer::GenerateTerrain()
 	{
-		glm::vec2 posPlayer = { -2, -5 };
 		const float groundSize = 10;
 		const int widthGround = 2;
-		const int HeightGround = 2;
+		const int heightGround = 2;
 		// generate children
 
-		float newTileWidth =  groundSize / 2.f ;
-		for (int i = 0; i < widthGround; i++)
+		float newTileWidth = groundSize / static_cast<float>(widthGround);
+		float newTileHeight = groundSize / static_cast<float>(heightGround); ;
+		glm::vec3 centerOffset = { newTileWidth/2,0.,newTileHeight/2 };
+		for (int i = -widthGround/2; i < widthGround/2; i++)
 		{
-			for (int j = 0; j < HeightGround; j++)
+			for (int j = -heightGround / 2; j < heightGround /2; j++)
 			{
-				m_InstanceData.emplace_back(glm::vec3{ i* newTileWidth  ,0,j* newTileWidth }, newTileWidth, 0);
+				glm::vec3 position = glm::vec3(i * newTileWidth, 0, j * newTileHeight) + centerOffset;
+				m_InstanceData.emplace_back(position, newTileWidth, 0);
 			}
 		
 		}
-		glm::vec3 centerOfGround = { newTileWidth/2,0.,newTileWidth/2 } ;
-		float newSubTileWidth = newTileWidth * 0.5f;
-		glm::vec3 leftTop;
-		leftTop.x = centerOfGround.x*2 + centerOfGround.x * 0.5f;
-		leftTop.y = 0.f;
-		leftTop.z = centerOfGround.z*2 + centerOfGround.z * 0.5f;
-		glm::vec3 rightTop;
-		rightTop.x = centerOfGround.x * 2 - centerOfGround.x * 0.5f;
-		rightTop.y = 0.f;
-		rightTop.z = centerOfGround.z * 2 + centerOfGround.z * 0.5f;
-		glm::vec3 leftBottom;
-		leftBottom.x = centerOfGround.x * 2 + centerOfGround.x * 0.5f;
-		leftBottom.y = 0.f;
-		leftBottom.z = centerOfGround.z * 2 - centerOfGround.z * 0.5f;
+	
+		GenerateLeftTopChildren(m_InstanceData, glm::vec3{0,0.,0.}, newTileWidth/2);
+		
+		GenerateRightTopChildren(m_InstanceData, glm::vec3{0,0.,0.}, newTileWidth/2);
+		GenerateRightBottomChildren(m_InstanceData, glm::vec3{0,0.,0.}, newTileWidth/2);
+		GenerateRightBottomChildren(m_InstanceData, glm::vec3{ -newTileWidth / 2,0.,-newTileWidth / 2 }, newTileWidth/4);
 
-		glm::vec3 rightBottom;
-		rightBottom.x = centerOfGround.x * 2 - centerOfGround.x * 0.5f;
-		rightBottom.y = 0.f;
-		rightBottom.z = centerOfGround.z * 2 - centerOfGround.z * 0.5f;
+		GenerateRightBottomChildren(m_InstanceData, glm::vec3{ -newTileWidth / 2,0.,-newTileWidth / 2 } + glm::vec3{ -newTileWidth / 4,0.,-newTileWidth / 4. }, newTileWidth/8);
+		GenerateLeftTopChildren(m_InstanceData, glm::vec3{ -newTileWidth / 2,0.,-newTileWidth / 2 } + glm::vec3{ -newTileWidth / 4,0.,-newTileWidth / 4. }, newTileWidth/8);
+		GenerateRightTopChildren(m_InstanceData, glm::vec3{ -newTileWidth / 2,0.,-newTileWidth / 2 } + glm::vec3{ -newTileWidth / 4,0.,-newTileWidth / 4. }, newTileWidth/8);
+		GenerateLeftBottomChildren(m_InstanceData, glm::vec3{ -newTileWidth / 2,0.,-newTileWidth / 2 } + glm::vec3{ -newTileWidth / 4,0.,-newTileWidth / 4. }, newTileWidth/8);
 
-		m_InstanceData.emplace_back(leftTop, groundSize / 4.f, 0);
-		m_InstanceData.emplace_back(rightTop, groundSize / 4.f, 0);
-		m_InstanceData.emplace_back(leftBottom, groundSize / 4.f, 0);
-		m_InstanceData.emplace_back(rightBottom, groundSize / 4.f, 0);
-		//for (int i = 0; i < 2; i++)
-		//{
-		//	for (int j = 0; j < 2; j++)
-		//	{
-		//		m_InstanceData.emplace_back(glm::vec3{ centerTile.x+i * groundSize / 4 ,0,centerTile.z+ j * groundSize / 4 }, groundSize /4,0);
-		//	}
+
+		//GenerateRightTopChildren(m_InstanceData, glm::vec3{ -newTileWidth / 2,0.,newTileWidth / 2 }, newTileWidth / 4);
+		//GenerateRightTopChildren(m_InstanceData, glm::vec3{ -newTileWidth / 2,0.,newTileWidth / 2 } + glm::vec3{ -newTileWidth / 4,0.,newTileWidth / 4. }, newTileWidth/8);
+		
+		
+		//GenerateLeftTopChildren(m_InstanceData, glm::vec3{ newTileWidth/2,0.,newTileWidth /2}, newTileWidth/4);
+		//GenerateLeftTopChildren(m_InstanceData, glm::vec3{ newTileWidth/2,0.,newTileWidth /2} + glm::vec3{ newTileWidth / 4,0.,newTileWidth / 4. }, newTileWidth/8);
+
+
+		//newTileWidth /= 2;
+		//newTileHeight /= 2;
+		//GenerateChildren(m_InstanceData, glm::vec3{ newTileWidth,0.,newTileHeight }, newTileWidth/2);
+		//newTileWidth /= 2;
+		//newTileHeight /= 2;
 		//
-		//}
-		//for (int i = 0; i <= 10; i++)
-		//{
-		//	for (int j = 0; j <= 10; j++)
-		//	{
-		//		m_InstanceData.emplace_back(glm::vec3{ i, j, 0 }, 1, 0);
-		//	}
-		//}
+		//GenerateChildren(m_InstanceData, glm::vec3{ newTileWidth,0.,newTileHeight }, newTileWidth/2);
+		//newTileWidth /=2;
+		//glm::vec3 offset = { newTileWidth / 2+groundSize / 8.f ,0,0};
+		////centerOfGround = { newTileWidth ,0,newTileWidth };
+		////centerOfGround += offset;
+		//
+		////GenerateChildren(m_InstanceData, centerOfGround, groundSize / 8.f);
+		//
+		//
+		//glm::vec3 leftTop;
+		////leftTop.x = centerOfGround.x * 2  * 2.5 + centerOfGround.x * 0.5f;
+		//leftTop.x = centerOfGround.x;
+		//leftTop.y = 0.f;
+		//leftTop.z = centerOfGround.z ;
+		//glm::vec3 rightTop;
+		//rightTop.x = centerOfGround.x * 2 - centerOfGround.x * 0.5f;
+		//rightTop.y = 0.f;
+		//rightTop.z = centerOfGround.z * 2 + centerOfGround.z * 0.5f;
+		//glm::vec3 leftBottom;
+		//leftBottom.x = centerOfGround.x * 2 + centerOfGround.x * 0.5f;
+		//leftBottom.y = 0.f;
+		//leftBottom.z = centerOfGround.z * 2 - centerOfGround.z * 0.5f;
+		//
+		//glm::vec3 rightBottom;
+		//rightBottom.x = centerOfGround.x * 2 - centerOfGround.x * 0.5f;
+		//rightBottom.y = 0.f;
+		//rightBottom.z = centerOfGround.z * 2 - centerOfGround.z * 0.5f;
+
+		//m_InstanceData.emplace_back(glm::vec3{ 0.,0.,0. }, groundSize / 8.f, 0);
+		//m_InstanceData.emplace_back(rightTop, groundSize / 8.f, 0);
+		//m_InstanceData.emplace_back(leftBottom, groundSize / 8.f, 0);
+		//m_InstanceData.emplace_back(rightBottom, tileScale, 0);
+		
 	}
 
 	vk::RenderPass MakeRenderPass(vk::Device device, vk::Format swapchainImageFormat, vk::Format depthFormat) {
