@@ -4,6 +4,7 @@ layout(location = 0) out vec4  outColor;
 
 layout(location = 0) in vec2 uv ;
 layout(location = 1) in vec4 color;
+layout(location = 2) in float scale;
 layout(set = 1, binding = 0) uniform sampler2D u_Tex;
 
 
@@ -30,6 +31,7 @@ void main()
     vec2 grid = fract(uv* 3.);
     outColor.xyz=vec3(0);
     outColor.xyz=color.xxx;
+    //outColor.xy =  fract(uv);
     //outColor.xy= uv;
     //outColor = vec4(uv.x,uv.y,0,1);
     //outColor = texture(u_Tex, uv);

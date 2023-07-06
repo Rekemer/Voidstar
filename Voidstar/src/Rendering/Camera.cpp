@@ -2,6 +2,7 @@
 #include "Camera.h"
 #include "../Input.h"
 #include "../Keys.h"
+#include "../Log.h"
 #include "gtc/quaternion.hpp"
 namespace Voidstar
 {
@@ -10,6 +11,9 @@ namespace Voidstar
         ProcessInput(deltaTime);
         ProcessMouse();
         UpdateView();
+        Log::GetLog()->info("camera position {0} {1} {2}", m_Position.x, m_Position.y, m_Position.z);
+
+
 	}
     void Camera::UpdateView()
     {
@@ -98,13 +102,16 @@ namespace Voidstar
 
             if (Input::IsKeyPressed(VS_KEY_A))
             {
-                auto pos = m_Position - glm::normalize(glm::cross(m_Front, m_Up)) * cameraSpeed * deltaTime;
+                auto right = glm::normalize(glm::cross(m_Front, m_Up));
+                auto pos = m_Position - right * cameraSpeed * deltaTime;
                 m_Position = pos;
+
             }
 
             if (Input::IsKeyPressed(VS_KEY_D))
             {
-                auto pos = m_Position + glm::normalize(glm::cross(m_Front, m_Up)) * cameraSpeed * deltaTime;
+                auto right =glm::normalize(glm::cross(m_Front, m_Up));
+                auto pos = m_Position + right * cameraSpeed * deltaTime;
                 m_Position = pos;
             }
 

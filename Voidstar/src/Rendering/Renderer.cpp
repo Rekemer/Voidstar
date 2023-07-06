@@ -136,6 +136,11 @@ namespace Voidstar
 	}
 
 
+	void SetIndexForCorners(std::vector<Vertex>& plane, glm::vec2 uv )
+	{
+
+	}
+
 	std::vector<Vertex> GeneratePlane(float detail, std::vector<IndexType>& indices)
 	{
 		std::vector<Vertex> vertices;
@@ -151,8 +156,8 @@ namespace Voidstar
 
 				// Calculate vertex position
 				vertex.x = i * stepSize - 0.5f;
-				vertex.y = j * stepSize - 0.5f;
-				vertex.z = 0.0;
+				vertex.y = 0.0;
+				vertex.z = j * stepSize - 0.5f;
 
 				//// Calculate vertex normal
 				//vertex.nx = 0.0f;
@@ -383,7 +388,7 @@ namespace Voidstar
 		m_Model = Model::Load(modelPath);
 
 		std::vector<IndexType> indices;
-		auto vertices = GeneratePlane(100, indices);
+		auto vertices = GeneratePlane(1, indices);
 		auto indexSize = SizeOfBuffer(indices.size(),indices[0]);
 		{
 			SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(indexSize);
@@ -457,12 +462,11 @@ namespace Voidstar
 		ctx = TracyVkContextCalibrated(physDev,dev,queue, m_TracyCommandBuffer.GetCommandBuffer(),
 			vkGetPhysicalDeviceCalibrateableTimeDomainsEXT, vkGetCalibratedTimestampsEXT);
 
-
+		GenerateTerrain();
 		
 
 
 	}
-
 	void Renderer::CreateSyncObjects()
 	{	
 		vk::SemaphoreCreateInfo semaphoreInfo = {};
@@ -532,20 +536,20 @@ namespace Voidstar
 		auto cameraView = m_App->GetCamera()->GetView();
 		auto cameraProj = m_App->GetCamera()->GetProj();
 
-		ubo.model = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-		ubo.view = glm::lookAt(glm::vec3(-2.0f, 0.0f, 4.0f), glm::vec3(0.5f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f));
-		//ubo.proj = glm::perspective(glm::radians(45.0f), extent.width / (float)extent.height, 0.0001f, 10.0f);
+		//ubo.model = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		//ubo.view = glm::lookAt(glm::vec3(-2.0f, 0.0f, 4.0f), glm::vec3(0.5f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f));
+		////ubo.proj = glm::perspective(glm::radians(45.0f), extent.width / (float)extent.height, 0.0001f, 10.0f);
 		ubo.view = cameraView;
 		ubo.proj = cameraProj;
-		auto model = glm::mat4(1.f);
-		glm::mat4 blenderToLH = glm::mat4(1.0f);
-		blenderToLH[2][2] = -1.0f;  // Flip Z-axis
-		blenderToLH[3][2] = 1.0f;
-		//model = blenderToLH * model;
-		// blender: z  is up, y is forward
-		model = glm::rotate(model,glm::radians(-90.f) , glm::vec3(1, 0, 0));
-		model = glm::rotate(model,glm::radians(90.f) , glm::vec3(0, 0, 1));
-		ubo.model = model;
+		//auto model = glm::mat4(1.f);
+		//glm::mat4 blenderToLH = glm::mat4(1.0f);
+		//blenderToLH[2][2] = -1.0f;  // Flip Z-axis
+		//blenderToLH[3][2] = 1.0f;
+		////model = blenderToLH * model;
+		//// blender: z  is up, y is forward
+		//model = glm::rotate(model,glm::radians(-90.f) , glm::vec3(1, 0, 0));
+		//model = glm::rotate(model,glm::radians(90.f) , glm::vec3(0, 0, 1));
+		//ubo.model = model;
 		auto extent = m_Swapchain->GetExtent();
 		//ubo.proj[1][1] *= -1,
 		memcpy(uniformBuffersMapped[imageIndex], &ubo, sizeof(ubo));
@@ -640,7 +644,7 @@ namespace Voidstar
 
 			commandBuffer.bindIndexBuffer(m_IndexBuffer->GetBuffer(), 0, m_IndexBuffer->GetIndexType());
             auto amount = m_IndexBuffer->GetIndexAmount();
-			commandBuffer.drawIndexed(static_cast<uint32_t>(amount), 2, 0, 0, 0);
+			commandBuffer.drawIndexed(static_cast<uint32_t>(amount),m_InstanceData.size(), 0, 0, 0);
 			
 			//commandBuffer.draw(8192, 1, 0, 0);
 		
@@ -663,11 +667,7 @@ namespace Voidstar
 	{
 		
 
-		// quadtree operations
-		std::vector<InstanceData> instanceData;
-
-		instanceData.emplace_back(glm::vec3{ 0, 0, 0 }, 2.f, 0);
-		instanceData.emplace_back(glm::vec3{ 0, -2, 0 }, 2.f, 1);
+		
 
 		
 
@@ -710,7 +710,7 @@ namespace Voidstar
 			0, nullptr                                  // Image memory barriers
 		);
 
-		memcpy(m_InstancedPtr, &instanceData[0],sizeof(instanceData[0]) * instanceData.size());
+		memcpy(m_InstancedPtr, &m_InstanceData[0],sizeof(m_InstanceData) * m_InstanceData.size());
 
 		
 		//renderCommandBuffer.GetCommandBuffer().pipelineBarrier(
@@ -735,7 +735,6 @@ namespace Voidstar
 			renderCommandBuffer.Submit(waitSemaphores, signalSemaphores, &m_InFlightFence);
 			renderCommandBuffer.EndRendering();
 
-			m_InstanceData.clear();
 		}
 
 		
@@ -917,6 +916,64 @@ namespace Voidstar
 			Log::GetLog()->error("Failed to create shader module for{0}", filename);
 			
 		}
+	}
+
+	void Renderer::GenerateTerrain()
+	{
+		glm::vec2 posPlayer = { -2, -5 };
+		const float groundSize = 10;
+		const int widthGround = 2;
+		const int HeightGround = 2;
+		// generate children
+
+		float newTileWidth =  groundSize / 2.f ;
+		for (int i = 0; i < widthGround; i++)
+		{
+			for (int j = 0; j < HeightGround; j++)
+			{
+				m_InstanceData.emplace_back(glm::vec3{ i* newTileWidth  ,0,j* newTileWidth }, newTileWidth, 0);
+			}
+		
+		}
+		glm::vec3 centerOfGround = { newTileWidth/2,0.,newTileWidth/2 } ;
+		float newSubTileWidth = newTileWidth * 0.5f;
+		glm::vec3 leftTop;
+		leftTop.x = centerOfGround.x*2 + centerOfGround.x * 0.5f;
+		leftTop.y = 0.f;
+		leftTop.z = centerOfGround.z*2 + centerOfGround.z * 0.5f;
+		glm::vec3 rightTop;
+		rightTop.x = centerOfGround.x * 2 - centerOfGround.x * 0.5f;
+		rightTop.y = 0.f;
+		rightTop.z = centerOfGround.z * 2 + centerOfGround.z * 0.5f;
+		glm::vec3 leftBottom;
+		leftBottom.x = centerOfGround.x * 2 + centerOfGround.x * 0.5f;
+		leftBottom.y = 0.f;
+		leftBottom.z = centerOfGround.z * 2 - centerOfGround.z * 0.5f;
+
+		glm::vec3 rightBottom;
+		rightBottom.x = centerOfGround.x * 2 - centerOfGround.x * 0.5f;
+		rightBottom.y = 0.f;
+		rightBottom.z = centerOfGround.z * 2 - centerOfGround.z * 0.5f;
+
+		m_InstanceData.emplace_back(leftTop, groundSize / 4.f, 0);
+		m_InstanceData.emplace_back(rightTop, groundSize / 4.f, 0);
+		m_InstanceData.emplace_back(leftBottom, groundSize / 4.f, 0);
+		m_InstanceData.emplace_back(rightBottom, groundSize / 4.f, 0);
+		//for (int i = 0; i < 2; i++)
+		//{
+		//	for (int j = 0; j < 2; j++)
+		//	{
+		//		m_InstanceData.emplace_back(glm::vec3{ centerTile.x+i * groundSize / 4 ,0,centerTile.z+ j * groundSize / 4 }, groundSize /4,0);
+		//	}
+		//
+		//}
+		//for (int i = 0; i <= 10; i++)
+		//{
+		//	for (int j = 0; j <= 10; j++)
+		//	{
+		//		m_InstanceData.emplace_back(glm::vec3{ i, j, 0 }, 1, 0);
+		//	}
+		//}
 	}
 
 	vk::RenderPass MakeRenderPass(vk::Device device, vk::Format swapchainImageFormat, vk::Format depthFormat) {

@@ -105,7 +105,7 @@ namespace Voidstar
 		}
 
 		void SubmitInstanceData(const InstanceData& instance);
-	
+		void GenerateTerrain();
 
 		~Renderer();
 	private:
@@ -199,7 +199,7 @@ namespace Voidstar
 		SPtr<Window> m_Window;
 
 		RenderPrimitive m_RenderPrimitive = RenderPrimitive::Plane;
-		vk::PolygonMode m_PolygoneMode = vk::PolygonMode::eFill;
+		vk::PolygonMode m_PolygoneMode = vk::PolygonMode::eLine;
 
 
 		vk::BufferMemoryBarrier	m_InstanceBarrier;

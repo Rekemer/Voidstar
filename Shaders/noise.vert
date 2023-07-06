@@ -8,6 +8,7 @@ layout(binding = 0) uniform UniformBufferObject {
     mat4 model;
     mat4 view;
     mat4 proj;
+    
 } ubo;
 
 // vertexAttributes
@@ -34,6 +35,7 @@ vec3 colors[3] = vec3[](
 
 layout(location = 0) out vec2 uv ;
 layout(location = 1) out vec4 color ;
+layout(location = 2) out float scale ;
 
 
 vec4 random(vec4 st)
@@ -58,9 +60,9 @@ float noise (vec2 st) {
     vec2 f = fract(st);
 
     float a = random(i);
-    float b = random(i + vec2(1.0, 0.0));
-    float c = random(i + vec2(0.0, 1.0));
-    float d = random(i + vec2(1.0, 1.0));
+    float b = random(i + vec2(1., 0.0));
+    float c = random(i + vec2(0.0, 1.));
+    float d = random(i + vec2(1.,1.));
 
 	// smooth step function lol
     vec2 u = f * f * (3.0 - 2.0 * f);
@@ -102,15 +104,18 @@ float fbm(vec2 st)
 void main() 
 {
 	//gl_PointSize = 14.0;
-	vec4 worldPos= ubo.model * vec4((in_pos*instanceScale)+instancePos,1.0);
-	worldPos.y+=fbm(in_uv*3.0);
+    
+	//vec4 worldPos= ubo.model * vec4((in_pos+instancePos)*instanceScale,1.0);
+	vec4 worldPos= vec4((in_pos*instanceScale)+instancePos,1.0);
+	//worldPos.y+=fbm(in_uv);
 	vec4 pos =	ubo.proj *  ubo.view * worldPos;
+	//vec4 pos =	ubo.proj * worldPos;
 	
-   
 	gl_Position = pos;
+    scale=instanceScale;
 	uv = in_uv;
 	uv = vec2(in_uv.x,in_uv.y);
 	color = in_color;
-	color.x = fbm(in_uv*3.0);
+	color.x = fbm(in_uv);
 		
 }
