@@ -4,6 +4,7 @@
 #include "../Keys.h"
 #include "../Log.h"
 #include "gtc/quaternion.hpp"
+#include "gtc/quaternion.hpp"
 namespace Voidstar
 {
 	void Camera::Update(float deltaTime)
@@ -11,7 +12,7 @@ namespace Voidstar
         ProcessInput(deltaTime);
         ProcessMouse();
         UpdateView();
-        Log::GetLog()->info("camera position {0} {1} {2}", m_Position.x, m_Position.y, m_Position.z);
+      
 
 
 	}

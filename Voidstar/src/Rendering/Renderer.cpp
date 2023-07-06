@@ -665,8 +665,8 @@ namespace Voidstar
 	}
 	void Renderer::Render()
 	{
-		
-
+		m_InstanceData.clear();
+		GenerateTerrain();
 		
 
 		
@@ -1034,7 +1034,7 @@ namespace Voidstar
 		glm::vec3 rightBottom;
 
 
-		rightBottom.x = centerOfParentTile.x - tileScale / 2;
+		rightBottom.x = centerOfParentTile.x + tileScale / 2;
 		rightBottom.y = 0.f;
 		rightBottom.z = centerOfParentTile.z - tileScale * 2 + tileScale / 2;
 
@@ -1043,84 +1043,161 @@ namespace Voidstar
 		tiles.emplace_back(leftBottom, tileScale, 0);
 		tiles.emplace_back(rightBottom, tileScale, 0);
 	}
+
+	glm::vec3 currentTilePos;
+	
+	const float groundSize = 50;
+	const int widthGround = 20;
+	const int heightGround = 20;
+	float levelOfDetail = 6;
+	void Renderer::GenerateTerrain(glm::vec3 tilePos,float depth,float tileWidth)
+	{
+		if (depth >= levelOfDetail)
+		{
+			return;
+		}
+		glm::vec3 posPlayer = m_App->GetCamera()->m_Position;
+		auto dirToPlayer = glm::normalize(posPlayer- currentTilePos);
+		bool isTop = glm::dot(dirToPlayer, glm::vec3{ 0,0,1 }) > 0;
+		float side = glm::dot(dirToPlayer, glm::vec3{ 1,0,0 });
+
+
+
+		
+		//if (side > 0 && isTop)
+		{
+			// left top
+			GenerateLeftTopChildren(m_InstanceData, currentTilePos, tileWidth );
+		}
+		//else if (side < 0 && isTop)
+		{
+			// right top
+			GenerateRightTopChildren(m_InstanceData, currentTilePos, tileWidth  );
+		}
+		//else if (side > 0 && !isTop)
+		{
+			// left bottom
+			//currentTilePos += glm::vec3{ tileWidth  ,0,-tileWidth };
+			GenerateLeftBottomChildren(m_InstanceData, currentTilePos, tileWidth);
+		}
+		//else if (side < 0 && !isTop)
+		{
+			// right bottom
+			GenerateRightBottomChildren(m_InstanceData, currentTilePos, tileWidth );
+		}
+
+
+		auto tileLeftTop = currentTilePos + glm::vec3{ tileWidth  ,0,tileWidth };
+		auto tileRightTop = currentTilePos + glm::vec3{ -tileWidth  ,0,tileWidth };
+		auto tileLeftBottom = currentTilePos + glm::vec3{ tileWidth  ,0,-tileWidth };
+		auto tileRightBottom = currentTilePos + glm::vec3{ -tileWidth  ,0,-tileWidth };
+
+		// Calculate distances
+		float distLeftTop = glm::distance(posPlayer, tileLeftTop);
+		float distRightTop = glm::distance(posPlayer, tileRightTop);
+		float distLeftBottom = glm::distance(posPlayer, tileLeftBottom);
+		float distRightBottom = glm::distance(posPlayer, tileRightBottom);
+
+		// Find the position closest to posPlayer
+		glm::vec3 closestTilePos;
+		if (distLeftTop <= distRightTop && distLeftTop <= distLeftBottom && distLeftTop <= distRightBottom)
+		{
+			currentTilePos = tileLeftTop;
+		}
+		else if (distRightTop <= distLeftTop && distRightTop <= distLeftBottom && distRightTop <= distRightBottom)
+		{
+			currentTilePos = tileRightTop;
+		}
+		else if (distLeftBottom <= distLeftTop && distLeftBottom <= distRightTop && distLeftBottom <= distRightBottom)
+		{
+			currentTilePos = tileLeftBottom;
+		}
+		else
+		{
+			currentTilePos = tileRightBottom;
+		}
+
+
+		tileWidth /=  2;
+		
+		GenerateTerrain(currentTilePos,++depth, tileWidth);
+	}
 	void Renderer::GenerateTerrain()
 	{
-		const float groundSize = 10;
-		const int widthGround = 2;
-		const int heightGround = 2;
+		glm::vec3 posPlayer = m_App->GetCamera()->m_Position;
+		float depth = 0;
+		float shortestPath =  1000;
+		float longestPath =  0;
 		// generate children
 
 		float newTileWidth = groundSize / static_cast<float>(widthGround);
 		float newTileHeight = groundSize / static_cast<float>(heightGround); ;
 		glm::vec3 centerOffset = { newTileWidth/2,0.,newTileHeight/2 };
+		glm::vec3 currentTilePosBiggest = {0,0,0};
+		bool isBiggestFound = false;
 		for (int i = -widthGround/2; i < widthGround/2; i++)
 		{
 			for (int j = -heightGround / 2; j < heightGround /2; j++)
 			{
 				glm::vec3 position = glm::vec3(i * newTileWidth, 0, j * newTileHeight) + centerOffset;
+				if (shortestPath > glm::length(posPlayer - position))
+				{
+					if (!isBiggestFound)
+					{
+						isBiggestFound = true;
+						currentTilePosBiggest = position;
+					}
+					currentTilePos = position;
+					shortestPath = glm::length(posPlayer - position);
+
+				}
 				m_InstanceData.emplace_back(position, newTileWidth, 0);
 			}
 		
 		}
 	
-		GenerateLeftTopChildren(m_InstanceData, glm::vec3{0,0.,0.}, newTileWidth/2);
+	
+		GenerateTerrain(currentTilePos,0, newTileWidth / 2);
+		//GenerateTerrain(currentTilePos + glm::vec3{ -newTileWidth,0,newTileWidth }, 0, newTileWidth / 2);
+		//GenerateTerrain(currentTilePosBiggest + glm::vec3{ newTileWidth,0,newTileWidth }, 0, newTileWidth / 2);
+		//GenerateTerrain(currentTilePosBiggest + glm::vec3{ newTileWidth,0,-newTileWidth }, 0, newTileWidth / 2);
+		//GenerateTerrain(currentTilePosBiggest + glm::vec3{ -newTileWidth,0,-newTileWidth }, 0, newTileWidth / 2);
+
+		//if (side > 0 && isTop)
+		//{
+		//	// left top
+		//	GenerateLeftTopChildren(m_InstanceData, glm::vec3{ 0,0.,0. }, newTileWidth / 2);
+		//}
+		//else if (side < 0 && isTop)
+		//{
+		//	// right top
+		//	GenerateRightTopChildren(m_InstanceData, glm::vec3{ 0,0.,0. }, newTileWidth / 2);
+		//}
+		//else if (side > 0 && !isTop)
+		//{
+		//	// left bottom
+		//	GenerateLeftBottomChildren(m_InstanceData, glm::vec3{ 0,0.,0. }, newTileWidth / 2);
+		//}
+		//else if (side < 0 && !isTop)
+		//{
+		//	// right bottom
+		//	currentTilePos = { -newTileWidth / 2 ,0,-newTileWidth / 2 };
+		//	GenerateRightBottomChildren(m_InstanceData, glm::vec3{ 0,0.,0. }, newTileWidth / 2);
+		//}
+
+		//GenerateLeftTopChildren(m_InstanceData, glm::vec3{0,0.,0.}, newTileWidth/2);
+		//
+		//GenerateRightTopChildren(m_InstanceData, glm::vec3{0,0.,0.}, newTileWidth/2);
+		//GenerateRightBottomChildren(m_InstanceData, glm::vec3{0,0.,0.}, newTileWidth/2);
+		//GenerateRightBottomChildren(m_InstanceData, glm::vec3{ -newTileWidth / 2,0.,-newTileWidth / 2 }, newTileWidth/4);
+		//
+		//GenerateRightBottomChildren(m_InstanceData, glm::vec3{ -newTileWidth / 2,0.,-newTileWidth / 2 } + glm::vec3{ -newTileWidth / 4,0.,-newTileWidth / 4. }, newTileWidth/8);
+		//GenerateLeftTopChildren(m_InstanceData, glm::vec3{ -newTileWidth / 2,0.,-newTileWidth / 2 } + glm::vec3{ -newTileWidth / 4,0.,-newTileWidth / 4. }, newTileWidth/8);
+		//GenerateRightTopChildren(m_InstanceData, glm::vec3{ -newTileWidth / 2,0.,-newTileWidth / 2 } + glm::vec3{ -newTileWidth / 4,0.,-newTileWidth / 4. }, newTileWidth/8);
+		//GenerateLeftBottomChildren(m_InstanceData, glm::vec3{ -newTileWidth / 2,0.,-newTileWidth / 2 } + glm::vec3{ -newTileWidth / 4,0.,-newTileWidth / 4. }, newTileWidth/8);
+
+
 		
-		GenerateRightTopChildren(m_InstanceData, glm::vec3{0,0.,0.}, newTileWidth/2);
-		GenerateRightBottomChildren(m_InstanceData, glm::vec3{0,0.,0.}, newTileWidth/2);
-		GenerateRightBottomChildren(m_InstanceData, glm::vec3{ -newTileWidth / 2,0.,-newTileWidth / 2 }, newTileWidth/4);
-
-		GenerateRightBottomChildren(m_InstanceData, glm::vec3{ -newTileWidth / 2,0.,-newTileWidth / 2 } + glm::vec3{ -newTileWidth / 4,0.,-newTileWidth / 4. }, newTileWidth/8);
-		GenerateLeftTopChildren(m_InstanceData, glm::vec3{ -newTileWidth / 2,0.,-newTileWidth / 2 } + glm::vec3{ -newTileWidth / 4,0.,-newTileWidth / 4. }, newTileWidth/8);
-		GenerateRightTopChildren(m_InstanceData, glm::vec3{ -newTileWidth / 2,0.,-newTileWidth / 2 } + glm::vec3{ -newTileWidth / 4,0.,-newTileWidth / 4. }, newTileWidth/8);
-		GenerateLeftBottomChildren(m_InstanceData, glm::vec3{ -newTileWidth / 2,0.,-newTileWidth / 2 } + glm::vec3{ -newTileWidth / 4,0.,-newTileWidth / 4. }, newTileWidth/8);
-
-
-		//GenerateRightTopChildren(m_InstanceData, glm::vec3{ -newTileWidth / 2,0.,newTileWidth / 2 }, newTileWidth / 4);
-		//GenerateRightTopChildren(m_InstanceData, glm::vec3{ -newTileWidth / 2,0.,newTileWidth / 2 } + glm::vec3{ -newTileWidth / 4,0.,newTileWidth / 4. }, newTileWidth/8);
-		
-		
-		//GenerateLeftTopChildren(m_InstanceData, glm::vec3{ newTileWidth/2,0.,newTileWidth /2}, newTileWidth/4);
-		//GenerateLeftTopChildren(m_InstanceData, glm::vec3{ newTileWidth/2,0.,newTileWidth /2} + glm::vec3{ newTileWidth / 4,0.,newTileWidth / 4. }, newTileWidth/8);
-
-
-		//newTileWidth /= 2;
-		//newTileHeight /= 2;
-		//GenerateChildren(m_InstanceData, glm::vec3{ newTileWidth,0.,newTileHeight }, newTileWidth/2);
-		//newTileWidth /= 2;
-		//newTileHeight /= 2;
-		//
-		//GenerateChildren(m_InstanceData, glm::vec3{ newTileWidth,0.,newTileHeight }, newTileWidth/2);
-		//newTileWidth /=2;
-		//glm::vec3 offset = { newTileWidth / 2+groundSize / 8.f ,0,0};
-		////centerOfGround = { newTileWidth ,0,newTileWidth };
-		////centerOfGround += offset;
-		//
-		////GenerateChildren(m_InstanceData, centerOfGround, groundSize / 8.f);
-		//
-		//
-		//glm::vec3 leftTop;
-		////leftTop.x = centerOfGround.x * 2  * 2.5 + centerOfGround.x * 0.5f;
-		//leftTop.x = centerOfGround.x;
-		//leftTop.y = 0.f;
-		//leftTop.z = centerOfGround.z ;
-		//glm::vec3 rightTop;
-		//rightTop.x = centerOfGround.x * 2 - centerOfGround.x * 0.5f;
-		//rightTop.y = 0.f;
-		//rightTop.z = centerOfGround.z * 2 + centerOfGround.z * 0.5f;
-		//glm::vec3 leftBottom;
-		//leftBottom.x = centerOfGround.x * 2 + centerOfGround.x * 0.5f;
-		//leftBottom.y = 0.f;
-		//leftBottom.z = centerOfGround.z * 2 - centerOfGround.z * 0.5f;
-		//
-		//glm::vec3 rightBottom;
-		//rightBottom.x = centerOfGround.x * 2 - centerOfGround.x * 0.5f;
-		//rightBottom.y = 0.f;
-		//rightBottom.z = centerOfGround.z * 2 - centerOfGround.z * 0.5f;
-
-		//m_InstanceData.emplace_back(glm::vec3{ 0.,0.,0. }, groundSize / 8.f, 0);
-		//m_InstanceData.emplace_back(rightTop, groundSize / 8.f, 0);
-		//m_InstanceData.emplace_back(leftBottom, groundSize / 8.f, 0);
-		//m_InstanceData.emplace_back(rightBottom, tileScale, 0);
 		
 	}
 
