@@ -32,7 +32,7 @@ void main()
     outColor.xyz=vec3(0);
     outColor.xyz=color.xxx;
     //outColor.xy =  fract(uv);
-    //outColor.xy= uv;
+    outColor.xyz= vec3(uv,0.);
     //outColor = vec4(uv.x,uv.y,0,1);
     //outColor = texture(u_Tex, uv);
 }

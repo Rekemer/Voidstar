@@ -917,6 +917,40 @@ namespace Voidstar
 			
 		}
 	}
+
+
+	void GenerateChildren(std::vector<InstanceData>& tiles, glm::vec3 centerOfParentTile, float tileScale)
+	{
+		//tileScale /= 2;
+		glm::vec3 leftTop;
+		leftTop.x = centerOfParentTile.x + tileScale/2 ;
+		leftTop.y = 0.f;
+		leftTop.z = centerOfParentTile.z + tileScale/2;
+		glm::vec3 rightTop;
+
+		rightTop.x = centerOfParentTile.x -tileScale/2;
+		rightTop.y = 0.f;
+		rightTop.z = centerOfParentTile.z + tileScale/2 ;
+
+		glm::vec3 leftBottom;
+
+		leftBottom.x = centerOfParentTile.x + tileScale/2;
+		leftBottom.y = 0.f;
+		leftBottom.z = centerOfParentTile.z - tileScale/2;
+
+
+		glm::vec3 rightBottom;
+
+
+		rightBottom.x = centerOfParentTile.x - tileScale/2 ;
+		rightBottom.y = 0.f;
+		rightBottom.z = centerOfParentTile.z - tileScale/2 ;
+
+		tiles.emplace_back(leftTop, tileScale, 0);
+		tiles.emplace_back(rightTop, tileScale, 0);
+		tiles.emplace_back(leftBottom, tileScale, 0);
+		tiles.emplace_back(rightBottom, tileScale, 0);
+	}
 	//tile scale is width and height of tile
 	void GenerateLeftTopChildren(std::vector<InstanceData>& tiles,glm::vec3 centerOfParentTile,float tileScale)
 	{
@@ -926,7 +960,7 @@ namespace Voidstar
 		leftTop.z = centerOfParentTile.z + tileScale * 2  - tileScale / 2;
 		glm::vec3 rightTop;
 		
-		rightTop.x = centerOfParentTile.x+tileScale / 2;
+		rightTop.x = centerOfParentTile.x - tileScale / 2;
 		rightTop.y = 0.f;
 		rightTop.z = centerOfParentTile.z + tileScale + tileScale / 2;
 		
@@ -1044,53 +1078,56 @@ namespace Voidstar
 		tiles.emplace_back(rightBottom, tileScale, 0);
 	}
 
-	glm::vec3 currentTilePos;
 	
-	const float groundSize = 50;
-	const int widthGround = 20;
-	const int heightGround = 20;
+	const float groundSize = 10;
+	const int widthGround = 2;
+	const int heightGround = 2;
 	float levelOfDetail = 6;
-	void Renderer::GenerateTerrain(glm::vec3 tilePos,float depth,float tileWidth)
+	void Renderer::GenerateTerrain(glm::vec3 tilePos,float depth,float tileWidthOfTileToDivide, int parentIndex)
 	{
 		if (depth >= levelOfDetail)
 		{
 			return;
 		}
 		glm::vec3 posPlayer = m_App->GetCamera()->m_Position;
-		auto dirToPlayer = glm::normalize(posPlayer- currentTilePos);
+		auto dirToPlayer = glm::normalize(posPlayer- tilePos);
 		bool isTop = glm::dot(dirToPlayer, glm::vec3{ 0,0,1 }) > 0;
 		float side = glm::dot(dirToPlayer, glm::vec3{ 1,0,0 });
 
 
 
+		// element after parent index elements of begin
+		m_InstanceData.erase(m_InstanceData.begin() + parentIndex);
 		
+
+		GenerateChildren(m_InstanceData, tilePos, tileWidthOfTileToDivide);
 		//if (side > 0 && isTop)
 		{
 			// left top
-			GenerateLeftTopChildren(m_InstanceData, currentTilePos, tileWidth );
+			//GenerateLeftTopChildren(m_InstanceData, currentTilePos, tileWidth );
 		}
 		//else if (side < 0 && isTop)
 		{
 			// right top
-			GenerateRightTopChildren(m_InstanceData, currentTilePos, tileWidth  );
+			//GenerateRightTopChildren(m_InstanceData, currentTilePos, tileWidth  );
 		}
 		//else if (side > 0 && !isTop)
 		{
 			// left bottom
 			//currentTilePos += glm::vec3{ tileWidth  ,0,-tileWidth };
-			GenerateLeftBottomChildren(m_InstanceData, currentTilePos, tileWidth);
+			//GenerateLeftBottomChildren(m_InstanceData, currentTilePos, tileWidth);
 		}
 		//else if (side < 0 && !isTop)
 		{
 			// right bottom
-			GenerateRightBottomChildren(m_InstanceData, currentTilePos, tileWidth );
+			//GenerateRightBottomChildren(m_InstanceData, currentTilePos, tileWidth );
 		}
 
 
-		auto tileLeftTop = currentTilePos + glm::vec3{ tileWidth  ,0,tileWidth };
-		auto tileRightTop = currentTilePos + glm::vec3{ -tileWidth  ,0,tileWidth };
-		auto tileLeftBottom = currentTilePos + glm::vec3{ tileWidth  ,0,-tileWidth };
-		auto tileRightBottom = currentTilePos + glm::vec3{ -tileWidth  ,0,-tileWidth };
+		auto tileLeftTop = tilePos + glm::vec3{ tileWidthOfTileToDivide /2  ,0,tileWidthOfTileToDivide /2 };
+		auto tileRightTop = tilePos + glm::vec3{ -tileWidthOfTileToDivide /2  ,0,tileWidthOfTileToDivide /2};
+		auto tileLeftBottom = tilePos + glm::vec3{ tileWidthOfTileToDivide /2 ,0,-tileWidthOfTileToDivide /2 };
+		auto tileRightBottom = tilePos + glm::vec3{ -tileWidthOfTileToDivide /2  ,0,-tileWidthOfTileToDivide /2 };
 
 		// Calculate distances
 		float distLeftTop = glm::distance(posPlayer, tileLeftTop);
@@ -1102,29 +1139,34 @@ namespace Voidstar
 		glm::vec3 closestTilePos;
 		if (distLeftTop <= distRightTop && distLeftTop <= distLeftBottom && distLeftTop <= distRightBottom)
 		{
-			currentTilePos = tileLeftTop;
+			closestTilePos = tileLeftTop;
+			parentIndex = std::distance(m_InstanceData.begin(), m_InstanceData.end() - 4);
 		}
 		else if (distRightTop <= distLeftTop && distRightTop <= distLeftBottom && distRightTop <= distRightBottom)
 		{
-			currentTilePos = tileRightTop;
+			closestTilePos = tileRightTop;
+			parentIndex = std::distance(m_InstanceData.begin(), m_InstanceData.end() - 3);
 		}
 		else if (distLeftBottom <= distLeftTop && distLeftBottom <= distRightTop && distLeftBottom <= distRightBottom)
 		{
-			currentTilePos = tileLeftBottom;
+			closestTilePos = tileLeftBottom;
+			parentIndex = std::distance(m_InstanceData.begin(), m_InstanceData.end() - 2);
 		}
 		else
 		{
-			currentTilePos = tileRightBottom;
+			closestTilePos = tileRightBottom;
+			parentIndex = std::distance(m_InstanceData.begin(), m_InstanceData.end() - 1);
 		}
 
 
-		tileWidth /=  2;
+		tileWidthOfTileToDivide /=  2;
 		
-		GenerateTerrain(currentTilePos,++depth, tileWidth);
+		GenerateTerrain(closestTilePos,++depth, tileWidthOfTileToDivide,parentIndex);
 	}
 	void Renderer::GenerateTerrain()
 	{
 		glm::vec3 posPlayer = m_App->GetCamera()->m_Position;
+		glm::vec3 currentTilePos;
 		float depth = 0;
 		float shortestPath =  1000;
 		float longestPath =  0;
@@ -1135,11 +1177,15 @@ namespace Voidstar
 		glm::vec3 centerOffset = { newTileWidth/2,0.,newTileHeight/2 };
 		glm::vec3 currentTilePosBiggest = {0,0,0};
 		bool isBiggestFound = false;
+		uint32_t index = 0;
 		for (int i = -widthGround/2; i < widthGround/2; i++)
 		{
 			for (int j = -heightGround / 2; j < heightGround /2; j++)
 			{
-				glm::vec3 position = glm::vec3(i * newTileWidth, 0, j * newTileHeight) + centerOffset;
+				//for generate children by direction
+				//glm::vec3 position = glm::vec3(i * newTileWidth, 0, j * newTileHeight) + centerOffset;
+				// just generate children
+				glm::vec3 position = glm::vec3(i * newTileWidth, 0, j * newTileHeight);
 				if (shortestPath > glm::length(posPlayer - position))
 				{
 					if (!isBiggestFound)
@@ -1148,6 +1194,7 @@ namespace Voidstar
 						currentTilePosBiggest = position;
 					}
 					currentTilePos = position;
+					index = m_InstanceData.size();
 					shortestPath = glm::length(posPlayer - position);
 
 				}
@@ -1157,7 +1204,7 @@ namespace Voidstar
 		}
 	
 	
-		GenerateTerrain(currentTilePos,0, newTileWidth / 2);
+		GenerateTerrain(currentTilePos,0, newTileWidth / 2, index);
 		//GenerateTerrain(currentTilePos + glm::vec3{ -newTileWidth,0,newTileWidth }, 0, newTileWidth / 2);
 		//GenerateTerrain(currentTilePosBiggest + glm::vec3{ newTileWidth,0,newTileWidth }, 0, newTileWidth / 2);
 		//GenerateTerrain(currentTilePosBiggest + glm::vec3{ newTileWidth,0,-newTileWidth }, 0, newTileWidth / 2);
