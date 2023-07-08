@@ -106,7 +106,7 @@ namespace Voidstar
 
 		void SubmitInstanceData(const InstanceData& instance);
 		void GenerateTerrain();
-		void GenerateTerrain(glm::vec3 tilePos,float depth, float tileWidth,int parentIndex);
+		void GenerateTerrain(glm::vec3 tilePos,float depth, float tileWidth, int parentIndex);
 
 		~Renderer();
 	private:
@@ -200,7 +200,7 @@ namespace Voidstar
 		SPtr<Window> m_Window;
 
 		RenderPrimitive m_RenderPrimitive = RenderPrimitive::Plane;
-		vk::PolygonMode m_PolygoneMode = vk::PolygonMode::eFill;
+		vk::PolygonMode m_PolygoneMode = vk::PolygonMode::eLine;
 
 
 		vk::BufferMemoryBarrier	m_InstanceBarrier;

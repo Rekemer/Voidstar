@@ -919,7 +919,7 @@ namespace Voidstar
 	}
 
 
-	void GenerateChildren(std::vector<InstanceData>& tiles, glm::vec3 centerOfParentTile, float tileScale)
+	void GenerateChildren(std::vector<InstanceData>& tiles, glm::vec3 centerOfParentTile, float tileScale,int depth)
 	{
 		//tileScale /= 2;
 		glm::vec3 leftTop;
@@ -946,10 +946,10 @@ namespace Voidstar
 		rightBottom.y = 0.f;
 		rightBottom.z = centerOfParentTile.z - tileScale/2 ;
 
-		tiles.emplace_back(leftTop, tileScale, 0);
-		tiles.emplace_back(rightTop, tileScale, 0);
-		tiles.emplace_back(leftBottom, tileScale, 0);
-		tiles.emplace_back(rightBottom, tileScale, 0);
+		tiles.emplace_back(leftTop, tileScale, depth);
+		tiles.emplace_back(rightTop, tileScale, depth);
+		tiles.emplace_back(leftBottom, tileScale, depth);
+		tiles.emplace_back(rightBottom, tileScale, depth);
 	}
 	//tile scale is width and height of tile
 	void GenerateLeftTopChildren(std::vector<InstanceData>& tiles,glm::vec3 centerOfParentTile,float tileScale)
@@ -1079,10 +1079,10 @@ namespace Voidstar
 	}
 
 	
-	const float groundSize = 10;
-	const int widthGround = 2;
-	const int heightGround = 2;
-	float levelOfDetail = 6;
+	const float groundSize = 100;
+	const int widthGround = 20;
+	const int heightGround = 20;
+	float levelOfDetail = 3;
 	void Renderer::GenerateTerrain(glm::vec3 tilePos,float depth,float tileWidthOfTileToDivide, int parentIndex)
 	{
 		if (depth >= levelOfDetail)
@@ -1100,7 +1100,7 @@ namespace Voidstar
 		m_InstanceData.erase(m_InstanceData.begin() + parentIndex);
 		
 
-		GenerateChildren(m_InstanceData, tilePos, tileWidthOfTileToDivide);
+		GenerateChildren(m_InstanceData, tilePos, tileWidthOfTileToDivide,depth);
 		//if (side > 0 && isTop)
 		{
 			// left top
@@ -1178,9 +1178,9 @@ namespace Voidstar
 		glm::vec3 currentTilePosBiggest = {0,0,0};
 		bool isBiggestFound = false;
 		uint32_t index = 0;
-		for (int i = -widthGround/2; i < widthGround/2; i++)
+		for (int i = -(widthGround/2 + widthGround%2); i < (widthGround/2); i++)
 		{
-			for (int j = -heightGround / 2; j < heightGround /2; j++)
+			for (int j = -(heightGround / 2 + heightGround % 2); j < (heightGround / 2 ); j++)
 			{
 				//for generate children by direction
 				//glm::vec3 position = glm::vec3(i * newTileWidth, 0, j * newTileHeight) + centerOffset;
@@ -1198,13 +1198,13 @@ namespace Voidstar
 					shortestPath = glm::length(posPlayer - position);
 
 				}
-				m_InstanceData.emplace_back(position, newTileWidth, 0);
+				m_InstanceData.emplace_back(position, newTileWidth, 1);
 			}
 		
 		}
 	
 	
-		GenerateTerrain(currentTilePos,0, newTileWidth / 2, index);
+		GenerateTerrain(currentTilePos,2, newTileWidth / 2, index);
 		//GenerateTerrain(currentTilePos + glm::vec3{ -newTileWidth,0,newTileWidth }, 0, newTileWidth / 2);
 		//GenerateTerrain(currentTilePosBiggest + glm::vec3{ newTileWidth,0,newTileWidth }, 0, newTileWidth / 2);
 		//GenerateTerrain(currentTilePosBiggest + glm::vec3{ newTileWidth,0,-newTileWidth }, 0, newTileWidth / 2);
