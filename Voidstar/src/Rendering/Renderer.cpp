@@ -34,7 +34,8 @@ namespace Voidstar
 	const uint32_t PARTICLE_COUNT = 8192;
 	std::string BASE_SHADER_PATH = "../Shaders/";
 	std::string BASE_RES_PATH = "res";
-	const std::string SPIRV_COMPILER_PATH = "C:/VulkanSDK/1.3.216.0/Bin/glslc.exe";
+	//const std::string SPIRV_COMPILER_PATH = "C:/VulkanSDK/1.3.216.0/Bin/glslc.exe";
+	const std::string SPIRV_COMPILER_PATH = "C:/VulkanSDK/1.3.216.0/Bin/glslangvalidator.exe";
 	std::string BASE_SPIRV_OUTPUT = BASE_SHADER_PATH+"Binary/";
 	#define INSTANCE_COUNT 4096
 
@@ -49,12 +50,12 @@ namespace Voidstar
 		return filepath.substr(0, extensionIndex);
 	}
 
-	std::string CreateCommand(std::string shader,const char* extension)
+	std::string CreateCommand(std::string shader, const char* extension, std::string& shaderPath)
 	{
 		auto name = GetFileNameWithoutExtension(shader);
-		std::string shaderPath = BASE_SHADER_PATH + shader.c_str();
+		
 		std::string shaderOutput = BASE_SPIRV_OUTPUT + name.c_str() + extension;
-		std::string command = SPIRV_COMPILER_PATH + " " + shaderPath + " -o " + shaderOutput;
+		std::string command = SPIRV_COMPILER_PATH + " -V " + shaderPath + " -o " + shaderOutput;
 		return command;
 	}
 
@@ -62,22 +63,24 @@ namespace Voidstar
 	{
 		for (auto& shader : std::filesystem::directory_iterator(BASE_SHADER_PATH))
 		{
-			if (!shader.is_directory())
+			bool isDirectory = shader.is_directory();
+			const std::string& filenameStr = shader.path().filename().string();
+			bool isTesselationFolder = isDirectory && filenameStr.compare("Tesselation") == 0;
+			// vertex and fragment shaders
+			if (!isDirectory)
 			{
 				auto extension= shader.path().extension().string();
 				auto shaderString = shader.path().filename().string();
+				std::string shaderPath = BASE_SHADER_PATH + shader.path().string();
 				std::string command="";
 				if (extension == ".vert") {
 					// Handle vertex shader
 					const char* extension = ".spvV";
-					command = CreateCommand(shaderString, extension);
+					command = CreateCommand(shaderString, extension, shaderPath);
 				}
 				else if (extension == ".frag") {
 					const char* extension = ".spvF";
-					command = CreateCommand(shaderString, extension);
-				}
-				else {
-					// Handle other cases
+					command = CreateCommand(shaderString, extension, shaderPath);
 				}
 				if (command != "")
 				{
@@ -87,7 +90,37 @@ namespace Voidstar
 						Log::GetLog()->error("shader {0} is not compiled!", shaderString);
 					}
 				}
+			}
+			// tesselation shaders
+			else if (isTesselationFolder)
+			{
+				auto tesslationFoldePath = shader;
+				for (auto& shader : std::filesystem::directory_iterator(tesslationFoldePath))
+				{
+					std::string command = "";
+					auto extension = shader.path().extension().string();
+					auto shaderString = shader.path().filename().string();
+					auto shaderPath = BASE_SHADER_PATH + "Tesselation/" + shaderString;
+					if (extension == ".tesc") {
+						const char* extension = ".spvC";
+						command = CreateCommand(shaderString, extension, shaderPath);
+					}
+					else  if (extension == ".tese") {
 				
+						const char* extension = ".spvE";
+						command = CreateCommand(shaderString, extension, shaderPath);
+						}
+				if (command != "")
+				{
+					int result = std::system(command.c_str());
+					if (result != 0)
+					{
+						Log::GetLog()->error("shader {0} is not compiled!", shaderString);
+					}
+				}
+				
+				}
+			
 			}
 		}
 	}
@@ -100,7 +133,8 @@ namespace Voidstar
 		
 		auto& vertexShader = shaderFilenames[0];
 		const char* extension = ".spvV";
-		auto command = CreateCommand(vertexShader, extension);
+		std::string shaderPath = BASE_SHADER_PATH + vertexShader;
+		auto command = CreateCommand(vertexShader, extension, shaderPath);
 		
 
 		// Execute the command
@@ -117,8 +151,9 @@ namespace Voidstar
 			// Handle the failure scenario
 		}
 		auto& fragmentShader = shaderFilenames[1];
+		shaderPath = BASE_SHADER_PATH + fragmentShader;
 		extension = ".spvF";
-		command = CreateCommand(fragmentShader, extension);
+		command = CreateCommand(fragmentShader, extension, shaderPath);
 
 		// Execute the command
 		result = std::system(command.c_str());
@@ -229,8 +264,8 @@ namespace Voidstar
 	{
 		
 		InitFilePath();
-		//CompileShader({ "shader.vert","shader.frag" });
 		CompileAllShaders();
+		//CompileShader({ "shader.vert","shader.frag" });
 		m_Window=window; 
 		m_ViewportWidth = screenWidth;
 		m_ViewportHeight = screenHeight;
@@ -269,7 +304,8 @@ namespace Voidstar
 		vk::DescriptorSetLayoutBinding layoutBinding;
 		layoutBinding.binding = 0;
 		layoutBinding.descriptorType = vk::DescriptorType::eUniformBuffer;
-		layoutBinding.stageFlags = vk::ShaderStageFlagBits::eVertex;
+		layoutBinding.stageFlags = vk::ShaderStageFlagBits::eVertex| vk::ShaderStageFlagBits::eTessellationControl
+			| vk::ShaderStageFlagBits::eTessellationEvaluation;
 		layoutBinding.descriptorCount = 1;
 
 		std::vector<vk::DescriptorSetLayoutBinding> layoutBindings{ layoutBinding };
@@ -845,6 +881,8 @@ namespace Voidstar
 		
 		specs.vertexFilepath = BASE_SPIRV_OUTPUT +"noise.spvV";
 		specs.fragmentFilepath = BASE_SPIRV_OUTPUT +"default.spvF";
+		specs.tessCFilepath = BASE_SPIRV_OUTPUT +"tessC.spvC";
+		specs.tessEFilepath = BASE_SPIRV_OUTPUT +"tessE.spvE";
 		specs.swapchainExtent = swapChainExtent;
 		specs.swapchainImageFormat = swapchainFormat;
 
@@ -921,6 +959,7 @@ namespace Voidstar
 
 	void GenerateChildren(std::vector<InstanceData>& tiles, glm::vec3 centerOfParentTile, float tileScale,int depth)
 	{
+		// assign indexes of neighbours?
 		//tileScale /= 2;
 		glm::vec3 leftTop;
 		leftTop.x = centerOfParentTile.x + tileScale/2 ;
@@ -1079,17 +1118,19 @@ namespace Voidstar
 	}
 
 	
-	const float groundSize = 100;
-	const int widthGround = 20;
-	const int heightGround = 20;
-	float levelOfDetail = 3;
+	const float groundSize = 10;
+	const int widthGround = 2;
+	const int heightGround = 2;
+	float levelOfDetail =6;
 	void Renderer::GenerateTerrain(glm::vec3 tilePos,float depth,float tileWidthOfTileToDivide, int parentIndex)
 	{
 		if (depth >= levelOfDetail)
 		{
 			return;
 		}
+
 		glm::vec3 posPlayer = m_App->GetCamera()->m_Position;
+		posPlayer = glm::vec3{ 0,0,0 };
 		auto dirToPlayer = glm::normalize(posPlayer- tilePos);
 		bool isTop = glm::dot(dirToPlayer, glm::vec3{ 0,0,1 }) > 0;
 		float side = glm::dot(dirToPlayer, glm::vec3{ 1,0,0 });
@@ -1101,6 +1142,9 @@ namespace Voidstar
 		
 
 		GenerateChildren(m_InstanceData, tilePos, tileWidthOfTileToDivide,depth);
+		//GenerateChildren(m_InstanceData, tilePos + glm::vec3(tileWidthOfTileToDivide*2,0,tileWidthOfTileToDivide*2), tileWidthOfTileToDivide, depth+1);
+		//GenerateChildren(m_InstanceData, tilePos + glm::vec3(-tileWidthOfTileToDivide*2,0,tileWidthOfTileToDivide*2), tileWidthOfTileToDivide, depth+1);
+		//GenerateChildren(m_InstanceData, tilePos + glm::vec3(0,0,tileWidthOfTileToDivide*2), tileWidthOfTileToDivide, depth+1);
 		//if (side > 0 && isTop)
 		{
 			// left top
@@ -1135,7 +1179,7 @@ namespace Voidstar
 		float distLeftBottom = glm::distance(posPlayer, tileLeftBottom);
 		float distRightBottom = glm::distance(posPlayer, tileRightBottom);
 
-		// Find the position closest to posPlayer
+		// Find the position closest to posPlayer and get new parent index from generated tiles
 		glm::vec3 closestTilePos;
 		if (distLeftTop <= distRightTop && distLeftTop <= distLeftBottom && distLeftTop <= distRightBottom)
 		{
@@ -1166,6 +1210,7 @@ namespace Voidstar
 	void Renderer::GenerateTerrain()
 	{
 		glm::vec3 posPlayer = m_App->GetCamera()->m_Position;
+		posPlayer = glm::vec3{ 0,0,0 };
 		glm::vec3 currentTilePos;
 		float depth = 0;
 		float shortestPath =  1000;
@@ -1205,6 +1250,7 @@ namespace Voidstar
 	
 	
 		GenerateTerrain(currentTilePos,2, newTileWidth / 2, index);
+		
 		//GenerateTerrain(currentTilePos + glm::vec3{ -newTileWidth,0,newTileWidth }, 0, newTileWidth / 2);
 		//GenerateTerrain(currentTilePosBiggest + glm::vec3{ newTileWidth,0,newTileWidth }, 0, newTileWidth / 2);
 		//GenerateTerrain(currentTilePosBiggest + glm::vec3{ newTileWidth,0,-newTileWidth }, 0, newTileWidth / 2);
@@ -1374,7 +1420,7 @@ namespace Voidstar
 		//The info for the graphics pipeline
 		vk::GraphicsPipelineCreateInfo pipelineInfo = {};
 		pipelineInfo.flags = vk::PipelineCreateFlags();
-		
+
 
 		//Shader stages, to be populated later
 		std::vector<vk::PipelineShaderStageCreateInfo> shaderStages;
@@ -1389,7 +1435,7 @@ namespace Voidstar
 		vertexInputInfo.flags = vk::PipelineVertexInputStateCreateFlags();
 		vertexInputInfo.vertexBindingDescriptionCount = spec.bindingDescription.size();
 		vertexInputInfo.pVertexBindingDescriptions = spec.bindingDescription.data();
-		
+
 		vertexInputInfo.vertexAttributeDescriptionCount = spec.attributeDescription.size();
 		vertexInputInfo.pVertexAttributeDescriptions = spec.attributeDescription.data();
 
@@ -1398,24 +1444,21 @@ namespace Voidstar
 		//Input Assembly
 		vk::PipelineInputAssemblyStateCreateInfo inputAssemblyInfo = {};
 		inputAssemblyInfo.flags = vk::PipelineInputAssemblyStateCreateFlags();
-		inputAssemblyInfo.topology = vk::PrimitiveTopology::eTriangleList;
-		
+		//inputAssemblyInfo.topology = vk::PrimitiveTopology::eTriangleList;
+		inputAssemblyInfo.topology = vk::PrimitiveTopology::ePatchList;
+
+		vk::PipelineTessellationStateCreateInfo tesselationState{};
+		tesselationState.patchControlPoints = 4;
+
 		pipelineInfo.pInputAssemblyState = &inputAssemblyInfo;
-
-		
-		
-		
+		pipelineInfo.pTessellationState = &tesselationState;
 
 
-		vk::ShaderModule vertexShader = CreateModule(
-			spec.vertexFilepath, spec.device
-		);
-		vk::PipelineShaderStageCreateInfo vertexShaderInfo = {};
-		vertexShaderInfo.flags = vk::PipelineShaderStageCreateFlags();
-		vertexShaderInfo.stage = vk::ShaderStageFlagBits::eVertex;
-		vertexShaderInfo.module = vertexShader;
-		vertexShaderInfo.pName = "main";
-		shaderStages.push_back(vertexShaderInfo);
+
+
+
+
+
 
 		//Viewport and Scissor
 		vk::Viewport viewport = {};
@@ -1462,23 +1505,65 @@ namespace Voidstar
 		rasterizer.depthBiasEnable = VK_FALSE; //Depth bias can be useful in shadow maps.
 		pipelineInfo.pRasterizationState = &rasterizer;
 
-		
-		vk::ShaderModule fragmentShader = CreateModule(
-			spec.fragmentFilepath, spec.device
+
+
+		vk::ShaderModule vertexShader = CreateModule(
+			spec.vertexFilepath, spec.device
 		);
-		vk::PipelineShaderStageCreateInfo fragmentShaderInfo = {};
-		fragmentShaderInfo.flags = vk::PipelineShaderStageCreateFlags();
-		fragmentShaderInfo.stage = vk::ShaderStageFlagBits::eFragment;
-		fragmentShaderInfo.module = fragmentShader;
-		fragmentShaderInfo.pName = "main";
-		shaderStages.push_back(fragmentShaderInfo);
-		//Now both shaders have been made, we can declare them to the pipeline info
+	{
+		vk::PipelineShaderStageCreateInfo vertexShaderInfo = {};
+		vertexShaderInfo.flags = vk::PipelineShaderStageCreateFlags();
+		vertexShaderInfo.stage = vk::ShaderStageFlagBits::eVertex;
+		vertexShaderInfo.module = vertexShader;
+		vertexShaderInfo.pName = "main";
+		shaderStages.push_back(vertexShaderInfo);
+	}
+
+		
+
+			vk::ShaderModule fragmentShader = CreateModule(
+				spec.fragmentFilepath, spec.device
+			);
+		{
+			vk::PipelineShaderStageCreateInfo fragmentShaderInfo = {};
+			fragmentShaderInfo.flags = vk::PipelineShaderStageCreateFlags();
+			fragmentShaderInfo.stage = vk::ShaderStageFlagBits::eFragment;
+			fragmentShaderInfo.module = fragmentShader;
+			fragmentShaderInfo.pName = "main";
+			shaderStages.push_back(fragmentShaderInfo);
+		}
+		
+
+
+			vk::ShaderModule tessControl = CreateModule(
+				spec.tessCFilepath, spec.device
+			);
+		{
+			vk::PipelineShaderStageCreateInfo tessShaderInfo = {};
+			tessShaderInfo.flags = vk::PipelineShaderStageCreateFlags();
+			tessShaderInfo.stage = vk::ShaderStageFlagBits::eTessellationControl;
+			tessShaderInfo.module = tessControl;
+			tessShaderInfo.pName = "main";
+			shaderStages.push_back(tessShaderInfo);
+		}
+			vk::ShaderModule tessEvaulation = CreateModule(
+				spec.tessEFilepath, spec.device
+			);
+		{
+			vk::PipelineShaderStageCreateInfo tessShaderInfo = {};
+			tessShaderInfo.flags = vk::PipelineShaderStageCreateFlags();
+			tessShaderInfo.stage = vk::ShaderStageFlagBits::eTessellationEvaluation;
+			tessShaderInfo.module = tessEvaulation;
+			tessShaderInfo.pName = "main";
+			shaderStages.push_back(tessShaderInfo);
+		}
+
+
+
+
+
 		pipelineInfo.stageCount = shaderStages.size();
 		pipelineInfo.pStages = shaderStages.data();
-
-
-
-
 		
 
 
@@ -1560,6 +1645,8 @@ namespace Voidstar
 		//Finally clean up by destroying shader modules
 		spec.device.destroyShaderModule(vertexShader);
 		spec.device.destroyShaderModule(fragmentShader);
+		spec.device.destroyShaderModule(tessControl);
+		spec.device.destroyShaderModule(tessEvaulation);
 		Log::GetLog()->info("Pipeline is Created!");
 		return output;
 

@@ -72,8 +72,18 @@ namespace Voidstar
 	{
 		
 		vk::Device device;
-		std::string vertexFilepath;
-		std::string fragmentFilepath;
+		std::string vertexFilepath="";
+		std::string fragmentFilepath="";
+		std::string geometryShader = "";
+
+		// tesselation shaders
+		// control shader
+		std::string tessCFilepath = "";
+		// evalatuation shader
+		std::string tessEFilepath = "";
+
+
+
 		vk::SampleCountFlagBits samples;
 		vk::Extent2D swapchainExtent;
 		vk::Format swapchainImageFormat;

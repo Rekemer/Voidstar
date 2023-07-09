@@ -94,6 +94,7 @@
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\Rendering\CommandPoolManager.h" />
+    <ClInclude Include="src\Quadtree\Quadtree.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Dependencies\Tracy\public\TracyClient.cpp">
@@ -151,5 +152,6 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="src\Rendering\CommandPoolManager.cpp" />
+    <ClCompile Include="src\Quadtree\Quadtree.cpp" />
   </ItemGroup>
 </Project>

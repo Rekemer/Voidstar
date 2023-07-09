@@ -104,7 +104,7 @@ namespace Voidstar
 		vk::PhysicalDeviceFeatures deviceFeatures = vk::PhysicalDeviceFeatures();
 
 		deviceFeatures.fillModeNonSolid = true;
-
+		deviceFeatures.tessellationShader = true;
 		std::vector<const char*> enabledLayers;
 
 		enabledLayers.push_back("VK_LAYER_KHRONOS_validation");

@@ -71,7 +71,7 @@ namespace Voidstar
 		}
 		catch (vk::SystemError err)
 		{
-			Log::GetLog()->error("Failed to create Instance!");
+			Log::GetLog()->error("Failed to create Instance!\n {0} ",err.what());
 
 		}
 

@@ -86,7 +86,7 @@ namespace Voidstar
 
     void Camera::ProcessInput(float deltaTime)
 	{
-            const float cameraSpeed = 15.f; 
+            const float cameraSpeed = 5.f; 
             deltaTime = 0.01f;
             if (Input::IsKeyPressed(VS_KEY_W))
             {

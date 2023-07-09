@@ -81,9 +81,9 @@ float noise ( vec2 cell, vec2 uv, float nextVertexOffset) {
     vec2 f = uv;
    // i = vec2(gl_InstanceIndex,0);
     float a = random(i);
-    float b = random(i + vec2(nextVertexOffset, 0.0));
-    float c = random(i + vec2(0.0, nextVertexOffset));
-    float d = random(i + vec2(nextVertexOffset,nextVertexOffset));
+    float b = random(i + vec2(1, 0.0));
+    float c = random(i + vec2(0.0, 1));
+    float d = random(i + vec2(1,1));
 
 	// smooth step function lol
     vec2 u = f * f * (3.0 - 2.0 * f);
@@ -110,12 +110,12 @@ float fbm(vec2 cell,vec2 newuv, float nextVertexOffset)
 	// Initial values
     float value = 0.0;
     float amplitude = .5;
-    float frequency = 0.;
+    float frequency = 1;
 
 	  // Loop of octaves
     for (int i = 0; i < OCTAVES; i++)
 	{
-        value += amplitude * noise(cell,newuv, nextVertexOffset);
+        value += amplitude * noise(cell  *frequency,newuv, nextVertexOffset);
         //st *=3.;
         amplitude *= .3;
     }
@@ -201,7 +201,6 @@ void main()
     vec2 newUv  = GetUvs(worldPos.xz,dimension,in_uv,texIndex);
    // float brown = fbm(in_uv*tilesAmount,newUv);
     //worldPos.y+=
-	vec4 pos =	ubo.proj *  ubo.view * worldPos;
 	//vec4 pos =	ubo.proj * worldPos;
 	worldSpacePos = worldPos;
     depth = texIndex;
@@ -254,8 +253,10 @@ void main()
     
     noiseValue = fbm(cell,newUv,width);
 	color.xyz =vec3(noiseValue,noiseValue,noiseValue) ;
-    pos.y -= noiseValue*13.0;
+    //worldPos.y += noiseValue;
     //color.xyz = vec3(newUv,0.);
     //color.xyz= vec3( randomGradient(cell),0.);
+	//vec4 pos =	ubo.proj *  ubo.view * worldPos;
+	vec4 pos =	 worldPos;
 	gl_Position = pos;
 }
