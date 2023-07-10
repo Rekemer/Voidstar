@@ -139,7 +139,7 @@ float noiseInstance (vec2 uv)
 
 
 // Constants
-const int gridSize = 100;
+const int gridSize = 10;
 const float cellSize = 1.0 / float(gridSize);
 
 const int permutationTableSize = 256;
@@ -252,8 +252,8 @@ void main()
     vec2 grid =newUv*1.;
     
     noiseValue = fbm(cell,newUv,width);
+    worldPos.y += noiseValue*13.;
 	color.xyz =vec3(noiseValue,noiseValue,noiseValue) ;
-    //worldPos.y += noiseValue;
     //color.xyz = vec3(newUv,0.);
     //color.xyz= vec3( randomGradient(cell),0.);
 	//vec4 pos =	ubo.proj *  ubo.view * worldPos;

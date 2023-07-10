@@ -12,7 +12,7 @@ namespace Voidstar
         ProcessInput(deltaTime);
         ProcessMouse();
         UpdateView();
-      
+        Log::GetLog()->info("pos: {0} {1} {2}\n", m_Position.x, m_Position.y, m_Position.z);
 
 
 	}
@@ -86,7 +86,7 @@ namespace Voidstar
 
     void Camera::ProcessInput(float deltaTime)
 	{
-            const float cameraSpeed = 5.f; 
+            const float cameraSpeed = 15.f; 
             deltaTime = 0.01f;
             if (Input::IsKeyPressed(VS_KEY_W))
             {

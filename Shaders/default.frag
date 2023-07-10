@@ -3,7 +3,7 @@
 layout(location = 0) out vec4  outColor;
 
 //layout(location = 0) in vec2 uv ;
-//layout(location = 1) in vec4 color;
+layout(location = 1) in vec4 color;
 //layout(location = 2) in float scale;
 //layout(location = 3) in vec4 worldSpacePos;
 //layout(location = 4) in float depth;
@@ -104,7 +104,7 @@ void main()
     //outColor.xyz=color.xyz;
     outColor.xyz=vec3(1,1,1);
     //vec2 grid = fract(newUv* 3.);
-    //outColor.xyz=color.xyz;
+    outColor.xyz=color.xyz;
     //outColor.xyz=vec3(0);
     //outColor.z =0;
     //outColor.xy = newUv;
