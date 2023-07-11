@@ -13,6 +13,9 @@ namespace Voidstar
             {null, null},
             {null, null}
         };
+        NodeID parentId;
+        glm::vec3 worldPosition;
+        float tileWidth;
     };
     struct Box
     {
@@ -40,6 +43,12 @@ namespace Voidstar
         std::vector<Node> nodes;
 
         static Quadtree Build(glm::vec2& posPlayer);
+        Node& GetLeft(Node& currentNode);
+        Node& GetRight(Node& currentNode);
+        Node& GetUp(Node& currentNode);
+        Node& GetBottom(Node& currentNode);
+        void Clear(Node& node);
+        void GenerateChildren(Node& node);
     private:
         void BuildTree();
     };

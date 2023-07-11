@@ -38,11 +38,11 @@ namespace Voidstar
 	const std::string SPIRV_COMPILER_PATH = "C:/VulkanSDK/1.3.216.0/Bin/glslangvalidator.exe";
 	std::string BASE_SPIRV_OUTPUT = BASE_SHADER_PATH+"Binary/";
 	#define INSTANCE_COUNT 4096
-	#define ZEROPOS 0
+	#define ZEROPOS 1
 	const float groundSize = 100;
-	const int widthGround = 4;
-	const int heightGround = 4;
-	float levelOfDetail = 6;
+	const int widthGround = 2;
+	const int heightGround = 2;
+	
 
 
 
@@ -1189,7 +1189,7 @@ namespace Voidstar
 		GenerateChildren(m_InstanceData, tilePos+ rightTopOffset, tileWidthOfTileToDivide,depth);
 		GenerateChildren(m_InstanceData, tilePos+ rightBottomOffset, tileWidthOfTileToDivide,depth);
 		GenerateChildren(m_InstanceData, tilePos+ leftBottomOffset, tileWidthOfTileToDivide,depth);
-		//GenerateChildren(m_InstanceData, tilePos + glm::vec3(0,0,tileWidthOfTileToDivide*2), tileWidthOfTileToDivide, depth+1);
+		GenerateChildren(m_InstanceData, tilePos + glm::vec3(0,0,tileWidthOfTileToDivide*2), tileWidthOfTileToDivide, depth+1);
 
 
 		//auto iterator = indexes.find(glm::length(centerOfParentTile));

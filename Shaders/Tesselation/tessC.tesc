@@ -41,7 +41,7 @@ if(gl_InvocationID == 0)
     // Step 1: define constants to control tessellation parameters
 	// set these as desired for your world scale
     const int MIN_TESS_LEVEL = 1;
-    const int MAX_TESS_LEVEL = 3;
+    const int MAX_TESS_LEVEL = 1;
     const float MIN_DISTANCE = 0.01;
     const float MAX_DISTANCE = 10;
 
