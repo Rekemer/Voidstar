@@ -22,7 +22,7 @@ namespace Voidstar
 			};
 			
 		};
-
+		float noiseValue;
 
 		static vk::VertexInputBindingDescription GetBindingDescription() {
 			vk::VertexInputBindingDescription bindingDescription{};

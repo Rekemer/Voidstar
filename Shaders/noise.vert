@@ -14,12 +14,13 @@ layout(binding = 0) uniform UniformBufferObject {
 // vertexAttributes
 layout(location = 0) in vec3 in_pos;
 layout(location = 1) in vec4 in_color;
-layout(location = 2) in vec2 in_uv;
+layout(location = 2) in float in_noise;
+layout(location = 3) in vec2 in_uv;
 
 // Instanced attributes
-layout (location = 3) in vec3 instancePos;
-layout (location = 4) in float instanceScale;
-layout (location = 5) in int texIndex;
+layout (location = 4) in vec3 instancePos;
+layout (location = 5) in float instanceScale;
+layout (location = 6) in int texIndex;
 
 vec2 positions[3] = vec2[](
 	vec2(0.0, -0.5),
@@ -81,16 +82,17 @@ float noise ( vec2 cell, vec2 uv, float nextVertexOffset) {
     vec2 f = uv;
    // i = vec2(gl_InstanceIndex,0);
     float a = random(i);
-    float b = random(i + vec2(1, 0.0));
-    float c = random(i + vec2(0.0, 1));
-    float d = random(i + vec2(1,1));
+    float b = random(i + vec2(2.5, 0.0));
+    float c = random(i + vec2(0.0, 2.5));
+    float d = random(i + vec2(2.5,2.5));
 
 	// smooth step function lol
     vec2 u = f * f * (3.0 - 2.0 * f);
+    //u = vec2(1,1);
 
 	//return u.x;
 float interpolated;
-#define MYVERSION 0
+#define MYVERSION 1
 	#ifdef MYVERSION 
 	float interpolatedX = mix(a, b, u.x);
 	float interpolatedY = mix(c, d, u.x);
@@ -193,15 +195,13 @@ void main()
     
     
 // Constants
-    const int gridSize = 100;
+    const int gridSize = 10;
     const float cellSize = 1.0 / float(gridSize);
 	//vec4 worldPos= ubo.model * vec4((in_pos+instancePos)*instanceScale,1.0);
-    float dimension = 100;
     float tilesAmount  = 2.;
 	vec4 worldPos= vec4((in_pos*instanceScale)+instancePos,1.0);
-    vec2 newUv  = GetUvs(worldPos.xz,dimension,in_uv,texIndex);
    // float brown = fbm(in_uv*tilesAmount,newUv);
-    //worldPos.y+=
+   // worldPos.y+=
 	//vec4 pos =	ubo.proj * worldPos;
 	worldSpacePos = worldPos;
     depth = texIndex;
@@ -209,16 +209,13 @@ void main()
     scale=instanceScale;
 	uv = in_uv;
 	color = in_color;
-    vec2 f = fract(newUv*tilesAmount);
-    float xn = norm(worldPos.x,dimension,-dimension);
-    float yn = norm(worldPos.z,dimension,-dimension);
-    vec2 uvBegin = vec2(dimension/2.,-dimension/2);
+    
     
 
    // worldPos.xz += uvBegin;
 
 // Calculate the grid cell position
-    vec2 cell = floor(worldPos.xz * gridSize);
+    
     
     // Calculate the relative position within the cell
     vec2 vertex = fract(worldPos.xz * gridSize);
@@ -231,29 +228,18 @@ void main()
 
 
 
-    float width = 5. / texIndex;
-  
-    newUv = vec2(xn,yn);
 
-    for (float x = -width*2 ; x <= width*2; x+=width) {
-        for (float y = -width*2 ; y <= width*2 ; y+=width) {
-            cellOffset = vec2(float(x), float(y));
-            vec2 gridVertex = cell + cellOffset;
-            float dotProduct = dotGridGradient(gridVertex, worldPos.xz);
-            noiseValue += dotProduct * interpolate(1.0 - length(cellOffset), 1.0, newUv.x * newUv.y);
-            noiseValue = dotProduct;
-        }
-    }
+    vec2 cell = floor(worldPos.xz * gridSize);
+    float xn = norm(worldPos.x,gridSize,-gridSize);
+    float yn = norm(worldPos.z,gridSize,-gridSize);
+    vec2 newUv = vec2(xn,yn);
+    noiseValue = fbm(worldPos.xz,newUv,3);
+   // worldPos.y += abs(noiseValue)*3.;
+    vec2 playerPos= vec2(0,0);
+    vec2 diff = playerPos - worldPos.xz;
+    float red = norm(length(diff),1,0);
 
-   // noiseValue *= 0.4;
-
-
-    //newUv = worldPos.xz - uvBegin;
-    //float noiseValue = noiseInstance(newUv);
-    vec2 grid =newUv*1.;
-    
-    noiseValue = fbm(cell,newUv,width);
-    worldPos.y += abs(noiseValue)*13.;
+    noiseValue = noise(worldPos.xz,newUv,gridSize/4);
 	color.xyz =vec3(noiseValue,noiseValue,noiseValue) ;
     //color.xyz = vec3(newUv,0.);
     //color.xyz= vec3( randomGradient(cell),0.);

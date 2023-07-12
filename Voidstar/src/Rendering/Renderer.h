@@ -5,6 +5,7 @@
 #include <gtc/matrix_transform.hpp>
 #include"CommandBuffer.h"
 #include"../Types.h"
+#include"QuadTree/QuadTree.h"
 namespace Voidstar
 {
 	class Window;
@@ -126,12 +127,12 @@ namespace Voidstar
 		void CreateDevice();
 		void CreatePipeline();
 		void CreateFramebuffers();
-		GraphicsPipeline CreatePipeline(GraphicsPipelineSpecification& spec);
+		GraphicsPipeline CreatePipeline(GraphicsPipelineSpecification& spec, vk::PrimitiveTopology topology);
 		void DestroySwapchain();
 		void CreateSyncObjects();
 		void CreateMSAAFrame();
 		
-		void RecordCommandBuffer(uint32_t imageIndex);
+		void RecordCommandBuffer(uint32_t imageIndex, vk::RenderPass& renderPass, vk::Pipeline& pipeline, vk::PipelineLayout& pipelineLayout, int instances);
 		void UpdateUniformBuffer(uint32_t imageIndex);
 		void RecreateSwapchain();
 		void Shutdown();
@@ -142,6 +143,9 @@ namespace Voidstar
 		UPtr<Swapchain> m_Swapchain;
 		UPtr<Buffer> m_ModelBuffer{nullptr};
 		UPtr<IndexBuffer> m_IndexBuffer;
+		UPtr<Buffer> m_SphereBuffer;
+		UPtr<IndexBuffer> m_IndexSphereBuffer;
+		
 		Application* m_App;
 		
 		UPtr<Buffer> m_InstancedDataBuffer;
@@ -191,11 +195,12 @@ namespace Voidstar
 
 		
 
+		vk::Pipeline m_Pipeline;
 		vk::RenderPass m_RenderPass;
 		vk::PipelineLayout m_PipelineLayout;
-		vk::PipelineLayout m_ComputePipelineLayout;
-		vk::Pipeline m_Pipeline;
-		vk::Pipeline m_ComputePipeline;
+		vk::Pipeline m_DebugPipeline;
+		vk::PipelineLayout m_DebugPipelineLayout;
+		vk::RenderPass m_DebugRenderPass;
 
 		UPtr<CommandPoolManager> m_CommandPoolManager;
 		
@@ -217,7 +222,7 @@ namespace Voidstar
 		std::vector<InstanceData> m_InstanceData;
 		std::vector<vk::DescriptorSet> m_InstanceDescriptorSets;
 		void* m_InstancedPtr;
-
+		Quadtree m_QuadTree;
 	};
 
 }

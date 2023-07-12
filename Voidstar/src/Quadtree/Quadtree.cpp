@@ -1,108 +1,230 @@
 #include"Prereq.h"
 #include "Quadtree.h"
-#include <bitset>
+
+
 namespace Voidstar
 {
-	float levelOfDetail = 3;
-	// level equals amount of tiles on grid
-// level determines size of each coordinates in bite level = amount of bits per coordinates
-	constexpr size_t size = 64;
-#define F_32 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
-#define F_16 0xFFFFFFFFFFFFFFFF
-	std::bitset<size> codeQuadtreeNode(std::bitset<size> x, std::bitset<size> y, int level) {
-		std::bitset<size> quadtreeCode;
-		std::cout << "x " << x << "\n";
-		std::cout << "y " << y << "\n";
-		quadtreeCode |= x << level | y;
-		return quadtreeCode;
-	}
 
-	void GetCoords(std::bitset<size> quadCode, uint64_t level)
+
+	const float groundSize = 10;
+	const int widthGround = 2;
+	const int heightGround = 2;
+
+	float levelOfDetail = 6;
+
+
+
+
+	// 2 bits per depth
+	std::bitset<size> ChildOfParent(int x, std::bitset<size> parentIndex, int childrenDepth)
 	{
-		std::bitset<size> x;
-		std::bitset<size> y;
-		std::bitset<size> mask = F_16 >> (128 - level);
-		std::cout << "mask for y coordiante " << mask << std::endl;
-		y = quadCode & mask;
-		x = quadCode >> level;
-		std::cout << "\nx " << x.to_ulong() << std::endl;
-		std::cout << " y " << y.to_ulong() << std::endl;
-	}
-	//int main() {
-	//	uint64_t x = 63; // x-coordinate of the node
-	//	uint64_t y = 61; // y-coordinate of the node
-	//	uint64_t level = 6; // level of the node
-	//	// 10 01 
-	//
-	//	auto bits = codeQuadtreeNode(x, y, level);
-	//	std::cout << "\nBit of number " << bits << std::endl;
-	//	GetCoords(bits, level);
-	//	return 0;
-	//}
+		std::bitset<size> nodeCoords;
+		nodeCoords |= parentIndex;
 
-	Quadtree Quadtree::Build( glm::vec2& posPlayer)
+		std::bitset<size> maskCoords;
+		maskCoords |= std::bitset<size>(x);
+		maskCoords <<= (childrenDepth-1) * 2;
+		nodeCoords |= maskCoords;
+		std::cout << " newNode of "<< x << "coords "<< parentIndex<< " is" << maskCoords << std::endl;
+		return nodeCoords;
+
+	}
+	std::bitset<size> ParentOfChild(std::bitset<size> child, int childDepth)
+	{
+		std::bitset<size> maskCoords;
+		for (int i = 0; i < childDepth * 2 - 3; i++)
+		{
+			maskCoords[i] = 1;
+			maskCoords[i + 1] = 1;
+		}
+		std::cout << " mask " << child << std::endl;
+		return child & maskCoords;
+	}
+
+	
+	Quadtree Quadtree::Build( glm::vec3 posPlayer)
 	{
 		Quadtree result;
 		auto min = glm::vec2{ -20,-20 };
 		auto max = glm::vec2{ 20,20 };
 		Box box{min,max};
-		result.BuildTree();
+		result.root.tileWidth = groundSize;
+		result.root.worldPosition = glm::vec3{0,0,0};
+
+		//result.GenerateChildren(result.root, 1);
+		result.BuildTree(posPlayer, result.root,1);
 		return result;
 	}
-	Node& Quadtree::GetLeft(Node& currentNode)
+	
+	Node Quadtree::GetNode(std::bitset<size> node, int depth)
 	{
-		// TODO: вставьте здесь оператор return
+		auto& vector = nodes[depth];
+		for (int i = 0; i < vector.size(); i++)
+		{
+			if (vector[i].index == node)
+			{
+				return vector[i];
+			}
+		}
+		return{};
 	}
-	Node& Quadtree::GetRight(Node& currentNode)
+
+
+	//depth 1 = 2
+	//depth 2 = 4
+	//depth 3 = 5
+	std::bitset<size> GetSibling(Coordinate coord, std::bitset<size> node, int depthOfNode)
 	{
-		// TODO: вставьте здесь оператор return
+		if ((depthOfNode * 2 - 1) <= 0)
+		{
+			return {};
+		}
+		std::bitset<size> temp{ coord };
+		node[depthOfNode * 2 - 1] = temp[1];
+		node[depthOfNode*2 -2] = temp[2];
+		return node;
 	}
-	Node& Quadtree::GetUp(Node& currentNode)
+
+	std::optional<Node> Quadtree::GetLeft(Coordinate coord,std::bitset<size> node,int depthOfNode)
 	{
-		// TODO: вставьте здесь оператор return
+		
+
+		auto siblingIndex = GetSibling(coord, node, depthOfNode);
+		return GetNode(siblingIndex, depthOfNode);
 	}
-	Node& Quadtree::GetBottom(Node& currentNode)
-	{
-		// TODO: вставьте здесь оператор return
-	}
+
 	void Quadtree::Clear(Node& node)
 	{
 	}
-	void Quadtree::GenerateChildren(Node& node)
+
+	
+
+	GeneratedChildren Quadtree::GenerateChildren(Node& node,int depth)
 	{
-		float tileScale = node.tileWidth;
+
+		//auto iterator = std::find(nodes[depth].begin(), nodes[depth].end(), node);
+		//if (iterator != nodes.end())
+		//{
+		//	nodes[depth].erase(iterator);
+		//}
+
+		float tileScale = node.tileWidth/2;
 		auto centerOfParentTile = node.worldPosition;
-		glm::vec3 leftTop;
-		leftTop.x = centerOfParentTile.x + tileScale / 2;
-		leftTop.y = 0.f;
-		leftTop.z = centerOfParentTile.z + tileScale / 2;
-		glm::vec3 rightTop;
 
-		rightTop.x = centerOfParentTile.x - tileScale / 2;
-		rightTop.y = 0.f;
-		rightTop.z = centerOfParentTile.z + tileScale / 2;
+		Node leftTop;
+		leftTop.worldPosition.x = centerOfParentTile.x + tileScale / 2;
+		leftTop.worldPosition.y = 0.f;
+		leftTop.worldPosition.z = centerOfParentTile.z + tileScale / 2;
+		leftTop.index = ChildOfParent(0,node.index, depth);
+		leftTop.tileWidth = tileScale;
+		Node rightTop;
 
-		glm::vec3 leftBottom;
+		rightTop.worldPosition.x = centerOfParentTile.x - tileScale / 2;
+		rightTop.worldPosition.y = 0.f;
+		rightTop.worldPosition.z = centerOfParentTile.z + tileScale / 2;
+		rightTop.index = ChildOfParent(1, node.index, depth);
+		rightTop.tileWidth = tileScale;
+		Node leftBottom;
 
-		leftBottom.x = centerOfParentTile.x + tileScale / 2;
-		leftBottom.y = 0.f;
-		leftBottom.z = centerOfParentTile.z - tileScale / 2;
+		leftBottom.worldPosition.x = centerOfParentTile.x + tileScale / 2;
+		leftBottom.worldPosition.y = 0.f;
+		leftBottom.worldPosition.z = centerOfParentTile.z - tileScale / 2;
+		leftBottom.index = ChildOfParent(2, node.index, depth);
+		leftBottom.tileWidth = tileScale;
+
+		Node rightBottom;
 
 
-		glm::vec3 rightBottom;
+		rightBottom.worldPosition.x = centerOfParentTile.x - tileScale / 2;
+		rightBottom.worldPosition.y = 0.f;
+		rightBottom.worldPosition.z = centerOfParentTile.z - tileScale / 2;
+		rightBottom.index = ChildOfParent(3, node.index, depth);
+		rightBottom.tileWidth = tileScale;
+
+		
+
+		nodes[depth].emplace_back(leftTop);
+		nodes[depth].emplace_back(rightTop);
+		nodes[depth].emplace_back(leftBottom);
+		nodes[depth].emplace_back(rightBottom);
+		return  { leftTop ,rightTop,leftBottom,rightBottom };
 
 
-		rightBottom.x = centerOfParentTile.x - tileScale / 2;
-		rightBottom.y = 0.f;
-		rightBottom.z = centerOfParentTile.z - tileScale / 2;
-		//nodes.emplace_back(leftTop, tileScale, depth);
-		//nodes.emplace_back(rightTop, tileScale, depth);
-		//nodes.emplace_back(leftBottom, tileScale, depth);
-		//nodes.emplace_back(rightBottom, tileScale, depth);
 	}
-	void Quadtree::BuildTree()
+	void Quadtree::BuildTree(glm::vec3 playerPos,Node& nodeToDivide,int depth)
 	{
+		glm::vec3 posPlayer = playerPos;
+		//auto distance = posPlayer - tilePos;
+		bool isDecreaseRes = false;
+		auto tilePos = nodeToDivide.worldPosition;
 
+		if (depth >= levelOfDetail)
+		{
+			return;
+		}
+		auto children = GenerateChildren(nodeToDivide, depth);
+		float tileWidthOfTileToDivide = nodeToDivide.tileWidth;
+		const glm::vec3 rightOffset{ -tileWidthOfTileToDivide * 2 ,0,0 };
+		const glm::vec3 upOffset{ 0,0,tileWidthOfTileToDivide * 2 };
+		const glm::vec3 bottomOffset{ 0,0,-tileWidthOfTileToDivide * 2 };
+		const glm::vec3 leftOffset{ tileWidthOfTileToDivide * 2,0,0 };
+		const glm::vec3 leftTopOffset{ tileWidthOfTileToDivide * 2,0,tileWidthOfTileToDivide * 2 };
+		const glm::vec3 rightTopOffset{ -tileWidthOfTileToDivide * 2,0,tileWidthOfTileToDivide * 2 };
+		const glm::vec3 rightBottomOffset{ -tileWidthOfTileToDivide * 2,0,-tileWidthOfTileToDivide * 2 };
+		const glm::vec3 leftBottomOffset{ tileWidthOfTileToDivide * 2,0,-tileWidthOfTileToDivide * 2 };
+
+
+		if (depth != 1)
+		{
+			//auto nodeLeftTop = GetLeft(0, nodeToDivide.index, depth);
+			//auto nodeLeftBottom = GetLeft(3, nodeToDivide.index, depth);
+
+			//auto nodeRight = GetRight(nodeToDivide);
+			//auto nodeUp = GetUp(nodeToDivide);
+			//auto nodeBottom = GetBottom(nodeToDivide);
+
+			//GenerateChildren(nodeLeft, depth);
+			//GenerateChildren(nodeUp,  depth);
+			//GenerateChildren(nodeBottom,  depth);
+			//GenerateChildren(nodeLeft,  depth);
+		}
+		
+
+
+		auto tileLeftTop = tilePos + glm::vec3{ tileWidthOfTileToDivide / 2  ,0,tileWidthOfTileToDivide / 2 };
+		auto tileRightTop = tilePos + glm::vec3{ -tileWidthOfTileToDivide / 2  ,0,tileWidthOfTileToDivide / 2 };
+		auto tileLeftBottom = tilePos + glm::vec3{ tileWidthOfTileToDivide / 2 ,0,-tileWidthOfTileToDivide / 2 };
+		auto tileRightBottom = tilePos + glm::vec3{ -tileWidthOfTileToDivide / 2  ,0,-tileWidthOfTileToDivide / 2 };
+
+		// Calculate distances
+		float distLeftTop = glm::distance(posPlayer, tileLeftTop);
+		float distRightTop = glm::distance(posPlayer, tileRightTop);
+		float distLeftBottom = glm::distance(posPlayer, tileLeftBottom);
+		float distRightBottom = glm::distance(posPlayer, tileRightBottom);
+
+		// Find the position closest to posPlayer and get new parent index from generated tiles
+		Node closestTilePos;
+		if (distLeftTop <= distRightTop && distLeftTop <= distLeftBottom && distLeftTop <= distRightBottom)
+		{
+			//lefttop
+			closestTilePos= children.leftTop;
+		}
+		else if (distRightTop <= distLeftTop && distRightTop <= distLeftBottom && distRightTop <= distRightBottom)
+		{
+			//righttop
+			closestTilePos= children.rightTop;
+		}
+		else if (distLeftBottom <= distLeftTop && distLeftBottom <= distRightTop && distLeftBottom <= distRightBottom)
+		{
+			//left bottom
+			closestTilePos = children.leftBottom;
+		}
+		else
+		{
+			//right bottom
+			closestTilePos = children.rightBottom;
+		}
+		BuildTree(playerPos, closestTilePos,++depth);
 	}
 
 }

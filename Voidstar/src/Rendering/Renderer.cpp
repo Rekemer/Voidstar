@@ -25,6 +25,21 @@
 #include"tracy/TracyVulkan.hpp"
 #include <filesystem>
 #include <cstdlib>
+#include <algorithm>
+
+
+namespace std
+{
+	template<>
+	struct hash<glm::vec3>
+	{
+		size_t operator()(const glm::vec3& key) const
+		{
+			std::string keyString = std::to_string(key.x) + std::to_string(key.y) + std::to_string(key.z);
+			return std::hash<std::string>()(keyString);
+		}
+	};
+}
 namespace Voidstar
 {
 	
@@ -39,12 +54,7 @@ namespace Voidstar
 	std::string BASE_SPIRV_OUTPUT = BASE_SHADER_PATH+"Binary/";
 	#define INSTANCE_COUNT 4096
 	#define ZEROPOS 1
-	const float groundSize = 100;
-	const int widthGround = 2;
-	const int heightGround = 2;
 	
-
-
 
 	template<typename T>
 	const uint64_t SizeOfBuffer(const uint64_t bufferSize,const T& bufferElement) 
@@ -183,7 +193,57 @@ namespace Voidstar
 	{
 
 	}
+	std::vector<Vertex> GenerateSphere(float radius, int rings,int sectors, std::vector<IndexType>& indices)
+	{
+		std::vector<Vertex> vertices;
+		float const R = 1.0f / static_cast<float>(rings - 1);
+		float const S = 1.0f / static_cast<float>(sectors - 1);
+		{
+		
+			int r, s;
+			float pi = 3.14159;
+			for (r = 0; r < rings; ++r) {
+				for (s = 0; s < sectors; ++s) {
+					float const y = glm::sin(-pi * 2 + pi * r * R);
+					float const x = glm::cos(2 * pi * s * S) * glm::sin(pi * r * R);
+					float const z = glm::sin(2 * pi * s * S) * glm::sin(pi * r * R);
 
+					Vertex vertex;
+					vertex.x = x * radius;
+					vertex.y = y * radius;
+					vertex.z = z * radius;
+
+					vertices.push_back(vertex);
+				}
+			}
+		}
+
+		{
+			int r, s;
+
+			for (r = 0; r < rings - 1; ++r) {
+				for (s = 0; s < sectors - 1; ++s) {
+					int first = r * sectors + s;
+					int second = (r + 1) * sectors + s;
+					int third = (r + 1) * sectors + (s + 1);
+					int fourth = r * sectors + (s + 1);
+
+					indices.push_back(first);
+					indices.push_back(second);
+					indices.push_back(third);
+
+					indices.push_back(first);
+					indices.push_back(third);
+					indices.push_back(fourth);
+				}
+			}
+		}
+		
+
+
+		return vertices;
+
+	}
 	std::vector<Vertex> GeneratePlane(float detail, std::vector<IndexType>& indices)
 	{
 		std::vector<Vertex> vertices;
@@ -499,6 +559,51 @@ namespace Voidstar
 		//m_InstanceData.reserve(100);
 
 
+
+		{
+			std::vector<IndexType> indices;
+			auto vertices = GenerateSphere(1.,20.,20, indices);
+			auto indexSize = SizeOfBuffer(indices.size(), indices[0]);
+			{
+				SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(indexSize);
+
+
+				{
+					BufferInputChunk inputBuffer;
+					inputBuffer.size = indexSize;
+					inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+					inputBuffer.usage = vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst;
+					m_IndexSphereBuffer = CreateUPtr<IndexBuffer>(inputBuffer, indices.size(), vk::IndexType::eUint32);
+
+				}
+
+				m_TransferCommandBuffer[0].BeginTransfering();
+				m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_IndexSphereBuffer.get(), (void*)indices.data(), indexSize);
+				m_TransferCommandBuffer[0].EndTransfering();
+
+
+
+			}
+
+			auto vertexSize = SizeOfBuffer(vertices.size(), vertices[0]);
+			void* vertexData = const_cast<void*>(static_cast<const void*>(vertices.data()));
+			SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(vertexSize);
+			{
+				BufferInputChunk inputBuffer;
+				inputBuffer.size = vertexSize;
+				inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+				inputBuffer.usage = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer;
+
+				m_SphereBuffer = CreateUPtr<Buffer>(inputBuffer);
+			}
+
+			m_TransferCommandBuffer[0].BeginTransfering();
+			m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_SphereBuffer.get(), (void*)vertices.data(), vertexSize);
+			m_TransferCommandBuffer[0].EndTransfering();
+		}
+		
+
+
 		CreateMSAAFrame();
 		CreatePipeline();
 		CreateFramebuffers();
@@ -517,7 +622,6 @@ namespace Voidstar
 		ctx = TracyVkContextCalibrated(physDev,dev,queue, m_TracyCommandBuffer.GetCommandBuffer(),
 			vkGetPhysicalDeviceCalibrateableTimeDomainsEXT, vkGetCalibratedTimestampsEXT);
 
-		GenerateTerrain();
 		
 
 
@@ -652,7 +756,7 @@ namespace Voidstar
 	}
 
 
-	void Renderer::RecordCommandBuffer(uint32_t imageIndex)
+	void Renderer::RecordCommandBuffer(uint32_t imageIndex,vk::RenderPass& renderPass,vk::Pipeline& pipeline, vk::PipelineLayout& pipelineLayout, int instances)
 	{
 
 		vk::CommandBufferBeginInfo beginInfo = {};
@@ -662,7 +766,7 @@ namespace Voidstar
 		commandBuffer.begin(beginInfo);
 		{
 			TracyVkZone(ctx, commandBuffer, "Rendering");
-			m_RenderCommandBuffer[imageIndex].BeginRenderPass(&m_RenderPass, &m_Swapchain->GetFrames()[imageIndex].framebuffer, &m_Swapchain->GetExtent());
+			m_RenderCommandBuffer[imageIndex].BeginRenderPass(&renderPass, &m_Swapchain->GetFrames()[imageIndex].framebuffer, &m_Swapchain->GetExtent());
 			vk::Viewport viewport;
 			viewport.x = 0;
 			viewport.y = 0;
@@ -675,10 +779,10 @@ namespace Voidstar
 			scissors.offset = vk::Offset2D{(uint32_t)0,(uint32_t)0};
 			scissors.extent= vk::Extent2D{ (uint32_t)m_ViewportWidth,(uint32_t)m_ViewportHeight};
 
-			commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PipelineLayout, 0, m_DescriptorSets[imageIndex],nullptr);
-			commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PipelineLayout, 1, m_DescriptorSetTex, nullptr);
+			commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout, 0, m_DescriptorSets[imageIndex],nullptr);
+			commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout, 1, m_DescriptorSetTex, nullptr);
 			
-			commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_Pipeline);
+			commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
 			vk::DeviceSize offsets[] = { 0 };
 
 			{
@@ -699,7 +803,7 @@ namespace Voidstar
 
 			commandBuffer.bindIndexBuffer(m_IndexBuffer->GetBuffer(), 0, m_IndexBuffer->GetIndexType());
             auto amount = m_IndexBuffer->GetIndexAmount();
-			commandBuffer.drawIndexed(static_cast<uint32_t>(amount),m_InstanceData.size(), 0, 0, 0);
+			commandBuffer.drawIndexed(static_cast<uint32_t>(amount),instances, 0, 0, 0);
 			
 			//commandBuffer.draw(8192, 1, 0, 0);
 		
@@ -721,9 +825,16 @@ namespace Voidstar
 	void Renderer::Render()
 	{
 		m_InstanceData.clear();
-		GenerateTerrain();
-		
+		auto quadTree = Quadtree::Build({0,0,0});
 
+		
+		for (auto& entry : quadTree.nodes)
+		{
+			for (auto node : entry.second)
+			{
+				m_InstanceData.emplace_back(node.worldPosition,node.tileWidth,0);
+			}
+		}
 		
 
 		{
@@ -785,7 +896,8 @@ namespace Voidstar
 			ZoneScopedN("Sumbit render commands");
 			renderCommandBuffer.BeginRendering();
 
-			RecordCommandBuffer(imageIndex);
+			RecordCommandBuffer(imageIndex,m_RenderPass,m_Pipeline,m_PipelineLayout,m_InstanceData.size());
+			//RecordCommandBuffer(imageIndex,  m_DebugRenderPass, m_DebugPipeline, m_DebugPipelineLayout,1);
 			
 			renderCommandBuffer.Submit(waitSemaphores, signalSemaphores, &m_InFlightFence);
 			renderCommandBuffer.EndRendering();
@@ -890,8 +1002,40 @@ namespace Voidstar
 		return vInputAttribDescription;
 	}
 
+	float random(glm::vec2 st) {
+		return glm::fract(glm::sin(glm::dot(st,
+			glm::vec2(12.9898, 78.233))) *
+			43758.5453123);
+	}
+	float lerp(float a, float b, float t)
+	{
+		return a + (b - a) * t;
+	}
+	float noise(glm::vec2 cell, glm::vec2 uv, float nextVertexOffset) {
+		glm::vec2 i = cell;
+		glm::vec2 f = uv;
+		// i = vec2(gl_InstanceIndex,0);
+		float a = random(i);
+		float b = random(i + glm::vec2(nextVertexOffset, 0.0));
+		float c = random(i + glm::vec2(0.0, nextVertexOffset));
+		float d = random(i + glm::vec2(nextVertexOffset, nextVertexOffset));
+
+		// smooth step function lol
+		glm::vec2 u = f * f * (3.0f - 2.0f * f);
+		//u = vec2(1,1);
+
+		//return u.x;
+		float interpolated;
+
+		float interpolatedX = lerp(a, b, u.x);
+		float interpolatedY = lerp(c, d, u.x);
+		interpolated = lerp(interpolatedX, interpolatedY, u.y);
+
+		return interpolated;
+	}
 	void Renderer::CreatePipeline()
 	{
+		// terrain pipeline
 		GraphicsPipelineSpecification specs;
 
 		auto swapchainFormat = m_Swapchain->GetFormat();
@@ -914,11 +1058,12 @@ namespace Voidstar
 		{
 			VertexInputAttributeDescription(0,0,vk::Format::eR32G32B32Sfloat,offsetof(Vertex, Position)),
 			VertexInputAttributeDescription(0,1,vk::Format::eR32G32B32A32Sfloat,offsetof(Vertex, Color)),
-			VertexInputAttributeDescription(0,2,vk::Format::eR32G32Sfloat,offsetof(Vertex, UV)),
+			VertexInputAttributeDescription(0,2,vk::Format::eR32G32B32A32Sfloat,offsetof(Vertex, noiseValue)),
+			VertexInputAttributeDescription(0,3,vk::Format::eR32Sfloat,offsetof(Vertex, UV)),
 
-			VertexInputAttributeDescription(1,3,vk::Format::eR32G32B32Sfloat,offsetof(InstanceData, pos)),
-			VertexInputAttributeDescription(1,4,vk::Format::eR32Sfloat,offsetof(InstanceData, scale)),
-			VertexInputAttributeDescription(1,5,vk::Format::eR32Sint,offsetof(InstanceData, texIndex))
+			VertexInputAttributeDescription(1,4,vk::Format::eR32G32B32Sfloat,offsetof(InstanceData, pos)),
+			VertexInputAttributeDescription(1,5,vk::Format::eR32Sfloat,offsetof(InstanceData, scale)),
+			VertexInputAttributeDescription(1,6,vk::Format::eR32Sint,offsetof(InstanceData, texIndex))
 		};
 
 		specs.bindingDescription = bindings;
@@ -933,10 +1078,60 @@ namespace Voidstar
 		m_DescriptorSetLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutTex->GetLayout()};
 
 		specs.descriptorSetLayout = m_DescriptorSetLayouts;
-		auto pipline = CreatePipeline(specs);
+		auto pipline = CreatePipeline(specs, vk::PrimitiveTopology::ePatchList);
 		m_Pipeline = pipline.pipeline;
 		m_PipelineLayout= pipline.layout;
 		m_RenderPass= pipline.renderpass;
+
+		// debug pipeline
+
+		//{
+		//	GraphicsPipelineSpecification specs;
+		//
+		//	auto swapchainFormat = m_Swapchain->GetFormat();
+		//	auto swapChainExtent = m_Swapchain->GetExtent();
+		//	specs.device = m_Device->GetDevice();
+		//
+		//	specs.vertexFilepath = BASE_SPIRV_OUTPUT + "debug.spvV";
+		//	specs.fragmentFilepath = BASE_SPIRV_OUTPUT + "default.spvF";
+		//	specs.swapchainExtent = swapChainExtent;
+		//	specs.swapchainImageFormat = swapchainFormat;
+		//
+		//
+		//	std::vector<vk::VertexInputBindingDescription> bindings{ CreateBindingDescription(0,sizeof//(Vertex),vk::VertexInputRate::eVertex) ,CreateBindingDescription(1,sizeof//(InstanceData),vk::VertexInputRate::eInstance) };
+		//
+		//	std::vector<vk::VertexInputAttributeDescription> attributeDescriptions;
+		//
+		//	attributeDescriptions =
+		//	{
+		//		VertexInputAttributeDescription(0,0,vk::Format::eR32G32B32Sfloat,offsetof(Vertex, Position)),
+		//		VertexInputAttributeDescription(0,1,vk::Format::eR32G32B32A32Sfloat,offsetof(Vertex, Color)),
+		//		VertexInputAttributeDescription(0,2,vk::Format::eR32G32Sfloat,offsetof(Vertex, UV)),
+		//
+		//		VertexInputAttributeDescription(1,3,vk::Format::eR32G32B32Sfloat,offsetof(InstanceData, pos)),
+		//		VertexInputAttributeDescription(1,4,vk::Format::eR32Sfloat,offsetof(InstanceData, scale)),
+		//		VertexInputAttributeDescription(1,5,vk::Format::eR32Sint,offsetof(InstanceData, texIndex))
+		//	};
+		//
+		//	specs.bindingDescription = bindings;
+		//
+		//
+		//
+		//	specs.attributeDescription = attributeDescriptions;
+		//	//specs.attributeDescription = Particle::GetAttributeDescriptions();
+		//
+		//	auto samples = RenderContext::GetDevice()->GetSamples();
+		//	specs.samples = samples;
+		//	m_DescriptorSetLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout//(),m_DescriptorSetLayoutTex->GetLayout() };
+		//
+		//	specs.descriptorSetLayout = m_DescriptorSetLayouts;
+		//
+		//	auto pipline = CreatePipeline(specs, vk::PrimitiveTopology::eTriangleList);
+		//	m_DebugPipeline = pipline.pipeline;
+		//	m_DebugPipelineLayout = pipline.layout;
+		//	m_DebugRenderPass = pipline.renderpass;
+		//
+		//}
 	}
 
 	std::vector<char> ReadFile(std::string filename)
@@ -975,12 +1170,22 @@ namespace Voidstar
 		}
 	}
 
-	std::unordered_map<float, int> indexes;
+	std::unordered_map < glm::vec3 , int > indexes;
+	std::vector<int> erased;
+	static int id = 0;
 	void GenerateChildren(std::vector<InstanceData>& tiles, glm::vec3 centerOfParentTile, float tileScale,int depth)
 	{
 		// assign indexes of neighbours?
 		//tileScale /= 2;
-		
+		float len = glm::dot(centerOfParentTile, glm::vec3{0,0,0});
+		if (indexes.find(centerOfParentTile) != indexes.end())
+		{
+			{
+				if (std::find(erased.begin(), erased.end(), indexes.at(centerOfParentTile)) == erased.end())
+				{
+					erased.push_back(indexes[centerOfParentTile]);
+				}
+			}
 		glm::vec3 leftTop;
 		leftTop.x = centerOfParentTile.x + tileScale/2 ;
 		leftTop.y = 0.f;
@@ -1004,14 +1209,17 @@ namespace Voidstar
 		rightBottom.x = centerOfParentTile.x - tileScale/2 ;
 		rightBottom.y = 0.f;
 		rightBottom.z = centerOfParentTile.z - tileScale/2 ;
-		tiles.emplace_back(leftTop, tileScale, depth);
-		indexes[glm::length(leftTop)] = tiles.size() - 1;
-		tiles.emplace_back(rightTop, tileScale, depth);
-		indexes[glm::length(rightTop)] = tiles.size() - 1;
-		tiles.emplace_back(leftBottom, tileScale, depth);
-		indexes[glm::length(leftBottom)] = tiles.size() - 1;
-		tiles.emplace_back(rightBottom, tileScale, depth);
-		indexes[glm::length(rightBottom)] = tiles.size() - 1;
+		tiles.emplace_back(leftTop, tileScale, ++id);
+		indexes[leftTop] = id;
+		tiles.emplace_back(rightTop, tileScale,  ++id);
+		indexes[rightTop] = id;
+		tiles.emplace_back(leftBottom, tileScale,  ++id);
+		indexes[leftBottom] = id;
+		tiles.emplace_back(rightBottom, tileScale,  ++id);
+		indexes[rightBottom] = id;
+		}
+		
+		
 	}
 	//tile scale is width and height of tile
 	void GenerateLeftTopChildren(std::vector<InstanceData>& tiles,glm::vec3 centerOfParentTile,float tileScale)
@@ -1153,10 +1361,10 @@ namespace Voidstar
 #endif // DEBUG
 
 		
-		if (depth >= levelOfDetail && isDecreaseRes)
-		{
-			return;
-		}
+		//if (depth >= levelOfDetail && isDecreaseRes)
+		//{
+		//	return;
+		//}
 		auto dirToPlayer = glm::normalize(distance);
 		bool isTop = glm::dot(dirToPlayer, glm::vec3{ 0,0,1 }) > 0;
 		float side = glm::dot(dirToPlayer, glm::vec3{ 1,0,0 });
@@ -1183,13 +1391,12 @@ namespace Voidstar
 
 		GenerateChildren(m_InstanceData, tilePos+ rightOffset, tileWidthOfTileToDivide,depth);
 		GenerateChildren(m_InstanceData, tilePos+ upOffset, tileWidthOfTileToDivide,depth);
-		GenerateChildren(m_InstanceData, tilePos+bottomOffset, tileWidthOfTileToDivide,depth);
+		GenerateChildren(m_InstanceData, tilePos +bottomOffset, tileWidthOfTileToDivide,depth);
 		GenerateChildren(m_InstanceData, tilePos+ leftOffset, tileWidthOfTileToDivide,depth);
 		GenerateChildren(m_InstanceData, tilePos+ leftTopOffset, tileWidthOfTileToDivide,depth);
 		GenerateChildren(m_InstanceData, tilePos+ rightTopOffset, tileWidthOfTileToDivide,depth);
 		GenerateChildren(m_InstanceData, tilePos+ rightBottomOffset, tileWidthOfTileToDivide,depth);
-		GenerateChildren(m_InstanceData, tilePos+ leftBottomOffset, tileWidthOfTileToDivide,depth);
-		GenerateChildren(m_InstanceData, tilePos + glm::vec3(0,0,tileWidthOfTileToDivide*2), tileWidthOfTileToDivide, depth+1);
+		//GenerateChildren(m_InstanceData, tilePos+ leftBottomOffset, tileWidthOfTileToDivide,depth);
 
 
 		//auto iterator = indexes.find(glm::length(centerOfParentTile));
@@ -1221,7 +1428,7 @@ namespace Voidstar
 		}
 
 
-		auto tileLeftTop = tilePos + glm::vec3{ tileWidthOfTileToDivide /2  ,0,tileWidthOfTileToDivide /2 };
+ 		auto tileLeftTop = tilePos + glm::vec3{ tileWidthOfTileToDivide /2  ,0,tileWidthOfTileToDivide /2 };
 		auto tileRightTop = tilePos + glm::vec3{ -tileWidthOfTileToDivide /2  ,0,tileWidthOfTileToDivide /2};
 		auto tileLeftBottom = tilePos + glm::vec3{ tileWidthOfTileToDivide /2 ,0,-tileWidthOfTileToDivide /2 };
 		auto tileRightBottom = tilePos + glm::vec3{ -tileWidthOfTileToDivide /2  ,0,-tileWidthOfTileToDivide /2 };
@@ -1259,102 +1466,86 @@ namespace Voidstar
 		//GenerateTerrain(tilePos + glm::vec3(0, 0, tileWidthOfTileToDivide * 2),depth, tileWidthOfTileToDivide,parentIndex);
 		tileWidthOfTileToDivide /=  2;
 		
-		//GenerateTerrain(closestTilePos,++depth, tileWidthOfTileToDivide,parentIndex);
+		GenerateTerrain(closestTilePos,++depth, tileWidthOfTileToDivide,parentIndex);
 	}
 	void Renderer::GenerateTerrain()
 	{
-		glm::vec3 posPlayer = m_App->GetCamera()->m_Position;
-#if ZEROPOS
-
-		posPlayer = glm::vec3{ 0,0,0 };
-#endif // ZEROPOS
-
-		glm::vec3 currentTilePos;
-		float depth = 0;
-		float shortestPath =  1000;
-		float longestPath =  0;
-		// generate children
-
-		float currentTileWidth = groundSize / static_cast<float>(widthGround);
-		float currentTileHeight = groundSize / static_cast<float>(heightGround); ;
-		glm::vec3 centerOffset = { currentTileWidth /2,0.,currentTileHeight /2 };
-		glm::vec3 currentTilePosBiggest = {0,0,0};
-		bool isBiggestFound = false;
-		uint32_t index = 0;
-		for (int i = -(widthGround/2 + widthGround%2); i < (widthGround/2); i++)
-		{
-			for (int j = -(heightGround / 2 + heightGround % 2); j < (heightGround / 2 ); j++)
-			{
-				//for generate children by direction
-				//glm::vec3 position = glm::vec3(i * newTileWidth, 0, j * newTileHeight) + centerOffset;
-				// just generate children
-				glm::vec3 position = glm::vec3(i * currentTileWidth, 0, j * currentTileHeight);
-				if (shortestPath > glm::length(posPlayer - position))
-				{
-					if (!isBiggestFound)
-					{
-						isBiggestFound = true;
-						currentTilePosBiggest = position;
-					}
-					currentTilePos = position;
-					index = m_InstanceData.size();
-					shortestPath = glm::length(posPlayer - position);
-
-				}
-				m_InstanceData.emplace_back(position, currentTileWidth, 1);
-				indexes[glm::length(position)] = m_InstanceData.size()-1;
-			}
-		
-		}
-		//glm::vec3 position = glm::vec3(0, 0, 0);
-		//currentTileWidth = position;
-		//m_InstanceData.emplace_back(position, currentTileWidth, 1);
-		float newTileWidth = currentTileWidth / 2;
-		GenerateTerrain(currentTilePos,2, newTileWidth , index);
-		//GenerateTerrain(currentTilePos+glm::vec3{ -newTileWidth,0,newTileWidth },2, newTileWidth , index); //right up
-		//GenerateTerrain(currentTilePos+glm::vec3{ -newTileWidth,0,0},2, newTileWidth, index); // right
-		//GenerateTerrain(currentTilePos+glm::vec3{ 0,0,newTileWidth },2, newTileWidth, index); // up
-		
-		//GenerateTerrain(currentTilePos + glm::vec3{ -newTileWidth,0,newTileWidth }, 0, newTileWidth / 2);
-		//GenerateTerrain(currentTilePosBiggest + glm::vec3{ newTileWidth,0,newTileWidth }, 0, newTileWidth / 2);
-		//GenerateTerrain(currentTilePosBiggest + glm::vec3{ newTileWidth,0,-newTileWidth }, 0, newTileWidth / 2);
-		//GenerateTerrain(currentTilePosBiggest + glm::vec3{ -newTileWidth,0,-newTileWidth }, 0, newTileWidth / 2);
-
-		//if (side > 0 && isTop)
-		//{
-		//	// left top
-		//	GenerateLeftTopChildren(m_InstanceData, glm::vec3{ 0,0.,0. }, newTileWidth / 2);
-		//}
-		//else if (side < 0 && isTop)
-		//{
-		//	// right top
-		//	GenerateRightTopChildren(m_InstanceData, glm::vec3{ 0,0.,0. }, newTileWidth / 2);
-		//}
-		//else if (side > 0 && !isTop)
-		//{
-		//	// left bottom
-		//	GenerateLeftBottomChildren(m_InstanceData, glm::vec3{ 0,0.,0. }, newTileWidth / 2);
-		//}
-		//else if (side < 0 && !isTop)
-		//{
-		//	// right bottom
-		//	currentTilePos = { -newTileWidth / 2 ,0,-newTileWidth / 2 };
-		//	GenerateRightBottomChildren(m_InstanceData, glm::vec3{ 0,0.,0. }, newTileWidth / 2);
-		//}
-
-		//GenerateLeftTopChildren(m_InstanceData, glm::vec3{0,0.,0.}, newTileWidth/2);
-		//
-		//GenerateRightTopChildren(m_InstanceData, glm::vec3{0,0.,0.}, newTileWidth/2);
-		//GenerateRightBottomChildren(m_InstanceData, glm::vec3{0,0.,0.}, newTileWidth/2);
-		//GenerateRightBottomChildren(m_InstanceData, glm::vec3{ -newTileWidth / 2,0.,-newTileWidth / 2 }, newTileWidth/4);
-		//
-		//GenerateRightBottomChildren(m_InstanceData, glm::vec3{ -newTileWidth / 2,0.,-newTileWidth / 2 } + glm::vec3{ -newTileWidth / 4,0.,-newTileWidth / 4. }, newTileWidth/8);
-		//GenerateLeftTopChildren(m_InstanceData, glm::vec3{ -newTileWidth / 2,0.,-newTileWidth / 2 } + glm::vec3{ -newTileWidth / 4,0.,-newTileWidth / 4. }, newTileWidth/8);
-		//GenerateRightTopChildren(m_InstanceData, glm::vec3{ -newTileWidth / 2,0.,-newTileWidth / 2 } + glm::vec3{ -newTileWidth / 4,0.,-newTileWidth / 4. }, newTileWidth/8);
-		//GenerateLeftBottomChildren(m_InstanceData, glm::vec3{ -newTileWidth / 2,0.,-newTileWidth / 2 } + glm::vec3{ -newTileWidth / 4,0.,-newTileWidth / 4. }, newTileWidth/8);
-
-
-		
+//		glm::vec3 posPlayer = m_App->GetCamera()->m_Position;
+//		
+//#if ZEROPOS
+//
+//		posPlayer = glm::vec3{ 0,0,0 };
+//#endif // ZEROPOS
+//
+//		glm::vec3 currentTilePos;
+//		float depth = 0;
+//		float shortestPath =  1000;
+//		float longestPath =  0;
+//		// generate children
+//
+//		float currentTileWidth = groundSize / static_cast<float>(widthGround);
+//		float currentTileHeight = groundSize / static_cast<float>(heightGround); ;
+//		glm::vec3 centerOffset = { currentTileWidth /2,0.,currentTileHeight /2 };
+//		glm::vec3 currentTilePosBiggest = {0,0,0};
+//		bool isBiggestFound = false;
+//		uint32_t index = 0;
+//		for (int i = -(widthGround/2 + widthGround%2); i < (widthGround/2); i++)
+//		{
+//			for (int j = -(heightGround / 2 + heightGround % 2); j < (heightGround / 2 ); j++)
+//			{
+//				//for generate children by direction
+//				//glm::vec3 position = glm::vec3(i * newTileWidth, 0, j * newTileHeight) + centerOffset;
+//				// just generate children
+//				glm::vec3 position = glm::vec3(i * currentTileWidth, 0, j * currentTileHeight);
+//				if (shortestPath > glm::length(posPlayer - position))
+//				{
+//					if (!isBiggestFound)
+//					{
+//						isBiggestFound = true;
+//						currentTilePosBiggest = position;
+//					}
+//					currentTilePos = position;
+//					index = m_InstanceData.size();
+//					shortestPath = glm::length(posPlayer - position);
+//
+//				}
+//				m_InstanceData.emplace_back(position, currentTileWidth,++id);
+//				indexes[position] = id;
+//			}
+//		
+//		}
+//		//glm::vec3 position = glm::vec3(0, 0, 0);
+//		//currentTileWidth = position;
+//		//m_InstanceData.emplace_back(position, currentTileWidth, 1);
+//		float newTileWidth = currentTileWidth / 2;
+//		GenerateTerrain(currentTilePos,2, newTileWidth , index);
+//		
+//
+//
+//		for (auto erase : erased)
+//		{
+//			m_InstanceData.erase(
+//				std::remove_if(
+//					m_InstanceData.begin(),
+//					m_InstanceData.end(),
+//					[erase](const InstanceData& instance) {
+//						return std::find(erased.begin(), erased.end(), instance.texIndex) != erased.end();
+//					}
+//				),
+//				m_InstanceData.end()
+//						);
+//		}
+//
+//		// generate noise for each vertex
+//		for (auto instance : m_InstanceData)
+//		{
+//
+//		}
+//
+//
+//		erased.clear();
+//		indexes.clear();
+//		id = 0;
 		
 	}
 
@@ -1475,7 +1666,7 @@ namespace Voidstar
 		}
 	}
 
-	GraphicsPipeline Renderer::CreatePipeline(GraphicsPipelineSpecification& spec)
+	GraphicsPipeline Renderer::CreatePipeline(GraphicsPipelineSpecification& spec, vk::PrimitiveTopology topology)
 	{
 		/*
 		* Build and return a graphics pipeline based on the given info.
@@ -1508,14 +1699,17 @@ namespace Voidstar
 		//Input Assembly
 		vk::PipelineInputAssemblyStateCreateInfo inputAssemblyInfo = {};
 		inputAssemblyInfo.flags = vk::PipelineInputAssemblyStateCreateFlags();
-		//inputAssemblyInfo.topology = vk::PrimitiveTopology::eTriangleList;
-		inputAssemblyInfo.topology = vk::PrimitiveTopology::ePatchList;
-
-		vk::PipelineTessellationStateCreateInfo tesselationState{};
-		tesselationState.patchControlPoints = 4;
-
+		inputAssemblyInfo.topology = topology;
 		pipelineInfo.pInputAssemblyState = &inputAssemblyInfo;
-		pipelineInfo.pTessellationState = &tesselationState;
+
+		if (spec.tessCFilepath != "")
+		{	
+			vk::PipelineTessellationStateCreateInfo tesselationState{};
+			tesselationState.patchControlPoints = 4;
+
+			pipelineInfo.pTessellationState = &tesselationState;
+		}
+	
 
 
 
@@ -1597,30 +1791,34 @@ namespace Voidstar
 			shaderStages.push_back(fragmentShaderInfo);
 		}
 		
+		vk::ShaderModule tessControl, tessEvaulation;
+		if (spec.tessCFilepath != "")
+		{
 
-
-			vk::ShaderModule tessControl = CreateModule(
+			tessControl = CreateModule(
 				spec.tessCFilepath, spec.device
 			);
-		{
-			vk::PipelineShaderStageCreateInfo tessShaderInfo = {};
-			tessShaderInfo.flags = vk::PipelineShaderStageCreateFlags();
-			tessShaderInfo.stage = vk::ShaderStageFlagBits::eTessellationControl;
-			tessShaderInfo.module = tessControl;
-			tessShaderInfo.pName = "main";
-			shaderStages.push_back(tessShaderInfo);
-		}
-			vk::ShaderModule tessEvaulation = CreateModule(
+			{
+				vk::PipelineShaderStageCreateInfo tessShaderInfo = {};
+				tessShaderInfo.flags = vk::PipelineShaderStageCreateFlags();
+				tessShaderInfo.stage = vk::ShaderStageFlagBits::eTessellationControl;
+				tessShaderInfo.module = tessControl;
+				tessShaderInfo.pName = "main";
+				shaderStages.push_back(tessShaderInfo);
+			}
+			tessEvaulation = CreateModule(
 				spec.tessEFilepath, spec.device
 			);
-		{
-			vk::PipelineShaderStageCreateInfo tessShaderInfo = {};
-			tessShaderInfo.flags = vk::PipelineShaderStageCreateFlags();
-			tessShaderInfo.stage = vk::ShaderStageFlagBits::eTessellationEvaluation;
-			tessShaderInfo.module = tessEvaulation;
-			tessShaderInfo.pName = "main";
-			shaderStages.push_back(tessShaderInfo);
+			{
+				vk::PipelineShaderStageCreateInfo tessShaderInfo = {};
+				tessShaderInfo.flags = vk::PipelineShaderStageCreateFlags();
+				tessShaderInfo.stage = vk::ShaderStageFlagBits::eTessellationEvaluation;
+				tessShaderInfo.module = tessEvaulation;
+				tessShaderInfo.pName = "main";
+				shaderStages.push_back(tessShaderInfo);
+			}
 		}
+
 
 
 
@@ -1709,8 +1907,12 @@ namespace Voidstar
 		//Finally clean up by destroying shader modules
 		spec.device.destroyShaderModule(vertexShader);
 		spec.device.destroyShaderModule(fragmentShader);
-		spec.device.destroyShaderModule(tessControl);
-		spec.device.destroyShaderModule(tessEvaulation);
+		if (tessControl)
+		{
+			spec.device.destroyShaderModule(tessControl);
+			spec.device.destroyShaderModule(tessEvaulation);
+		}
+	
 		Log::GetLog()->info("Pipeline is Created!");
 		return output;
 
@@ -1795,8 +1997,8 @@ namespace Voidstar
 		m_Swapchain.reset();
 		m_Device->GetDevice().destroyRenderPass(m_RenderPass);
 
-		m_Device->GetDevice().destroyPipeline(m_ComputePipeline);
-		m_Device->GetDevice().destroyPipelineLayout(m_ComputePipelineLayout);
+		m_Device->GetDevice().destroyPipeline(m_DebugPipeline);
+		m_Device->GetDevice().destroyPipelineLayout(m_DebugPipelineLayout);
 
 
 		m_Device->GetDevice().destroy();

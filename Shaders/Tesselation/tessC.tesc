@@ -34,16 +34,18 @@ void main()
     float maxLodLevel = 6;
     float minLodLevel = 1;
     int numPoints = 4;
-	outColor[gl_InvocationID] = inColor[gl_InvocationID];
+	
+    const int MIN_TESS_LEVEL = 1;
+    const int MAX_TESS_LEVEL = 1;
+    const float MIN_DISTANCE = 0.01;
+    const float MAX_DISTANCE = 10;
 if(gl_InvocationID == 0)
 {
     // ----------------------------------------------------------------------
     // Step 1: define constants to control tessellation parameters
 	// set these as desired for your world scale
-    const int MIN_TESS_LEVEL = 1;
-    const int MAX_TESS_LEVEL = 1;
-    const float MIN_DISTANCE = 0.01;
-    const float MAX_DISTANCE = 10;
+
+    vec4 playPos= vec4(0,0,0,0);
 
     // ----------------------------------------------------------------------
     // Step 2: transform each vertex into eye space
@@ -52,10 +54,10 @@ if(gl_InvocationID == 0)
     vec4 eyeSpacePos10 =gl_in[2].gl_Position;
     vec4 eyeSpacePos11 =gl_in[3].gl_Position;
 
-	float d00= length(eyeSpacePos00);
-	float d01= length(eyeSpacePos01);
-	float d10= length(eyeSpacePos10);
-	float d11= length(eyeSpacePos11);
+	float d00= length(eyeSpacePos00-playPos);
+	float d01= length(eyeSpacePos01-playPos);
+	float d10= length(eyeSpacePos10-playPos);
+	float d11= length(eyeSpacePos11-playPos);
 
     // ----------------------------------------------------------------------
     // Step 3: "distance" from camera scaled between 0 and 1
@@ -72,7 +74,7 @@ if(gl_InvocationID == 0)
     float tessLevel3 = mix( MAX_TESS_LEVEL, MIN_TESS_LEVEL, min(distance11, distance10) );
 
 
-	float maxTileWitdth =25.f;
+	float maxTileWitdth =5.f;
 	float tileWidth =length(gl_in[0].gl_Position - gl_in[1].gl_Position);
 	float fragments = maxTileWitdth/tileWidth;
     // ----------------------------------------------------------------------
@@ -88,6 +90,9 @@ if(gl_InvocationID == 0)
     gl_TessLevelInner[1] = max(tessLevel0, tessLevel2);
 }
   gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
+  float dist =  length(gl_in[gl_InvocationID].gl_Position)/(MAX_DISTANCE-MIN_DISTANCE);
+  outColor[gl_InvocationID] =vec4(dist,dist,dist,1);
+  outColor[gl_InvocationID] = inColor[gl_InvocationID];
 
 }
 	

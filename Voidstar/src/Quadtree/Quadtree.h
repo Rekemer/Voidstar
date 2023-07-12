@@ -1,20 +1,26 @@
 #pragma once
 #include"../Prereq.h"
 #include"glm.hpp"
+#include <unordered_map>
+#include <bitset>
+#include <optional>
 namespace Voidstar
 {
-    using NodeID = uint32_t;
+    constexpr size_t size = 64;
+    #define F_32 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+    #define F_16 0xFFFFFFFFFFFFFFFF
+    template<typename U ,typename T>
+    using Map = std::unordered_map<U,T>;
+    using Coordinate = uint32_t;
     static constexpr float inf = std::numeric_limits<float>::infinity();
-    static constexpr NodeID null = NodeID(-1);
+    static constexpr Coordinate null = Coordinate(-1);
 
     struct Node
     {
-        NodeID children[2][2]{
-            {null, null},
-            {null, null}
-        };
-        NodeID parentId;
+        Coordinate leftSibling{null}, rightSibling{null}, upSibling{null}, bottomSibling{null};
+        std::bitset<size> index;
         glm::vec3 worldPosition;
+        int depth;
         float tileWidth;
     };
     struct Box
@@ -36,20 +42,22 @@ namespace Voidstar
         }
 
     };
+    struct GeneratedChildren
+    {
+        Node  leftTop, rightTop, leftBottom, rightBottom;
+    };
     struct Quadtree
     {
         Box bbox;
-        NodeID root;
-        std::vector<Node> nodes;
+        Node root;
+        Map<int,std::vector<Node>> nodes;
 
-        static Quadtree Build(glm::vec2& posPlayer);
-        Node& GetLeft(Node& currentNode);
-        Node& GetRight(Node& currentNode);
-        Node& GetUp(Node& currentNode);
-        Node& GetBottom(Node& currentNode);
+        static Quadtree Build(glm::vec3 posPlayer);
+        Node GetNode(std::bitset<size> node, int depth);
+        std::optional<Node> GetLeft(Coordinate coord, std::bitset<size> node, int depthOfNode);
         void Clear(Node& node);
-        void GenerateChildren(Node& node);
+        GeneratedChildren GenerateChildren(Node& node, int depth);
     private:
-        void BuildTree();
+        void BuildTree(glm::vec3 playerPos, Node& nodeToDivide, int depth);
     };
 }
