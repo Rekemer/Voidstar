@@ -825,14 +825,22 @@ namespace Voidstar
 	void Renderer::Render()
 	{
 		m_InstanceData.clear();
-		auto quadTree = Quadtree::Build({0,0,0});
+		auto cameraPos = m_App->GetCamera()->m_Position;
+		auto quadTree = Quadtree::Build(cameraPos);
 
 		
 		for (auto& entry : quadTree.nodes)
 		{
 			for (auto node : entry.second)
 			{
-				m_InstanceData.emplace_back(node.worldPosition,node.tileWidth,0);
+				if (node.isDrawn)
+				{
+					m_InstanceData.emplace_back(node.worldPosition,node.tileWidth,0);
+				}
+				
+				
+				
+				
 			}
 		}
 		

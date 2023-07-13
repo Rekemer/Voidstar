@@ -14,14 +14,18 @@ namespace Voidstar
     using Coordinate = uint32_t;
     static constexpr float inf = std::numeric_limits<float>::infinity();
     static constexpr Coordinate null = Coordinate(-1);
-
     struct Node
     {
-        Coordinate leftSibling{null}, rightSibling{null}, upSibling{null}, bottomSibling{null};
         std::bitset<size> index;
         glm::vec3 worldPosition;
         int depth;
         float tileWidth;
+        bool isDrawn = true;
+
+        bool operator==(const Node& node)
+        {
+            return node.index == index;
+        }
     };
     struct Box
     {
@@ -44,7 +48,7 @@ namespace Voidstar
     };
     struct GeneratedChildren
     {
-        Node  leftTop, rightTop, leftBottom, rightBottom;
+        std::bitset<size>  leftTop, rightTop, leftBottom, rightBottom;
     };
     struct Quadtree
     {
@@ -53,11 +57,11 @@ namespace Voidstar
         Map<int,std::vector<Node>> nodes;
 
         static Quadtree Build(glm::vec3 posPlayer);
-        Node GetNode(std::bitset<size> node, int depth);
+        Node& GetNode(std::bitset<size> node, int depth);
         std::optional<Node> GetLeft(Coordinate coord, std::bitset<size> node, int depthOfNode);
         void Clear(Node& node);
         GeneratedChildren GenerateChildren(Node& node, int depth);
     private:
-        void BuildTree(glm::vec3 playerPos, Node& nodeToDivide, int depth);
+        void BuildTree(glm::vec3 playerPos, Node nodeToDivide, int depth);
     };
 }

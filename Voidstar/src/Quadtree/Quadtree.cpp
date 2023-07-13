@@ -1,5 +1,6 @@
 #include"Prereq.h"
 #include "Quadtree.h"
+#include "Log.h"
 
 
 namespace Voidstar
@@ -10,7 +11,7 @@ namespace Voidstar
 	const int widthGround = 2;
 	const int heightGround = 2;
 
-	float levelOfDetail = 6;
+	float levelOfDetail =3;
 
 
 
@@ -25,7 +26,7 @@ namespace Voidstar
 		maskCoords |= std::bitset<size>(x);
 		maskCoords <<= (childrenDepth-1) * 2;
 		nodeCoords |= maskCoords;
-		std::cout << " newNode of "<< x << "coords "<< parentIndex<< " is" << maskCoords << std::endl;
+		//std::cout << " newNode of "<< x << "coords "<< parentIndex<< " is" << maskCoords << std::endl;
 		return nodeCoords;
 
 	}
@@ -49,14 +50,27 @@ namespace Voidstar
 		auto max = glm::vec2{ 20,20 };
 		Box box{min,max};
 		result.root.tileWidth = groundSize;
+		result.root.isDrawn = false;
 		result.root.worldPosition = glm::vec3{0,0,0};
+
+
+
+		float currentTileWidth = groundSize / static_cast<float>(widthGround);
+		float currentTileHeight = groundSize / static_cast<float>(heightGround); ;
+		glm::vec3 centerOffset = { currentTileWidth /2,0.,currentTileHeight /2 };
+		glm::vec3 currentTilePosBiggest = {0,0,0};
+		bool isBiggestFound = false;
+		uint32_t index = 0;
+		float shortestPath = 1000;
+		Node currentNode;
+		
 
 		//result.GenerateChildren(result.root, 1);
 		result.BuildTree(posPlayer, result.root,1);
 		return result;
 	}
 	
-	Node Quadtree::GetNode(std::bitset<size> node, int depth)
+	Node& Quadtree::GetNode(std::bitset<size> node, int depth)
 	{
 		auto& vector = nodes[depth];
 		for (int i = 0; i < vector.size(); i++)
@@ -66,7 +80,7 @@ namespace Voidstar
 				return vector[i];
 			}
 		}
-		return{};
+		return{root};
 	}
 
 
@@ -81,15 +95,26 @@ namespace Voidstar
 		}
 		std::bitset<size> temp{ coord };
 		node[depthOfNode * 2 - 1] = temp[1];
-		node[depthOfNode*2 -2] = temp[2];
+		node[depthOfNode*2 -2] = temp[0];
 		return node;
 	}
 
+	
 	std::optional<Node> Quadtree::GetLeft(Coordinate coord,std::bitset<size> node,int depthOfNode)
 	{
 		
 
 		auto siblingIndex = GetSibling(coord, node, depthOfNode);
+
+		if (siblingIndex == node)
+		{
+		//{
+		//auto parentDepth = depthOfNode - 1;
+		//auto parent = ParentOfChild(node,depthOfNode);
+		//auto parentSibling = GetSibling(1,parent,parentDepth);
+		return {};
+		}
+
 		return GetNode(siblingIndex, depthOfNode);
 	}
 
@@ -102,34 +127,37 @@ namespace Voidstar
 	GeneratedChildren Quadtree::GenerateChildren(Node& node,int depth)
 	{
 
-		//auto iterator = std::find(nodes[depth].begin(), nodes[depth].end(), node);
-		//if (iterator != nodes.end())
+		
+		//auto parentDepth = depth - 1;
+		//if (parentDepth != 0)
 		//{
-		//	nodes[depth].erase(iterator);
+		auto& node1 = GetNode(node.index, depth - 1);
+		node1.isDrawn = false;
 		//}
-
-		float tileScale = node.tileWidth/2;
+		
+		float tileScale = node.tileWidth / 2;
 		auto centerOfParentTile = node.worldPosition;
 
+		auto childDepth = depth;
 		Node leftTop;
 		leftTop.worldPosition.x = centerOfParentTile.x + tileScale / 2;
 		leftTop.worldPosition.y = 0.f;
 		leftTop.worldPosition.z = centerOfParentTile.z + tileScale / 2;
-		leftTop.index = ChildOfParent(0,node.index, depth);
+		leftTop.index = ChildOfParent(0, node.index, childDepth);
 		leftTop.tileWidth = tileScale;
 		Node rightTop;
 
 		rightTop.worldPosition.x = centerOfParentTile.x - tileScale / 2;
 		rightTop.worldPosition.y = 0.f;
 		rightTop.worldPosition.z = centerOfParentTile.z + tileScale / 2;
-		rightTop.index = ChildOfParent(1, node.index, depth);
+		rightTop.index = ChildOfParent(1, node.index, childDepth);
 		rightTop.tileWidth = tileScale;
 		Node leftBottom;
 
 		leftBottom.worldPosition.x = centerOfParentTile.x + tileScale / 2;
 		leftBottom.worldPosition.y = 0.f;
 		leftBottom.worldPosition.z = centerOfParentTile.z - tileScale / 2;
-		leftBottom.index = ChildOfParent(2, node.index, depth);
+		leftBottom.index = ChildOfParent(2, node.index, childDepth);
 		leftBottom.tileWidth = tileScale;
 
 		Node rightBottom;
@@ -138,31 +166,31 @@ namespace Voidstar
 		rightBottom.worldPosition.x = centerOfParentTile.x - tileScale / 2;
 		rightBottom.worldPosition.y = 0.f;
 		rightBottom.worldPosition.z = centerOfParentTile.z - tileScale / 2;
-		rightBottom.index = ChildOfParent(3, node.index, depth);
+		rightBottom.index = ChildOfParent(3, node.index, childDepth);
 		rightBottom.tileWidth = tileScale;
 
-		
 
-		nodes[depth].emplace_back(leftTop);
-		nodes[depth].emplace_back(rightTop);
-		nodes[depth].emplace_back(leftBottom);
-		nodes[depth].emplace_back(rightBottom);
-		return  { leftTop ,rightTop,leftBottom,rightBottom };
-
+		nodes[childDepth].emplace_back(leftTop);
+		nodes[childDepth].emplace_back(rightTop);
+		nodes[childDepth].emplace_back(leftBottom);
+		nodes[childDepth].emplace_back(rightBottom);
+		return  { leftTop.index,rightTop.index,leftBottom.index,rightBottom.index };
+	
 
 	}
-	void Quadtree::BuildTree(glm::vec3 playerPos,Node& nodeToDivide,int depth)
+	void Quadtree::BuildTree(glm::vec3 playerPos,Node nodeToDivide,int depth)
 	{
+		//if (nodeToDivide.index == std::bitset<size>(""))
 		glm::vec3 posPlayer = playerPos;
 		//auto distance = posPlayer - tilePos;
 		bool isDecreaseRes = false;
 		auto tilePos = nodeToDivide.worldPosition;
 
-		if (depth >= levelOfDetail)
+		if (depth > levelOfDetail)
 		{
 			return;
 		}
-		auto children = GenerateChildren(nodeToDivide, depth);
+		auto& children = GenerateChildren(nodeToDivide, depth);
 		float tileWidthOfTileToDivide = nodeToDivide.tileWidth;
 		const glm::vec3 rightOffset{ -tileWidthOfTileToDivide * 2 ,0,0 };
 		const glm::vec3 upOffset{ 0,0,tileWidthOfTileToDivide * 2 };
@@ -176,14 +204,32 @@ namespace Voidstar
 
 		if (depth != 1)
 		{
-			//auto nodeLeftTop = GetLeft(0, nodeToDivide.index, depth);
-			//auto nodeLeftBottom = GetLeft(3, nodeToDivide.index, depth);
-
-			//auto nodeRight = GetRight(nodeToDivide);
+			auto parentDepth = depth - 1;
+			auto nodeLeftTop = GetLeft(0, nodeToDivide.index, parentDepth);
+			auto nodeLeftBottom = GetLeft(2, nodeToDivide.index, parentDepth);
+			auto nodeRightTop = GetLeft(1, nodeToDivide.index, parentDepth);
+			auto nodeRightBottom = GetLeft(3, nodeToDivide.index, parentDepth);
 			//auto nodeUp = GetUp(nodeToDivide);
-			//auto nodeBottom = GetBottom(nodeToDivide);
+			//auto nodeBottom = GetUp(nodeToDivide);
 
-			//GenerateChildren(nodeLeft, depth);
+			if (nodeLeftTop.has_value())
+			{
+				//Log::GetLog()->info("{0} {1} {2}",nodeLeftTop.value().worldPosition.x , nodeLeftTop.value().worldPosition.y, nodeLeftTop.value().worldPosition.z);
+				GenerateChildren(nodeLeftTop.value(), parentDepth+1);
+			}
+			if (nodeLeftBottom.has_value())
+			{
+				GenerateChildren(nodeLeftBottom.value(), parentDepth+1);
+			}
+			if (nodeRightTop.has_value())
+			{
+				//Log::GetLog()->info("{0} {1} {2}",nodeLeftTop.value().worldPosition.x , nodeLeftTop.value().worldPosition.y, nodeLeftTop.value().worldPosition.z);
+				GenerateChildren(nodeRightTop.value(), parentDepth+1);
+			}
+			if (nodeRightBottom.has_value())
+			{
+				//GenerateChildren(nodeRightBottom.value(), parentDepth+1);
+			}
 			//GenerateChildren(nodeUp,  depth);
 			//GenerateChildren(nodeBottom,  depth);
 			//GenerateChildren(nodeLeft,  depth);
@@ -203,7 +249,7 @@ namespace Voidstar
 		float distRightBottom = glm::distance(posPlayer, tileRightBottom);
 
 		// Find the position closest to posPlayer and get new parent index from generated tiles
-		Node closestTilePos;
+		std::bitset<size> closestTilePos;
 		if (distLeftTop <= distRightTop && distLeftTop <= distLeftBottom && distLeftTop <= distRightBottom)
 		{
 			//lefttop
@@ -224,7 +270,8 @@ namespace Voidstar
 			//right bottom
 			closestTilePos = children.rightBottom;
 		}
-		BuildTree(playerPos, closestTilePos,++depth);
+		auto nextNode = GetNode(closestTilePos, depth);
+		BuildTree(playerPos, nextNode,++depth);
 	}
 
 }
