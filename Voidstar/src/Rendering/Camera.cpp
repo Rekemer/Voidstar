@@ -12,7 +12,7 @@ namespace Voidstar
         ProcessInput(deltaTime);
         ProcessMouse();
         UpdateView();
-        Log::GetLog()->info("pos: {0} {1} {2}\n", m_Position.x, m_Position.y, m_Position.z);
+        //Log::GetLog()->info("pos: {0} {1} {2}\n", m_Position.x, m_Position.y, m_Position.z);
 
 
 	}

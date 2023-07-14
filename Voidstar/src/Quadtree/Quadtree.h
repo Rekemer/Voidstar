@@ -57,9 +57,12 @@ namespace Voidstar
         Map<int,std::vector<Node>> nodes;
 
         static Quadtree Build(glm::vec3 posPlayer);
-        Node& GetNode(std::bitset<size> node, int depth);
+        std::optional<Node*> GetNode(std::bitset<size> node, int depth);
         std::optional<Node> GetLeft(Coordinate coord, std::bitset<size> node, int depthOfNode);
+        std::optional<Node> GetNeighbour(std::bitset<size> direction, std::bitset<size> node, int depthOfNode);
         void Clear(Node& node);
+        std::bitset<size>  GetSibling(Coordinate coord, std::bitset<size> node, int depthOfNode);
+        
         GeneratedChildren GenerateChildren(Node& node, int depth);
     private:
         void BuildTree(glm::vec3 playerPos, Node nodeToDivide, int depth);
