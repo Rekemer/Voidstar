@@ -25,7 +25,9 @@ namespace Voidstar
 		Cube,
 	};
 	struct InstanceData {
+		
 		glm::vec3 pos;
+		//alignas(glm::vec4 edges;
 		float scale;
 		uint32_t texIndex;
 		InstanceData(const glm::vec3& position, float scaling, uint32_t textureIndex)

@@ -319,15 +319,20 @@ namespace Voidstar
 			auto nodeLeftTop = GetNeighbour(northWest, nodeToDivide.index, parentDepth);
 			
 			auto nodeRight = GetNeighbour(east, nodeToDivide.index, parentDepth);
-			auto nodeRightBottom = GetNeighbour(southWest, nodeToDivide.index, parentDepth);
-			auto nodeRightTop = GetNeighbour(northWest, nodeToDivide.index, parentDepth);
+			auto nodeRightBottom = GetNeighbour(southEast, nodeToDivide.index, parentDepth);
+			auto nodeRightTop = GetNeighbour(northEast, nodeToDivide.index, parentDepth);
 			auto nodeBottom = GetNeighbour(south, nodeToDivide.index, parentDepth);
+
+			bool leftOverflow = ((nodeToDivide.worldPosition.x)) - (nodeToDivide.tileWidth - nodeToDivide.tileWidth / 2) >= 0;
+			bool rightOverflow = ((nodeToDivide.worldPosition.x)) + (nodeToDivide.tileWidth - nodeToDivide.tileWidth / 2) <= 0;
+			bool topOverflow = ((nodeToDivide.worldPosition.z)) - (nodeToDivide.tileWidth - nodeToDivide.tileWidth / 2) >= 0;
+			bool bottomOverflow= ((nodeToDivide.worldPosition.z)) + (nodeToDivide.tileWidth - nodeToDivide.tileWidth / 2) <= 0;
 
 			if (nodeLeft.has_value())
 			{
 				//Log::GetLog()->info("{0} {1} {2}",nodeLeftTop.value().worldPosition.x , nodeLeftTop.value().worldPosition.y, nodeLeftTop.value().worldPosition.z);
-				bool isOverflow =((nodeToDivide.worldPosition.x)) - (groundSize / 2 - nodeToDivide.tileWidth / 2) >=0 ;
-				if (!isOverflow)
+				bool isOverflow = leftOverflow;
+				if (!isOverflow && nodeLeft.value().isDrawn == true)
 				{
 
 					GenerateChildren(nodeLeft.value(), nodeLeft.value().depth + 1);
@@ -335,52 +340,51 @@ namespace Voidstar
 			}
 			if (nodeUp.has_value())
 			{
-				bool isOverflow = ((nodeToDivide.worldPosition.z)) - (groundSize / 2 - nodeToDivide.tileWidth / 2) >= 0;
+				bool isOverflow = topOverflow;
 				//std::cout << "is overflow " << isOverflow << std::endl;
 				//std::cout << "tile world pos x " << nodeToDivide.worldPosition.x << std::endl;
 				//std::cout << "boundary x " << (groundSize / 2 - nodeToDivide.tileWidth / 2) << std::endl;
 				//std::cout << "distance x " << (glm::abs(nodeToDivide.worldPosition.x)) - (groundSize / 2 - nodeToDivide.tileWidth / 2) << std::endl;
-				if (!isOverflow)
+				if (!isOverflow && nodeUp.value().isDrawn == true)
 				{
 
-					//GenerateChildren(nodeUp.value(), nodeUp.value().depth + 1);
+					GenerateChildren(nodeUp.value(), nodeUp.value().depth + 1);
 				}
 			}
 			if (nodeRight.has_value())
 			{
-				bool isOverflow = ((nodeToDivide.worldPosition.x)) + (groundSize / 2 - nodeToDivide.tileWidth / 2) <= 0;
+				bool isOverflow = rightOverflow;
 				//std::cout << "is overflow " << isOverflow << std::endl;
 				//std::cout << "tile world pos x " << nodeToDivide.worldPosition.x << std::endl;
 				//std::cout << "boundary x " << (groundSize / 2 - nodeToDivide.tileWidth / 2) << std::endl;
 				//std::cout << "distance x " << (glm::abs(nodeToDivide.worldPosition.x)) - (groundSize / 2 - nodeToDivide.tileWidth / 2) << std::endl;
-				if (!isOverflow)
+				if (!isOverflow && nodeRight.value().isDrawn == true)
 				{
 
-					//GenerateChildren(nodeRight.value(), nodeRight.value().depth + 1);
+					GenerateChildren(nodeRight.value(), nodeRight.value().depth + 1);
 				}
 			}
 			if (nodeBottom.has_value())
 			{
-				bool isOverflow = ((nodeToDivide.worldPosition.z)) + (groundSize / 2 - nodeToDivide.tileWidth / 2) <= 0;
+				bool isOverflow = bottomOverflow;
 				//std::cout << "is overflow " << isOverflow << std::endl;
 				//std::cout << "tile world pos x " << nodeToDivide.worldPosition.x << std::endl;
 				//std::cout << "boundary x " << (groundSize / 2 - nodeToDivide.tileWidth / 2) << std::endl;
 				//std::cout << "distance x " << (glm::abs(nodeToDivide.worldPosition.x)) - (groundSize / 2 - nodeToDivide.tileWidth / 2) << std::endl;
-				if (!isOverflow)
+				if (!isOverflow && nodeBottom.value().isDrawn == true)
 				{
 
-					//GenerateChildren(nodeBottom.value(), nodeBottom.value().depth + 1);
+					GenerateChildren(nodeBottom.value(), nodeBottom.value().depth + 1);
 				}
 			}
 			if (nodeLeftBottom.has_value())
 			{
-				bool isOverflow = ((nodeToDivide.worldPosition.x)) - (groundSize / 2 - nodeToDivide.tileWidth / 2) >= 0;
-				isOverflow |= ((nodeToDivide.worldPosition.z)) + (groundSize / 2 - nodeToDivide.tileWidth / 2) <= 0;
+				bool isOverflow = bottomOverflow || leftOverflow;
 				std::cout << "is overflow " << isOverflow << std::endl;
 				//std::cout << "tile world pos x " << nodeToDivide.worldPosition.x << std::endl;
 				//std::cout << "boundary x " << (groundSize / 2 - nodeToDivide.tileWidth / 2) << std::endl;
 				//std::cout << "distance x " << (glm::abs(nodeToDivide.worldPosition.x)) - (groundSize / 2 - nodeToDivide.tileWidth / 2) << std::endl;
-				if (!isOverflow)
+				if (!isOverflow && nodeLeftBottom.value().isDrawn==true)
 				{
 
 					GenerateChildren(nodeLeftBottom.value(), nodeLeftBottom.value().depth + 1);
@@ -388,16 +392,42 @@ namespace Voidstar
 			}
 			if (nodeLeftTop.has_value())
 			{
-				bool isOverflow = ((nodeToDivide.worldPosition.z)) - (groundSize / 2 - nodeToDivide.tileWidth / 2) >= 0;
-				isOverflow |= ((nodeToDivide.worldPosition.x)) + (groundSize / 2 - nodeToDivide.tileWidth / 2) <= 0;
-				std::cout << "is overflow " << isOverflow << std::endl;
+				bool isOverflow = topOverflow || leftOverflow;
+				//std::cout << "is overflow " << isOverflow << std::endl;
 				//std::cout << "tile world pos x " << nodeToDivide.worldPosition.x << std::endl;
 				//std::cout << "boundary x " << (groundSize / 2 - nodeToDivide.tileWidth / 2) << std::endl;
 				//std::cout << "distance x " << (glm::abs(nodeToDivide.worldPosition.x)) - (groundSize / 2 - nodeToDivide.tileWidth / 2) << std::endl;
-				if (!isOverflow)
+				if (!isOverflow && nodeLeftTop.value().isDrawn == true)
 				{
 
-					//GenerateChildren(nodeLeftTop.value(), nodeLeftTop.value().depth + 1);
+					GenerateChildren(nodeLeftTop.value(), nodeLeftTop.value().depth + 1);
+				}
+			}
+
+			if (nodeRightBottom.has_value())
+			{
+				bool isOverflow = bottomOverflow || rightOverflow;
+				//std::cout << "is overflow " << isOverflow << std::endl;
+				//std::cout << "tile world pos x " << nodeToDivide.worldPosition.x << std::endl;
+				//std::cout << "boundary x " << (groundSize / 2 - nodeToDivide.tileWidth / 2) << std::endl;
+				//std::cout << "distance x " << (glm::abs(nodeToDivide.worldPosition.x)) - (groundSize / 2 - nodeToDivide.tileWidth / 2) << std::endl;
+				if (!isOverflow && nodeRightBottom.value().isDrawn == true)
+				{
+
+					GenerateChildren(nodeRightBottom.value(), nodeRightBottom.value().depth + 1);
+				}
+			}
+			if (nodeRightTop.has_value())
+			{
+				bool isOverflow = topOverflow || rightOverflow;
+				//std::cout << "is overflow " << isOverflow << std::endl;
+				//std::cout << "tile world pos x " << nodeToDivide.worldPosition.x << std::endl;
+				//std::cout << "boundary x " << (groundSize / 2 - nodeToDivide.tileWidth / 2) << std::endl;
+				//std::cout << "distance x " << (glm::abs(nodeToDivide.worldPosition.x)) - (groundSize / 2 - nodeToDivide.tileWidth / 2) << std::endl;
+				if (!isOverflow && nodeRightTop.value().isDrawn == true)
+				{
+
+					GenerateChildren(nodeRightTop.value(), nodeRightTop.value().depth + 1);
 				}
 			}
 			//GenerateChildren(nodeUp,  depth);

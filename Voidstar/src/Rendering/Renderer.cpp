@@ -1071,7 +1071,8 @@ namespace Voidstar
 
 			VertexInputAttributeDescription(1,4,vk::Format::eR32G32B32Sfloat,offsetof(InstanceData, pos)),
 			VertexInputAttributeDescription(1,5,vk::Format::eR32Sfloat,offsetof(InstanceData, scale)),
-			VertexInputAttributeDescription(1,6,vk::Format::eR32Sint,offsetof(InstanceData, texIndex))
+			VertexInputAttributeDescription(1,6,vk::Format::eR32Sint,offsetof(InstanceData, texIndex)),
+			//VertexInputAttributeDescription(1,7,vk::Format::eR32G32B32A32Sfloat,offsetof(InstanceData, edges))
 		};
 
 		specs.bindingDescription = bindings;
