@@ -21,7 +21,7 @@ layout(location = 3) in vec2 in_uv;
 layout (location = 4) in vec3 instancePos;
 layout (location = 5) in vec4 instanceEdges;
 layout (location = 6) in float instanceScale;
-
+layout(set = 1, binding = 0) uniform sampler2D u_Tex;
 vec2 positions[3] = vec2[](
 	vec2(0.0, -0.5),
 	vec2(0.5, 0.5),
@@ -196,14 +196,11 @@ void main()
     
     
 // Constants
-    const int gridSize = 100;
+    const int gridSize = 10;
     const float cellSize = 1.0 / float(gridSize);
 	//vec4 worldPos= ubo.model * vec4((in_pos+instancePos)*instanceScale,1.0);
     float tilesAmount  = 2.;
 	vec4 worldPos= vec4((in_pos*instanceScale)+instancePos,1.0);
-   // float brown = fbm(in_uv*tilesAmount,newUv);
-   // worldPos.y+=
-	//vec4 pos =	ubo.proj * worldPos;
 	worldSpacePos = worldPos;
 	
     scale=instanceScale;
@@ -212,16 +209,12 @@ void main()
     
     
 
-   // worldPos.xz += uvBegin;
 
-// Calculate the grid cell position
     
     
-    // Calculate the relative position within the cell
-    vec2 vertex = fract(worldPos.xz * gridSize);
+   
     
-    // Calculate the Perlin noise value
-    float noiseValue = 0.0;
+    
     
     vec2 cellOffset;
 
@@ -230,18 +223,18 @@ void main()
 
 
     vec2 cell = floor(worldPos.xz * gridSize);
-    float xn = norm(worldPos.x,gridSize,-gridSize);
-    float yn = norm(worldPos.z,gridSize,-gridSize);
-    vec2 newUv = vec2(xn,yn);
-    noiseValue = fbm(worldPos.xz,newUv,3);
+  
     vec2 playerPos= vec2(0,0);
     vec2 diff = playerPos - worldPos.xz;
     float red = norm(length(diff),1,0);
 
-    noiseValue = noise(worldPos.xz,newUv,gridSize/4);
+    vec2 newUv = GetUvs(worldPos.xz, gridSize, in_uv,gridSize/(instanceScale) );
+
+    float noiseValue = texture(u_Tex,newUv).x;
     worldPos.y = abs(noiseValue);
 	color.xyz =vec3(noiseValue,noiseValue,noiseValue) ;
-    //color.xyz = vec3(newUv,0.);
+   // color.xyz = vec3(newUv,0.);
+    //color.xyz = vec3(noiseValue,noiseValue,noiseValue);
     //color.xyz= vec3( randomGradient(cell),0.);
 	//vec4 pos =	ubo.proj *  ubo.view * worldPos;
 	vec4 pos =	 worldPos;

@@ -8,7 +8,7 @@ layout(location = 1) in vec4 color;
 //layout(location = 3) in vec4 worldSpacePos;
 //layout(location = 4) in float depth;
 
-layout(set = 1, binding = 0) uniform sampler2D u_Tex;
+
 
 
 vec4 random_color(vec4 st)

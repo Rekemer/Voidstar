@@ -472,7 +472,7 @@ namespace Voidstar
 			vk::DescriptorSetLayoutBinding layoutBinding;
 			layoutBinding.binding = 0;
 			layoutBinding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-			layoutBinding.stageFlags = vk::ShaderStageFlagBits::eFragment;
+			layoutBinding.stageFlags = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eTessellationEvaluation;
 			layoutBinding.descriptorCount = 1;
 
 			std::vector<vk::DescriptorSetLayoutBinding> layoutBindings{ layoutBinding };
@@ -498,9 +498,9 @@ namespace Voidstar
 
 
 
-		m_Image = Image::CreateImage(BASE_RES_PATH+"viking_room/viking_room.png", m_DescriptorSetTex);
-		std::string modelPath = BASE_RES_PATH+"viking_room/viking_room.obj";
-		m_Model = Model::Load(modelPath);
+		m_Image = Image::CreateImage(BASE_RES_PATH+"noise.jpg", m_DescriptorSetTex);
+		//std::string modelPath = BASE_RES_PATH+"viking_room/viking_room.obj";
+		//m_Model = Model::Load(modelPath);
 
 		std::vector<IndexType> indices;
 		auto vertices = GeneratePlane(1, indices);
@@ -826,7 +826,7 @@ namespace Voidstar
 	{
 		m_InstanceData.clear();
 		auto cameraPos = m_App->GetCamera()->m_Position;
-		//cameraPos = { 0,0,0 };
+		//cameraPos = { 5,0,-5 };
 		auto quadTree = Quadtree::Build(cameraPos);
 
 		

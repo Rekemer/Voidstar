@@ -11,6 +11,7 @@ layout(binding = 0) uniform UniformBufferObject {
 layout(location = 1) in vec4[] inColor ;
 layout(location = 1) out vec4 outColor ;
 layout (quads) in;
+layout(set = 1, binding = 0) uniform sampler2D u_Tex;
 vec4 random(vec4 st)
 {
 	float dotProduct1 = dot(st, vec4(127.1, 311.7, 23423.1, 98.2));
@@ -61,6 +62,21 @@ float interpolated;
     return interpolated;
 }
 
+
+vec2 GetUvs(vec2 worldSpacePos, float dimension, vec2 uv, float depth)
+{
+    
+    float scaling = depth/dimension;
+    vec2 uv_ = uv * scaling;
+
+    vec2 wp = worldSpacePos.xy;
+    float xn = norm(wp.x,dimension/2,-dimension/2);
+    float yn = norm(wp.y,dimension/2,-dimension/2);
+    
+    vec2 newUv = vec2(xn,yn);
+	float n = scaling/2;
+    return newUv;
+}
 #define OCTAVES 37
 float fbm(vec2 cell,vec2 newuv, float nextVertexOffset)
 {
@@ -108,22 +124,22 @@ void main()
     vec4 p1 = (p11 - p10) * u + p10;
     vec4 p = (p1 - p0) * v + p0;
 
-    float gridSize = 100;
-    vec2 cell = floor(p.xz * gridSize);
-    float xn = norm(p.x,gridSize,-gridSize);
-    float yn = norm(p.z,gridSize,-gridSize);
-    vec2 newUv = vec2(xn,yn);
+    float gridSize = 10;
     float tileWidth = length(gl_in[0].gl_Position - gl_in[1].gl_Position);
-    float noiseValue = noise(p.xz,newUv,tileWidth);
    
-    p.y = abs(noiseValue);
-    gl_Position = ubo.proj*ubo.view*p;
+    vec2 newUv = GetUvs(p.xz,gridSize, vec2(u,v),gridSize / (tileWidth));
 
+    float noiseValue = texture(u_Tex,newUv).x;
+   
      vec4 color = mix(
         mix(inColor[0], inColor[1], barycentricCoord.x),
-        mix(inColor[2], inColor[3], barycentricCoord.x),
+        mix(inColor[3], inColor[2], barycentricCoord.x),
         barycentricCoord.z
     );
-     outColor = vec4(noiseValue,noiseValue,noiseValue,1);
-      //outColor = color;
+     p.y =abs(noiseValue);
+
+     //p.y =color.x;
+     outColor = vec4(newUv,0,1);
+     outColor =vec4(noiseValue,noiseValue,noiseValue,1);
+    gl_Position = ubo.proj*ubo.view*p;
 }

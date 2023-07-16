@@ -11,7 +11,7 @@ namespace Voidstar
 	const int widthGround = 2;
 	const int heightGround = 2;
 
-	constexpr float levelOfDetail = 12;
+	constexpr float levelOfDetail =6;
 
 
 
@@ -476,7 +476,7 @@ namespace Voidstar
 			{
 			
 				bool isOverflow = bottomOverflow || leftOverflow;
-				std::cout << "is overflow " << isOverflow << std::endl;
+				//std::cout << "is overflow " << isOverflow << std::endl;
 				//std::cout << "tile world pos x " << nodeToDivide.worldPosition.x << std::endl;
 				//std::cout << "boundary x " << (groundSize / 2 - nodeToDivide.tileWidth / 2) << std::endl;
 				//std::cout << "distance x " << (glm::abs(nodeToDivide.worldPosition.x)) - (groundSize / 2 - nodeToDivide.tileWidth / /2)/ << std::endl;
