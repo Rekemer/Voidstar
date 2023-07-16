@@ -826,6 +826,7 @@ namespace Voidstar
 	{
 		m_InstanceData.clear();
 		auto cameraPos = m_App->GetCamera()->m_Position;
+		//cameraPos = { 0,0,0 };
 		auto quadTree = Quadtree::Build(cameraPos);
 
 		
@@ -834,8 +835,14 @@ namespace Voidstar
 			for (auto node : entry.second)
 			{
 				if (node.isDrawn)
-				{
-					m_InstanceData.emplace_back(node.worldPosition,node.tileWidth,0);
+				{	
+					auto data = InstanceData{ node.worldPosition,node.tileWidth,0 };
+
+					data.edges[0] = node.edges[0];
+					data.edges[1] = node.edges[1];
+					data.edges[2] = node.edges[2];
+					data.edges[3] = node.edges[3];
+					m_InstanceData.emplace_back(data);
 				}
 				
 				
@@ -1070,9 +1077,8 @@ namespace Voidstar
 			VertexInputAttributeDescription(0,3,vk::Format::eR32Sfloat,offsetof(Vertex, UV)),
 
 			VertexInputAttributeDescription(1,4,vk::Format::eR32G32B32Sfloat,offsetof(InstanceData, pos)),
-			VertexInputAttributeDescription(1,5,vk::Format::eR32Sfloat,offsetof(InstanceData, scale)),
-			VertexInputAttributeDescription(1,6,vk::Format::eR32Sint,offsetof(InstanceData, texIndex)),
-			//VertexInputAttributeDescription(1,7,vk::Format::eR32G32B32A32Sfloat,offsetof(InstanceData, edges))
+			VertexInputAttributeDescription(1,5,vk::Format::eR32G32B32A32Sfloat,offsetof(InstanceData, edges)),
+			VertexInputAttributeDescription(1,6,vk::Format::eR32Sfloat,offsetof(InstanceData, scale)),
 		};
 
 		specs.bindingDescription = bindings;

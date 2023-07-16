@@ -24,14 +24,13 @@ namespace Voidstar
 		Plane,
 		Cube,
 	};
-	struct InstanceData {
+	struct  InstanceData {
 		
-		glm::vec3 pos;
-		//alignas(glm::vec4 edges;
-		float scale;
-		uint32_t texIndex;
+		alignas(16)float edges [4] = {1.f,1.f,1.f,1.f};
+		alignas(16)glm::vec3 pos;
+		alignas(4)float scale;
 		InstanceData(const glm::vec3& position, float scaling, uint32_t textureIndex)
-			: pos(position), scale(scaling), texIndex(textureIndex) {}
+			: pos(position), scale(scaling) {}
 	};
 	struct UniformBufferObject {
 		glm::mat4 model;

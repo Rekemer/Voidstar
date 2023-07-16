@@ -108,7 +108,7 @@ void main()
     vec4 p1 = (p11 - p10) * u + p10;
     vec4 p = (p1 - p0) * v + p0;
 
-    float gridSize = 10;
+    float gridSize = 100;
     vec2 cell = floor(p.xz * gridSize);
     float xn = norm(p.x,gridSize,-gridSize);
     float yn = norm(p.z,gridSize,-gridSize);
@@ -116,7 +116,7 @@ void main()
     float tileWidth = length(gl_in[0].gl_Position - gl_in[1].gl_Position);
     float noiseValue = noise(p.xz,newUv,tileWidth);
    
-    //p.y = abs(noiseValue)*3;
+    p.y = abs(noiseValue);
     gl_Position = ubo.proj*ubo.view*p;
 
      vec4 color = mix(

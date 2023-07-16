@@ -6,13 +6,13 @@ namespace Voidstar
 	{
 		union
 		{
-			float Position[3];
+			alignas(16)float Position[3];
 			struct
 			{
 				float x, y, z;
 			};
 		};
-		float Color[4];
+		alignas(16)float Color[4];
 		union
 		{
 			alignas(8)float UV[2];
@@ -22,7 +22,7 @@ namespace Voidstar
 			};
 			
 		};
-		float noiseValue;
+		alignas(4)float noiseValue;
 
 		static vk::VertexInputBindingDescription GetBindingDescription() {
 			vk::VertexInputBindingDescription bindingDescription{};

@@ -11,16 +11,12 @@ namespace Voidstar
 	const int widthGround = 2;
 	const int heightGround = 2;
 
-	constexpr float levelOfDetail =6;
+	constexpr float levelOfDetail = 12;
 
-	std::bitset<size> west("010101"); 
-	std::bitset<size> east("000001"); 
-	std::bitset<size> south("101010"); 
-	std::bitset<size> north("000010"); 
-	std::bitset<size> southEast("101011"); 
-	std::bitset<size> northEast("000011"); 
-	std::bitset<size> northWest("010111"); 
-	std::bitset<size> southWest("111111"); 
+
+
+
+	
 	std::bitset<size> GenerateTx(int depth)
 	{
 		std::bitset<size> tx;
@@ -117,10 +113,62 @@ namespace Voidstar
 	}
 
 	
-	std::bitset<size> Increment(std::bitset<size> node, const std::bitset<size>& dir,int depth)
+
+	//std::bitset<size> west("010101");
+	//std::bitset<size> east("000001");
+	//std::bitset<size> south("101010");
+	//std::bitset<size> north("000010");
+	//std::bitset<size> southEast("101011");
+	//std::bitset<size> northEast("000011");
+	//std::bitset<size> northWest("010111");
+	//std::bitset<size> southWest("111111");
+
+	std::bitset<size> GetBitDirection(Direction direction, int depth)
+	{
+		switch (direction)
+		{
+		case Voidstar::Direction::NORTH:
+			return std::bitset<size>("10");
+			break;
+		case Voidstar::Direction::EAST:
+			return std::bitset<size>("1");
+			break;
+		case Voidstar::Direction::WEST:
+			return GenerateTy(depth);
+			break;
+		case Voidstar::Direction::SOUTH:
+			return GenerateTx(depth);
+			break;
+
+		case Voidstar::Direction::SOUTHEAST:
+			return GenerateTx(depth) | std::bitset<size>("11");
+			break;
+		case Voidstar::Direction::SOUTHWEST:
+		{
+			auto bitDirection = std::bitset<size>();
+			bitDirection.set();
+			return bitDirection;
+		}
+			break;
+
+		case Voidstar::Direction::NORTHWEST:
+			return GenerateTy(depth) | std::bitset<size>("111");
+			break;
+		case Voidstar::Direction::NORTHEAST:
+			return std::bitset<size>("11");
+			break;
+
+		default:
+			break;
+		}
+	}
+
+	std::bitset<size> Increment(std::bitset<size> node,  Direction direction,int depth)
 	{
 		std::bitset<size> tx = GenerateTx(depth);
 		std::bitset<size> ty = GenerateTy(depth);
+		auto dir = GetBitDirection(direction,depth);
+	
 		unsigned long long nodeValue = node.to_ullong();
 		unsigned long long dirValue = dir.to_ullong();
 
@@ -157,60 +205,68 @@ namespace Voidstar
 
 	}
 
-	std::optional<Node> Quadtree::GetNeighbour(std::bitset<size> direction, std::bitset<size> node, int depthOfNode)
+	bool leftOverflow = false;
+	bool rightOverflow = false;
+	bool  topOverflow = false;
+	bool bottomOverflow = false;
+	void Quadtree::Detalize(std::bitset<size> nodeIndex, int depth, int maxDepth, Direction direction)
+	{
+		if (depth > maxDepth ) return;
+		std::bitset<size> iterIndex = nodeIndex;
+		//for (int i = depth; i < maxDepth; i++)
+		//{
+			auto node = GetNode(iterIndex, depth);
+			auto children = GenerateChildren(*node.value(), depth+1);
+			if (direction == Direction::WEST)
+			{
+	
+				auto a = GetNode(children.rightTop, depth + 1);
+				auto b = GetNode(children.rightBottom, depth + 1);
+				if (a.has_value())
+				{
+					//Detalize(a.value()->index, depth + 1, maxDepth, direction);
+	
+				}
+				if (b.has_value())
+				{
+	
+					//Detalize(b.value()->index, depth +1,maxDepth,direction);
+				}
+			}
+		//}
+	}
+
+	std::optional<Node> Quadtree::GetNeighbour(Direction direction, std::bitset<size> node, int depthOfNode)
 	{
 
 
 		auto siblingIndex = Increment(node, direction, depthOfNode);
-		// oveflow check
-		auto largestBitsSibling = std::bitset<size>(siblingIndex >> ((depthOfNode -1)* 2-2));
-		auto largestBitsCurrent = std::bitset<size>(node >> ((depthOfNode -1)* 2-2));
-		//if (direction == east)
-		//{
-		//	if ((largestBitsSibling[0] <largestBitsCurrent[0] ))
-		//	{
-		//		//return{};
-		//	}
-		//}
-		//else if (direction == west)
-		//{
-		//	if (largestBitsSibling[0] % 2 == 1)
-		//	{	
-		//		return{};
-		//	}
-		//}
+	//	if (depthOfNode == 4)
+		{
+
+			//::cout << " current " << node << std::endl;
+			//::cout << depthOfNode << " " << siblingIndex << std::endl;
+		}
+
 		std::optional<Node*> sibling = GetNode(siblingIndex, depthOfNode);
 		auto depthOfNeighbour = depthOfNode;
 		while (!sibling.has_value() && depthOfNeighbour > 0)
 		{
-			auto parent = ParentOfChild(siblingIndex, --depthOfNeighbour);
+			auto parent = ParentOfChild(siblingIndex, depthOfNeighbour--);
+			siblingIndex = parent;
 			sibling = GetNode(parent, depthOfNeighbour);
-			if (sibling.has_value() && isRoot(*sibling.value()))
+			if (sibling.has_value() && sibling.value()->isDrawn)
 			{
 				break;
 			}
 		}
-		if (sibling.has_value() && !isRoot(*sibling.value()))
+		if (sibling.has_value() && !isRoot(*sibling.value()) && sibling.value()->isDrawn)
 		{
+			//Detalize(sibling.value()->index, sibling.value()->depth , depthOfNode,direction);
 			return *sibling.value();
 		}
 		return{};
-		//while (!sibling1.isDrawn)
-		//{
-		//	auto childOfsibling = ChildOfParent(1,siblingIndex1,depthOfNode+1);
-		//	sibling1 = GetNode(childOfsibling, depthOfNode + 1);
-		//}
-
-		////if (siblingIndex == node)
-		////{
-		////	//{
-		////	//auto parentDepth = depthOfNode - 1;
-		////	//auto parent = ParentOfChild(node,depthOfNode);
-		////	//auto parentSibling = GetSibling(1,parent,parentDepth);
-		////	return {};
-		////}
-
-		//return sibling1;
+	
 	}
 	
 
@@ -279,6 +335,13 @@ namespace Voidstar
 	
 
 	}
+
+
+	//void Quadtree::DetaliseNode(std::bitset<size> node, Node& player)
+	//{
+	//
+	//}
+	
 	// divide node to level depth
 	void Quadtree::BuildTree(glm::vec3 playerPos,Node nodeToDivide,int depth)
 	{
@@ -308,26 +371,34 @@ namespace Voidstar
 		{
 			if (nodeToDivide.index == std::bitset<size>("000101"))
 			{
-				std::cout << "sd";
+			//	std::cout << "sd";
 			}
 			//std::cout << nodeToDivide.index << std::endl;
 			auto parentDepth = depth-1;
-			auto nodeUp = GetNeighbour(north, nodeToDivide.index, parentDepth);
 			
-			auto nodeLeft = GetNeighbour(west, nodeToDivide.index, parentDepth);
-			auto nodeLeftBottom = GetNeighbour(southWest, nodeToDivide.index, parentDepth);
-			auto nodeLeftTop = GetNeighbour(northWest, nodeToDivide.index, parentDepth);
+			auto nodeUp = GetNeighbour(Direction::NORTH, nodeToDivide.index, nodeToDivide.depth);
+			auto nodeLeft = GetNeighbour(Direction::WEST, nodeToDivide.index, nodeToDivide.depth);
 			
-			auto nodeRight = GetNeighbour(east, nodeToDivide.index, parentDepth);
-			auto nodeRightBottom = GetNeighbour(southEast, nodeToDivide.index, parentDepth);
-			auto nodeRightTop = GetNeighbour(northEast, nodeToDivide.index, parentDepth);
-			auto nodeBottom = GetNeighbour(south, nodeToDivide.index, parentDepth);
+			auto nodeRight = GetNeighbour(Direction::EAST, nodeToDivide.index, nodeToDivide.depth);
+			auto nodeBottom = GetNeighbour(Direction::SOUTH, nodeToDivide.index, nodeToDivide.depth);
+			
+			auto nodeRightBottom = GetNeighbour(Direction::SOUTHEAST, nodeToDivide.index, nodeToDivide.depth);
+			auto nodeRightTop = GetNeighbour(Direction::NORTHEAST, nodeToDivide.index, nodeToDivide.depth);
+			auto nodeLeftTop = GetNeighbour(Direction::NORTHWEST, nodeToDivide.index, nodeToDivide.depth);
+			auto nodeLeftBottom = GetNeighbour(Direction::SOUTHWEST, nodeToDivide.index, nodeToDivide.depth);
 
-			bool leftOverflow = ((nodeToDivide.worldPosition.x)) - (nodeToDivide.tileWidth - nodeToDivide.tileWidth / 2) >= 0;
-			bool rightOverflow = ((nodeToDivide.worldPosition.x)) + (nodeToDivide.tileWidth - nodeToDivide.tileWidth / 2) <= 0;
-			bool topOverflow = ((nodeToDivide.worldPosition.z)) - (nodeToDivide.tileWidth - nodeToDivide.tileWidth / 2) >= 0;
-			bool bottomOverflow= ((nodeToDivide.worldPosition.z)) + (nodeToDivide.tileWidth - nodeToDivide.tileWidth / 2) <= 0;
+			 leftOverflow = ((nodeToDivide.worldPosition.x)) - (groundSize/2 - nodeToDivide.tileWidth / 2) >= 0;
+			 rightOverflow = ((nodeToDivide.worldPosition.x)) + (groundSize/2 - nodeToDivide.tileWidth / 2) <= 0;
+			 topOverflow = ((nodeToDivide.worldPosition.z)) - (groundSize/2 - nodeToDivide.tileWidth / 2) >= 0;
+			 bottomOverflow = ((nodeToDivide.worldPosition.z)) + (groundSize/2 - nodeToDivide.tileWidth / 2) <= 0;
 
+			#define DIAGONAL 1
+			#define LEFT 1
+			#define RIGHT 1
+			#define UP 1
+			#define BOTTOM 1
+
+#if  LEFT
 			if (nodeLeft.has_value())
 			{
 				//Log::GetLog()->info("{0} {1} {2}",nodeLeftTop.value().worldPosition.x , nodeLeftTop.value().worldPosition.y, nodeLeftTop.value().worldPosition.z);
@@ -335,59 +406,91 @@ namespace Voidstar
 				if (!isOverflow && nodeLeft.value().isDrawn == true)
 				{
 
-					GenerateChildren(nodeLeft.value(), nodeLeft.value().depth + 1);
+					auto children = GenerateChildren(nodeLeft.value(), nodeLeft.value().depth +1);
+					auto leftTop = GetNode(children.leftTop, nodeLeft.value().depth + 1);
+					auto leftBottom = GetNode(children.leftBottom, nodeLeft.value().depth + 1);
+					leftBottom.value()->edges[3] = 0.5f;
+					leftTop.value()->edges[3] = 0.5f;
+
 				}
 			}
+#else
+#endif //  LEFT
+
+#if UP
+
 			if (nodeUp.has_value())
 			{
 				bool isOverflow = topOverflow;
-				//std::cout << "is overflow " << isOverflow << std::endl;
-				//std::cout << "tile world pos x " << nodeToDivide.worldPosition.x << std::endl;
-				//std::cout << "boundary x " << (groundSize / 2 - nodeToDivide.tileWidth / 2) << std::endl;
-				//std::cout << "distance x " << (glm::abs(nodeToDivide.worldPosition.x)) - (groundSize / 2 - nodeToDivide.tileWidth / 2) << std::endl;
-				if (!isOverflow && nodeUp.value().isDrawn == true)
+
+				if (!isOverflow)
 				{
 
-					GenerateChildren(nodeUp.value(), nodeUp.value().depth + 1);
+
+					auto children = GenerateChildren(nodeUp.value(), nodeUp.value().depth + 1);;
+					auto leftTop = GetNode(children.leftTop, nodeUp.value().depth + 1);
+					auto rightTop = GetNode(children.rightTop, nodeUp.value().depth + 1);
+					rightTop.value()->edges[2] = 0.5f;
+					leftTop.value()->edges[2] = 0.5f;
 				}
 			}
+#else
+#endif // UP
+#if RIGHT
 			if (nodeRight.has_value())
 			{
 				bool isOverflow = rightOverflow;
-				//std::cout << "is overflow " << isOverflow << std::endl;
-				//std::cout << "tile world pos x " << nodeToDivide.worldPosition.x << std::endl;
-				//std::cout << "boundary x " << (groundSize / 2 - nodeToDivide.tileWidth / 2) << std::endl;
-				//std::cout << "distance x " << (glm::abs(nodeToDivide.worldPosition.x)) - (groundSize / 2 - nodeToDivide.tileWidth / 2) << std::endl;
+
 				if (!isOverflow && nodeRight.value().isDrawn == true)
 				{
-
-					GenerateChildren(nodeRight.value(), nodeRight.value().depth + 1);
+					auto children = GenerateChildren(nodeRight.value(), nodeRight.value().depth + 1);;
+					auto rightTop = GetNode(children.rightTop, nodeRight.value().depth + 1);
+					auto rightBottom = GetNode(children.rightBottom, nodeRight.value().depth + 1);
+					rightTop.value()->edges[1] = 0.5f;
+					rightBottom.value()->edges[1] = 0.5f;
 				}
 			}
+#else
+#endif // RIGHT
+
+#if BOTTOM
 			if (nodeBottom.has_value())
 			{
 				bool isOverflow = bottomOverflow;
-				//std::cout << "is overflow " << isOverflow << std::endl;
-				//std::cout << "tile world pos x " << nodeToDivide.worldPosition.x << std::endl;
-				//std::cout << "boundary x " << (groundSize / 2 - nodeToDivide.tileWidth / 2) << std::endl;
-				//std::cout << "distance x " << (glm::abs(nodeToDivide.worldPosition.x)) - (groundSize / 2 - nodeToDivide.tileWidth / 2) << std::endl;
+
 				if (!isOverflow && nodeBottom.value().isDrawn == true)
 				{
 
-					GenerateChildren(nodeBottom.value(), nodeBottom.value().depth + 1);
+					auto children = GenerateChildren(nodeBottom.value(), nodeBottom.value().depth + 1);
+					auto leftBottom = GetNode(children.leftBottom, nodeBottom.value().depth + 1);
+					auto rightBottom = GetNode(children.rightBottom, nodeBottom.value().depth + 1);
+					leftBottom.value()->edges[0] = 0.5f;
+					rightBottom.value()->edges[0] = 0.5f;
 				}
 			}
+#else
+#endif // BOTTOM
+
+			#if DIAGONAL
 			if (nodeLeftBottom.has_value())
 			{
+			
 				bool isOverflow = bottomOverflow || leftOverflow;
 				std::cout << "is overflow " << isOverflow << std::endl;
 				//std::cout << "tile world pos x " << nodeToDivide.worldPosition.x << std::endl;
 				//std::cout << "boundary x " << (groundSize / 2 - nodeToDivide.tileWidth / 2) << std::endl;
-				//std::cout << "distance x " << (glm::abs(nodeToDivide.worldPosition.x)) - (groundSize / 2 - nodeToDivide.tileWidth / 2) << std::endl;
+				//std::cout << "distance x " << (glm::abs(nodeToDivide.worldPosition.x)) - (groundSize / 2 - nodeToDivide.tileWidth / /2)/ << std::endl;
 				if (!isOverflow && nodeLeftBottom.value().isDrawn==true)
 				{
-
-					GenerateChildren(nodeLeftBottom.value(), nodeLeftBottom.value().depth + 1);
+					auto children = GenerateChildren(nodeLeftBottom.value(), nodeLeftBottom.value().depth + 1);
+					auto leftTop = GetNode(children.leftTop, nodeLeftBottom.value().depth + 1);
+					auto leftBottom = GetNode(children.leftBottom, nodeLeftBottom.value().depth + 1);
+					auto rightBottom = GetNode(children.rightBottom, nodeLeftBottom.value().depth + 1);
+			
+					leftTop.value()->edges[3] = 0.5f;
+					leftBottom.value()->edges[3] = 0.5f;
+					leftBottom.value()->edges[0] = 0.5f;
+					rightBottom.value()->edges[0] = 0.5f;
 				}
 			}
 			if (nodeLeftTop.has_value())
@@ -396,25 +499,18 @@ namespace Voidstar
 				//std::cout << "is overflow " << isOverflow << std::endl;
 				//std::cout << "tile world pos x " << nodeToDivide.worldPosition.x << std::endl;
 				//std::cout << "boundary x " << (groundSize / 2 - nodeToDivide.tileWidth / 2) << std::endl;
-				//std::cout << "distance x " << (glm::abs(nodeToDivide.worldPosition.x)) - (groundSize / 2 - nodeToDivide.tileWidth / 2) << std::endl;
+				//std::cout << "distance x " << (glm::abs(nodeToDivide.worldPosition.x)) - (groundSize / 2 //nodeToDivide.tileWidth /2) /<< std::endl;
 				if (!isOverflow && nodeLeftTop.value().isDrawn == true)
 				{
-
-					GenerateChildren(nodeLeftTop.value(), nodeLeftTop.value().depth + 1);
-				}
-			}
-
-			if (nodeRightBottom.has_value())
-			{
-				bool isOverflow = bottomOverflow || rightOverflow;
-				//std::cout << "is overflow " << isOverflow << std::endl;
-				//std::cout << "tile world pos x " << nodeToDivide.worldPosition.x << std::endl;
-				//std::cout << "boundary x " << (groundSize / 2 - nodeToDivide.tileWidth / 2) << std::endl;
-				//std::cout << "distance x " << (glm::abs(nodeToDivide.worldPosition.x)) - (groundSize / 2 - nodeToDivide.tileWidth / 2) << std::endl;
-				if (!isOverflow && nodeRightBottom.value().isDrawn == true)
-				{
-
-					GenerateChildren(nodeRightBottom.value(), nodeRightBottom.value().depth + 1);
+					auto children = GenerateChildren(nodeLeftTop.value(), nodeLeftTop.value().depth + 1);
+					auto leftTop = GetNode(children.leftTop, nodeLeftTop.value().depth + 1);
+					auto leftBottom = GetNode(children.leftBottom, nodeLeftTop.value().depth + 1);
+					auto rightTop = GetNode(children.rightTop, nodeLeftTop.value().depth + 1);
+			
+					leftTop.value()->edges[3] = 0.5f;
+					leftTop.value()->edges[2] = 0.5f;
+					leftBottom.value()->edges[3] = 0.5f;
+					rightTop.value()->edges[2] = 0.5f;
 				}
 			}
 			if (nodeRightTop.has_value())
@@ -423,16 +519,44 @@ namespace Voidstar
 				//std::cout << "is overflow " << isOverflow << std::endl;
 				//std::cout << "tile world pos x " << nodeToDivide.worldPosition.x << std::endl;
 				//std::cout << "boundary x " << (groundSize / 2 - nodeToDivide.tileWidth / 2) << std::endl;
-				//std::cout << "distance x " << (glm::abs(nodeToDivide.worldPosition.x)) - (groundSize / 2 - nodeToDivide.tileWidth / 2) << std::endl;
+				//std::cout << "distance x " << (glm::abs(nodeToDivide.worldPosition.x)) - (groundSize / 2 nodeToDivide.tileWidth / 2) << std::endl;
 				if (!isOverflow && nodeRightTop.value().isDrawn == true)
 				{
+					auto children = GenerateChildren(nodeRightTop.value(), nodeRightTop.value().depth + 1);
+					auto leftTop = GetNode(children.leftTop, nodeRightTop.value().depth + 1);
+					auto rightTop = GetNode(children.rightTop, nodeRightTop.value().depth + 1);
+					auto rightBottom = GetNode(children.rightBottom, nodeRightTop.value().depth + 1);
 
-					GenerateChildren(nodeRightTop.value(), nodeRightTop.value().depth + 1);
+					leftTop.value()->edges[2] = 0.5f;
+					rightTop.value()->edges[2] = 0.5f;
+					rightTop.value()->edges[1] = 0.5f;
+					rightBottom.value()->edges[1] = 0.5f;
 				}
 			}
-			//GenerateChildren(nodeUp,  depth);
-			//GenerateChildren(nodeBottom,  depth);
-			//GenerateChildren(nodeLeft,  depth);
+			
+			if (nodeRightBottom.has_value())
+			{
+				bool isOverflow = bottomOverflow || rightOverflow;
+				//std::cout << "is overflow " << isOverflow << std::endl;
+				//std::cout << "tile world pos x " << nodeToDivide.worldPosition.x << std::endl;
+				//std::cout << "boundary x " << (groundSize / 2 - nodeToDivide.tileWidth / 2) << std::endl;
+				//std::cout << "distance x " << (glm::abs(nodeToDivide.worldPosition.x)) - (groundSize / 2 //nodeToDivide.tileWidth / 2) << std::endl;
+				if (!isOverflow && nodeRightBottom.value().isDrawn == true)
+				{
+					auto children = GenerateChildren(nodeRightBottom.value(), nodeRightBottom.value().depth + 1);
+					auto rightBottom = GetNode(children.rightBottom, nodeRightBottom.value().depth + 1);
+					auto rightTop = GetNode(children.rightTop, nodeRightBottom.value().depth + 1);
+					auto leftBottom = GetNode(children.leftBottom, nodeRightBottom.value().depth + 1);
+					leftBottom.value()->edges[0] = 0.5f;
+					rightBottom.value()->edges[1] = 0.5f;
+					rightBottom.value()->edges[0] = 0.5f;
+					rightTop.value()->edges[1] = 0.5f;
+				}
+			}
+			#else
+
+			#endif
+			
 		}
 		
 

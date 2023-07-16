@@ -8,6 +8,7 @@ layout (vertices=4) out;
 
 layout(location = 1) in vec4[] inColor ;
 layout(location = 1) out vec4[] outColor ;
+layout(location = 5) in vec4[] edges ;
 const int AB = 2;
 const int BC = 3;
 const int CD = 0;
@@ -36,7 +37,7 @@ void main()
     int numPoints = 4;
 	
     const int MIN_TESS_LEVEL = 1;
-    const int MAX_TESS_LEVEL = 1;
+    const int MAX_TESS_LEVEL = 4;
     const float MIN_DISTANCE = 0.01;
     const float MAX_DISTANCE = 10;
 if(gl_InvocationID == 0)
@@ -79,11 +80,15 @@ if(gl_InvocationID == 0)
 	float fragments = maxTileWitdth/tileWidth;
     // ----------------------------------------------------------------------
     // Step 5: set the corresponding outer edge tessellation levels
-    gl_TessLevelOuter[0] = tessLevel0;
-    gl_TessLevelOuter[1] = tessLevel1;
-    gl_TessLevelOuter[2] = tessLevel2;
-    gl_TessLevelOuter[3] = tessLevel3;
+    gl_TessLevelOuter[0] = (int(tessLevel0) + int(tessLevel0) %2)* edges[0].x;
+    gl_TessLevelOuter[1] = (int(tessLevel1) + int(tessLevel1) %2)* edges[0].y;
+    gl_TessLevelOuter[2] = (int(tessLevel2) + int(tessLevel2) %2)* edges[0].z;
+    gl_TessLevelOuter[3] = (int(tessLevel3) + int(tessLevel3) %2)* edges[0].w;
 
+    //gl_TessLevelOuter[0] = tessLevel0;
+    //gl_TessLevelOuter[1] = tessLevel1;
+    //gl_TessLevelOuter[2] = tessLevel2;
+    //gl_TessLevelOuter[3] = tessLevel3;
     // ----------------------------------------------------------------------
     // Step 6: set the inner tessellation levels to the max of the two parallel edges
     gl_TessLevelInner[0] = max(tessLevel1, tessLevel3);

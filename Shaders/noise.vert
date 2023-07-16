@@ -19,8 +19,8 @@ layout(location = 3) in vec2 in_uv;
 
 // Instanced attributes
 layout (location = 4) in vec3 instancePos;
-layout (location = 5) in float instanceScale;
-layout (location = 6) in int texIndex;
+layout (location = 5) in vec4 instanceEdges;
+layout (location = 6) in float instanceScale;
 
 vec2 positions[3] = vec2[](
 	vec2(0.0, -0.5),
@@ -39,6 +39,7 @@ layout(location = 1) out vec4 color ;
 layout(location = 2) out float scale ;
 layout(location = 3) out vec4 worldSpacePos;
 layout(location = 4) out float depth;
+layout(location = 5) out vec4 edges;
 
 float norm(float val, float max,float min)
  {
@@ -195,7 +196,7 @@ void main()
     
     
 // Constants
-    const int gridSize = 10;
+    const int gridSize = 100;
     const float cellSize = 1.0 / float(gridSize);
 	//vec4 worldPos= ubo.model * vec4((in_pos+instancePos)*instanceScale,1.0);
     float tilesAmount  = 2.;
@@ -204,7 +205,6 @@ void main()
    // worldPos.y+=
 	//vec4 pos =	ubo.proj * worldPos;
 	worldSpacePos = worldPos;
-    depth = texIndex;
 	
     scale=instanceScale;
 	uv = in_uv;
@@ -234,16 +234,17 @@ void main()
     float yn = norm(worldPos.z,gridSize,-gridSize);
     vec2 newUv = vec2(xn,yn);
     noiseValue = fbm(worldPos.xz,newUv,3);
-   // worldPos.y += abs(noiseValue)*3.;
     vec2 playerPos= vec2(0,0);
     vec2 diff = playerPos - worldPos.xz;
     float red = norm(length(diff),1,0);
 
     noiseValue = noise(worldPos.xz,newUv,gridSize/4);
+    worldPos.y = abs(noiseValue);
 	color.xyz =vec3(noiseValue,noiseValue,noiseValue) ;
     //color.xyz = vec3(newUv,0.);
     //color.xyz= vec3( randomGradient(cell),0.);
 	//vec4 pos =	ubo.proj *  ubo.view * worldPos;
 	vec4 pos =	 worldPos;
 	gl_Position = pos;
+    edges = instanceEdges;
 }

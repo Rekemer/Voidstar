@@ -18,6 +18,7 @@ namespace Voidstar
     {
         std::bitset<size> index;
         glm::vec3 worldPosition;
+        float edges[4] = {1,1,1,1};
         int depth;
         float tileWidth;
         bool isDrawn = true;
@@ -27,6 +28,21 @@ namespace Voidstar
             return node.index == index;
         }
     };
+
+    enum class Direction
+    {
+        NORTH,
+        EAST,
+        WEST,
+        SOUTH,
+
+        SOUTHEAST,
+        SOUTHWEST,
+
+        NORTHWEST,
+        NORTHEAST,
+    };   
+
     struct Box
     {
         glm::vec2 min{ inf,  inf };
@@ -59,10 +75,10 @@ namespace Voidstar
         static Quadtree Build(glm::vec3 posPlayer);
         std::optional<Node*> GetNode(std::bitset<size> node, int depth);
         std::optional<Node> GetLeft(Coordinate coord, std::bitset<size> node, int depthOfNode);
-        std::optional<Node> GetNeighbour(std::bitset<size> direction, std::bitset<size> node, int depthOfNode);
+        std::optional<Node> GetNeighbour(Direction direction, std::bitset<size> node, int depthOfNode);
         void Clear(Node& node);
         std::bitset<size>  GetSibling(Coordinate coord, std::bitset<size> node, int depthOfNode);
-        
+        void Detalize(std::bitset<size> nodeIndex, int depth, int maxDepth, Direction direction);
         GeneratedChildren GenerateChildren(Node& node, int depth);
     private:
         void BuildTree(glm::vec3 playerPos, Node nodeToDivide, int depth);
