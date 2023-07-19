@@ -85,6 +85,9 @@ namespace Voidstar
 		std::string tessEFilepath = "";
 
 
+		std::string computeFilepath = "";
+
+
 
 		vk::SampleCountFlagBits samples;
 		vk::Extent2D swapchainExtent;
@@ -137,6 +140,7 @@ namespace Voidstar
 		void UpdateUniformBuffer(uint32_t imageIndex);
 		void RecreateSwapchain();
 		void Shutdown();
+		void CreateComputePipeline();
 	private:
 		Voidstar::Instance* m_Instance;
 		int m_ViewportWidth, m_ViewportHeight;
@@ -152,6 +156,7 @@ namespace Voidstar
 		UPtr<Buffer> m_InstancedDataBuffer;
 
 		SPtr<Image> m_Image;
+		SPtr<Image> m_NoiseImage;
 		SPtr<Model> m_Model;
 
 
@@ -176,12 +181,10 @@ namespace Voidstar
 		std::vector<vk::DescriptorSet> m_DescriptorSets;
 		std::vector<UPtr<Buffer>> m_ShaderStorageBuffers;
 		vk::CommandPool m_CommandComputePool;
-		std::vector<CommandBuffer> m_CommandComputeBuffers;
+		std::vector<CommandBuffer> m_ComputeCommandBuffer;
 
 		SPtr<DescriptorPool> m_DescriptorPoolTex;
 		vk::DescriptorSet m_DescriptorSetTex;
-		SPtr<DescriptorPool> m_ComputePool;
-		DescriptorSetLayout* m_ComputeSetLayout;
 		std::vector<vk::DescriptorSet> m_ComputeDescriptorSets;
 		//debug callback
 		vk::DebugUtilsMessengerEXT m_DebugMessenger;
@@ -203,6 +206,13 @@ namespace Voidstar
 		vk::PipelineLayout m_DebugPipelineLayout;
 		vk::RenderPass m_DebugRenderPass;
 
+		vk::Pipeline m_ComputePipeline;
+		vk::PipelineLayout m_ComputePipelineLayout;
+		vk::DescriptorSet m_DescriptorSetNoise;
+		SPtr<DescriptorPool> m_DescriptorPoolNoise;
+		DescriptorSetLayout* m_DescriptorSetLayoutNoise;
+
+
 		UPtr<CommandPoolManager> m_CommandPoolManager;
 		
 
@@ -216,7 +226,7 @@ namespace Voidstar
 		SPtr<Window> m_Window;
 
 		RenderPrimitive m_RenderPrimitive = RenderPrimitive::Plane;
-		vk::PolygonMode m_PolygoneMode = vk::PolygonMode::eFill;
+		vk::PolygonMode m_PolygoneMode = vk::PolygonMode::eLine;
 
 
 		vk::BufferMemoryBarrier	m_InstanceBarrier;

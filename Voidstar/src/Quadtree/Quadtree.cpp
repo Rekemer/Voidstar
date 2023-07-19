@@ -7,11 +7,11 @@ namespace Voidstar
 {
 	//http://www.lcad.icmc.usp.br/~jbatista/procimg/quadtree_neighbours.pdf
 
-	const float groundSize = 10;
+	const float groundSize = 100;
 	const int widthGround = 2;
 	const int heightGround = 2;
 
-	constexpr float levelOfDetail =6;
+	constexpr float levelOfDetail =32;
 
 
 

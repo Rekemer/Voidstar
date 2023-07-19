@@ -54,7 +54,7 @@ namespace Voidstar
 	std::string BASE_SPIRV_OUTPUT = BASE_SHADER_PATH+"Binary/";
 	#define INSTANCE_COUNT 4096
 	#define ZEROPOS 1
-	
+	size_t currentFrame = 0;
 
 	template<typename T>
 	const uint64_t SizeOfBuffer(const uint64_t bufferSize,const T& bufferElement) 
@@ -83,6 +83,7 @@ namespace Voidstar
 			bool isDirectory = shader.is_directory();
 			const std::string& filenameStr = shader.path().filename().string();
 			bool isTesselationFolder = isDirectory && filenameStr.compare("Tesselation") == 0;
+			bool isComputeFolder = isDirectory && filenameStr.compare("Compute") == 0;
 			// vertex and fragment shaders
 			if (!isDirectory)
 			{
@@ -128,17 +129,40 @@ namespace Voidstar
 						const char* extension = ".spvE";
 						command = CreateCommand(shaderString, extension, shaderPath);
 						}
-				if (command != "")
-				{
-					int result = std::system(command.c_str());
-					if (result != 0)
+					if (command != "")
 					{
-						Log::GetLog()->error("shader {0} is not compiled!", shaderString);
+						int result = std::system(command.c_str());
+						if (result != 0)
+						{
+							Log::GetLog()->error("shader {0} is not compiled!", shaderString);
+						}
 					}
-				}
 				
 				}
 			
+			}
+			else if (isComputeFolder)
+			{
+				auto computeFolderPath = shader;
+				for (auto& shader : std::filesystem::directory_iterator(computeFolderPath))
+				{
+					std::string command = "";
+					auto extension = shader.path().extension().string();
+					auto shaderString = shader.path().filename().string();
+					auto shaderPath = BASE_SHADER_PATH + "Compute/" + shaderString;
+					if (extension == ".comp") {
+						const char* extension = ".spvCmp";
+						command = CreateCommand(shaderString, extension, shaderPath);
+					}
+					if (command != "")
+					{
+						int result = std::system(command.c_str());
+						if (result != 0)
+						{
+							Log::GetLog()->error("shader {0} is not compiled!", shaderString);
+						}
+					}
+				}
 			}
 		}
 	}
@@ -338,6 +362,71 @@ namespace Voidstar
 	}
 
 
+	void Renderer::CreateComputePipeline()
+	{
+
+		{
+
+			vk::DescriptorPoolSize poolSize;
+			poolSize.type = vk::DescriptorType::eStorageImage;
+			poolSize.descriptorCount = 1;
+
+			std::vector<vk::DescriptorPoolSize> poolSizes{ poolSize };
+
+			m_DescriptorPoolNoise = DescriptorPool::Create(poolSizes, 1);
+
+			std::vector<vk::DescriptorSetLayout> layouts;
+			layouts.resize(1);
+
+
+
+			vk::DescriptorSetLayoutBinding layoutBinding;
+			layoutBinding.binding = 0;
+			layoutBinding.descriptorType = vk::DescriptorType::eStorageImage;
+			layoutBinding.stageFlags = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eTessellationEvaluation | vk::ShaderStageFlagBits::eCompute ;
+			layoutBinding.descriptorCount = 1;
+
+			std::vector<vk::DescriptorSetLayoutBinding> layoutBindings{ layoutBinding };
+
+			m_DescriptorSetLayoutNoise = DescriptorSetLayout::Create(layoutBindings);
+
+			layouts[0] = m_DescriptorSetLayoutNoise->GetLayout();
+			m_DescriptorSetNoise = m_DescriptorPoolNoise->AllocateDescriptorSets(1, layouts.data())[0];
+		}
+
+		m_NoiseImage = Image::CreateEmptyImage({ m_DescriptorSetNoise,m_DescriptorSetTex}, 450, 450);
+		// create compute layout
+
+
+		auto device = RenderContext::GetDevice();
+		auto computeShaderModule = CreateModule(BASE_SPIRV_OUTPUT + "NoiseTex.spvCmp", device->GetDevice());
+
+		vk::PipelineShaderStageCreateInfo computeShaderStageInfo{};
+		computeShaderStageInfo.flags = vk::PipelineShaderStageCreateFlags();
+		computeShaderStageInfo.stage = vk::ShaderStageFlagBits::eCompute;
+		computeShaderStageInfo.module = computeShaderModule;
+		computeShaderStageInfo.pName = "main";
+
+
+		vk::PipelineLayoutCreateInfo pipelineLayoutInfo{};
+		pipelineLayoutInfo.sType = vk::StructureType::ePipelineLayoutCreateInfo;
+		pipelineLayoutInfo.setLayoutCount = 1;
+		pipelineLayoutInfo.pSetLayouts = const_cast<const vk::DescriptorSetLayout*>(&m_DescriptorSetLayoutNoise->GetLayout());
+		m_ComputePipelineLayout = device->GetDevice().createPipelineLayout(pipelineLayoutInfo, nullptr);
+
+
+		vk::ComputePipelineCreateInfo pipelineInfo{};
+
+		pipelineInfo.sType = vk::StructureType::eComputePipelineCreateInfo;
+		pipelineInfo.layout = m_ComputePipelineLayout;
+		pipelineInfo.stage = computeShaderStageInfo;
+		m_ComputePipeline = device->GetDevice().createComputePipeline(nullptr, pipelineInfo).value;
+
+
+
+		vkDestroyShaderModule(device->GetDevice(), computeShaderModule, nullptr);
+	}
+
 	void Renderer::Init(size_t screenWidth, size_t screenHeight, std::shared_ptr<Window> window, Application* app) 
 		
 	{
@@ -489,6 +578,7 @@ namespace Voidstar
 		auto commandPool = m_CommandPoolManager->GetFreePool();
 		m_RenderCommandBuffer = CommandBuffer::CreateBuffers(commandPool, vk::CommandBufferLevel::ePrimary, 3);
 		m_TransferCommandBuffer = CommandBuffer::CreateBuffers(commandPool, vk::CommandBufferLevel::ePrimary, 3);
+		m_ComputeCommandBuffer = CommandBuffer::CreateBuffers(commandPool, vk::CommandBufferLevel::ePrimary, 3);
 
 		CreateSyncObjects();
 
@@ -498,7 +588,8 @@ namespace Voidstar
 
 
 
-		m_Image = Image::CreateImage(BASE_RES_PATH+"noise.jpg", m_DescriptorSetTex);
+		//m_Image = Image::CreateImage(BASE_RES_PATH+"noise.jpg", m_DescriptorSetTex);
+		
 		//std::string modelPath = BASE_RES_PATH+"viking_room/viking_room.obj";
 		//m_Model = Model::Load(modelPath);
 
@@ -605,9 +696,11 @@ namespace Voidstar
 
 
 		CreateMSAAFrame();
+		CreateComputePipeline();
 		CreatePipeline();
 		CreateFramebuffers();
 		
+		// create compute pipeline 
 
 
 		auto physDev = m_Device->GetDevicePhys();
@@ -623,6 +716,66 @@ namespace Voidstar
 			vkGetPhysicalDeviceCalibrateableTimeDomainsEXT, vkGetCalibratedTimestampsEXT);
 
 		
+		currentFrame = 0;
+		auto cmdBuffer = m_ComputeCommandBuffer[currentFrame].GetCommandBuffer();
+		cmdBuffer.reset();
+
+		vk::CommandBufferBeginInfo beginInfo;
+		beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
+		cmdBuffer.begin(beginInfo);
+
+
+
+		vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_ComputePipeline);
+		cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_ComputePipelineLayout, 0, 1, &m_DescriptorSetNoise, 0, 0);
+
+		vkCmdDispatch(cmdBuffer, 480/16, 480/ 16, 1);
+
+
+		// Transition the image layout from VK_IMAGE_LAYOUT_GENERAL (used in the compute shader)
+// to VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL (used in the graphics pipeline)
+		VkImageMemoryBarrier barrier = {};
+		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL; // The layout used in the compute shader
+		barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; // Readable format
+		barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT; // Access mask for the compute shader writes
+		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT; // Access mask for the graphics pipeline reads
+		barrier.image = m_NoiseImage->m_Image;
+		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT; // or other aspect mask if applicable
+		barrier.subresourceRange.baseMipLevel = 0;
+		barrier.subresourceRange.levelCount = 1;
+		barrier.subresourceRange.baseArrayLayer = 0;
+		barrier.subresourceRange.layerCount = 1;
+		
+		// Issue the pipeline barrier to transition the image layout
+		vkCmdPipelineBarrier(
+			cmdBuffer,
+			VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, // Compute shader stage (write operation)
+			VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT, // Graphics pipeline stage (read operation)
+			0, // Dependency flags
+			0, nullptr, // Memory barriers
+			0, nullptr, // Buffer memory barriers
+			1, &barrier // Image memory barrier
+		);
+
+		if (vkEndCommandBuffer(cmdBuffer) != VK_SUCCESS)
+		{
+			throw std::runtime_error("failed to record command buffer!");
+		}
+		vk::SubmitInfo submitInfo = {};
+
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &cmdBuffer;
+		submitInfo.signalSemaphoreCount = 1;
+		submitInfo.pSignalSemaphores = &m_ComputeFinishedSemaphores[currentFrame];
+
+		m_Device->GetGraphicsQueue().submit(submitInfo);
+
+
+
+
+
+
 
 
 	}
@@ -816,7 +969,7 @@ namespace Voidstar
 		
 	}
 
-	size_t currentFrame = 0;
+	
 	Renderer* Renderer::Instance()
 	{
 		static Renderer* s_Renderer = new Renderer();
@@ -1833,7 +1986,24 @@ namespace Voidstar
 				shaderStages.push_back(tessShaderInfo);
 			}
 		}
+		vk::ShaderModule computeModule;
+		if (spec.computeFilepath != "")
+		{
 
+			computeModule = CreateModule(
+				spec.computeFilepath, spec.device
+			);
+			{
+				vk::PipelineShaderStageCreateInfo computeShaderInfo = {};
+				computeShaderInfo.flags = vk::PipelineShaderStageCreateFlags();
+				computeShaderInfo.stage = vk::ShaderStageFlagBits::eCompute;
+				computeShaderInfo.module = computeModule;
+				computeShaderInfo.pName = "main";
+				shaderStages.push_back(computeShaderInfo);
+			}
+		
+			
+		}
 
 
 
@@ -1927,7 +2097,12 @@ namespace Voidstar
 			spec.device.destroyShaderModule(tessControl);
 			spec.device.destroyShaderModule(tessEvaulation);
 		}
-	
+		
+		if (computeModule)
+		{
+			spec.device.destroyShaderModule(computeModule);
+
+		}
 		Log::GetLog()->info("Pipeline is Created!");
 		return output;
 
@@ -1984,8 +2159,8 @@ namespace Voidstar
 		delete m_DescriptorSetLayoutTex;
 		m_DescriptorPool.reset();
 		m_DescriptorPoolTex.reset();
-		m_ComputePool.reset();
-		m_Device->GetDevice().destroyDescriptorSetLayout(m_ComputeSetLayout->GetLayout());
+		m_DescriptorPoolNoise.reset();
+		m_Device->GetDevice().destroyDescriptorSetLayout(m_DescriptorSetLayoutNoise->GetLayout());
 	
 
 		for (int i = 0; i < m_DescriptorSetLayouts.size(); i++)

@@ -67,6 +67,7 @@ namespace Voidstar
 	{
 		
 		auto image = CreateUPtr<Image>();
+		
 		image->m_CommandPool = Renderer::Instance()->GetCommandPoolManager()->GetFreePool();
 		stbi_set_flip_vertically_on_load(true);
 		auto pixels = stbi_load(path.c_str(), &image->m_Width, &image->m_Height, &image->m_Channels, STBI_rgb_alpha);
@@ -216,6 +217,158 @@ namespace Voidstar
 		descriptorWrite.pImageInfo = &imageDescriptor;
 
 		device->GetDevice().updateDescriptorSets(descriptorWrite, nullptr);
+
+		return image;
+	}
+	SPtr<Image> Image::CreateEmptyImage(std::vector<vk::DescriptorSet> descriptorSet, int width, int height)
+	{
+		auto image = CreateUPtr<Image>();
+
+		image->m_CommandPool = Renderer::Instance()->GetCommandPoolManager()->GetFreePool();
+		image->m_Width = width;
+		image->m_Height = height;
+
+
+		auto device = RenderContext::GetDevice();
+		ImageSpecs specs;
+		specs.width = image->m_Width;
+		specs.height = image->m_Height;
+		specs.format = vk::Format::eR8G8B8A8Unorm;
+		specs.tiling = vk::ImageTiling::eOptimal;
+		specs.usage = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled;
+		specs.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+		image->m_Format = specs.format;
+		try {
+			image->m_Image = CreateVKImage(specs, vk::SampleCountFlagBits::e1);
+		}
+		catch (vk::SystemError err)
+		{
+			Log::GetLog()->error("Unable to make empty image: ");
+		}
+
+		try
+		{
+			image->m_ImageMemory = CreateMemory(image->m_Image, specs);
+		}
+		catch (vk::SystemError err)
+		{
+			Log::GetLog()->error("Unable to allocate memory for empty image");
+		}
+
+		// populate memory with data
+		auto imageSize = image->m_Width * image->m_Height * 4;
+		auto buffer = Buffer::CreateStagingBuffer(imageSize);
+
+
+
+
+
+
+
+
+
+
+
+
+
+		image->m_ImageView = CreateImageView(image->m_Image, vk::Format::eR8G8B8A8Unorm, vk::ImageAspectFlagBits::eColor);
+
+
+		/*
+	typedef struct VkSamplerCreateInfo {
+		VkStructureType         sType;
+		const void* pNext;
+		VkSamplerCreateFlags    flags;
+		VkFilter                magFilter;
+		VkFilter                minFilter;
+		VkSamplerMipmapMode     mipmapMode;
+		VkSamplerAddressMode    addressModeU;
+		VkSamplerAddressMode    addressModeV;
+		VkSamplerAddressMode    addressModeW;
+		float                   mipLodBias;
+		VkBool32                anisotropyEnable;
+		float                   maxAnisotropy;
+		VkBool32                compareEnable;
+		VkCompareOp             compareOp;
+		float                   minLod;
+		float                   maxLod;
+		VkBorderColor           borderColor;
+		VkBool32                unnormalizedCoordinates;
+	} VkSamplerCreateInfo;
+	*/
+		vk::SamplerCreateInfo samplerInfo;
+		samplerInfo.flags = vk::SamplerCreateFlags();
+		samplerInfo.minFilter = vk::Filter::eLinear;
+		samplerInfo.magFilter = vk::Filter::eLinear;
+		samplerInfo.addressModeU = vk::SamplerAddressMode::eRepeat;
+		samplerInfo.addressModeV = vk::SamplerAddressMode::eRepeat;
+		samplerInfo.addressModeW = vk::SamplerAddressMode::eRepeat;
+
+		samplerInfo.anisotropyEnable = false;
+		samplerInfo.maxAnisotropy = 1.0f;
+
+		samplerInfo.borderColor = vk::BorderColor::eIntOpaqueBlack;
+		samplerInfo.unnormalizedCoordinates = false;
+		samplerInfo.compareEnable = false;
+		samplerInfo.compareOp = vk::CompareOp::eAlways;
+
+		samplerInfo.mipmapMode = vk::SamplerMipmapMode::eLinear;
+		samplerInfo.mipLodBias = 0.0f;
+		samplerInfo.minLod = 0.0f;
+		samplerInfo.maxLod = 0.0f;
+
+		try
+		{
+			image->m_Sampler = device->GetDevice().createSampler(samplerInfo);
+		}
+		catch (vk::SystemError err)
+		{
+			Log::GetLog()->error("Failed to make sampler for empty image");
+
+		}
+
+		//then transfer it to image memory
+		auto commandBuffer = CommandBuffer::CreateBuffer(image->m_CommandPool, vk::CommandBufferLevel::ePrimary);
+
+
+		commandBuffer.BeginTransfering();
+		commandBuffer.ChangeImageLayout(&image->m_Image, vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral);
+		commandBuffer.EndTransfering();
+
+		commandBuffer.Free();
+		Renderer::Instance()->GetCommandPoolManager()->FreePool(image->m_CommandPool);
+
+
+		vk::DescriptorImageInfo imageDescriptor;
+		imageDescriptor.imageLayout = vk::ImageLayout::eGeneral;
+		imageDescriptor.imageView = image->m_ImageView;
+		imageDescriptor.sampler = image->m_Sampler;
+
+		vk::WriteDescriptorSet descriptorWrite;
+		descriptorWrite.dstSet = descriptorSet[0];
+		descriptorWrite.dstBinding = 0;
+		descriptorWrite.dstArrayElement = 0;
+		descriptorWrite.descriptorType = vk::DescriptorType::eStorageImage;
+		descriptorWrite.descriptorCount = 1;
+		descriptorWrite.pImageInfo = &imageDescriptor;
+
+
+		vk::DescriptorImageInfo imageDescriptor1;
+		imageDescriptor1.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+		imageDescriptor1.imageView = image->m_ImageView;
+		imageDescriptor1.sampler = image->m_Sampler;
+
+		vk::WriteDescriptorSet descriptorWrite1;
+		descriptorWrite1.dstSet = descriptorSet[1];
+		descriptorWrite1.dstBinding = 0;
+		descriptorWrite1.dstArrayElement = 0;
+		descriptorWrite1.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+		descriptorWrite1.descriptorCount = 1;
+		descriptorWrite1.pImageInfo = &imageDescriptor1;
+
+
+		device->GetDevice().updateDescriptorSets({ descriptorWrite}, nullptr);
+		device->GetDevice().updateDescriptorSets({ descriptorWrite1}, nullptr);
 
 		return image;
 	}

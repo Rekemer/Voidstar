@@ -124,7 +124,7 @@ void main()
     vec4 p1 = (p11 - p10) * u + p10;
     vec4 p = (p1 - p0) * v + p0;
 
-    float gridSize = 10;
+    float gridSize = 100;
     float tileWidth = length(gl_in[0].gl_Position - gl_in[1].gl_Position);
    
     vec2 newUv = GetUvs(p.xz,gridSize, vec2(u,v),gridSize / (tileWidth));

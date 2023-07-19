@@ -1,0 +1,79 @@
+#version 450
+
+
+
+layout(set = 0, binding = 0, rgba8) uniform writeonly image2D storageImage;
+
+
+layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+
+
+
+
+
+float random (vec2 st) {
+    return fract(sin(dot(st.xy,
+                         vec2(12.9898,78.233)))*
+        43758.5453123);
+}
+float noise (  vec2 st) {
+    vec2 i = floor(st);
+    vec2 f = fract(st);
+
+    // Four corners in 2D of a tile
+    float a = random(i);
+    float b = random(i + vec2(1.0, 0.0));
+    float c = random(i + vec2(0.0, 1.0));
+    float d = random(i + vec2(1.0, 1.0));
+
+	// smooth step function lol
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    //u = vec2(1,1);
+
+	//return u.x;
+    float interpolated;
+
+
+	float interpolatedX = mix(a, b, u.x);
+	float interpolatedY = mix(c, d, u.x);
+	interpolated = mix(interpolatedX , interpolatedY , u.y);
+	
+
+
+    return interpolated;
+}
+
+#define OCTAVES 37
+float fbm (in vec2 st) {
+    // Initial values
+    float value = 0.0;
+    float amplitude = .5;
+    float frequency = 0.;
+    //
+    // Loop of octaves
+    for (int i = 0; i < OCTAVES; i++) {
+        value += amplitude * noise(st);
+        st *= 5.;
+        amplitude *= .7;
+    }
+    return value;
+}
+
+
+
+
+
+void main() 
+{
+   // Get the image coordinates
+    ivec2 coords = ivec2(gl_GlobalInvocationID.xy);
+    vec2 imageSize = vec2(480,480);
+    float u = float(coords.x) / float(imageSize.x);
+    float v = float(coords.y) / float(imageSize.y);
+    vec2 st = vec2 (u,v);
+    float noise = fbm(st*125.0);
+    // Set the color to blue (RGB = 0, 0, 1)
+    imageStore(storageImage, coords, vec4(noise,noise,noise, 1.0));
+
+}

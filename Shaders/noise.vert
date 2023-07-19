@@ -10,7 +10,7 @@ layout(binding = 0) uniform UniformBufferObject {
     mat4 proj;
     
 } ubo;
-
+layout(set = 1, binding = 0) uniform sampler2D u_Tex;
 // vertexAttributes
 layout(location = 0) in vec3 in_pos;
 layout(location = 1) in vec4 in_color;
@@ -21,7 +21,6 @@ layout(location = 3) in vec2 in_uv;
 layout (location = 4) in vec3 instancePos;
 layout (location = 5) in vec4 instanceEdges;
 layout (location = 6) in float instanceScale;
-layout(set = 1, binding = 0) uniform sampler2D u_Tex;
 vec2 positions[3] = vec2[](
 	vec2(0.0, -0.5),
 	vec2(0.5, 0.5),
@@ -196,7 +195,7 @@ void main()
     
     
 // Constants
-    const int gridSize = 10;
+    const int gridSize = 100;
     const float cellSize = 1.0 / float(gridSize);
 	//vec4 worldPos= ubo.model * vec4((in_pos+instancePos)*instanceScale,1.0);
     float tilesAmount  = 2.;
