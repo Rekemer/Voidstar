@@ -6,6 +6,7 @@
 #include"CommandBuffer.h"
 #include"../Types.h"
 #include"QuadTree/QuadTree.h"
+struct ImGui_ImplVulkanH_Window;
 namespace Voidstar
 {
 	class Window;
@@ -103,6 +104,14 @@ namespace Voidstar
 		vk::RenderPass renderpass;
 		vk::Pipeline pipeline;
 	};
+	struct ImGuiData
+	{
+		VkDescriptorPool g_DescriptorPool;
+		VkRenderPass g_RenderPass;
+		vk::CommandPool g_CommandPool;
+		std::vector<CommandBuffer> g_CommandBuffers;
+		std::vector<vk::Framebuffer> g_FrameBuffers;
+	};
 	class Instance;
 	class Device;
 	class Swapchain;
@@ -112,6 +121,8 @@ namespace Voidstar
 	{
 	public:
 		void Init(size_t screenWidth, size_t screenHeight, std::shared_ptr<Window> window, Application* app );
+		void InitImGui( );
+		void SetupVulkanWindow(ImGui_ImplVulkanH_Window* g_wd, VkSurfaceKHR surface, int width, int height);
 		static Renderer* Instance();
 		void Render();
 		CommandPoolManager* GetCommandPoolManager()
@@ -122,7 +133,8 @@ namespace Voidstar
 		void SubmitInstanceData(const InstanceData& instance);
 		void GenerateTerrain();
 		void GenerateTerrain(glm::vec3 tilePos,float depth, float tileWidth, int parentIndex);
-
+		void RenderImGui(int frameIndex);
+		void CleanUpImGui();
 		~Renderer();
 	private:
 		void CreateInstance();
@@ -226,7 +238,7 @@ namespace Voidstar
 		SPtr<Window> m_Window;
 
 		RenderPrimitive m_RenderPrimitive = RenderPrimitive::Plane;
-		vk::PolygonMode m_PolygoneMode = vk::PolygonMode::eLine;
+		vk::PolygonMode m_PolygoneMode = vk::PolygonMode::eFill;
 
 
 		vk::BufferMemoryBarrier	m_InstanceBarrier;
@@ -234,6 +246,9 @@ namespace Voidstar
 		std::vector<vk::DescriptorSet> m_InstanceDescriptorSets;
 		void* m_InstancedPtr;
 		Quadtree m_QuadTree;
+
+		ImGuiData imguiData;
+	
 	};
 
 }

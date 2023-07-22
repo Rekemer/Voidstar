@@ -46,16 +46,16 @@ float noise (  vec2 st) {
 
 #define OCTAVES 37
 float fbm (in vec2 st) {
-    // Initial values
+  // Initial values
     float value = 0.0;
     float amplitude = .5;
-    float frequency = 0.;
+    float frequency =5.;
     //
     // Loop of octaves
     for (int i = 0; i < OCTAVES; i++) {
         value += amplitude * noise(st);
-        st *= 5.;
-        amplitude *= .7;
+        st *= frequency;
+        amplitude *= .3;
     }
     return value;
 }
@@ -68,11 +68,11 @@ void main()
 {
    // Get the image coordinates
     ivec2 coords = ivec2(gl_GlobalInvocationID.xy);
-    vec2 imageSize = vec2(480,480);
+    vec2 imageSize = vec2(450,450);
     float u = float(coords.x) / float(imageSize.x);
     float v = float(coords.y) / float(imageSize.y);
     vec2 st = vec2 (u,v);
-    float noise = fbm(st*125.0);
+    float noise = fbm(st*5.0);
     // Set the color to blue (RGB = 0, 0, 1)
     imageStore(storageImage, coords, vec4(noise,noise,noise, 1.0));
 

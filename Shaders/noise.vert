@@ -230,7 +230,7 @@ void main()
     vec2 newUv = GetUvs(worldPos.xz, gridSize, in_uv,gridSize/(instanceScale) );
 
     float noiseValue = texture(u_Tex,newUv).x;
-    worldPos.y = abs(noiseValue);
+    worldPos.y = abs(noiseValue)*8 ;
 	color.xyz =vec3(noiseValue,noiseValue,noiseValue) ;
    // color.xyz = vec3(newUv,0.);
     //color.xyz = vec3(noiseValue,noiseValue,noiseValue);

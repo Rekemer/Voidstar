@@ -1,0 +1,4 @@
+[submodule "Voidstar/Dependencies/ImGui/imgui"]
+	path = Dependencies/ImGui/imgui
+	url = https://github.com/ocornut/imgui.git
+	branch = docking
