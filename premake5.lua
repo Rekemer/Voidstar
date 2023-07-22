@@ -8,8 +8,8 @@ workspace "Voidstar"
     cppdialect "C++17"
 	configurations
 	{
-		"VS_Debug",
-		"VS_Release"
+		"Debug",
+		"Release"
 	}
 
 	flags
@@ -24,7 +24,7 @@ workspace "Voidstar"
 	include "Voidstar"
 	
 	group "Dependencies"
-		include "Dependencies/ImGui/imgui"
+		include "Dependencies/ImGui"
 	group ""
 	include "Sandbox"
 	

@@ -23,7 +23,7 @@ project "Voidstar"
         "%{wks.location}/Dependencies/spdlog/include/spdlog",
         "%{wks.location}/Dependencies/",
         "%{wks.location}/Dependencies/Tracy/public",
-        "%{wks.location}/Dependencies/ImGui/imgui",
+        "%{wks.location}/Dependencies/ImGui",
         "%{prj.location}/src"
         
     }

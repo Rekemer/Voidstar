@@ -1334,13 +1334,13 @@ namespace Voidstar
 
 			// frame render
 			{
-				VkResult err;
-
-				if (err == VK_ERROR_OUT_OF_DATE_KHR || err == VK_SUBOPTIMAL_KHR)
-				{
-					g_SwapChainRebuild = true;
-					return;
-				}
+				//VkResult err = ;
+				//
+				//if (err == VK_ERROR_OUT_OF_DATE_KHR || err == VK_SUBOPTIMAL_KHR)
+				//{
+				//	g_SwapChainRebuild = true;
+				//	return;
+				//}
 
 				ImGui_ImplVulkanH_Frame* fd = &wd->Frames[imageIndex];
 				{
@@ -1351,7 +1351,7 @@ namespace Voidstar
 					VkCommandBufferBeginInfo info = {};
 					info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 					info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-					err = vkBeginCommandBuffer(fd->CommandBuffer, &info);
+					vkBeginCommandBuffer(fd->CommandBuffer, &info);
 				}
 				{
 					VkRenderPassBeginInfo info = {};
@@ -1370,7 +1370,7 @@ namespace Voidstar
 
 				// Submit command buffer
 				vkCmdEndRenderPass(fd->CommandBuffer);
-				err = vkEndCommandBuffer(fd->CommandBuffer);
+				vkEndCommandBuffer(fd->CommandBuffer);
 				{
 					//VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 					//VkSubmitInfo info = {};

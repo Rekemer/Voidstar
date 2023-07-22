@@ -13,7 +13,7 @@ project "Sandbox"
     {
         "src",
         "%{wks.solution}/Dependencies/glm/glm",
-        "%{wks.solution}/Dependencies/ImGui/imgui",
+        "%{wks.solution}/Dependencies/ImGui",
         "../Voidstar/src",
     }
 
