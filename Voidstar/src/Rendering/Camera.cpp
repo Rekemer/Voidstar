@@ -9,11 +9,17 @@ namespace Voidstar
 {
 	void Camera::Update(float deltaTime)
 	{
-        ProcessInput(deltaTime);
-        ProcessMouse();
-        UpdateView();
+        if (m_IsControlEnabled)
+        {
+            ProcessInput(deltaTime);
+            ProcessMouse();
+            UpdateView();
+        }
         //Log::GetLog()->info("pos: {0} {1} {2}\n", m_Position.x, m_Position.y, m_Position.z);
-
+        if (Input::IsKeyPressed(VS_KEY_C))
+        {
+            m_IsControlEnabled = !m_IsControlEnabled;
+        }
 
 	}
     void Camera::UpdateView()

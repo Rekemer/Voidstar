@@ -61,6 +61,7 @@ namespace Voidstar
 		void CopyBufferToImage(Buffer* buffer,vk::Image* image, int width, int height);
 
 		void EndTransfering();
+		void SubmitSingle();
 
 		vk::CommandBuffer& GetCommandBuffer() { return m_CommandBuffer; }
 

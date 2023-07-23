@@ -1,7 +1,14 @@
 #version 450
 
 
-
+// layout(binding = 0) uniform NoiseData {
+//     float frequence ;
+// 	float amplitude ;
+// 	float octaves ;
+// 	int textureHeight ;
+// 	int textureWidth ;
+    
+// } noise;
 layout(set = 0, binding = 0, rgba8) uniform writeonly image2D storageImage;
 
 

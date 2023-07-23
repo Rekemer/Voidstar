@@ -447,6 +447,31 @@ namespace Voidstar
 		vkDestroyShaderModule(device->GetDevice(), computeShaderModule, nullptr);
 	}
 
+	void Renderer::UpdateNoiseTexure()
+	{
+		currentFrame = 0;
+		auto device = m_Device->GetDevice();
+
+		auto cmdBuffer = m_ComputeCommandBuffer[currentFrame].BeginTransfering();
+
+
+
+
+		vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_ComputePipeline);
+		cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_ComputePipelineLayout, 0, 1, &m_DescriptorSetNoise, 0, 0);
+
+		vkCmdDispatch(cmdBuffer, 480 / 16, 480 / 16, 1);
+
+		m_ComputeCommandBuffer[currentFrame].ChangeImageLayout(&m_NoiseImage->m_Image, vk::ImageLayout::eGeneral, vk::ImageLayout::eShaderReadOnlyOptimal);
+
+		m_ComputeCommandBuffer[currentFrame].EndTransfering();
+		m_ComputeCommandBuffer[currentFrame].SubmitSingle();
+
+
+		device.waitIdle();
+
+	}
+
 	void Renderer::Init(size_t screenWidth, size_t screenHeight, std::shared_ptr<Window> window, Application* app) 
 		
 	{
@@ -632,6 +657,7 @@ namespace Voidstar
 			m_TransferCommandBuffer[0].BeginTransfering();
 			m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_IndexBuffer.get(), (void*)indices.data(), indexSize);
 			m_TransferCommandBuffer[0].EndTransfering();
+			m_TransferCommandBuffer[0].SubmitSingle();
 
 
 
@@ -652,6 +678,7 @@ namespace Voidstar
 		m_TransferCommandBuffer[0].BeginTransfering();
 		m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_ModelBuffer.get(), (void*)vertices.data(), vertexSize);
 		m_TransferCommandBuffer[0].EndTransfering();
+		m_TransferCommandBuffer[0].SubmitSingle();
 
 
 		{
@@ -691,6 +718,7 @@ namespace Voidstar
 				m_TransferCommandBuffer[0].BeginTransfering();
 				m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_IndexSphereBuffer.get(), (void*)indices.data(), indexSize);
 				m_TransferCommandBuffer[0].EndTransfering();
+				m_TransferCommandBuffer[0].SubmitSingle();
 
 
 
@@ -711,6 +739,7 @@ namespace Voidstar
 			m_TransferCommandBuffer[0].BeginTransfering();
 			m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_SphereBuffer.get(), (void*)vertices.data(), vertexSize);
 			m_TransferCommandBuffer[0].EndTransfering();
+			m_TransferCommandBuffer[0].SubmitSingle();
 		}
 		
 
@@ -736,65 +765,7 @@ namespace Voidstar
 			vkGetPhysicalDeviceCalibrateableTimeDomainsEXT, vkGetCalibratedTimestampsEXT);
 
 		
-		currentFrame = 0;
-		auto cmdBuffer = m_ComputeCommandBuffer[currentFrame].GetCommandBuffer();
-		cmdBuffer.reset();
-
-		vk::CommandBufferBeginInfo beginInfo;
-		beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
-		cmdBuffer.begin(beginInfo);
-
-
-
-		vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_ComputePipeline);
-		cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_ComputePipelineLayout, 0, 1, &m_DescriptorSetNoise, 0, 0);
-
-		vkCmdDispatch(cmdBuffer, 480/16, 480/ 16, 1);
-
-
-		// Transition the image layout from VK_IMAGE_LAYOUT_GENERAL (used in the compute shader)
-// to VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL (used in the graphics pipeline)
-		VkImageMemoryBarrier barrier = {};
-		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL; // The layout used in the compute shader
-		barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; // Readable format
-		barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT; // Access mask for the compute shader writes
-		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT; // Access mask for the graphics pipeline reads
-		barrier.image = m_NoiseImage->m_Image;
-		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT; // or other aspect mask if applicable
-		barrier.subresourceRange.baseMipLevel = 0;
-		barrier.subresourceRange.levelCount = 1;
-		barrier.subresourceRange.baseArrayLayer = 0;
-		barrier.subresourceRange.layerCount = 1;
-		
-		// Issue the pipeline barrier to transition the image layout
-		vkCmdPipelineBarrier(
-			cmdBuffer,
-			VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, // Compute shader stage (write operation)
-			VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT, // Graphics pipeline stage (read operation)
-			0, // Dependency flags
-			0, nullptr, // Memory barriers
-			0, nullptr, // Buffer memory barriers
-			1, &barrier // Image memory barrier
-		);
-
-		if (vkEndCommandBuffer(cmdBuffer) != VK_SUCCESS)
-		{
-			throw std::runtime_error("failed to record command buffer!");
-		}
-		vk::SubmitInfo submitInfo = {};
-
-		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers = &cmdBuffer;
-		submitInfo.signalSemaphoreCount = 1;
-		submitInfo.pSignalSemaphores = &m_ComputeFinishedSemaphores[currentFrame];
-
-		m_Device->GetGraphicsQueue().submit(submitInfo);
-
-		auto device = m_Device->GetDevice();
-
-		device.waitIdle();
-
+		UpdateNoiseTexure();
 
 
 		InitImGui();
@@ -939,13 +910,12 @@ namespace Voidstar
 		
 		
 		
-		
 		//SetupVulkanWindow(&g_MainWindowData,m_Surface,m_ViewportWidth, m_ViewportHeight);
 
 		ImGui::CreateContext();
 		// Setup Dear ImGui style
-		ImGui::StyleColorsDark();
-		//ImGui::StyleColorsLight();
+		//ImGui::StyleColorsDark();
+		ImGui::StyleColorsLight();
 
 		// Setup Platform/Renderer backends
 		bool result =ImGui_ImplGlfw_InitForVulkan(m_Window->GetRaw(), true);
@@ -969,6 +939,7 @@ namespace Voidstar
 
 		result =  ImGui_ImplVulkan_CreateFontsTexture((VkCommandBuffer)commandBuffer.GetCommandBuffer());
 		commandBuffer.EndTransfering();
+		commandBuffer.SubmitSingle();
 		commandBuffer.Free();
 
 
@@ -1256,6 +1227,7 @@ namespace Voidstar
 		//	0, nullptr                                  
 		//);
 		m_TransferCommandBuffer[imageIndex].EndTransfering();
+		m_TransferCommandBuffer[imageIndex].SubmitSingle();
 			vk::Semaphore waitSemaphores[] = { m_ImageAvailableSemaphore };
 			vk::Semaphore signalSemaphores[] = { m_RenderFinishedSemaphore };
 
@@ -1280,7 +1252,7 @@ namespace Voidstar
 		ImGui_ImplVulkan_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
-		bool show_demo_window = true;
+		bool show_demo_window = false;
 		bool show_another_window = false;
 		ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
@@ -1288,38 +1260,18 @@ namespace Voidstar
 		if (show_demo_window)
 			ImGui::ShowDemoWindow(&show_demo_window);
 
-		// 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
-		{
-			static float f = 0.0f;
-			static int counter = 0;
 
-			ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
-
-			ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-			ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
-			ImGui::Checkbox("Another Window", &show_another_window);
-
-			ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-			ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
-
-			if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-				counter++;
-			ImGui::SameLine();
-			ImGui::Text("counter = %d", counter);
-
-			ImGui::End();
-		}
-
-		// 3. Show another simple window.
-		if (show_another_window)
-		{
-			ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
-			ImGui::Text("Hello from another window!");
-			if (ImGui::Button("Close Me"))
-				show_another_window = false;
-			ImGui::End();
-		}
-
+		bool isResized = false;
+		bool isNewParametrs = false;
+		ImGui::Begin("NoiseParametrs", &show_another_window);
+		isNewParametrs |= ImGui::SliderFloat("Frequency", &noiseData.frequence, 0, 100);
+		isNewParametrs |= ImGui::SliderFloat("Amplitude", &noiseData.amplitude, 0, 100);
+		isNewParametrs |= ImGui::SliderFloat("Octaves", &noiseData.octaves, 0, 100);
+		isResized |= ImGui::SliderInt("Texture Width", &noiseData.textureWidth, 0, 1000);
+		isResized |= ImGui::SliderInt("Texture Height", &noiseData.textureHeight, 0, 1000);
+		ImGui::End();
+		isNewParametrs |= isResized;
+		
 		// Rendering
 		ImGui::Render();
 		ImDrawData* draw_data = ImGui::GetDrawData();
@@ -1334,13 +1286,7 @@ namespace Voidstar
 
 			// frame render
 			{
-				//VkResult err = ;
-				//
-				//if (err == VK_ERROR_OUT_OF_DATE_KHR || err == VK_SUBOPTIMAL_KHR)
-				//{
-				//	g_SwapChainRebuild = true;
-				//	return;
-				//}
+				
 
 				ImGui_ImplVulkanH_Frame* fd = &wd->Frames[imageIndex];
 				{
@@ -1372,42 +1318,10 @@ namespace Voidstar
 				vkCmdEndRenderPass(fd->CommandBuffer);
 				vkEndCommandBuffer(fd->CommandBuffer);
 				{
-					//VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-					//VkSubmitInfo info = {};
-					//info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-					//info.waitSemaphoreCount = 1;
-					//info.pWaitSemaphores = &image_acquired_semaphore;
-					//info.pWaitDstStageMask = &wait_stage;
-					//info.commandBufferCount = 1;
-					//info.pCommandBuffers = &fd->CommandBuffer;
-					//info.signalSemaphoreCount = 1;
-					//info.pSignalSemaphores = &render_complete_semaphore;
-
-				//	err = vkQueueSubmit(g_Queue, 1, &info, fd->Fence);
+					
 				}
 			}
 
-			// frame present
-
-			//{
-			//	if (g_SwapChainRebuild)
-			//		return;
-			//	VkSemaphore render_complete_semaphore = wd->FrameSemaphores[frameIndex].RenderCompleteSemaphore;
-			//	VkPresentInfoKHR info = {};
-			//	info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-			//	info.waitSemaphoreCount = 1;
-			//	info.pWaitSemaphores = &render_complete_semaphore;
-			//	info.swapchainCount = 1;
-			//	info.pSwapchains = &wd->Swapchain;
-			//	info.pImageIndices = &wd->FrameIndex;
-			//	VkResult err = vkQueuePresentKHR(g_Queue, &info);
-			//	if (err == VK_ERROR_OUT_OF_DATE_KHR || err == VK_SUBOPTIMAL_KHR)
-			//	{
-			//		g_SwapChainRebuild = true;
-			//		return;
-			//	}
-			//	wd->SemaphoreIndex = (wd->SemaphoreIndex + 1) % wd->ImageCount; // Now we can use the next set of semaphores
-			//}
 
 		}
 
@@ -1459,6 +1373,21 @@ namespace Voidstar
 			ZoneScopedN("Recreating swapchain");
 			RecreateSwapchain();
 		}
+
+
+
+		if (isResized)
+		{
+			m_Device->GetDevice().waitIdle();
+			m_NoiseImage.reset();
+			m_NoiseImage = Image::CreateEmptyImage({ m_DescriptorSetNoise,m_DescriptorSetTex },noiseData.textureWidth,noiseData.textureHeight);
+			UpdateNoiseTexure();
+		}
+		if (isNewParametrs)
+		{
+			// update noise descriptor 
+		}
+
 
 		currentFrame = (currentFrame + 1) % m_Swapchain->GetFramesCount();
 

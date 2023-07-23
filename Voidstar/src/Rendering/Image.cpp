@@ -126,10 +126,12 @@ namespace Voidstar
 		commandBuffer.BeginTransfering();
 		commandBuffer.ChangeImageLayout(&image->m_Image, vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal,mipMaps);
 		commandBuffer.EndTransfering();
+		commandBuffer.SubmitSingle();
 
 		commandBuffer.BeginTransfering();
 		commandBuffer.CopyBufferToImage(buffer.get(), &image->m_Image, image->m_Width, image->m_Height);
 		commandBuffer.EndTransfering();
+		commandBuffer.SubmitSingle();
 		
 		commandBuffer.Free();
 		Renderer::Instance()->GetCommandPoolManager()->FreePool(image->m_CommandPool);
@@ -334,6 +336,7 @@ namespace Voidstar
 		commandBuffer.BeginTransfering();
 		commandBuffer.ChangeImageLayout(&image->m_Image, vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral);
 		commandBuffer.EndTransfering();
+		commandBuffer.SubmitSingle();
 
 		commandBuffer.Free();
 		Renderer::Instance()->GetCommandPoolManager()->FreePool(image->m_CommandPool);

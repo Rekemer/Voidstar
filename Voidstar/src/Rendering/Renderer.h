@@ -112,6 +112,14 @@ namespace Voidstar
 		std::vector<CommandBuffer> g_CommandBuffers;
 		std::vector<vk::Framebuffer> g_FrameBuffers;
 	};
+	struct NoiseData
+	{
+		float frequence = 5.f;
+		float amplitude = 0.3f;
+		float octaves = 37;
+		int textureHeight = 450;
+		int textureWidth = 450;
+	};
 	class Instance;
 	class Device;
 	class Swapchain;
@@ -153,6 +161,7 @@ namespace Voidstar
 		void RecreateSwapchain();
 		void Shutdown();
 		void CreateComputePipeline();
+		void UpdateNoiseTexure();
 	private:
 		Voidstar::Instance* m_Instance;
 		int m_ViewportWidth, m_ViewportHeight;
@@ -248,6 +257,7 @@ namespace Voidstar
 		Quadtree m_QuadTree;
 
 		ImGuiData imguiData;
+		NoiseData noiseData;
 	
 	};
 

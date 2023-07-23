@@ -207,6 +207,20 @@ namespace Voidstar
 			sourceStage = vk::PipelineStageFlagBits::eTopOfPipe;
 			destinationStage = vk::PipelineStageFlagBits::eTransfer;
 		}
+		else if (oldLayout == vk::ImageLayout::eUndefined && newLayout == vk::ImageLayout::eGeneral)
+		{
+			barrier.srcAccessMask = vk::AccessFlagBits::eNone;
+			barrier.dstAccessMask = vk::AccessFlagBits::eShaderWrite | vk::AccessFlagBits::eShaderRead;
+			sourceStage = vk::PipelineStageFlagBits::eTopOfPipe;
+			destinationStage = vk::PipelineStageFlagBits::eComputeShader;
+		}
+		else if (oldLayout == vk::ImageLayout::eGeneral && newLayout == vk::ImageLayout::eShaderReadOnlyOptimal)
+		{
+			barrier.srcAccessMask = vk::AccessFlagBits::eShaderWrite;
+			barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+			sourceStage = vk::PipelineStageFlagBits::eComputeShader;
+			destinationStage = vk::PipelineStageFlagBits::eVertexShader | vk::PipelineStageFlagBits::eTessellationEvaluationShader;
+		}
 		else {
 
 			barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
@@ -246,6 +260,11 @@ namespace Voidstar
 	void CommandBuffer::EndTransfering()
 	{
 		m_CommandBuffer.end();
+		
+
+	}
+	void CommandBuffer::SubmitSingle()
+	{
 		auto device = RenderContext::GetDevice();
 
 		vk::SubmitInfo submitInfo;
@@ -254,9 +273,7 @@ namespace Voidstar
 		device->GetGraphicsQueue().submit(1, &submitInfo, nullptr);
 
 		device->GetGraphicsQueue().waitIdle();
-
 	}
-
 	CommandBuffer::~CommandBuffer()
 	{
 		//auto device = RenderContext::GetDevice();
