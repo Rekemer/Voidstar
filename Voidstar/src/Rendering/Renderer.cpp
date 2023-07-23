@@ -404,9 +404,15 @@ namespace Voidstar
 			layoutBinding.binding = 0;
 			layoutBinding.descriptorType = vk::DescriptorType::eStorageImage;
 			layoutBinding.stageFlags = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eTessellationEvaluation | vk::ShaderStageFlagBits::eCompute ;
-			layoutBinding.descriptorCount = 1;
+			layoutBinding.descriptorCount =1;
+			vk::DescriptorSetLayoutBinding layoutBinding1;
+			layoutBinding1.binding = 1;
+			layoutBinding1.descriptorType = vk::DescriptorType::eUniformBuffer;
+			layoutBinding1.stageFlags = vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eTessellationEvaluation;
+			layoutBinding1.descriptorCount =1;
 
-			std::vector<vk::DescriptorSetLayoutBinding> layoutBindings{ layoutBinding };
+
+			std::vector<vk::DescriptorSetLayoutBinding> layoutBindings{ layoutBinding,layoutBinding1 };
 
 			m_DescriptorSetLayoutNoise = DescriptorSetLayout::Create(layoutBindings);
 
@@ -415,6 +421,32 @@ namespace Voidstar
 		}
 
 		m_NoiseImage = Image::CreateEmptyImage({ m_DescriptorSetNoise,m_DescriptorSetTex}, 450, 450);
+
+		{
+			BufferInputChunk inputBuffer;
+			inputBuffer.size = sizeof(NoiseData);
+			inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+			inputBuffer.usage = vk::BufferUsageFlagBits::eUniformBuffer;
+
+			m_NoiseData = new Buffer(inputBuffer);
+			m_NoiseDataPtr= m_Device->GetDevice().mapMemory(m_NoiseData->GetMemory(), 0, sizeof(NoiseData));
+			memcpy(m_NoiseDataPtr, &noiseData, sizeof(NoiseData));
+			vk::WriteDescriptorSet writeInfo;
+			vk::DescriptorBufferInfo bufferInfo{};
+			bufferInfo.buffer = m_NoiseData->GetBuffer();
+			bufferInfo.offset = 0;
+			bufferInfo.range = sizeof(NoiseData);
+
+			writeInfo.dstSet = m_DescriptorSetNoise;
+			writeInfo.dstBinding = 1;
+			writeInfo.dstArrayElement = 0; //byte offset within binding for inline uniform blocks
+			writeInfo.descriptorCount = 1;
+			writeInfo.descriptorType = vk::DescriptorType::eUniformBuffer;
+			writeInfo.pBufferInfo = &bufferInfo;
+
+			m_Device->GetDevice().updateDescriptorSets(writeInfo, nullptr);
+		}
+		
 		// create compute layout
 
 
@@ -451,7 +483,13 @@ namespace Voidstar
 	{
 		currentFrame = 0;
 		auto device = m_Device->GetDevice();
+		if (m_NoiseImage->m_ImageLayout != vk::ImageLayout::eGeneral)
+		{
+			auto cmdBuffer = m_ComputeCommandBuffer[currentFrame].BeginTransfering();
+			m_ComputeCommandBuffer[currentFrame].ChangeImageLayout(m_NoiseImage.get(), vk::ImageLayout::eShaderReadOnlyOptimal, vk::ImageLayout::eGeneral); m_ComputeCommandBuffer[currentFrame].EndTransfering();
+			m_ComputeCommandBuffer[currentFrame].SubmitSingle();
 
+		}
 		auto cmdBuffer = m_ComputeCommandBuffer[currentFrame].BeginTransfering();
 
 
@@ -460,9 +498,9 @@ namespace Voidstar
 		vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_ComputePipeline);
 		cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_ComputePipelineLayout, 0, 1, &m_DescriptorSetNoise, 0, 0);
 
-		vkCmdDispatch(cmdBuffer, 480 / 16, 480 / 16, 1);
+		vkCmdDispatch(cmdBuffer, noiseData.textureWidth / 16, noiseData.textureHeight / 16, 1);
 
-		m_ComputeCommandBuffer[currentFrame].ChangeImageLayout(&m_NoiseImage->m_Image, vk::ImageLayout::eGeneral, vk::ImageLayout::eShaderReadOnlyOptimal);
+		m_ComputeCommandBuffer[currentFrame].ChangeImageLayout(m_NoiseImage.get(), vk::ImageLayout::eGeneral, vk::ImageLayout::eShaderReadOnlyOptimal);
 
 		m_ComputeCommandBuffer[currentFrame].EndTransfering();
 		m_ComputeCommandBuffer[currentFrame].SubmitSingle();
@@ -608,6 +646,8 @@ namespace Voidstar
 			layoutBinding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
 			layoutBinding.stageFlags = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eTessellationEvaluation;
 			layoutBinding.descriptorCount = 1;
+
+
 
 			std::vector<vk::DescriptorSetLayoutBinding> layoutBindings{ layoutBinding };
 
@@ -1105,6 +1145,7 @@ namespace Voidstar
 
 			commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout, 0, m_DescriptorSets[imageIndex],nullptr);
 			commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout, 1, m_DescriptorSetTex, nullptr);
+			commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout, 2, m_DescriptorSetNoise, nullptr);
 			
 			commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
 			vk::DeviceSize offsets[] = { 0 };
@@ -1261,16 +1302,18 @@ namespace Voidstar
 			ImGui::ShowDemoWindow(&show_demo_window);
 
 
-		bool isResized = false;
-		bool isNewParametrs = false;
+		
 		ImGui::Begin("NoiseParametrs", &show_another_window);
-		isNewParametrs |= ImGui::SliderFloat("Frequency", &noiseData.frequence, 0, 100);
-		isNewParametrs |= ImGui::SliderFloat("Amplitude", &noiseData.amplitude, 0, 100);
-		isNewParametrs |= ImGui::SliderFloat("Octaves", &noiseData.octaves, 0, 100);
-		isResized |= ImGui::SliderInt("Texture Width", &noiseData.textureWidth, 0, 1000);
-		isResized |= ImGui::SliderInt("Texture Height", &noiseData.textureHeight, 0, 1000);
+		m_IsNewParametrs |= ImGui::SliderFloat("Frequency", &noiseData.frequence, 0, 100);
+		m_IsNewParametrs |= ImGui::SliderFloat("Amplitude", &noiseData.amplitude, 0, 100);
+		m_IsNewParametrs |= ImGui::SliderFloat("Octaves", &noiseData.octaves, 0, 100);
+		m_IsNewParametrs |= ImGui::SliderFloat("Vertex amplitude", &noiseData.multipler, 0, 100);
+		m_IsResized |= ImGui::SliderFloat("Texture Width", &noiseData.textureWidth, 0, 1000);
+		m_IsResized |= ImGui::SliderFloat("Texture Height", &noiseData.textureHeight, 0, 1000);
+		m_IsPolygon = ImGui::Button("change mode");
+	
 		ImGui::End();
-		isNewParametrs |= isResized;
+		m_IsNewParametrs |= m_IsResized;
 		
 		// Rendering
 		ImGui::Render();
@@ -1376,18 +1419,38 @@ namespace Voidstar
 
 
 
-		if (isResized)
+		if (m_IsResized)
 		{
 			m_Device->GetDevice().waitIdle();
 			m_NoiseImage.reset();
 			m_NoiseImage = Image::CreateEmptyImage({ m_DescriptorSetNoise,m_DescriptorSetTex },noiseData.textureWidth,noiseData.textureHeight);
-			UpdateNoiseTexure();
 		}
-		if (isNewParametrs)
+		if (m_IsNewParametrs)
 		{
 			// update noise descriptor 
+			memcpy(m_NoiseDataPtr, &noiseData, sizeof(NoiseData));
+			UpdateNoiseTexure();
 		}
+		if (m_IsPolygon)
+		{
+			m_Device->GetDevice().waitIdle();
+			m_IsPolygon = false;
+			if (m_PolygoneMode == vk::PolygonMode::eLine)
+			{
+				m_PolygoneMode = vk::PolygonMode::eFill;
 
+			}
+			else
+			{
+				m_PolygoneMode = vk::PolygonMode::eLine;
+
+			}
+			m_Device->GetDevice().destroyPipeline(m_Pipeline);
+			m_Device->GetDevice().destroyPipelineLayout(m_PipelineLayout);
+			m_Device->GetDevice().destroyRenderPass(m_RenderPass);
+			CreatePipeline();
+			
+		}
 
 		currentFrame = (currentFrame + 1) % m_Swapchain->GetFramesCount();
 
@@ -1531,7 +1594,7 @@ namespace Voidstar
 
 		auto samples = RenderContext::GetDevice()->GetSamples();
 		specs.samples = samples;
-		m_DescriptorSetLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutTex->GetLayout()};
+		m_DescriptorSetLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutTex->GetLayout(),m_DescriptorSetLayoutNoise->GetLayout() };
 
 		specs.descriptorSetLayout = m_DescriptorSetLayouts;
 		auto pipline = CreatePipeline(specs, vk::PrimitiveTopology::ePatchList);
@@ -1929,7 +1992,7 @@ namespace Voidstar
 		ImGui_ImplVulkan_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
-		bool show_demo_window = true;
+		bool show_demo_window = false;
 		bool show_another_window = false;
 		ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
@@ -1937,27 +2000,7 @@ namespace Voidstar
 		if (show_demo_window)
 			ImGui::ShowDemoWindow(&show_demo_window);
 
-		// 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
-		{
-			static float f = 0.0f;
-			static int counter = 0;
-
-			ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
-
-			ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-			ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
-			ImGui::Checkbox("Another Window", &show_another_window);
-
-			ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-			ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
-
-			if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-				counter++;
-			ImGui::SameLine();
-			ImGui::Text("counter = %d", counter);
-
-			ImGui::End();
-		}
+	
 
 		// 3. Show another simple window.
 		if (show_another_window)

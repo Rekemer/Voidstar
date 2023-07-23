@@ -8,10 +8,20 @@ layout(binding = 0) uniform UniformBufferObject {
     mat4 proj;
     
 } ubo;
+layout(set = 1, binding = 0) uniform sampler2D u_Tex;
+layout(set=2,binding = 1) uniform NoiseData {
+
+    float frequence ;
+	float amplitude ;
+	float octaves ;
+	float textureHeight ;
+	float textureWidth ;
+	float multipler ;
+    
+} noiseData;
 layout(location = 1) in vec4[] inColor ;
 layout(location = 1) out vec4 outColor ;
 layout (quads) in;
-layout(set = 1, binding = 0) uniform sampler2D u_Tex;
 vec4 random(vec4 st)
 {
 	float dotProduct1 = dot(st, vec4(127.1, 311.7, 23423.1, 98.2));
@@ -136,7 +146,7 @@ void main()
         mix(inColor[3], inColor[2], barycentricCoord.x),
         barycentricCoord.z
     );
-     p.y =abs(noiseValue)*8;
+     p.y =abs(noiseValue)*noiseData.multipler;
 
      //p.y =color.x;
      outColor = vec4(newUv,0,1);

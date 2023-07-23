@@ -16,7 +16,7 @@ namespace Voidstar
             UpdateView();
         }
         //Log::GetLog()->info("pos: {0} {1} {2}\n", m_Position.x, m_Position.y, m_Position.z);
-        if (Input::IsKeyPressed(VS_KEY_C))
+        if (Input::IsKeyTyped(VS_KEY_C))
         {
             m_IsControlEnabled = !m_IsControlEnabled;
         }

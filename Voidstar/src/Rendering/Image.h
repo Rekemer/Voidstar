@@ -43,6 +43,7 @@ namespace Voidstar
 		void* LoadImageRaw();
 	private:
 		friend class Renderer;
+		friend class CommandBuffer;
 		int m_Width, m_Height, m_Channels;
 		int m_MipMapLevels;
 		vk::Image m_Image;
@@ -51,5 +52,6 @@ namespace Voidstar
 		vk::ImageView m_ImageView;
 		vk::Sampler m_Sampler;
 		vk::CommandPool m_CommandPool;
+		vk::ImageLayout m_ImageLayout = vk::ImageLayout::eUndefined;
 	};
 }

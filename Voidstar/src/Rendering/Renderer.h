@@ -117,8 +117,9 @@ namespace Voidstar
 		float frequence = 5.f;
 		float amplitude = 0.3f;
 		float octaves = 37;
-		int textureHeight = 450;
-		int textureWidth = 450;
+		float textureHeight = 450;
+		float textureWidth = 450;
+		float multipler = 8.f;
 	};
 	class Instance;
 	class Device;
@@ -258,6 +259,11 @@ namespace Voidstar
 
 		ImGuiData imguiData;
 		NoiseData noiseData;
+		void* m_NoiseDataPtr;
+		Buffer* m_NoiseData;
+
+		bool m_IsResized, m_IsNewParametrs, m_IsPolygon;
+
 	
 	};
 

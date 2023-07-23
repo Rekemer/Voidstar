@@ -1,17 +1,16 @@
 #version 450
 
 
-// layout(binding = 0) uniform NoiseData {
-//     float frequence ;
-// 	float amplitude ;
-// 	float octaves ;
-// 	int textureHeight ;
-// 	int textureWidth ;
-    
-// } noise;
 layout(set = 0, binding = 0, rgba8) uniform writeonly image2D storageImage;
+layout(set=0,binding = 1) uniform NoiseData {
 
-
+    float frequence ;
+	float amplitude ;
+	float octaves ;
+	float textureHeight ;
+	float textureWidth ;
+    
+} noiseData;
 layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
 
@@ -59,10 +58,10 @@ float fbm (in vec2 st) {
     float frequency =5.;
     //
     // Loop of octaves
-    for (int i = 0; i < OCTAVES; i++) {
+    for (int i = 0; i < noiseData.octaves; i++) {
         value += amplitude * noise(st);
-        st *= frequency;
-        amplitude *= .3;
+        st *= noiseData.frequence;
+        amplitude *= noiseData.amplitude;
     }
     return value;
 }
@@ -75,7 +74,7 @@ void main()
 {
    // Get the image coordinates
     ivec2 coords = ivec2(gl_GlobalInvocationID.xy);
-    vec2 imageSize = vec2(450,450);
+    vec2 imageSize = vec2(noiseData.textureWidth,noiseData.textureHeight);
     float u = float(coords.x) / float(imageSize.x);
     float v = float(coords.y) / float(imageSize.y);
     vec2 st = vec2 (u,v);

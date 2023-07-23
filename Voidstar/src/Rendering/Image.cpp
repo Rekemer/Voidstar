@@ -124,7 +124,7 @@ namespace Voidstar
 
 
 		commandBuffer.BeginTransfering();
-		commandBuffer.ChangeImageLayout(&image->m_Image, vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal,mipMaps);
+		commandBuffer.ChangeImageLayout(image.get(), vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal, mipMaps);
 		commandBuffer.EndTransfering();
 		commandBuffer.SubmitSingle();
 
@@ -334,7 +334,7 @@ namespace Voidstar
 
 
 		commandBuffer.BeginTransfering();
-		commandBuffer.ChangeImageLayout(&image->m_Image, vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral);
+		commandBuffer.ChangeImageLayout(image.get(), vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral);
 		commandBuffer.EndTransfering();
 		commandBuffer.SubmitSingle();
 

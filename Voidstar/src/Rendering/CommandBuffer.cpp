@@ -7,6 +7,7 @@
 #include"CommandPoolManager.h"
 #include"Renderer.h"
 #include"Log.h"
+#include "Image.h"
 namespace Voidstar
 {
 
@@ -154,9 +155,10 @@ namespace Voidstar
 		m_CommandBuffer.copyBuffer(src->GetBuffer(), target->GetBuffer(), copyRegion);
 
 	}
-	void CommandBuffer::ChangeImageLayout(vk::Image* image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout, int mipMap )
+	void CommandBuffer::ChangeImageLayout(Image* image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout, int mipMap )
 	{
-
+		auto vkImage = image->m_Image;
+		image->m_ImageLayout  = newLayout;
 
 		/*
 			typedef struct VkImageSubresourceRange {
@@ -193,7 +195,7 @@ namespace Voidstar
 		barrier.newLayout = newLayout;
 		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.image = *image;
+		barrier.image = vkImage;
 		barrier.subresourceRange = access;
 
 		vk::PipelineStageFlags sourceStage, destinationStage;

@@ -11,6 +11,16 @@ layout(binding = 0) uniform UniformBufferObject {
     
 } ubo;
 layout(set = 1, binding = 0) uniform sampler2D u_Tex;
+layout(set=2,binding = 1) uniform NoiseData {
+
+    float frequence ;
+	float amplitude ;
+	float octaves ;
+	float textureHeight ;
+	float textureWidth ;
+	float multipler ;
+    
+} noiseData;
 // vertexAttributes
 layout(location = 0) in vec3 in_pos;
 layout(location = 1) in vec4 in_color;
@@ -230,7 +240,7 @@ void main()
     vec2 newUv = GetUvs(worldPos.xz, gridSize, in_uv,gridSize/(instanceScale) );
 
     float noiseValue = texture(u_Tex,newUv).x;
-    worldPos.y = abs(noiseValue)*8 ;
+    worldPos.y = abs(noiseValue)*noiseData.multipler ;
 	color.xyz =vec3(noiseValue,noiseValue,noiseValue) ;
    // color.xyz = vec3(newUv,0.);
     //color.xyz = vec3(noiseValue,noiseValue,noiseValue);
