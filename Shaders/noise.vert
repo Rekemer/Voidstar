@@ -205,7 +205,7 @@ void main()
     
     
 // Constants
-    const int gridSize = 100;
+    const int gridSize = 1000;
     const float cellSize = 1.0 / float(gridSize);
 	//vec4 worldPos= ubo.model * vec4((in_pos+instancePos)*instanceScale,1.0);
     float tilesAmount  = 2.;
@@ -241,7 +241,7 @@ void main()
 
     float noiseValue = texture(u_Tex,newUv).x;
     worldPos.y = abs(noiseValue)*noiseData.multipler ;
-	color.xyz =vec3(noiseValue,noiseValue,noiseValue) ;
+	color.xyz =vec3( worldPos.y, worldPos.y, worldPos.y) ;
    // color.xyz = vec3(newUv,0.);
     //color.xyz = vec3(noiseValue,noiseValue,noiseValue);
     //color.xyz= vec3( randomGradient(cell),0.);

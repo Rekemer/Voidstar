@@ -9,6 +9,8 @@ layout(set=0,binding = 1) uniform NoiseData {
 	float octaves ;
 	float textureHeight ;
 	float textureWidth ;
+	float multipler;
+	float exponent ;
     
 } noiseData;
 layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
@@ -50,19 +52,27 @@ float noise (  vec2 st) {
     return interpolated;
 }
 
-#define OCTAVES 37
+
 float fbm (in vec2 st) {
   // Initial values
     float value = 0.0;
-    float amplitude = .5;
+    float amplitude = 1.;
     float frequency =5.;
+    float normalization =0;
+    float g= pow(2.0,-noiseData.amplitude);
     //
     // Loop of octaves
     for (int i = 0; i < noiseData.octaves; i++) {
-        value += amplitude * noise(st);
+        float noiseValue =  noise(st);
+        value += amplitude *noiseValue;
+        normalization += amplitude;
         st *= noiseData.frequence;
-        amplitude *= noiseData.amplitude;
+        amplitude *= g;
     }
+
+
+    value /= normalization;
+    value = pow(value,noiseData.exponent);
     return value;
 }
 
@@ -78,7 +88,7 @@ void main()
     float u = float(coords.x) / float(imageSize.x);
     float v = float(coords.y) / float(imageSize.y);
     vec2 st = vec2 (u,v);
-    float noise = fbm(st*5.0);
+    float noise = fbm(st*1000);
     // Set the color to blue (RGB = 0, 0, 1)
     imageStore(storageImage, coords, vec4(noise,noise,noise, 1.0));
 

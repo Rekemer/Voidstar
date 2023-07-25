@@ -102,9 +102,9 @@ void main()
     //outColor = random_color(vec4(1,1,1,1));
 	outColor.a = 1;
     //outColor.xyz=color.xyz;
-    outColor.xyz=vec3(1,1,1);
+    outColor.xyz=vec3(0.6,0.6,0.6)*color.xyz;
     //vec2 grid = fract(newUv* 3.);
-    outColor.xyz=color.xyz;
+    //outColor.xyz=color.xyz;
     //outColor.xyz=vec3(0);
     //outColor.z =0;
     //outColor.xy = newUv;

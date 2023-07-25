@@ -120,6 +120,10 @@ namespace Voidstar
 		float textureHeight = 450;
 		float textureWidth = 450;
 		float multipler = 8.f;
+		float exponent = 4.f;
+		
+		
+
 	};
 	class Instance;
 	class Device;

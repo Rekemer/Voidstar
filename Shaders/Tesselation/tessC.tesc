@@ -85,14 +85,14 @@ if(gl_InvocationID == 0)
     gl_TessLevelOuter[2] = (int(tessLevel2) + int(tessLevel2) %2)* edges[0].z;
     gl_TessLevelOuter[3] = (int(tessLevel3) + int(tessLevel3) %2)* edges[0].w;
 
-    gl_TessLevelOuter[0] = 4* edges[0].x;
-    gl_TessLevelOuter[1] = 4* edges[0].y;
-    gl_TessLevelOuter[2] = 4* edges[0].z;
-    gl_TessLevelOuter[3] = 4* edges[0].w;
+   gl_TessLevelOuter[0] = 4* edges[0].x;
+   gl_TessLevelOuter[1] = 4* edges[0].y;
+   gl_TessLevelOuter[2] = 4* edges[0].z;
+   gl_TessLevelOuter[3] = 4* edges[0].w;
     // ----------------------------------------------------------------------
     // Step 6: set the inner tessellation levels to the max of the two parallel edges
-    gl_TessLevelInner[0] = 4;
-    gl_TessLevelInner[1] = 4;
+   gl_TessLevelInner[0] = 4;
+   gl_TessLevelInner[1] = 4;
 }
   gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
   float dist =  length(gl_in[gl_InvocationID].gl_Position)/(MAX_DISTANCE-MIN_DISTANCE);

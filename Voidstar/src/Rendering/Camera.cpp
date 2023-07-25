@@ -79,7 +79,7 @@ namespace Voidstar
 
        /* m_Proj = PreparePerspectiveProjectionMatrix(width / height, 45.0f,0,100);*/
 
-        m_Proj = glm::perspective(glm::radians(45.0f), width / height, 0.0001f, 1000.0f);
+        m_Proj = glm::perspective(glm::radians(45.0f), width / height, 0.0001f, 10000.0f);
         m_Proj[1][1] *= -1;
 
     }

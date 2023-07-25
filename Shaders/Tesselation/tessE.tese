@@ -134,7 +134,7 @@ void main()
     vec4 p1 = (p11 - p10) * u + p10;
     vec4 p = (p1 - p0) * v + p0;
 
-    float gridSize = 100;
+    float gridSize = 1000;
     float tileWidth = length(gl_in[0].gl_Position - gl_in[1].gl_Position);
    
     vec2 newUv = GetUvs(p.xz,gridSize, vec2(u,v),gridSize / (tileWidth));
@@ -150,6 +150,6 @@ void main()
 
      //p.y =color.x;
      outColor = vec4(newUv,0,1);
-     outColor =vec4(noiseValue,noiseValue,noiseValue,1);
+     outColor =vec4(p.y,p.y,p.y,1);
     gl_Position = ubo.proj*ubo.view*p;
 }

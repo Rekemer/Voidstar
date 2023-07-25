@@ -1304,12 +1304,13 @@ namespace Voidstar
 
 		
 		ImGui::Begin("NoiseParametrs", &show_another_window);
-		m_IsNewParametrs |= ImGui::SliderFloat("Frequency", &noiseData.frequence, 0, 100);
-		m_IsNewParametrs |= ImGui::SliderFloat("Amplitude", &noiseData.amplitude, 0, 100);
-		m_IsNewParametrs |= ImGui::SliderFloat("Octaves", &noiseData.octaves, 0, 100);
+		m_IsNewParametrs |= ImGui::SliderFloat("Frequency", &noiseData.frequence, 0, 400);
+		m_IsNewParametrs |= ImGui::SliderFloat("Amplitude", &noiseData.amplitude, 0, 1);
+		m_IsNewParametrs |= ImGui::SliderFloat("Octaves", &noiseData.octaves, 0, 50);
 		m_IsNewParametrs |= ImGui::SliderFloat("Vertex amplitude", &noiseData.multipler, 0, 100);
-		m_IsResized |= ImGui::SliderFloat("Texture Width", &noiseData.textureWidth, 0, 1000);
-		m_IsResized |= ImGui::SliderFloat("Texture Height", &noiseData.textureHeight, 0, 1000);
+		m_IsNewParametrs |= ImGui::SliderFloat("exponent ", &noiseData.exponent, 0, 10);
+		m_IsResized |= ImGui::SliderFloat("Texture Width", &noiseData.textureWidth, 100, 1000);
+		m_IsResized |= ImGui::SliderFloat("Texture Height", &noiseData.textureHeight, 100, 1000);
 		m_IsPolygon = ImGui::Button("change mode");
 	
 		ImGui::End();

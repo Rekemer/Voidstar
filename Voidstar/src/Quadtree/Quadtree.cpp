@@ -7,11 +7,11 @@ namespace Voidstar
 {
 	//http://www.lcad.icmc.usp.br/~jbatista/procimg/quadtree_neighbours.pdf
 
-	const float groundSize = 100;
+	const float groundSize = 1000;
 	const int widthGround = 2;
 	const int heightGround = 2;
 
-	constexpr float levelOfDetail =32;
+	constexpr float levelOfDetail =16;
 
 
 
@@ -75,24 +75,9 @@ namespace Voidstar
 	Quadtree Quadtree::Build( glm::vec3 posPlayer)
 	{
 		Quadtree result;
-		auto min = glm::vec2{ -20,-20 };
-		auto max = glm::vec2{ 20,20 };
-		Box box{min,max};
 		result.root.tileWidth = groundSize;
 		result.root.isDrawn = false;
 		result.root.worldPosition = glm::vec3{0,0,0};
-
-
-		float currentTileWidth = groundSize / static_cast<float>(widthGround);
-		float currentTileHeight = groundSize / static_cast<float>(heightGround); ;
-		glm::vec3 centerOffset = { currentTileWidth /2,0.,currentTileHeight /2 };
-		glm::vec3 currentTilePosBiggest = {0,0,0};
-		bool isBiggestFound = false;
-		uint32_t index = 0;
-		float shortestPath = 1000;
-		Node currentNode;
-		
-
 		result.nodes[0].emplace_back(result.root);
 		//result.GenerateChildren(result.root, 1);
 		result.BuildTree(posPlayer, result.root,1);
