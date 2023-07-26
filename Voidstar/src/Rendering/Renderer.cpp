@@ -420,7 +420,10 @@ namespace Voidstar
 			m_DescriptorSetNoise = m_DescriptorPoolNoise->AllocateDescriptorSets(1, layouts.data())[0];
 		}
 
-		m_NoiseImage = Image::CreateEmptyImage({ m_DescriptorSetNoise,m_DescriptorSetTex}, 450, 450);
+		m_NoiseImage = Image::CreateEmptyImage({ m_DescriptorSetNoise,m_DescriptorSetTex}, noiseData.textureWidth, noiseData.textureHeight);
+		m_SnowTex = Image::CreateImage(BASE_RES_PATH + "terrain/GroundTex/rock_11_diffuse.jpg",m_DescriptorSetTex,1,1);
+		m_GrassTex = Image::CreateImage(BASE_RES_PATH +"terrain/grass.jpg", m_DescriptorSetTex,2,1);
+		m_StoneTex = Image::CreateImage(BASE_RES_PATH + "terrain/GroundTex/rock_01_diffuse.jpg", m_DescriptorSetTex,3,1);
 
 		{
 			BufferInputChunk inputBuffer;
@@ -630,7 +633,7 @@ namespace Voidstar
 
 			vk::DescriptorPoolSize poolSize;
 			poolSize.type = vk::DescriptorType::eCombinedImageSampler;
-			poolSize.descriptorCount = 1;
+			poolSize.descriptorCount = 4;
 		
 			std::vector<vk::DescriptorPoolSize> poolSizes{poolSize};
 
@@ -644,12 +647,28 @@ namespace Voidstar
 			vk::DescriptorSetLayoutBinding layoutBinding;
 			layoutBinding.binding = 0;
 			layoutBinding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-			layoutBinding.stageFlags = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eTessellationEvaluation;
+			layoutBinding.stageFlags = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eTessellationEvaluation | vk::ShaderStageFlagBits::eFragment;
 			layoutBinding.descriptorCount = 1;
 
+			vk::DescriptorSetLayoutBinding layoutBinding1;
+			layoutBinding1.binding = 1;
+			layoutBinding1.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+			layoutBinding1.stageFlags = vk::ShaderStageFlagBits::eFragment;
+			layoutBinding1.descriptorCount = 1;
 
+			vk::DescriptorSetLayoutBinding layoutBinding2;
+			layoutBinding2.binding = 2;
+			layoutBinding2.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+			layoutBinding2.stageFlags = vk::ShaderStageFlagBits::eFragment;
+			layoutBinding2.descriptorCount = 1;
 
-			std::vector<vk::DescriptorSetLayoutBinding> layoutBindings{ layoutBinding };
+			vk::DescriptorSetLayoutBinding layoutBinding3;
+			layoutBinding3.binding = 3;
+			layoutBinding3.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+			layoutBinding3.stageFlags = vk::ShaderStageFlagBits::eFragment;
+			layoutBinding3.descriptorCount = 1;
+
+			std::vector<vk::DescriptorSetLayoutBinding> layoutBindings{ layoutBinding,layoutBinding1,layoutBinding2,layoutBinding3 };
 
 			m_DescriptorSetLayoutTex = DescriptorSetLayout::Create(layoutBindings);
 
@@ -1309,8 +1328,9 @@ namespace Voidstar
 		m_IsNewParametrs |= ImGui::SliderFloat("Octaves", &noiseData.octaves, 0, 50);
 		m_IsNewParametrs |= ImGui::SliderFloat("Vertex amplitude", &noiseData.multipler, 0, 100);
 		m_IsNewParametrs |= ImGui::SliderFloat("exponent ", &noiseData.exponent, 0, 10);
-		m_IsResized |= ImGui::SliderFloat("Texture Width", &noiseData.textureWidth, 100, 1000);
-		m_IsResized |= ImGui::SliderFloat("Texture Height", &noiseData.textureHeight, 100, 1000);
+		m_IsNewParametrs |= ImGui::SliderFloat("uv scale ", &noiseData.scale, 0, 100);
+		m_IsResized |= ImGui::SliderFloat("Texture Width", &noiseData.textureWidth, 100, 5000);
+		m_IsResized |= ImGui::SliderFloat("Texture Height", &noiseData.textureHeight, 100, 5000);
 		m_IsPolygon = ImGui::Button("change mode");
 	
 		ImGui::End();

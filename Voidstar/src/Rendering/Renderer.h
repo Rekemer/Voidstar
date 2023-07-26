@@ -116,11 +116,12 @@ namespace Voidstar
 	{
 		float frequence = 5.f;
 		float amplitude = 0.3f;
-		float octaves = 37;
+		float octaves = 3;
 		float textureHeight = 450;
 		float textureWidth = 450;
 		float multipler = 8.f;
 		float exponent = 4.f;
+		float scale = 3.f;
 		
 		
 
@@ -183,6 +184,11 @@ namespace Voidstar
 
 		SPtr<Image> m_Image;
 		SPtr<Image> m_NoiseImage;
+		
+		SPtr<Image> m_SnowTex;
+		SPtr<Image>	m_GrassTex;
+		SPtr<Image>	m_StoneTex;
+		
 		SPtr<Model> m_Model;
 
 

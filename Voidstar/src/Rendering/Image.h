@@ -23,7 +23,7 @@ namespace Voidstar
 
 		static vk::Image CreateVKImage(ImageSpecs& specs, vk::SampleCountFlagBits samples = vk::SampleCountFlagBits::e1, int mipmap = 1);
 		static vk::DeviceMemory CreateMemory(vk::Image& image, ImageSpecs& specs);
-		static SPtr<Image> CreateImage(std::string path, vk::DescriptorSet descriptorSet);
+		static SPtr<Image> CreateImage(std::string path, vk::DescriptorSet descriptorSet, int binding, int descriptorCount);
 		static SPtr<Image> CreateEmptyImage(std::vector<vk::DescriptorSet> descriptorSet, int width, int height);
 		~Image();
 		void Bind();

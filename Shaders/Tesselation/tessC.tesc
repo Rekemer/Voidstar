@@ -6,9 +6,12 @@
 // this value controls the size of the input and output arrays
 layout (vertices=4) out;
 
-layout(location = 1) in vec4[] inColor ;
-layout(location = 1) out vec4[] outColor ;
-layout(location = 5) in vec4[] edges ;
+
+layout(location = 0) in vec4[] inColor ;
+layout(location = 1) in vec2[] inUv ;
+layout(location = 2) in vec4[] edges ;
+layout(location = 0) out vec4[] outColor;
+layout(location = 1) out vec2[] outUv;
 const int AB = 2;
 const int BC = 3;
 const int CD = 0;
@@ -85,19 +88,20 @@ if(gl_InvocationID == 0)
     gl_TessLevelOuter[2] = (int(tessLevel2) + int(tessLevel2) %2)* edges[0].z;
     gl_TessLevelOuter[3] = (int(tessLevel3) + int(tessLevel3) %2)* edges[0].w;
 
-   gl_TessLevelOuter[0] = 4* edges[0].x;
-   gl_TessLevelOuter[1] = 4* edges[0].y;
-   gl_TessLevelOuter[2] = 4* edges[0].z;
-   gl_TessLevelOuter[3] = 4* edges[0].w;
+   gl_TessLevelOuter[0] = 16* edges[0].x;
+   gl_TessLevelOuter[1] = 16* edges[0].y;
+   gl_TessLevelOuter[2] = 16* edges[0].z;
+   gl_TessLevelOuter[3] = 16* edges[0].w;
     // ----------------------------------------------------------------------
     // Step 6: set the inner tessellation levels to the max of the two parallel edges
-   gl_TessLevelInner[0] = 4;
-   gl_TessLevelInner[1] = 4;
+   gl_TessLevelInner[0] = 16;
+   gl_TessLevelInner[1] = 16;
 }
   gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
   float dist =  length(gl_in[gl_InvocationID].gl_Position)/(MAX_DISTANCE-MIN_DISTANCE);
   outColor[gl_InvocationID] =vec4(dist,dist,dist,1);
   outColor[gl_InvocationID] = inColor[gl_InvocationID];
+  outUv[gl_InvocationID] = inUv[gl_InvocationID];
 
 }
 	

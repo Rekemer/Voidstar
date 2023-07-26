@@ -63,7 +63,7 @@ namespace Voidstar
 		return imageMemory;
 		
 	}
-	SPtr<Image> Image::CreateImage(std::string path,vk::DescriptorSet descriptorSet)
+	SPtr<Image> Image::CreateImage(std::string path,vk::DescriptorSet descriptorSet, int binding, int descriptorCount)
 	{
 		
 		auto image = CreateUPtr<Image>();
@@ -133,17 +133,18 @@ namespace Voidstar
 		commandBuffer.EndTransfering();
 		commandBuffer.SubmitSingle();
 		
-		commandBuffer.Free();
 		Renderer::Instance()->GetCommandPoolManager()->FreePool(image->m_CommandPool);
 		
-		//graphicsQueue->BeginTransfering();
-		//graphicsQueue->ChangeImageLayout(&image->m_Image, vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal, mipMaps);
-		//graphicsQueue->EndTransfering();
+		
+		commandBuffer.BeginTransfering();
+		commandBuffer.ChangeImageLayout(image.get(), vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal, mipMaps);
+		commandBuffer.EndTransfering();
+		commandBuffer.SubmitSingle();
+
+		//image->GenerateMipmaps(image->m_Image, (VkFormat)image->m_Format, image->m_Width, image->m_Height,mipMaps);
 
 
-		image->GenerateMipmaps(image->m_Image, (VkFormat)image->m_Format, image->m_Width, image->m_Height,mipMaps);
-
-
+		commandBuffer.Free();
 		free(pixels);
 
 
@@ -212,10 +213,10 @@ namespace Voidstar
 
 		vk::WriteDescriptorSet descriptorWrite;
 		descriptorWrite.dstSet = descriptorSet;
-		descriptorWrite.dstBinding = 0;
+		descriptorWrite.dstBinding = binding;
 		descriptorWrite.dstArrayElement = 0;
 		descriptorWrite.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-		descriptorWrite.descriptorCount = 1;
+		descriptorWrite.descriptorCount = descriptorCount;
 		descriptorWrite.pImageInfo = &imageDescriptor;
 
 		device->GetDevice().updateDescriptorSets(descriptorWrite, nullptr);

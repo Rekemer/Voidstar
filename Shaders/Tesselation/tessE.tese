@@ -19,58 +19,18 @@ layout(set=2,binding = 1) uniform NoiseData {
 	float multipler ;
     
 } noiseData;
-layout(location = 1) in vec4[] inColor ;
-layout(location = 1) out vec4 outColor ;
+layout(location = 0) in vec4[] inColor ;
+layout(location = 1) in vec2[] ivUv ;
+layout(location = 0) out vec4 outColor;
+layout(location = 1) out vec2 outUv;
 layout (quads) in;
-vec4 random(vec4 st)
-{
-	float dotProduct1 = dot(st, vec4(127.1, 311.7, 23423.1, 98.2));
-    float dotProduct2 = dot(st, vec4(269.5, 183.3, 21.2, 65.1));
-    float dotProduct3 = dot(st, vec4(129.5, 383.3, 11.2, 5.1));
-    float dotProduct4 = dot(st, vec4(26.5, 83.3, 2.2, 15.1));
 
-    vec4 sinResult = sin(vec4(dotProduct1, dotProduct2,dotProduct3,dotProduct4));
-    vec4 multiplied = sinResult * 43758.5453;
 
-    return fract(multiplied);
-}
-float random (vec2 st) {
-    return fract(sin(dot(st.xy,
-                         vec2(12.9898,78.233)))*
-        43758.5453123);
-}
 float norm(float val, float max,float min)
 {
      return (val- min) / (max - min);
 }
 
-float noise ( vec2 cell, vec2 uv, float nextVertexOffset) {
-    vec2 i = cell;
-    vec2 f = uv;
-   // i = vec2(gl_InstanceIndex,0);
-    float a = random(i);
-   float b = random(i + vec2(2.5, 0.0));
-    float c = random(i + vec2(0.0, 2.5));
-    float d = random(i + vec2(2.5,2.5));
-
-	// smooth step function lol
-    vec2 u = f * f * (3.0 - 2.0 * f);
-    //u = vec2(1,1);
-	//return u.x;
-float interpolated;
-#define MYVERSION 1
-	#ifdef MYVERSION 
-	float interpolatedX = mix(a, b, u.x);
-	float interpolatedY = mix(c, d, u.x);
-	interpolated = mix(interpolatedX , interpolatedY , u.y);
-	#else
- 	interpolated = mix(a, b, u.x) +
-            (c - a)* u.y * (1.0 - u.x) +
-            (d - b) * u.x * u.y;
-	#endif
-
-    return interpolated;
-}
 
 
 vec2 GetUvs(vec2 worldSpacePos, float dimension, vec2 uv, float depth)
@@ -87,23 +47,7 @@ vec2 GetUvs(vec2 worldSpacePos, float dimension, vec2 uv, float depth)
 	float n = scaling/2;
     return newUv;
 }
-#define OCTAVES 37
-float fbm(vec2 cell,vec2 newuv, float nextVertexOffset)
-{
-	// Initial values
-    float value = 0.0;
-    float amplitude = .5;
-    float frequency = 1;
 
-	  // Loop of octaves
-    for (int i = 0; i < OCTAVES; i++)
-	{
-        value += amplitude * noise(cell  *frequency,newuv, nextVertexOffset);
-        //st *=3.;
-        amplitude *= .3;
-    }
-    return value;
-}
 void main()
 {
    // Calculate the barycentric coordinates of the current point on the quad
@@ -134,7 +78,7 @@ void main()
     vec4 p1 = (p11 - p10) * u + p10;
     vec4 p = (p1 - p0) * v + p0;
 
-    float gridSize = 1000;
+    float gridSize = 5000;
     float tileWidth = length(gl_in[0].gl_Position - gl_in[1].gl_Position);
    
     vec2 newUv = GetUvs(p.xz,gridSize, vec2(u,v),gridSize / (tileWidth));
@@ -150,6 +94,7 @@ void main()
 
      //p.y =color.x;
      outColor = vec4(newUv,0,1);
-     outColor =vec4(p.y,p.y,p.y,1);
+     outColor =vec4(p.y,noiseData.multipler,p.y,1);
+     outUv = newUv;
     gl_Position = ubo.proj*ubo.view*p;
 }
