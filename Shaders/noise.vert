@@ -24,8 +24,8 @@ layout(set=2,binding = 1) uniform NoiseData {
 // vertexAttributes
 layout(location = 0) in vec3 in_pos;
 layout(location = 1) in vec4 in_color;
-layout(location = 2) in float in_noise;
-layout(location = 3) in vec2 in_uv;
+layout(location = 2) in vec2 in_uv;
+layout(location = 3) in float in_noise;
 
 // Instanced attributes
 layout (location = 4) in vec3 instancePos;
@@ -46,6 +46,7 @@ vec3 colors[3] = vec3[](
 layout(location = 0) out vec4 color ;
 layout(location = 1) out vec2 uv ;
 layout(location = 2) out vec4 edges;
+layout(location = 3) out vec2 uvMesh;
 
 float norm(float val, float max,float min)
  {
@@ -111,7 +112,7 @@ void main()
 
     float noiseValue = texture(u_Tex,newUv).x;
     worldPos.y = abs(noiseValue)*noiseData.multipler ;
-	color.xyz =vec3( worldPos.y, noiseData.multipler, worldPos.y) ;
+	color =vec4( worldPos.y, noiseData.multipler, in_uv) ;
    // color.xyz = vec3(newUv,0.);
     //color.xyz = vec3(noiseValue,noiseValue,noiseValue);
     //color.xyz= vec3( randomGradient(cell),0.);
@@ -119,4 +120,5 @@ void main()
 	vec4 pos =	 worldPos;
 	gl_Position = pos;
     edges = instanceEdges;
+    uvMesh = in_uv;
 }

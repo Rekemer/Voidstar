@@ -10,8 +10,10 @@ layout (vertices=4) out;
 layout(location = 0) in vec4[] inColor ;
 layout(location = 1) in vec2[] inUv ;
 layout(location = 2) in vec4[] edges ;
+layout(location = 3) in vec2[] inUvMesh ;
 layout(location = 0) out vec4[] outColor;
 layout(location = 1) out vec2[] outUv;
+layout(location = 2) out vec2[] outUvMesh;
 const int AB = 2;
 const int BC = 3;
 const int CD = 0;
@@ -102,6 +104,7 @@ if(gl_InvocationID == 0)
   outColor[gl_InvocationID] =vec4(dist,dist,dist,1);
   outColor[gl_InvocationID] = inColor[gl_InvocationID];
   outUv[gl_InvocationID] = inUv[gl_InvocationID];
+  outUvMesh[gl_InvocationID] = inUvMesh[gl_InvocationID];
 
 }
 	

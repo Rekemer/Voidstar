@@ -4,6 +4,7 @@ layout(location = 0) out vec4  outColor;
 
 layout(location = 0) in vec4 color;
 layout(location = 1) in vec2 uv ;
+layout(location = 2) in vec2 uvMesh ;
 //layout(location = 2) in float scale;
 //layout(location = 3) in vec4 worldSpacePos;
 //layout(location = 4) in float depth;
@@ -103,52 +104,23 @@ void main()
     //newUv.y = uv_.y + (yn-n);
 
     //outColor = random_color(vec4(1,1,1,1));
-	outColor.a = 1;
     //outColor.xyz=color.xyz;
-    vec4 snowTex = texture(u_Tex1,uv);
-    vec4 groundTex = texture(u_Tex2,uv);
-    vec4 stoneTex = texture(u_Tex3,uv);
+    vec4 noiseTex = texture(u_Noise,uv);
+    vec4 groundTex = texture(u_Tex2,uvMesh);
+    vec4 stoneTex = texture(u_Tex3,uvMesh);
     float currentVertexHeight  = color.x;
     float maxVertexHeight  = color.y;
     float level = mix(0,maxVertexHeight,currentVertexHeight);
     float noise = level;
     outColor.xyz = vec3(noise ,noise ,noise );
 
+    //outColor = mix(groundTex,stoneTex,noiseTex.x);
+    outColor =groundTex;
+    //outColor.xy = uvMesh;
+    //outColor.z = 0;
+	outColor.a = 1;
 
 
-
-//     float weight0 = smoothstep(0.0, 1.0, level);  // Example: Blend texture 0 based on height
-//     float weight1 = 1.0 - weight0;                // Inverse of weight0
-
-//    // float weight2 = 1.0 - weight0 - weight1;       // Blend texture 2 with remaining weight
-
-//     // Sample each texture and blend them based on the weights
-    
-//     // Calculate the final color by blending the textures based on the weights
-//     //vec4 finalColor = groundTex * weight1 + stoneTex * weight0;
-
-//     // Output the final color
-//  // Define height thresholds for blending
-//     float grassThreshold = 0.0;    // Height at which grass starts
-//     float stoneThreshold = .5*maxVertexHeight;   // Height at which stone takes over
-//     float snowThreshold = .7*maxVertexHeight;    // Height at which snow starts
-
-//     // Define colors for grass, snow, and stone
-//     vec3 grassColor = vec3(0.2, 0.7, 0.2);     // Green color for grass
-//     vec3 snowColor = vec3(1.0, 1.0, 1.0);      // White color for snow
-//     vec3 stoneColor = vec3(0.5, 0.5, 0.5);     // Gray color for stone
-
-//     // Calculate blending weights based on the height
-//     float grassWeight = smoothstep(0, grassThreshold, currentVertexHeight);
-//     float stoneWeight = smoothstep(grassThreshold, stoneThreshold, currentVertexHeight);
-//     float snowWeight = smoothstep(stoneThreshold, snowThreshold, currentVertexHeight);
-
-//     // Calculate the final color by blending the colors based on the weights
-//     stoneColor = stoneColor * stoneWeight;
-//     vec3 finalColor = grassColor * grassWeight + snowColor * snowWeight +stoneColor;
-
-//     // Output the final color
-//     outColor.xyz = finalColor;
     
    
 }

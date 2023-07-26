@@ -1598,8 +1598,8 @@ namespace Voidstar
 		{
 			VertexInputAttributeDescription(0,0,vk::Format::eR32G32B32Sfloat,offsetof(Vertex, Position)),
 			VertexInputAttributeDescription(0,1,vk::Format::eR32G32B32A32Sfloat,offsetof(Vertex, Color)),
-			VertexInputAttributeDescription(0,2,vk::Format::eR32G32B32A32Sfloat,offsetof(Vertex, noiseValue)),
-			VertexInputAttributeDescription(0,3,vk::Format::eR32Sfloat,offsetof(Vertex, UV)),
+			VertexInputAttributeDescription(0,2,vk::Format::eR32G32Sfloat,offsetof(Vertex, UV)),
+			VertexInputAttributeDescription(0,3,vk::Format::eR32Sfloat,offsetof(Vertex, noiseValue)),
 
 			VertexInputAttributeDescription(1,4,vk::Format::eR32G32B32Sfloat,offsetof(InstanceData, pos)),
 			VertexInputAttributeDescription(1,5,vk::Format::eR32G32B32A32Sfloat,offsetof(InstanceData, edges)),
