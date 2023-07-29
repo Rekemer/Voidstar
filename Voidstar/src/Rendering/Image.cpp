@@ -136,12 +136,12 @@ namespace Voidstar
 		Renderer::Instance()->GetCommandPoolManager()->FreePool(image->m_CommandPool);
 		
 		
-		commandBuffer.BeginTransfering();
-		commandBuffer.ChangeImageLayout(image.get(), vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal, mipMaps);
-		commandBuffer.EndTransfering();
-		commandBuffer.SubmitSingle();
+		//commandBuffer.BeginTransfering();
+		//commandBuffer.ChangeImageLayout(image.get(), vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal, mipMaps);
+		//commandBuffer.EndTransfering();
+		//commandBuffer.SubmitSingle();
 
-		//image->GenerateMipmaps(image->m_Image, (VkFormat)image->m_Format, image->m_Width, image->m_Height,mipMaps);
+		image->GenerateMipmaps(image->m_Image, (VkFormat)image->m_Format, image->m_Width, image->m_Height,mipMaps);
 
 
 		commandBuffer.Free();
@@ -503,5 +503,6 @@ namespace Voidstar
 			0, nullptr,
 			1, &barrier);
 		commandBuffer.EndTransfering();
+		commandBuffer.SubmitSingle();
 	}
 }

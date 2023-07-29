@@ -387,11 +387,20 @@ namespace Voidstar
 
 		{
 
-			vk::DescriptorPoolSize poolSize;
-			poolSize.type = vk::DescriptorType::eStorageImage;
-			poolSize.descriptorCount = 1;
+			std::vector<vk::DescriptorPoolSize> poolSizes;
+			{
+				vk::DescriptorPoolSize poolSize;
+				poolSize.type = vk::DescriptorType::eStorageImage;
+				poolSize.descriptorCount = 1;
+				poolSizes.emplace_back(poolSize);
+			}
 
-			std::vector<vk::DescriptorPoolSize> poolSizes{ poolSize };
+			{
+				vk::DescriptorPoolSize poolSize;
+				poolSize.type = vk::DescriptorType::eUniformBuffer;
+				poolSize.descriptorCount = 1;
+				poolSizes.emplace_back(poolSize);
+			}
 
 			m_DescriptorPoolNoise = DescriptorPool::Create(poolSizes, 1);
 
@@ -403,12 +412,14 @@ namespace Voidstar
 			vk::DescriptorSetLayoutBinding layoutBinding;
 			layoutBinding.binding = 0;
 			layoutBinding.descriptorType = vk::DescriptorType::eStorageImage;
-			layoutBinding.stageFlags = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eTessellationEvaluation | vk::ShaderStageFlagBits::eCompute ;
+			layoutBinding.stageFlags = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eTessellationEvaluation |
+				vk::ShaderStageFlagBits::eCompute ;
 			layoutBinding.descriptorCount =1;
 			vk::DescriptorSetLayoutBinding layoutBinding1;
 			layoutBinding1.binding = 1;
 			layoutBinding1.descriptorType = vk::DescriptorType::eUniformBuffer;
-			layoutBinding1.stageFlags = vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eTessellationEvaluation;
+			layoutBinding1.stageFlags = vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex |
+				vk::ShaderStageFlagBits::eTessellationEvaluation;
 			layoutBinding1.descriptorCount =1;
 
 
@@ -421,7 +432,7 @@ namespace Voidstar
 		}
 
 		m_NoiseImage = Image::CreateEmptyImage({ m_DescriptorSetNoise,m_DescriptorSetTex}, noiseData.textureWidth, noiseData.textureHeight);
-		m_SnowTex = Image::CreateImage(BASE_RES_PATH + "terrain/GroundTex/rock_11_diffuse.jpg",m_DescriptorSetTex,1,1);
+		m_SnowTex = Image::CreateImage(BASE_RES_PATH + "terrain/snow/Snow_003_COLOR.jpg",m_DescriptorSetTex,1,1);
 		m_GrassTex = Image::CreateImage(BASE_RES_PATH +"terrain/grass.jpg", m_DescriptorSetTex,2,1);
 		m_StoneTex = Image::CreateImage(BASE_RES_PATH + "terrain/GroundTex/rock_01_diffuse.jpg", m_DescriptorSetTex,3,1);
 

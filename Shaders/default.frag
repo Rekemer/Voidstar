@@ -95,6 +95,13 @@ vec2 GetUvs(vec2 worldSpacePos, float dimension, vec2 uv, float depth)
     return newUv;
 }
 
+
+vec3 blend(vec4 texture1, float a1, vec4 texture2, float a2)
+{
+    return texture1.rgb * a1 + texture2.rgb * a2;
+    //return a1 > a2 ? texture1.rgb  *a1 :  texture2.rgb *a2;
+}
+
 void main() 
 {
 
@@ -105,18 +112,56 @@ void main()
 
     //outColor = random_color(vec4(1,1,1,1));
     //outColor.xyz=color.xyz;
+    vec2 scaledUvMesh = fract(uvMesh*3);
+    
+    
     vec4 noiseTex = texture(u_Noise,uv);
-    vec4 groundTex = texture(u_Tex2,uvMesh);
-    vec4 stoneTex = texture(u_Tex3,uvMesh);
+    vec4 snowTex = texture(u_Tex1,scaledUvMesh);
+    vec4 groundTex = texture(u_Tex2,scaledUvMesh);
+    vec4 stoneTex = texture(u_Tex3,scaledUvMesh);
     float currentVertexHeight  = color.x;
-    float maxVertexHeight  = color.y;
+    float maxVertexHeight  = 5;
     float level = mix(0,maxVertexHeight,currentVertexHeight);
-    float noise = level;
-    outColor.xyz = vec3(noise ,noise ,noise );
+    float t = currentVertexHeight / maxVertexHeight;
+    t = clamp(0,maxVertexHeight,t);
+    vec3 blended =blend(groundTex,1-t,stoneTex,t);
+    float alpha = t;
+    float stoneT = clamp(0,alpha/2,t);
+
+    float step1 = maxVertexHeight * 0.20;
+    float step2 = maxVertexHeight * 0.50;
+    float step3 = maxVertexHeight * 0.75;
+    vec4 blendedColor ;
+    if (t < step1)
+    {
+        blendedColor=groundTex;
+    }
+    else if (t < step2)
+    {
+        
+        float t = norm(t,step2,step1);
+        vec4 newColor = mix(groundTex,stoneTex,t);
+
+        blendedColor= newColor;
+
+    }
+    else 
+    {
+        float t = norm(t,step3,step2);
+        vec4 newColor = mix(stoneTex,snowTex,t);
+
+        blendedColor= newColor;
+    }
+
+
+
+
+
+   // outColor.xyz = vec3(noise ,noise ,noise );
 
     //outColor = mix(groundTex,stoneTex,noiseTex.x);
-    outColor =groundTex;
-    //outColor.xy = uvMesh;
+    outColor.xyz =blendedColor.xyz;
+    //outColor.xy = fract(uvMesh*10) ;
     //outColor.z = 0;
 	outColor.a = 1;
 
