@@ -138,8 +138,9 @@ void main()
     }
     else if (t < step2)
     {
-        
+        float rand = random(uv);
         float t = norm(t,step2,step1);
+        rand = norm(rand,0.2,-0.2);
         vec4 newColor = mix(groundTex,stoneTex,t);
 
         blendedColor= newColor;

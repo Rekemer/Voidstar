@@ -23,6 +23,8 @@ namespace Voidstar
 		
 		~Buffer();	
 	private:
+		friend class Renderer;
+		friend class Device;
 		uint32_t m_Size;
 		vk::Buffer m_Buffer;
 		vk::DeviceMemory m_BufferMemory;

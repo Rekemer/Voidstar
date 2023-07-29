@@ -382,6 +382,8 @@ namespace Voidstar
 	}
 
 
+	
+
 	void Renderer::CreateComputePipeline()
 	{
 
@@ -431,10 +433,19 @@ namespace Voidstar
 			m_DescriptorSetNoise = m_DescriptorPoolNoise->AllocateDescriptorSets(1, layouts.data())[0];
 		}
 
-		m_NoiseImage = Image::CreateEmptyImage({ m_DescriptorSetNoise,m_DescriptorSetTex}, noiseData.textureWidth, noiseData.textureHeight);
-		m_SnowTex = Image::CreateImage(BASE_RES_PATH + "terrain/snow/Snow_003_COLOR.jpg",m_DescriptorSetTex,1,1);
-		m_GrassTex = Image::CreateImage(BASE_RES_PATH +"terrain/grass.jpg", m_DescriptorSetTex,2,1);
-		m_StoneTex = Image::CreateImage(BASE_RES_PATH + "terrain/GroundTex/rock_01_diffuse.jpg", m_DescriptorSetTex,3,1);
+		m_NoiseImage = Image::CreateEmptyImage(noiseData.textureWidth, noiseData.textureHeight);
+
+
+		m_Device->UpdateDescriptorSet(m_DescriptorSetNoise, 0, 1, *m_NoiseImage, vk::ImageLayout::eGeneral, vk::DescriptorType::eStorageImage);
+		m_Device->UpdateDescriptorSet(m_DescriptorSetTex, 0, 1, *m_NoiseImage, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
+	
+
+		m_SnowTex = Image::CreateImage(BASE_RES_PATH + "terrain/snow/Snow_003_COLOR.jpg",m_DescriptorSetTex);
+		m_Device->UpdateDescriptorSet(m_DescriptorSetTex,1,1,*m_SnowTex,vk::ImageLayout::eShaderReadOnlyOptimal,vk::DescriptorType::eCombinedImageSampler);
+		m_GrassTex = Image::CreateImage(BASE_RES_PATH +"terrain/grass.jpg", m_DescriptorSetTex);
+		m_Device->UpdateDescriptorSet(m_DescriptorSetTex,2,1,*m_GrassTex, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
+		m_StoneTex = Image::CreateImage(BASE_RES_PATH + "terrain/GroundTex/rock_01_diffuse.jpg", m_DescriptorSetTex);
+		m_Device->UpdateDescriptorSet(m_DescriptorSetTex,3,1,*m_StoneTex, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
 
 		{
 			BufferInputChunk inputBuffer;
@@ -445,20 +456,9 @@ namespace Voidstar
 			m_NoiseData = new Buffer(inputBuffer);
 			m_NoiseDataPtr= m_Device->GetDevice().mapMemory(m_NoiseData->GetMemory(), 0, sizeof(NoiseData));
 			memcpy(m_NoiseDataPtr, &noiseData, sizeof(NoiseData));
-			vk::WriteDescriptorSet writeInfo;
-			vk::DescriptorBufferInfo bufferInfo{};
-			bufferInfo.buffer = m_NoiseData->GetBuffer();
-			bufferInfo.offset = 0;
-			bufferInfo.range = sizeof(NoiseData);
 
-			writeInfo.dstSet = m_DescriptorSetNoise;
-			writeInfo.dstBinding = 1;
-			writeInfo.dstArrayElement = 0; //byte offset within binding for inline uniform blocks
-			writeInfo.descriptorCount = 1;
-			writeInfo.descriptorType = vk::DescriptorType::eUniformBuffer;
-			writeInfo.pBufferInfo = &bufferInfo;
-
-			m_Device->GetDevice().updateDescriptorSets(writeInfo, nullptr);
+			m_Device->UpdateDescriptorSet(m_DescriptorSetNoise,1,1, *m_NoiseData, vk::DescriptorType::eUniformBuffer);
+			
 		}
 		
 		// create compute layout
@@ -622,21 +622,10 @@ namespace Voidstar
 
 		for (int i = 0; i < m_Swapchain->GetFramesCount(); i++)
 		{
-			vk::WriteDescriptorSet writeInfo;
+		
 			
-			vk::DescriptorBufferInfo bufferInfo{};
-			bufferInfo.buffer = m_UniformBuffers[i]->GetBuffer();
-			bufferInfo.offset = 0;
-			bufferInfo.range = sizeof(UniformBufferObject);
+			m_Device->UpdateDescriptorSet(m_DescriptorSets[i],0,1, *m_UniformBuffers[i], vk::DescriptorType::eUniformBuffer);
 
-			writeInfo.dstSet = m_DescriptorSets[i];
-			writeInfo.dstBinding = 0;
-			writeInfo.dstArrayElement = 0; //byte offset within binding for inline uniform blocks
-			writeInfo.descriptorCount = 1;
-			writeInfo.descriptorType = vk::DescriptorType::eUniformBuffer;
-			writeInfo.pBufferInfo = &bufferInfo;
-
-			m_Device->GetDevice().updateDescriptorSets(writeInfo, nullptr);
 		}
 		
 
@@ -1455,11 +1444,14 @@ namespace Voidstar
 		{
 			m_Device->GetDevice().waitIdle();
 			m_NoiseImage.reset();
-			m_NoiseImage = Image::CreateEmptyImage({ m_DescriptorSetNoise,m_DescriptorSetTex },noiseData.textureWidth,noiseData.textureHeight);
+			m_NoiseImage = Image::CreateEmptyImage(noiseData.textureWidth,noiseData.textureHeight);
+			m_Device->UpdateDescriptorSet(m_DescriptorSetNoise, 0, 1, *m_NoiseImage, vk::ImageLayout::eGeneral, vk::DescriptorType::eStorageImage);
+			m_Device->UpdateDescriptorSet(m_DescriptorSetTex, 0, 1, *m_NoiseImage, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
 		}
 		if (m_IsNewParametrs)
 		{
 			// update noise descriptor 
+			m_Device->GetDevice().waitIdle();
 			memcpy(m_NoiseDataPtr, &noiseData, sizeof(NoiseData));
 			UpdateNoiseTexure();
 		}

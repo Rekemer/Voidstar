@@ -3,6 +3,8 @@
 namespace Voidstar
 {
 	class Instance;
+	class Image;
+	class Buffer;
 	class Device
 	{
 	public:
@@ -16,6 +18,8 @@ namespace Voidstar
 		size_t GetPresentsIndex() { return m_PresentFamily; }
 		uint32_t FindMemoryTypeIndex (uint32_t supportedMemoryIndices, vk::MemoryPropertyFlags requestedProperties);
 		vk::SampleCountFlagBits GetSamples() { return m_MsaaSamples; }
+		void UpdateDescriptorSet(vk::DescriptorSet dscSet, int binding, int descriptorCount, Image& image, vk::ImageLayout layout, vk::DescriptorType descType);
+		void UpdateDescriptorSet(vk::DescriptorSet dscSet, int binding, int descriptorCount, Buffer& image, vk::DescriptorType type);
 	private:
 		vk::PhysicalDevice m_PhysicalDevice = VK_NULL_HANDLE;
 		vk::Device m_Device = VK_NULL_HANDLE;

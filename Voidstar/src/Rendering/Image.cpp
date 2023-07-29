@@ -63,7 +63,7 @@ namespace Voidstar
 		return imageMemory;
 		
 	}
-	SPtr<Image> Image::CreateImage(std::string path,vk::DescriptorSet descriptorSet, int binding, int descriptorCount)
+	SPtr<Image> Image::CreateImage(std::string path,vk::DescriptorSet descriptorSet)
 	{
 		
 		auto image = CreateUPtr<Image>();
@@ -206,24 +206,11 @@ namespace Voidstar
 		}
 
 
-		vk::DescriptorImageInfo imageDescriptor;
-		imageDescriptor.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-		imageDescriptor.imageView = image->m_ImageView;
-		imageDescriptor.sampler = image->m_Sampler;
 
-		vk::WriteDescriptorSet descriptorWrite;
-		descriptorWrite.dstSet = descriptorSet;
-		descriptorWrite.dstBinding = binding;
-		descriptorWrite.dstArrayElement = 0;
-		descriptorWrite.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-		descriptorWrite.descriptorCount = descriptorCount;
-		descriptorWrite.pImageInfo = &imageDescriptor;
-
-		device->GetDevice().updateDescriptorSets(descriptorWrite, nullptr);
 
 		return image;
 	}
-	SPtr<Image> Image::CreateEmptyImage(std::vector<vk::DescriptorSet> descriptorSet, int width, int height)
+	SPtr<Image> Image::CreateEmptyImage(int width, int height)
 	{
 		auto image = CreateUPtr<Image>();
 
@@ -343,36 +330,7 @@ namespace Voidstar
 		Renderer::Instance()->GetCommandPoolManager()->FreePool(image->m_CommandPool);
 
 
-		vk::DescriptorImageInfo imageDescriptor;
-		imageDescriptor.imageLayout = vk::ImageLayout::eGeneral;
-		imageDescriptor.imageView = image->m_ImageView;
-		imageDescriptor.sampler = image->m_Sampler;
-
-		vk::WriteDescriptorSet descriptorWrite;
-		descriptorWrite.dstSet = descriptorSet[0];
-		descriptorWrite.dstBinding = 0;
-		descriptorWrite.dstArrayElement = 0;
-		descriptorWrite.descriptorType = vk::DescriptorType::eStorageImage;
-		descriptorWrite.descriptorCount = 1;
-		descriptorWrite.pImageInfo = &imageDescriptor;
-
-
-		vk::DescriptorImageInfo imageDescriptor1;
-		imageDescriptor1.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-		imageDescriptor1.imageView = image->m_ImageView;
-		imageDescriptor1.sampler = image->m_Sampler;
-
-		vk::WriteDescriptorSet descriptorWrite1;
-		descriptorWrite1.dstSet = descriptorSet[1];
-		descriptorWrite1.dstBinding = 0;
-		descriptorWrite1.dstArrayElement = 0;
-		descriptorWrite1.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-		descriptorWrite1.descriptorCount = 1;
-		descriptorWrite1.pImageInfo = &imageDescriptor1;
-
-
-		device->GetDevice().updateDescriptorSets({ descriptorWrite}, nullptr);
-		device->GetDevice().updateDescriptorSets({ descriptorWrite1}, nullptr);
+		
 
 		return image;
 	}

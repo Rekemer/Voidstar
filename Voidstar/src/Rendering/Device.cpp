@@ -1,6 +1,8 @@
 #include "Prereq.h"
 #include "Device.h"
 #include "Instance.h"
+#include "Image.h"
+#include "Buffer.h"
 #include <set>
 #include "../Log.h"
 namespace Voidstar
@@ -185,4 +187,40 @@ namespace Voidstar
 
 		return 0;
 	}
+	void Device::UpdateDescriptorSet(vk::DescriptorSet dscSet, int binding, int descriptorCount, Image& image, vk::ImageLayout layout, vk::DescriptorType descType)
+	{
+		vk::DescriptorImageInfo imageDescriptor;
+		imageDescriptor.imageLayout = layout;
+		imageDescriptor.imageView = image.m_ImageView;
+		imageDescriptor.sampler = image.m_Sampler;
+
+		vk::WriteDescriptorSet descriptorWrite;
+		descriptorWrite.dstSet = dscSet;
+		descriptorWrite.dstBinding = binding;
+		descriptorWrite.dstArrayElement = 0;
+		descriptorWrite.descriptorType = descType;
+		descriptorWrite.descriptorCount = descriptorCount;
+		descriptorWrite.pImageInfo = &imageDescriptor;
+		m_Device.updateDescriptorSets(descriptorWrite, nullptr);
+	}
+
+
+	void Device::UpdateDescriptorSet(vk::DescriptorSet dscSet, int binding, int descriptorCount, Buffer& buffer, vk::DescriptorType type)
+	{
+		vk::WriteDescriptorSet writeInfo;
+		vk::DescriptorBufferInfo bufferInfo{};
+		bufferInfo.buffer = buffer.GetBuffer();
+		bufferInfo.offset = 0;
+		bufferInfo.range = buffer.m_Size;
+
+		writeInfo.dstSet = dscSet;
+		writeInfo.dstBinding = binding;
+		writeInfo.dstArrayElement = 0; //byte offset within binding for inline uniform blocks
+		writeInfo.descriptorCount = descriptorCount;
+		writeInfo.descriptorType = type;
+		writeInfo.pBufferInfo = &bufferInfo;
+
+		m_Device.updateDescriptorSets(writeInfo, nullptr);
+	}
+	
 }
