@@ -1,3 +1,37 @@
 make world space left hand coordinate system so that x positive is right
 
 abstract descriptor set creation
+
+// takeaways from filament
+
+update materials if dirty samplers or uniforms in prepare method
+
+materials in hash map
+
+    // per-renderpass data
+    ArenaScope rootArena(mPerRenderPassArena);
+
+    FEngine& engine = mEngine;
+    JobSystem& js = engine.getJobSystem();
+
+    // create a root job so no other job can escape
+    auto *rootJob = js.setRootJob(js.createJob());
+
+    // execute the render pass
+    renderJob(rootArena, const_cast<FView&>(*view));
+
+    // make sure to flush the command buffer
+    engine.flush();
+
+    // and wait for all jobs to finish as a safety (this should be a no-op)
+    js.runAndWait(rootJob);
+}
+
+RenderPass.h - executor and render pass and geometry with commands for render pass
+Renderer.cpp renderJob function
+
+FrameGraph ??? 
+
+Execute can be lambda
+
+FrameGraph& FrameGraph::compile()
