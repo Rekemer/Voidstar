@@ -212,7 +212,7 @@ namespace Voidstar
 		std::vector<vk::DescriptorSetLayout> m_DescriptorSetLayouts;
 		std::vector<vk::DescriptorSet> m_DescriptorSets;
 		std::vector<UPtr<Buffer>> m_ShaderStorageBuffers;
-		vk::CommandPool m_CommandComputePool;
+		vk::CommandPool m_TracyCommandPool;
 		std::vector<CommandBuffer> m_ComputeCommandBuffer;
 
 		SPtr<DescriptorPool> m_DescriptorPoolTex;

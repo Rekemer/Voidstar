@@ -8,6 +8,7 @@ namespace Voidstar
    
 
     void CommandPoolManager::Release() {
+
         for (const auto& pool :m_FreePools)
             RenderContext::GetDevice()->GetDevice().destroyCommandPool(pool);
 

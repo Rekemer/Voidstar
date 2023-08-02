@@ -341,6 +341,7 @@ namespace Voidstar
 		logicalDevice.destroyImage(m_Image);
 		logicalDevice.destroyImageView(m_ImageView);
 		logicalDevice.destroySampler(m_Sampler);
+		Renderer::Instance()->GetCommandPoolManager()->FreePool(m_CommandPool);
 	}
 	vk::Format Image::GetFormat(vk::PhysicalDevice physicalDevice, const std::vector<vk::Format>& candidates, vk::ImageTiling tiling, vk::FormatFeatureFlags features)
 	{
@@ -462,5 +463,6 @@ namespace Voidstar
 			1, &barrier);
 		commandBuffer.EndTransfering();
 		commandBuffer.SubmitSingle();
+		commandBuffer.Free();
 	}
 }

@@ -814,8 +814,8 @@ namespace Voidstar
 		auto physDev = m_Device->GetDevicePhys();
 		auto dev = m_Device->GetDevice();
 		auto queue = m_Device->GetGraphicsQueue();
-		auto commandPoolTracy = m_CommandPoolManager->GetFreePool();
-		m_TracyCommandBuffer = CommandBuffer::CreateBuffer(commandPoolTracy,vk::CommandBufferLevel::ePrimary);
+		m_TracyCommandPool = m_CommandPoolManager->GetFreePool();
+		m_TracyCommandBuffer = CommandBuffer::CreateBuffer(m_TracyCommandPool,vk::CommandBufferLevel::ePrimary);
 		auto instance = m_Instance->GetInstance();
 		PFN_vkGetPhysicalDeviceCalibrateableTimeDomainsEXT vkGetPhysicalDeviceCalibrateableTimeDomainsEXT = reinterpret_cast<PFN_vkGetPhysicalDeviceCalibrateableTimeDomainsEXT>(vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceCalibrateableTimeDomainsEXT"));
 		PFN_vkGetCalibratedTimestampsEXT vkGetCalibratedTimestampsEXT = reinterpret_cast<PFN_vkGetCalibratedTimestampsEXT>(vkGetDeviceProcAddr(dev, "vkGetCalibratedTimestampsEXT"));
@@ -1135,7 +1135,16 @@ namespace Voidstar
 	void Renderer::Shutdown()
 	{
 
-		m_CommandPoolManager->Release();
+			
+			for (int i = 0; i < m_ComputeCommandBuffer.size();i++)
+			{
+				m_RenderCommandBuffer[i].Free();
+				m_ComputeCommandBuffer[i].Free();
+				m_TransferCommandBuffer[i].Free();
+			};
+			m_CommandPoolManager->FreePool(m_RenderCommandBuffer[0].m_CommandPool);
+			m_CommandPoolManager->FreePool(m_TracyCommandPool);
+		
 	}
 
 
@@ -1203,8 +1212,8 @@ namespace Voidstar
 	
 	Renderer* Renderer::Instance()
 	{
-		static Renderer* s_Renderer = new Renderer();
-		return s_Renderer;
+		static Renderer renderer ;
+		return &renderer;
 	}
 	void Renderer::Render()
 	{
@@ -2139,6 +2148,8 @@ namespace Voidstar
 		ImGui_ImplVulkan_Shutdown();
 		ImGui_ImplGlfw_Shutdown();
 		ImGui::DestroyContext();
+		m_CommandPoolManager->FreePool(imguiData.g_CommandPool);
+
 	}
 	void Renderer::GenerateTerrain()
 	{
@@ -2642,7 +2653,14 @@ namespace Voidstar
 
 		}
 		m_Image.reset();
+		m_NoiseImage.reset();
 		
+		m_SnowTex.reset();
+		m_GrassTex.reset();
+		m_StoneTex.reset();
+
+		m_InstancedDataBuffer.reset();
+		delete m_NoiseData;
 		m_Device->GetDevice().freeMemory(m_MsaaImageMemory);
 		m_Device->GetDevice().destroyImage(m_MsaaImage);
 		m_Device->GetDevice().destroyImageView(m_MsaaImageView);
@@ -2657,14 +2675,13 @@ namespace Voidstar
 		{
 			buffer.reset();
 		}
-		device.destroyCommandPool(m_CommandComputePool);
 		
-		delete m_DescriptorSetLayout;
-		delete m_DescriptorSetLayoutTex;
+		//delete m_DescriptorSetLayout;
+		//delete m_DescriptorSetLayoutTex;
 		m_DescriptorPool.reset();
 		m_DescriptorPoolTex.reset();
 		m_DescriptorPoolNoise.reset();
-		m_Device->GetDevice().destroyDescriptorSetLayout(m_DescriptorSetLayoutNoise->GetLayout());
+		//m_Device->GetDevice().destroyDescriptorSetLayout(m_DescriptorSetLayoutNoise->GetLayout());
 	
 
 		for (int i = 0; i < m_DescriptorSetLayouts.size(); i++)
@@ -2691,10 +2708,10 @@ namespace Voidstar
 		m_Swapchain.reset();
 		m_Device->GetDevice().destroyRenderPass(m_RenderPass);
 
-		m_Device->GetDevice().destroyPipeline(m_DebugPipeline);
-		m_Device->GetDevice().destroyPipelineLayout(m_DebugPipelineLayout);
+		//m_Device->GetDevice().destroyPipeline(m_DebugPipeline);
+		//m_Device->GetDevice().destroyPipelineLayout(m_DebugPipelineLayout);
 
-
+		m_CommandPoolManager->Release();
 		m_Device->GetDevice().destroy();
 
 		m_Instance->GetInstance().destroySurfaceKHR(m_Surface);

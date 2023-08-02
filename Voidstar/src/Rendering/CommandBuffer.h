@@ -68,6 +68,7 @@ namespace Voidstar
 
 		~CommandBuffer();
 	private:
+		friend class Renderer;
 		vk::CommandPool m_CommandPool;
 		vk::CommandBuffer m_CommandBuffer;
 	};
