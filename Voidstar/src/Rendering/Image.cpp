@@ -133,7 +133,6 @@ namespace Voidstar
 		commandBuffer.EndTransfering();
 		commandBuffer.SubmitSingle();
 		
-		Renderer::Instance()->GetCommandPoolManager()->FreePool(image->m_CommandPool);
 		
 		
 		//commandBuffer.BeginTransfering();
@@ -327,7 +326,6 @@ namespace Voidstar
 		commandBuffer.SubmitSingle();
 
 		commandBuffer.Free();
-		Renderer::Instance()->GetCommandPoolManager()->FreePool(image->m_CommandPool);
 
 
 		

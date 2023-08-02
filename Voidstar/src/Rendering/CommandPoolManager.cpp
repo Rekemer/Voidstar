@@ -2,6 +2,7 @@
 #include"CommandPoolManager.h"
 #include"RenderContext.h"
 #include"Device.h"
+#include"Log.h"
 namespace Voidstar
 {
 
@@ -9,8 +10,14 @@ namespace Voidstar
 
     void CommandPoolManager::Release() {
 
-        for (const auto& pool :m_FreePools)
+        if (m_InUsePools.size() > 0)
+        {
+            Log::GetLog()->error("Not all pools are deallocated!");
+        }
+        for (const auto& pool : m_FreePools)
+        {
             RenderContext::GetDevice()->GetDevice().destroyCommandPool(pool);
+        }
 
     }
 

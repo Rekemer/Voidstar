@@ -203,7 +203,7 @@ namespace Voidstar
 		std::vector<Buffer*> m_UniformBuffers;
 		std::vector<CommandBuffer> m_RenderCommandBuffer, m_TransferCommandBuffer;
 		CommandBuffer m_TracyCommandBuffer;
-
+		vk::CommandPool m_FrameCommandPool;
 
 		std::vector<void*> uniformBuffersMapped;
 		
@@ -261,7 +261,7 @@ namespace Voidstar
 		vk::PolygonMode m_PolygoneMode = vk::PolygonMode::eFill;
 
 
-		vk::BufferMemoryBarrier	m_InstanceBarrier;
+		//vk::BufferMemoryBarrier	m_InstanceBarrier;
 		std::vector<InstanceData> m_InstanceData;
 		std::vector<vk::DescriptorSet> m_InstanceDescriptorSets;
 		void* m_InstancedPtr;

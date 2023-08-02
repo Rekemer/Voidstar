@@ -58,6 +58,7 @@ namespace Voidstar
 	std::string BASE_SPIRV_OUTPUT = BASE_SHADER_PATH+"Binary/";
 	#define INSTANCE_COUNT 4096
 	#define ZEROPOS 1
+	#define	IMGUI_ENABLED 1
 	size_t currentFrame = 0;
 	// Data
 	static VkAllocationCallbacks* g_Allocator = nullptr;
@@ -679,10 +680,10 @@ namespace Voidstar
 
 
 
-		auto commandPool = m_CommandPoolManager->GetFreePool();
-		m_RenderCommandBuffer = CommandBuffer::CreateBuffers(commandPool, vk::CommandBufferLevel::ePrimary, 3);
-		m_TransferCommandBuffer = CommandBuffer::CreateBuffers(commandPool, vk::CommandBufferLevel::ePrimary, 3);
-		m_ComputeCommandBuffer = CommandBuffer::CreateBuffers(commandPool, vk::CommandBufferLevel::ePrimary, 3);
+		m_FrameCommandPool = m_CommandPoolManager->GetFreePool();
+		m_RenderCommandBuffer = CommandBuffer::CreateBuffers(m_FrameCommandPool, vk::CommandBufferLevel::ePrimary, 3);
+		m_TransferCommandBuffer = CommandBuffer::CreateBuffers(m_FrameCommandPool, vk::CommandBufferLevel::ePrimary, 3);
+		m_ComputeCommandBuffer = CommandBuffer::CreateBuffers(m_FrameCommandPool, vk::CommandBufferLevel::ePrimary, 3);
 
 		CreateSyncObjects();
 
@@ -757,49 +758,49 @@ namespace Voidstar
 
 
 
-		{
-			std::vector<IndexType> indices;
-			auto vertices = GenerateSphere(1.,20.,20, indices);
-			auto indexSize = SizeOfBuffer(indices.size(), indices[0]);
-			{
-				SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(indexSize);
-
-
-				{
-					BufferInputChunk inputBuffer;
-					inputBuffer.size = indexSize;
-					inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
-					inputBuffer.usage = vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst;
-					m_IndexSphereBuffer = CreateUPtr<IndexBuffer>(inputBuffer, indices.size(), vk::IndexType::eUint32);
-
-				}
-
-				m_TransferCommandBuffer[0].BeginTransfering();
-				m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_IndexSphereBuffer.get(), (void*)indices.data(), indexSize);
-				m_TransferCommandBuffer[0].EndTransfering();
-				m_TransferCommandBuffer[0].SubmitSingle();
-
-
-
-			}
-
-			auto vertexSize = SizeOfBuffer(vertices.size(), vertices[0]);
-			void* vertexData = const_cast<void*>(static_cast<const void*>(vertices.data()));
-			SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(vertexSize);
-			{
-				BufferInputChunk inputBuffer;
-				inputBuffer.size = vertexSize;
-				inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
-				inputBuffer.usage = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer;
-
-				m_SphereBuffer = CreateUPtr<Buffer>(inputBuffer);
-			}
-
-			m_TransferCommandBuffer[0].BeginTransfering();
-			m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_SphereBuffer.get(), (void*)vertices.data(), vertexSize);
-			m_TransferCommandBuffer[0].EndTransfering();
-			m_TransferCommandBuffer[0].SubmitSingle();
-		}
+		//{
+		//	std::vector<IndexType> indices;
+		//	auto vertices = GenerateSphere(1.,20.,20, indices);
+		//	auto indexSize = SizeOfBuffer(indices.size(), indices[0]);
+		//	{
+		//		SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(indexSize);
+		//
+		//
+		//		{
+		//			BufferInputChunk inputBuffer;
+		//			inputBuffer.size = indexSize;
+		//			inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+		//			inputBuffer.usage = vk::BufferUsageFlagBits::eIndexBuffer | //vk::BufferUsageFlagBits::eTransferDst;
+		//			m_IndexSphereBuffer = CreateUPtr<IndexBuffer>(inputBuffer, indices.size(), //vk::IndexType::eUint32);
+		//
+		//		}
+		//
+		//		m_TransferCommandBuffer[0].BeginTransfering();
+		//		m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_IndexSphereBuffer.get(), //(void*)indices.data(), indexSize);
+		//		m_TransferCommandBuffer[0].EndTransfering();
+		//		m_TransferCommandBuffer[0].SubmitSingle();
+		//
+		//
+		//
+		//	}
+		//
+		//	auto vertexSize = SizeOfBuffer(vertices.size(), vertices[0]);
+		//	void* vertexData = const_cast<void*>(static_cast<const void*>(vertices.data()));
+		//	SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(vertexSize);
+		//	{
+		//		BufferInputChunk inputBuffer;
+		//		inputBuffer.size = vertexSize;
+		//		inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+		//		inputBuffer.usage = vk::BufferUsageFlagBits::eTransferDst | //vk::BufferUsageFlagBits::eVertexBuffer;
+		//
+		//		m_SphereBuffer = CreateUPtr<Buffer>(inputBuffer);
+		//	}
+		//
+		//	m_TransferCommandBuffer[0].BeginTransfering();
+		//	m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_SphereBuffer.get(), (void*)//vertices.data(), vertexSize);
+		//	m_TransferCommandBuffer[0].EndTransfering();
+		//	m_TransferCommandBuffer[0].SubmitSingle();
+		//}
 		
 
 
@@ -826,8 +827,9 @@ namespace Voidstar
 		
 		UpdateNoiseTexure();
 
-
+#if IMGUI_ENABLED
 		InitImGui();
+#endif	
 
 	}
 
@@ -1142,7 +1144,7 @@ namespace Voidstar
 				m_ComputeCommandBuffer[i].Free();
 				m_TransferCommandBuffer[i].Free();
 			};
-			m_CommandPoolManager->FreePool(m_RenderCommandBuffer[0].m_CommandPool);
+			m_CommandPoolManager->FreePool(m_FrameCommandPool);
 			m_CommandPoolManager->FreePool(m_TracyCommandPool);
 		
 	}
@@ -1316,8 +1318,8 @@ namespace Voidstar
 
 			//RenderImGui(imageIndex);
 		
-
-
+			
+#if IMGUI_ENABLED
 		ImGui_ImplVulkan_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
@@ -1401,7 +1403,7 @@ namespace Voidstar
 
 
 
-
+#endif
 
 			vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
 			vk::SubmitInfo submitInfo = {};
@@ -1413,7 +1415,7 @@ namespace Voidstar
 			const std::vector<vk::CommandBuffer> commandBuffers = { renderCommandBuffer.GetCommandBuffer(), g_MainWindowData.Frames[imageIndex].CommandBuffer };
 			//const std::vector<vk::CommandBuffer> commandBuffers = { renderCommandBuffer.GetCommandBuffer() };
 
-			submitInfo.commandBufferCount =2;
+			submitInfo.commandBufferCount = commandBuffers.size();
 			submitInfo.pCommandBuffers = commandBuffers.data();
 
 			submitInfo.signalSemaphoreCount = 1;
@@ -2145,10 +2147,24 @@ namespace Voidstar
 	}
 	void Renderer::CleanUpImGui()
 	{
+#if IMGUI_ENABLED
+		m_CommandPoolManager->FreePool(imguiData.g_CommandPool);
+		m_Device->GetDevice().destroyRenderPass(imguiData.g_RenderPass);
+		
+		auto device = RenderContext::GetDevice()->GetDevice();
+		for (int i = 0; i < g_MainWindowData.ImageCount; i++)
+		{
+			device.destroyFramebuffer(g_MainWindowData.Frames[i].Framebuffer);
+		}
+		device.destroyDescriptorPool(imguiData.g_DescriptorPool);
+		delete g_MainWindowData.Frames;
+		
 		ImGui_ImplVulkan_Shutdown();
 		ImGui_ImplGlfw_Shutdown();
 		ImGui::DestroyContext();
-		m_CommandPoolManager->FreePool(imguiData.g_CommandPool);
+
+
+#endif
 
 	}
 	void Renderer::GenerateTerrain()
@@ -2246,11 +2262,13 @@ namespace Voidstar
 		msaaAttachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
 		msaaAttachment.initialLayout = vk::ImageLayout::eUndefined;
 		msaaAttachment.finalLayout = vk::ImageLayout::eColorAttachmentOptimal;
+		//msaaAttachment.finalLayout = vk::ImageLayout::ePresentSrcKHR;
 		
 		
 		vk::AttachmentReference msaaAttachmentRef = {};
 		msaaAttachmentRef.attachment = 0;
 		msaaAttachmentRef.layout = vk::ImageLayout::eColorAttachmentOptimal;
+		//msaaAttachmentRef.layout = vk::ImageLayout::ePresentSrcKHR;
 		
 
 
@@ -2694,6 +2712,7 @@ namespace Voidstar
 		m_Device->GetDevice().destroySemaphore(m_ImageAvailableSemaphore);
 		m_Device->GetDevice().destroySemaphore(m_RenderFinishedSemaphore);
 		m_Device->GetDevice().destroyFence(m_InFlightFence);
+		//m_Device->GetDevice().destroyBarr;
 
 		for (auto& semaphore : m_ComputeFinishedSemaphores)
 		{
@@ -2708,8 +2727,8 @@ namespace Voidstar
 		m_Swapchain.reset();
 		m_Device->GetDevice().destroyRenderPass(m_RenderPass);
 
-		//m_Device->GetDevice().destroyPipeline(m_DebugPipeline);
-		//m_Device->GetDevice().destroyPipelineLayout(m_DebugPipelineLayout);
+		m_Device->GetDevice().destroyPipeline(m_ComputePipeline);
+		m_Device->GetDevice().destroyPipelineLayout(m_ComputePipelineLayout);
 
 		m_CommandPoolManager->Release();
 		m_Device->GetDevice().destroy();
