@@ -106,6 +106,7 @@
     <ClInclude Include="src\Keys.h" />
     <ClInclude Include="src\Log.h" />
     <ClInclude Include="src\Main.h" />
+    <ClInclude Include="src\MemoryTracker.h" />
     <ClInclude Include="src\Prereq.h" />
     <ClInclude Include="src\Quadtree\Quadtree.h" />
     <ClInclude Include="src\Rendering\Buffer.h" />

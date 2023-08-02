@@ -145,8 +145,6 @@ namespace Voidstar
 		}
 
 		void SubmitInstanceData(const InstanceData& instance);
-		void GenerateTerrain();
-		void GenerateTerrain(glm::vec3 tilePos,float depth, float tileWidth, int parentIndex);
 		void RenderImGui(int frameIndex);
 		void CleanUpImGui();
 		~Renderer();
