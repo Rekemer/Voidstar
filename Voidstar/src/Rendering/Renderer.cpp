@@ -60,6 +60,7 @@ namespace Voidstar
 	#define ZEROPOS 1
 	#define	IMGUI_ENABLED 1
 	size_t currentFrame = 0;
+	static float exeTime = 24;
 	// Data
 	static VkAllocationCallbacks* g_Allocator = nullptr;
 	static VkInstance               g_Instance = VK_NULL_HANDLE;
@@ -404,29 +405,29 @@ namespace Voidstar
 				poolSize.descriptorCount = 1;
 				poolSizes.emplace_back(poolSize);
 			}
-
+		
 			m_DescriptorPoolNoise = DescriptorPool::Create(poolSizes, 1);
 
 			std::vector<vk::DescriptorSetLayout> layouts;
 			layouts.resize(1);
 
 
-
-			vk::DescriptorSetLayoutBinding layoutBinding;
-			layoutBinding.binding = 0;
-			layoutBinding.descriptorType = vk::DescriptorType::eStorageImage;
-			layoutBinding.stageFlags = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eTessellationEvaluation |
-				vk::ShaderStageFlagBits::eCompute ;
-			layoutBinding.descriptorCount =1;
 			vk::DescriptorSetLayoutBinding layoutBinding1;
-			layoutBinding1.binding = 1;
-			layoutBinding1.descriptorType = vk::DescriptorType::eUniformBuffer;
-			layoutBinding1.stageFlags = vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex |
+			layoutBinding1.binding = 0;
+			layoutBinding1.descriptorType = vk::DescriptorType::eStorageImage;
+			layoutBinding1.stageFlags = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eTessellationEvaluation |
+				vk::ShaderStageFlagBits::eCompute;
+			layoutBinding1.descriptorCount = 2;
+
+			vk::DescriptorSetLayoutBinding layoutBinding2;
+			layoutBinding2.binding = 1;
+			layoutBinding2.descriptorType = vk::DescriptorType::eUniformBuffer;
+			layoutBinding2.stageFlags = vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex |
 				vk::ShaderStageFlagBits::eTessellationEvaluation;
-			layoutBinding1.descriptorCount =1;
+			layoutBinding2.descriptorCount = 1;
 
 
-			std::vector<vk::DescriptorSetLayoutBinding> layoutBindings{ layoutBinding,layoutBinding1 };
+			std::vector<vk::DescriptorSetLayoutBinding> layoutBindings{ layoutBinding1,layoutBinding2 };
 
 			m_DescriptorSetLayoutNoise = DescriptorSetLayout::Create(layoutBindings);
 
@@ -435,11 +436,46 @@ namespace Voidstar
 		}
 
 		m_NoiseImage = Image::CreateEmptyImage(noiseData.textureWidth, noiseData.textureHeight, vk::Format::eR8G8B8A8Snorm);
+		m_AnimatedNoiseImage = Image::CreateEmptyImage(noiseData.textureWidth, noiseData.textureHeight, vk::Format::eR8G8B8A8Snorm);
+
+		//m_Device->UpdateDescriptorSet(m_DescriptorSetNoise, 0, 1, *m_NoiseImage, vk::ImageLayout::eGeneral, vk::DescriptorType::eStorageImage);
+		//m_Device->UpdateDescriptorSet(m_DescriptorSetTex, 0, 1, *m_NoiseImage, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
+		
+
+		{
+			vk::DescriptorImageInfo imageDescriptor0;
+			imageDescriptor0.imageLayout = vk::ImageLayout::eGeneral;
+			imageDescriptor0.imageView = m_NoiseImage->m_ImageView;
+			imageDescriptor0.sampler = m_NoiseImage->m_Sampler;
+			vk::DescriptorImageInfo imageDescriptor1;
+			imageDescriptor1.imageLayout = vk::ImageLayout::eGeneral;
+			imageDescriptor1.imageView = m_AnimatedNoiseImage->m_ImageView;
+			imageDescriptor1.sampler = m_AnimatedNoiseImage->m_Sampler;
+			std::vector<vk::DescriptorImageInfo> images{ imageDescriptor0 ,imageDescriptor1 };
+			m_Device->UpdateDescriptorSet(m_DescriptorSetNoise, 0, images, vk::DescriptorType::eStorageImage);
+		//	m_Device->UpdateDescriptorSet(m_DescriptorSetNoise, 1, images, vk::DescriptorType::eStorageImage);
+
+			{
+				vk::DescriptorImageInfo imageDescriptor0;
+				imageDescriptor0.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+				imageDescriptor0.imageView = m_NoiseImage->m_ImageView;
+				imageDescriptor0.sampler = m_NoiseImage->m_Sampler;
+				vk::DescriptorImageInfo imageDescriptor1;
+				imageDescriptor1.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+				imageDescriptor1.imageView = m_AnimatedNoiseImage->m_ImageView;
+				imageDescriptor1.sampler = m_AnimatedNoiseImage->m_Sampler;
+				std::vector<vk::DescriptorImageInfo> images{ imageDescriptor0 ,imageDescriptor1 };
+				m_Device->UpdateDescriptorSet(m_DescriptorSetTex, 0, images, vk::DescriptorType::eCombinedImageSampler);
+			//	m_Device->UpdateDescriptorSet(m_DescriptorSetTex, 0, images, vk::DescriptorType::eCombinedImageSampler);
+			}
+			
 
 
-		m_Device->UpdateDescriptorSet(m_DescriptorSetNoise, 0, 1, *m_NoiseImage, vk::ImageLayout::eGeneral, vk::DescriptorType::eStorageImage);
-		m_Device->UpdateDescriptorSet(m_DescriptorSetTex, 0, 1, *m_NoiseImage, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
-	
+		}
+
+		//m_Device->UpdateDescriptorSet(m_DescriptorSetNoise, 0, 1, *m_AnimatedNoiseImage, vk::ImageLayout::eGeneral, vk::DescriptorType::eStorageImage);
+		//m_Device->UpdateDescriptorSet(m_DescriptorSetTex, 0, 1, *m_AnimatedNoiseImage, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
+
 
 		m_SnowTex = Image::CreateImage(BASE_RES_PATH + "terrain/snow/Snow_003_COLOR.jpg",m_DescriptorSetTex);
 		m_Device->UpdateDescriptorSet(m_DescriptorSetTex,1,1,*m_SnowTex,vk::ImageLayout::eShaderReadOnlyOptimal,vk::DescriptorType::eCombinedImageSampler);
@@ -475,10 +511,12 @@ namespace Voidstar
 		computeShaderStageInfo.pName = "main";
 
 
+		std::vector<vk::DescriptorSetLayout> layouts = { m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutNoise->GetLayout() };
+
 		vk::PipelineLayoutCreateInfo pipelineLayoutInfo{};
 		pipelineLayoutInfo.sType = vk::StructureType::ePipelineLayoutCreateInfo;
-		pipelineLayoutInfo.setLayoutCount = 1;
-		pipelineLayoutInfo.pSetLayouts = const_cast<const vk::DescriptorSetLayout*>(&m_DescriptorSetLayoutNoise->GetLayout());
+		pipelineLayoutInfo.setLayoutCount = layouts.size();
+		pipelineLayoutInfo.pSetLayouts = layouts.data();
 		m_ComputePipelineLayout = device->GetDevice().createPipelineLayout(pipelineLayoutInfo, nullptr);
 
 
@@ -494,14 +532,19 @@ namespace Voidstar
 		vkDestroyShaderModule(device->GetDevice(), computeShaderModule, nullptr);
 	}
 
+
 	void Renderer::UpdateNoiseTexure()
 	{
-		currentFrame = 0;
 		auto device = m_Device->GetDevice();
 		if (m_NoiseImage->m_ImageLayout != vk::ImageLayout::eGeneral)
 		{
 			auto cmdBuffer = m_ComputeCommandBuffer[currentFrame].BeginTransfering();
-			m_ComputeCommandBuffer[currentFrame].ChangeImageLayout(m_NoiseImage.get(), vk::ImageLayout::eShaderReadOnlyOptimal, vk::ImageLayout::eGeneral); m_ComputeCommandBuffer[currentFrame].EndTransfering();
+			
+			
+			m_ComputeCommandBuffer[currentFrame].ChangeImageLayout(m_NoiseImage.get(), vk::ImageLayout::eShaderReadOnlyOptimal, vk::ImageLayout::eGeneral);
+			m_ComputeCommandBuffer[currentFrame].ChangeImageLayout(m_AnimatedNoiseImage.get(), vk::ImageLayout::eShaderReadOnlyOptimal, vk::ImageLayout::eGeneral);
+			
+			m_ComputeCommandBuffer[currentFrame].EndTransfering();
 			m_ComputeCommandBuffer[currentFrame].SubmitSingle();
 
 		}
@@ -511,12 +554,13 @@ namespace Voidstar
 
 
 		vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_ComputePipeline);
-		cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_ComputePipelineLayout, 0, 1, &m_DescriptorSetNoise, 0, 0);
+		cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_ComputePipelineLayout, 0, 1, &m_DescriptorSets[currentFrame], 0, 0);
+		cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_ComputePipelineLayout, 1, 1, &m_DescriptorSetNoise, 0, 0);
 
 		vkCmdDispatch(cmdBuffer, noiseData.textureWidth / 16, noiseData.textureHeight / 16, 1);
 
 		m_ComputeCommandBuffer[currentFrame].ChangeImageLayout(m_NoiseImage.get(), vk::ImageLayout::eGeneral, vk::ImageLayout::eShaderReadOnlyOptimal);
-
+		m_ComputeCommandBuffer[currentFrame].ChangeImageLayout(m_AnimatedNoiseImage.get(), vk::ImageLayout::eGeneral, vk::ImageLayout::eShaderReadOnlyOptimal);
 		m_ComputeCommandBuffer[currentFrame].EndTransfering();
 		m_ComputeCommandBuffer[currentFrame].SubmitSingle();
 
@@ -572,7 +616,7 @@ namespace Voidstar
 		vk::DescriptorSetLayoutBinding layoutBinding;
 		layoutBinding.binding = 0;
 		layoutBinding.descriptorType = vk::DescriptorType::eUniformBuffer;
-		layoutBinding.stageFlags = vk::ShaderStageFlagBits::eVertex| vk::ShaderStageFlagBits::eTessellationControl
+		layoutBinding.stageFlags = vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex| vk::ShaderStageFlagBits::eTessellationControl
 			| vk::ShaderStageFlagBits::eTessellationEvaluation;
 		layoutBinding.descriptorCount = 1;
 
@@ -650,7 +694,8 @@ namespace Voidstar
 			layoutBinding.binding = 0;
 			layoutBinding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
 			layoutBinding.stageFlags = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eTessellationEvaluation | vk::ShaderStageFlagBits::eFragment;
-			layoutBinding.descriptorCount = 1;
+			layoutBinding.descriptorCount = 2;
+
 
 			vk::DescriptorSetLayoutBinding layoutBinding1;
 			layoutBinding1.binding = 1;
@@ -825,7 +870,9 @@ namespace Voidstar
 		ctx = TracyVkContextCalibrated(physDev,dev,queue, m_TracyCommandBuffer.GetCommandBuffer(),
 			vkGetPhysicalDeviceCalibrateableTimeDomainsEXT, vkGetCalibratedTimestampsEXT);
 
-		
+
+		//UpdateUniformBuffer(currentFrame);
+		//m_Device->GetDevice().waitIdle();
 		UpdateNoiseTexure();
 
 #if IMGUI_ENABLED
@@ -1086,6 +1133,7 @@ namespace Voidstar
 		////ubo.proj = glm::perspective(glm::radians(45.0f), extent.width / (float)extent.height, 0.0001f, 10.0f);
 		ubo.view = cameraView;
 		ubo.proj = cameraProj;
+		ubo.time = exeTime;
 		//auto model = glm::mat4(1.f);
 		//glm::mat4 blenderToLH = glm::mat4(1.0f);
 		//blenderToLH[2][2] = -1.0f;  // Flip Z-axis
@@ -1098,6 +1146,7 @@ namespace Voidstar
 		auto extent = m_Swapchain->m_SwapchainExtent;
 		//ubo.proj[1][1] *= -1,
 		memcpy(uniformBuffersMapped[imageIndex], &ubo, sizeof(ubo));
+
 	}
 
 	void Renderer::RecreateSwapchain()
@@ -1163,8 +1212,11 @@ namespace Voidstar
 		static Renderer renderer ;
 		return &renderer;
 	}
-	void Renderer::Render()
+
+
+	void Renderer::Render(float deltaTime)
 	{
+		exeTime += deltaTime;
 		m_InstanceData.clear();
 		auto cameraPos = m_App->GetCamera()->m_Position;
 		//cameraPos = { 5,0,-5 };
@@ -1250,6 +1302,7 @@ namespace Voidstar
 			vk::CommandBufferBeginInfo beginInfo = {};
 
 			auto commandBuffer = m_RenderCommandBuffer[imageIndex].GetCommandBuffer();
+			auto amount = m_IndexBuffer->GetIndexAmount();
 
 			commandBuffer.begin(beginInfo);
 			{
@@ -1291,8 +1344,7 @@ namespace Voidstar
 				commandBuffer.setScissor(0, 1, &scissors);
 
 				commandBuffer.bindIndexBuffer(m_IndexBuffer->GetBuffer(), 0, m_IndexBuffer->GetIndexType());
-				auto amount = m_IndexBuffer->GetIndexAmount();
-				commandBuffer.drawIndexed(static_cast<uint32_t>(amount), m_InstanceData.size(), 0, 0, 0);
+		//		commandBuffer.drawIndexed(static_cast<uint32_t>(amount), m_InstanceData.size(), 0, 0, 0);
 
 				
 			}
@@ -1300,6 +1352,8 @@ namespace Voidstar
 			// water rendering
 			{
 
+				commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_WaterPipeline->m_Pipeline);
+				commandBuffer.drawIndexed(static_cast<uint32_t>(amount), m_InstanceData.size(), 0, 0, 0);
 			}
 			m_RenderCommandBuffer[imageIndex].EndRenderPass();
 			TracyVkCollect(ctx, commandBuffer);
@@ -1373,9 +1427,11 @@ namespace Voidstar
 			m_Device->UpdateDescriptorSet(m_DescriptorSetNoise, 0, 1, *m_NoiseImage, vk::ImageLayout::eGeneral, vk::DescriptorType::eStorageImage);
 			m_Device->UpdateDescriptorSet(m_DescriptorSetTex, 0, 1, *m_NoiseImage, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
 		}
-		if (m_IsNewParametrs)
+		// should be updated separately
+		if (true)
 		{
 			// update noise descriptor 
+			//m_IsNewParametrs = false;
 			m_Device->GetDevice().waitIdle();
 			memcpy(m_NoiseDataPtr, &noiseData, sizeof(NoiseData));
 			UpdateNoiseTexure();
@@ -1395,7 +1451,7 @@ namespace Voidstar
 
 			}
 			m_TerrainPipeline.reset();
-			
+			m_WaterPipeline.reset();
 			CreatePipeline();
 			
 		}
@@ -1502,18 +1558,18 @@ namespace Voidstar
 	}
 	void Renderer::CreatePipeline()
 	{
+		auto swapchainFormat = m_Swapchain->m_SwapchainFormat;
+		auto swapChainExtent = m_Swapchain->m_SwapchainExtent;
 		// terrain pipeline
 		{
 			GraphicsPipelineSpecification specs;
 
-			auto swapchainFormat = m_Swapchain->m_SwapchainFormat;
-			auto swapChainExtent = m_Swapchain->m_SwapchainExtent;
 			specs.device = m_Device->GetDevice();
 
 			specs.vertexFilepath = BASE_SPIRV_OUTPUT + "noise.spvV";
 			specs.fragmentFilepath = BASE_SPIRV_OUTPUT + "default.spvF";
-			specs.tessCFilepath = BASE_SPIRV_OUTPUT + "tessC.spvC";
-			specs.tessEFilepath = BASE_SPIRV_OUTPUT + "tessE.spvE";
+			specs.tessCFilepath = BASE_SPIRV_OUTPUT + "tess.spvC";
+			specs.tessEFilepath = BASE_SPIRV_OUTPUT + "tess.spvE";
 			specs.swapchainExtent = swapChainExtent;
 			specs.swapchainImageFormat = swapchainFormat;
 
@@ -1545,58 +1601,54 @@ namespace Voidstar
 			m_DescriptorSetLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutTex->GetLayout(),m_DescriptorSetLayoutNoise->GetLayout() };
 
 			specs.descriptorSetLayout = m_DescriptorSetLayouts;
-			m_TerrainPipeline = Pipeline::CreateGraphicsPipeline(specs, vk::PrimitiveTopology::ePatchList, m_Swapchain->m_SwapchainFrames[0].depthFormat);
+			m_TerrainPipeline = Pipeline::CreateGraphicsPipeline(specs, vk::PrimitiveTopology::ePatchList, m_Swapchain->m_SwapchainFrames[0].depthFormat,m_PolygoneMode);
 		
 		}
 		
-		//// water pipeline 
-		//{
-		//	GraphicsPipelineSpecification specs;
+		// water pipeline 
+		{
+			GraphicsPipelineSpecification specs;
 
-		//	auto swapchainFormat = m_Swapchain->m_SwapchainFormat();
-		//	auto swapChainExtent = m_Swapchain->GetExtent();
-		//	specs.device = m_Device->GetDevice();
+			
+			
+			specs.device = m_Device->GetDevice();
 
-		//	specs.vertexFilepath = BASE_SPIRV_OUTPUT + "water.spvV";
-		//	specs.fragmentFilepath = BASE_SPIRV_OUTPUT + "water.spvF";
-		//	specs.tessCFilepath = BASE_SPIRV_OUTPUT + "tessC.spvC";
-		//	specs.tessEFilepath = BASE_SPIRV_OUTPUT + "tessE.spvE";
-		//	specs.swapchainExtent = swapChainExtent;
-		//	specs.swapchainImageFormat = swapchainFormat;
-
-
-		//	std::vector<vk::VertexInputBindingDescription> bindings{ CreateBindingDescription(0,sizeof(Vertex),vk::VertexInputRate::eVertex) ,CreateBindingDescription(1,sizeof(InstanceData),vk::VertexInputRate::eInstance) };
-
-		//	std::vector<vk::VertexInputAttributeDescription> attributeDescriptions;
-
-		//	attributeDescriptions =
-		//	{
-		//		VertexInputAttributeDescription(0,0,vk::Format::eR32G32B32Sfloat,offsetof(Vertex, Position)),
-		//		VertexInputAttributeDescription(0,1,vk::Format::eR32G32B32A32Sfloat,offsetof(Vertex, Color)),
-		//		VertexInputAttributeDescription(0,2,vk::Format::eR32G32Sfloat,offsetof(Vertex, UV)),
-
-		//		VertexInputAttributeDescription(1,4,vk::Format::eR32G32B32Sfloat,offsetof(InstanceData, pos)),
-		//		VertexInputAttributeDescription(1,5,vk::Format::eR32G32B32A32Sfloat,offsetof(InstanceData, edges)),
-		//		VertexInputAttributeDescription(1,6,vk::Format::eR32Sfloat,offsetof(InstanceData, scale)),
-		//	};
-
-		//	specs.bindingDescription = bindings;
+			specs.vertexFilepath = BASE_SPIRV_OUTPUT + "water.spvV";
+			specs.fragmentFilepath = BASE_SPIRV_OUTPUT + "water.spvF";
+			specs.tessCFilepath = BASE_SPIRV_OUTPUT + "waterTess.spvC";
+			specs.tessEFilepath = BASE_SPIRV_OUTPUT + "waterTess.spvE";
+			specs.swapchainExtent = swapChainExtent;
+			specs.swapchainImageFormat = swapchainFormat;
 
 
+			std::vector<vk::VertexInputBindingDescription> bindings{ CreateBindingDescription(0,sizeof(Vertex),vk::VertexInputRate::eVertex) ,CreateBindingDescription(1,sizeof(InstanceData),vk::VertexInputRate::eInstance) };
 
-		//	specs.attributeDescription = attributeDescriptions;
-		//	//specs.attributeDescription = Particle::GetAttributeDescriptions();
+			std::vector<vk::VertexInputAttributeDescription> attributeDescriptions;
 
-		//	auto samples = RenderContext::GetDevice()->GetSamples();
-		//	specs.samples = samples;
-		//	m_DescriptorSetLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutTex->GetLayout(),m_DescriptorSetLayoutNoise->GetLayout() };
+			attributeDescriptions =
+			{
+				VertexInputAttributeDescription(0,0,vk::Format::eR32G32B32Sfloat,offsetof(Vertex, Position)),
+				VertexInputAttributeDescription(0,1,vk::Format::eR32G32B32A32Sfloat,offsetof(Vertex, Color)),
+				VertexInputAttributeDescription(0,2,vk::Format::eR32G32Sfloat,offsetof(Vertex, UV)),
 
-		//	specs.descriptorSetLayout = m_DescriptorSetLayouts;
-		//	auto pipline = CreatePipeline(specs, vk::PrimitiveTopology::ePatchList);
-		//	m_Pipeline = pipline.pipeline;
-		//	m_PipelineLayout = pipline.layout;
-		//	m_RenderPass = pipline.renderpass;
-		//}
+				VertexInputAttributeDescription(1,4,vk::Format::eR32G32B32Sfloat,offsetof(InstanceData, pos)),
+				VertexInputAttributeDescription(1,5,vk::Format::eR32G32B32A32Sfloat,offsetof(InstanceData, edges)),
+				VertexInputAttributeDescription(1,6,vk::Format::eR32Sfloat,offsetof(InstanceData, scale)),
+			};
+
+			specs.bindingDescription = bindings;
+
+
+
+			specs.attributeDescription = attributeDescriptions;
+
+			auto samples = RenderContext::GetDevice()->GetSamples();
+			specs.samples = samples;
+			m_DescriptorSetLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutTex->GetLayout(),m_DescriptorSetLayoutNoise->GetLayout() };
+
+			specs.descriptorSetLayout = m_DescriptorSetLayouts;
+			m_WaterPipeline = Pipeline::CreateGraphicsPipeline(specs, vk::PrimitiveTopology::ePatchList, m_Swapchain->m_SwapchainFrames[0].depthFormat, m_PolygoneMode);
+		}
 		
 	}
 
@@ -1804,8 +1856,6 @@ namespace Voidstar
 		m_IsNewParametrs |= ImGui::SliderFloat("Vertex amplitude", &noiseData.multipler, 0, 100);
 		m_IsNewParametrs |= ImGui::SliderFloat("exponent ", &noiseData.exponent, 0, 10);
 		m_IsNewParametrs |= ImGui::SliderFloat("uv scale ", &noiseData.scale, 0, 100);
-		m_IsResized |= ImGui::SliderFloat("Texture Width", &noiseData.textureWidth, 100, 5000);
-		m_IsResized |= ImGui::SliderFloat("Texture Height", &noiseData.textureHeight, 100, 5000);
 		m_IsPolygon = ImGui::Button("change mode");
 		
 		//std::string strMemory = "Allocated memory " + std::to_string(allocationMetrics.Current()) + " Bytes";
@@ -2041,6 +2091,7 @@ namespace Voidstar
 		}
 		m_Image.reset();
 		m_NoiseImage.reset();
+		m_AnimatedNoiseImage.reset();
 		
 		m_SnowTex.reset();
 		m_GrassTex.reset();
@@ -2081,7 +2132,6 @@ namespace Voidstar
 		m_Device->GetDevice().destroySemaphore(m_ImageAvailableSemaphore);
 		m_Device->GetDevice().destroySemaphore(m_RenderFinishedSemaphore);
 		m_Device->GetDevice().destroyFence(m_InFlightFence);
-		//m_Device->GetDevice().destroyBarr;
 
 		for (auto& semaphore : m_ComputeFinishedSemaphores)
 		{
@@ -2093,6 +2143,7 @@ namespace Voidstar
 		}
 		
 		m_TerrainPipeline.reset();
+		m_WaterPipeline.reset();
 		
 		m_Swapchain.reset();
 

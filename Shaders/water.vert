@@ -8,9 +8,9 @@ layout(binding = 0) uniform UniformBufferObject {
     mat4 model;
     mat4 view;
     mat4 proj;
-    
 } ubo;
-layout(set = 1, binding = 0) uniform sampler2D u_Tex;
+layout(set = 1, binding = 0) uniform sampler2D[2]  u_Tex;
+layout(set = 1, binding = 1) uniform sampler2D u_AnimatedTex;
 layout(set=2,binding = 1) uniform NoiseData {
 
     float frequence ;
@@ -80,17 +80,17 @@ void main()
     const int gridSize = 5000;
 	vec4 worldPos= vec4((in_pos*instanceScale)+instancePos,1.0);
 	
-	color = in_color;
     
 
     vec2 newUv = GetUvs(worldPos.xz, gridSize, in_uv,gridSize/(instanceScale) );
 	uv = newUv;
 
-    float noiseValue = texture(u_Tex,newUv).x;
-    worldPos.y = noiseValue*noiseData.multipler ;
+    float noiseValue = texture(u_Tex[1],newUv).x;
 	color =vec4( worldPos.y, noiseData.multipler, in_uv) ;
   
 	vec4 pos =	 worldPos;
+    pos.y+=noiseValue;
+	color.xyz = vec3(noiseValue,noiseValue,noiseValue);
 	gl_Position = pos;
     edges = instanceEdges;
     uvMesh = in_uv;

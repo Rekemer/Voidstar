@@ -4,13 +4,13 @@
 //				y: -1(top), 1(bottom)
 
 
-layout(binding = 0) uniform UniformBufferObject {
+layout(set = 0,binding = 0) uniform UniformBufferObject {
     mat4 model;
     mat4 view;
     mat4 proj;
-    
+    float time;
 } ubo;
-layout(set = 1, binding = 0) uniform sampler2D u_Tex;
+layout(set = 1, binding = 0) uniform sampler2D[2] u_Tex;
 layout(set=2,binding = 1) uniform NoiseData {
 
     float frequence ;
@@ -86,7 +86,7 @@ void main()
     vec2 newUv = GetUvs(worldPos.xz, gridSize, in_uv,gridSize/(instanceScale) );
 	uv = newUv;
 
-    float noiseValue = texture(u_Tex,newUv).x;
+    float noiseValue = texture(u_Tex[0],newUv).x;
     worldPos.y = noiseValue*noiseData.multipler ;
 	color =vec4( worldPos.y, noiseData.multipler, in_uv) ;
   

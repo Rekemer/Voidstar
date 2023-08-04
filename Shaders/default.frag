@@ -10,7 +10,7 @@ layout(location = 2) in vec2 uvMesh ;
 //layout(location = 4) in float depth;
 
 
-layout(set = 1, binding = 0) uniform sampler2D u_Noise;
+layout(set = 1, binding = 0) uniform sampler2D[2] u_Noise;
 layout(set = 1, binding = 1) uniform sampler2D u_Tex1;
 layout(set = 1, binding = 2) uniform sampler2D u_Tex2;
 layout(set = 1, binding = 3) uniform sampler2D u_Tex3;
@@ -109,7 +109,7 @@ void main()
     vec2 scaledUvMesh = fract(uvMesh*3);
     
     
-    vec4 noiseTex = texture(u_Noise,uv);
+    vec4 noiseTex = texture(u_Noise[0],uv);
     vec4 snowTex = texture(u_Tex1,scaledUvMesh);
     vec4 groundTex = texture(u_Tex2,scaledUvMesh);
     vec4 stoneTex = texture(u_Tex3,scaledUvMesh);

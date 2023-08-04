@@ -8,7 +8,7 @@ layout(binding = 0) uniform UniformBufferObject {
     mat4 proj;
     
 } ubo;
-layout(set = 1, binding = 0) uniform sampler2D u_Tex;
+layout(set = 1, binding = 0) uniform sampler2D[2] u_Tex;
 layout(set=2,binding = 1) uniform NoiseData {
 
     float frequence ;
@@ -85,18 +85,16 @@ void main()
    
     vec2 newUv = GetUvs(p.xz,gridSize, vec2(u,v),gridSize / (tileWidth));
 
-    float noiseValue = texture(u_Tex,newUv).x;
+    float noiseValue = texture(u_Tex[1],newUv).x;
    
      vec4 color = mix(
         mix(inColor[0], inColor[1], barycentricCoord.x),
         mix(inColor[3], inColor[2], barycentricCoord.x),
         barycentricCoord.z
     );
-     p.y =noiseValue*noiseData.multipler;
 
-     //p.y =color.x;
      outColor = vec4(newUv,0,1);
-     outColor =vec4(p.y,noiseData.multipler,inUvMesh[0]);
+     outColor =color;
      outUv = newUv;
      outUvMesh = gl_TessCoord.xy;
     gl_Position = ubo.proj*ubo.view*p;

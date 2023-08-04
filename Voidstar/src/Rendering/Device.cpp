@@ -203,7 +203,20 @@ namespace Voidstar
 		descriptorWrite.pImageInfo = &imageDescriptor;
 		m_Device.updateDescriptorSets(descriptorWrite, nullptr);
 	}
+	// to have an array of textures for example
+	void Device::UpdateDescriptorSet(vk::DescriptorSet dscSet, int binding, std::vector<vk::DescriptorImageInfo> images, vk::DescriptorType descType)
+	{
+		
 
+		vk::WriteDescriptorSet descriptorWrite;
+		descriptorWrite.dstSet = dscSet;
+		descriptorWrite.dstBinding = binding;
+		descriptorWrite.dstArrayElement = 0;
+		descriptorWrite.descriptorType = descType;
+		descriptorWrite.descriptorCount = images.size();
+		descriptorWrite.pImageInfo = images.data();
+		m_Device.updateDescriptorSets(descriptorWrite, nullptr);
+	}
 
 	void Device::UpdateDescriptorSet(vk::DescriptorSet dscSet, int binding, int descriptorCount, Buffer& buffer, vk::DescriptorType type)
 	{

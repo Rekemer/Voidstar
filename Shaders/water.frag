@@ -106,51 +106,7 @@ void main()
 {
 
   
-    vec2 scaledUvMesh = fract(uvMesh*3);
-    
-    
-    vec4 noiseTex = texture(u_Noise,uv);
-    vec4 snowTex = texture(u_Tex1,scaledUvMesh);
-    vec4 groundTex = texture(u_Tex2,scaledUvMesh);
-    vec4 stoneTex = texture(u_Tex3,scaledUvMesh);
-    float currentVertexHeight  = color.x;
-    float maxVertexHeight  = 5;
-    float t = currentVertexHeight / maxVertexHeight;
-  
-    
-
-    float step1 = maxVertexHeight * 0.20;
-    float step2 = maxVertexHeight * 0.50;
-    float step3 = maxVertexHeight * 0.75;
-    vec4 blendedColor ;
-    if (t < step1)
-    {
-        blendedColor=groundTex;
-    }
-    else if (t < step2)
-    {
-        float rand = random(uv);
-        float t = norm(t,step2,step1);
-        rand = norm(rand,0.2,-0.2);
-        vec4 newColor = mix(groundTex,stoneTex,t);
-
-        blendedColor= newColor;
-
-    }
-    else 
-    {
-        float t = norm(t,step3,step2);
-        vec4 newColor = mix(stoneTex,snowTex,t);
-
-        blendedColor= newColor;
-    }
-
-
-
-
-
-
-    outColor.xyz =blendedColor.xyz;
+    outColor.xyz =color.xyz;
 	outColor.a = 1;
 
 

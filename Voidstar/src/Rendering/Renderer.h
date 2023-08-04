@@ -38,6 +38,7 @@ namespace Voidstar
 		glm::mat4 model;
 		glm::mat4 view;
 		glm::mat4 proj;
+		float time;
 	};
 
 	struct Particle {
@@ -98,7 +99,7 @@ namespace Voidstar
 		float multipler = 8.f;
 		float exponent = 4.f;
 		float scale = 3.f;
-		
+		float time = 0;
 		
 
 	};
@@ -114,7 +115,7 @@ namespace Voidstar
 		void InitImGui( );
 		void SetupVulkanWindow(ImGui_ImplVulkanH_Window* g_wd, VkSurfaceKHR surface, int width, int height);
 		static Renderer* Instance();
-		void Render();
+		void Render(float deltaTime);
 		CommandPoolManager* GetCommandPoolManager()
 		{
 			return m_CommandPoolManager.get();
@@ -157,6 +158,7 @@ namespace Voidstar
 
 		SPtr<Image> m_Image;
 		SPtr<Image> m_NoiseImage;
+		SPtr<Image> m_AnimatedNoiseImage;
 		
 		SPtr<Image> m_SnowTex;
 		SPtr<Image>	m_GrassTex;
@@ -203,6 +205,7 @@ namespace Voidstar
 	
 
 		UPtr<Pipeline> m_TerrainPipeline;
+		UPtr<Pipeline> m_WaterPipeline;
 
 		
 		vk::Pipeline m_DebugPipeline;
