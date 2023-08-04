@@ -11,7 +11,7 @@ namespace Voidstar
 	const int widthGround = 2;
 	const int heightGround = 2;
 
-	constexpr float levelOfDetail =16;
+	constexpr float levelOfDetail =32;
 
 
 
@@ -61,13 +61,6 @@ namespace Voidstar
 	}
 	std::bitset<size> ParentOfChild(std::bitset<size> child, int childDepth)
 	{
-		//std::bitset<size> maskCoords;
-		//for (int i = 0; i < childDepth * 2 - 3; i++)
-		//{
-		//	maskCoords[i] = 1;
-		//	maskCoords[i + 1] = 1;
-		//}
-		//std::cout << " mask " << child << std::endl;
 		return child>>2;
 	}
 
@@ -78,6 +71,10 @@ namespace Voidstar
 		result.root.tileWidth = groundSize;
 		result.root.isDrawn = false;
 		result.root.worldPosition = glm::vec3{0,0,0};
+		for (int i = 0; i < levelOfDetail; i++)
+		{
+			result.nodes[i].reserve(4);
+		}
 		result.nodes[0].emplace_back(result.root);
 		//result.GenerateChildren(result.root, 1);
 		result.BuildTree(posPlayer, result.root,1);
@@ -169,57 +166,13 @@ namespace Voidstar
 
 
 
-	std::bitset<size>  Quadtree::GetSibling(Coordinate coord, std::bitset<size> node, int depthOfNode)
-	{
-		//GetIndexNeighbour(1, node, depthOfNode);
-		
-		std::bitset<size> sibling;
-		if (coord == 1 || coord == 3)
-		{
-			//sibling = IncrememtX(node, depthOfNode);
-		}
-		else if (coord == 0 || coord == 2)
-		{
-		//	sibling = DecrementX(node, depthOfNode);
-		}
-		
-		//node[depthOfNode * 2 - 2] = temp[0];
-		//node[depthOfNode*2 -1] = temp[1];
-		return sibling;
 
-
-	}
 
 	bool leftOverflow = false;
 	bool rightOverflow = false;
 	bool  topOverflow = false;
 	bool bottomOverflow = false;
-	void Quadtree::Detalize(std::bitset<size> nodeIndex, int depth, int maxDepth, Direction direction)
-	{
-		if (depth > maxDepth ) return;
-		std::bitset<size> iterIndex = nodeIndex;
-		//for (int i = depth; i < maxDepth; i++)
-		//{
-			auto node = GetNode(iterIndex, depth);
-			auto children = GenerateChildren(*node.value(), depth+1);
-			if (direction == Direction::WEST)
-			{
 	
-				auto a = GetNode(children.rightTop, depth + 1);
-				auto b = GetNode(children.rightBottom, depth + 1);
-				if (a.has_value())
-				{
-					//Detalize(a.value()->index, depth + 1, maxDepth, direction);
-	
-				}
-				if (b.has_value())
-				{
-	
-					//Detalize(b.value()->index, depth +1,maxDepth,direction);
-				}
-			}
-		//}
-	}
 
 	std::optional<Node> Quadtree::GetNeighbour(Direction direction, std::bitset<size> node, int depthOfNode)
 	{
@@ -266,12 +219,8 @@ namespace Voidstar
 	{
 
 		
-		//auto parentDepth = depth - 1;
-		//if (parentDepth != 0)
-		//{
 		auto node1 = GetNode(node.index, depth - 1);
 		node1.value()->isDrawn = false;
-		//}
 		
 		float tileScale = node.tileWidth / 2;
 		auto centerOfParentTile = node.worldPosition;
@@ -312,20 +261,26 @@ namespace Voidstar
 		rightBottom.depth = depth;
 
 
-		nodes[childDepth].emplace_back(leftTop);
-		nodes[childDepth].emplace_back(rightTop);
-		nodes[childDepth].emplace_back(leftBottom);
-		nodes[childDepth].emplace_back(rightBottom);
+		nodes[childDepth].push_back(leftTop);
+		nodes[childDepth].push_back(rightTop);
+		nodes[childDepth].push_back(leftBottom);
+		nodes[childDepth].push_back(rightBottom);
 		return  { leftTop.index,rightTop.index,leftBottom.index,rightBottom.index };
 	
 
 	}
 
+	Quadtree::~Quadtree()
+	{
+		for (auto [key, value] : nodes)
+		{
+			value.clear();
+		}
+		nodes.clear();
+	}
 
-	//void Quadtree::DetaliseNode(std::bitset<size> node, Node& player)
-	//{
-	//
-	//}
+
+
 	
 	// divide node to level depth
 	void Quadtree::BuildTree(glm::vec3 playerPos,Node nodeToDivide,int depth)

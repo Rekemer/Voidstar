@@ -1,3 +1,4 @@
+
 #include"Prereq.h"
 #include "Renderer.h"
 #include <set>
@@ -29,7 +30,6 @@
 #include "imgui.h"
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_vulkan.h"
-
 
 namespace std
 {
@@ -291,7 +291,7 @@ namespace Voidstar
 	}
 	std::vector<Vertex> GeneratePlane(float detail, std::vector<IndexType>& indices)
 	{
-		std::vector<Vertex> vertices;
+		std::vector<Vertex> vertices ={};
 
 		int numDivisions = static_cast<int>(detail);
 		float stepSize = 1.0f / numDivisions;
@@ -1848,8 +1848,10 @@ namespace Voidstar
 		m_IsResized |= ImGui::SliderFloat("Texture Height", &noiseData.textureHeight, 100, 5000);
 		m_IsPolygon = ImGui::Button("change mode");
 		
-		std::string str = "Allocated memory " + std::to_string(allocationMetrics.Current()) + " Bytes";
-		ImGui::Text(str.c_str());
+		//std::string strMemory = "Allocated memory " + std::to_string(allocationMetrics.Current()) + " Bytes";
+		//std::string strLeaks = "Leaks " + std::to_string(allocationMetrics.Leaks());
+		//ImGui::Text(strMemory.c_str());
+		//ImGui::Text(strLeaks.c_str());
 
 		ImGui::End();
 		m_IsNewParametrs |= m_IsResized;
@@ -2089,9 +2091,9 @@ namespace Voidstar
 		inputAssemblyInfo.topology = topology;
 		pipelineInfo.pInputAssemblyState = &inputAssemblyInfo;
 
+		vk::PipelineTessellationStateCreateInfo tesselationState;
 		if (spec.tessCFilepath != "")
 		{	
-			vk::PipelineTessellationStateCreateInfo tesselationState{};
 			tesselationState.patchControlPoints = 4;
 
 			pipelineInfo.pTessellationState = &tesselationState;
@@ -2422,6 +2424,9 @@ namespace Voidstar
 		m_Instance->GetInstance().destroySurfaceKHR(m_Surface);
 		m_Instance->GetInstance().destroyDebugUtilsMessengerEXT(m_DebugMessenger, nullptr, m_Dldi);
 		m_Instance->GetInstance().destroy();
+
+		Log::GetLog()->info("Leaks {0}", allocationMetrics.Leaks());
+
 	}
 	void Renderer::CreateDevice()
 	{

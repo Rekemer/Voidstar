@@ -43,43 +43,23 @@ namespace Voidstar
         NORTHEAST,
     };   
 
-    struct Box
-    {
-        glm::vec2 min{ inf,  inf };
-        glm::vec2 max{ -inf, -inf };
-
-        glm::vec2 Middle(glm::vec2 const& p1, glm::vec2 const& p2)
-        {
-            return { (p1.x + p2.x) / 2.f, (p1.y + p2.y) / 2.f };
-        }
-        Box& operator |= (glm::vec2 const& p)
-        {
-            min.x = std::min(min.x, p.x);
-            min.y = std::min(min.y, p.y);
-            max.x = std::max(max.x, p.x);
-            max.y = std::max(max.y, p.y);
-            return *this;
-        }
-
-    };
+ 
     struct GeneratedChildren
     {
         std::bitset<size>  leftTop, rightTop, leftBottom, rightBottom;
     };
-    struct Quadtree
+    class Quadtree
     {
-        Box bbox;
+    public:
         Node root;
         Map<int,std::vector<Node>> nodes;
 
         static Quadtree Build(glm::vec3 posPlayer);
         std::optional<Node*> GetNode(std::bitset<size> node, int depth);
-        std::optional<Node> GetLeft(Coordinate coord, std::bitset<size> node, int depthOfNode);
         std::optional<Node> GetNeighbour(Direction direction, std::bitset<size> node, int depthOfNode);
         void Clear(Node& node);
-        std::bitset<size>  GetSibling(Coordinate coord, std::bitset<size> node, int depthOfNode);
-        void Detalize(std::bitset<size> nodeIndex, int depth, int maxDepth, Direction direction);
         GeneratedChildren GenerateChildren(Node& node, int depth);
+        ~Quadtree();
     private:
         void BuildTree(glm::vec3 playerPos, Node nodeToDivide, int depth);
     };

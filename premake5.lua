@@ -9,7 +9,8 @@ workspace "Voidstar"
 	configurations
 	{
 		"Debug",
-		"Release"
+		"Release",
+		"Dist",
 	}
 
 	flags
