@@ -209,7 +209,7 @@ namespace Voidstar
 
 		return image;
 	}
-	SPtr<Image> Image::CreateEmptyImage(int width, int height)
+	SPtr<Image> Image::CreateEmptyImage(int width, int height, vk::Format format)
 	{
 		auto image = CreateUPtr<Image>();
 
@@ -222,7 +222,7 @@ namespace Voidstar
 		ImageSpecs specs;
 		specs.width = image->m_Width;
 		specs.height = image->m_Height;
-		specs.format = vk::Format::eR8G8B8A8Unorm;
+		specs.format = format;
 		specs.tiling = vk::ImageTiling::eOptimal;
 		specs.usage = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled;
 		specs.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
@@ -260,7 +260,7 @@ namespace Voidstar
 
 
 
-		image->m_ImageView = CreateImageView(image->m_Image, vk::Format::eR8G8B8A8Unorm, vk::ImageAspectFlagBits::eColor);
+		image->m_ImageView = CreateImageView(image->m_Image, format, vk::ImageAspectFlagBits::eColor);
 
 
 		/*

@@ -1,6 +1,6 @@
 make world space left hand coordinate system so that x positive is right
 
-abstract descriptor set creation
+Create pipeline from pipeline cache
 
 // takeaways from filament
 

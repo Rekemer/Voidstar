@@ -92,7 +92,7 @@ void main()
         mix(inColor[3], inColor[2], barycentricCoord.x),
         barycentricCoord.z
     );
-     p.y =abs(noiseValue)*noiseData.multipler;
+     p.y =noiseValue*noiseData.multipler;
 
      //p.y =color.x;
      outColor = vec4(newUv,0,1);

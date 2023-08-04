@@ -55,7 +55,6 @@ namespace Voidstar
 		maskCoords |= std::bitset<size>(parentIndex);
 		maskCoords <<=  2;
 		nodeCoords |= maskCoords;
-		//std::cout << " newNode of "<< x << "coords "<< parentIndex<< " is" << maskCoords << std::endl;
 		return nodeCoords;
 
 	}

@@ -159,6 +159,7 @@
     <ClInclude Include="src\Rendering\IndexBuffer.h" />
     <ClInclude Include="src\Rendering\Instance.h" />
     <ClInclude Include="src\Rendering\Model.h" />
+    <ClInclude Include="src\Rendering\Pipeline.h" />
     <ClInclude Include="src\Rendering\RenderContext.h" />
     <ClInclude Include="src\Rendering\Renderer.h" />
     <ClInclude Include="src\Rendering\SupportStruct.h" />
@@ -191,6 +192,7 @@
     <ClCompile Include="src\Rendering\Image.cpp" />
     <ClCompile Include="src\Rendering\Instance.cpp" />
     <ClCompile Include="src\Rendering\Model.cpp" />
+    <ClCompile Include="src\Rendering\Pipeline.cpp" />
     <ClCompile Include="src\Rendering\RenderContext.cpp" />
     <ClCompile Include="src\Rendering\Renderer.cpp" />
     <ClCompile Include="src\Rendering\Swapchain.cpp" />

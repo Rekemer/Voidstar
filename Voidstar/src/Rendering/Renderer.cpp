@@ -2,7 +2,7 @@
 #include"Prereq.h"
 #include "Renderer.h"
 #include <set>
-#include <fstream>
+
 #include "../Window.h"
 #include "../Log.h"
 #include "glfw3.h"
@@ -30,7 +30,7 @@
 #include "imgui.h"
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_vulkan.h"
-
+#include "Pipeline.h"
 namespace std
 {
 	template<>
@@ -434,7 +434,7 @@ namespace Voidstar
 			m_DescriptorSetNoise = m_DescriptorPoolNoise->AllocateDescriptorSets(1, layouts.data())[0];
 		}
 
-		m_NoiseImage = Image::CreateEmptyImage(noiseData.textureWidth, noiseData.textureHeight);
+		m_NoiseImage = Image::CreateEmptyImage(noiseData.textureWidth, noiseData.textureHeight, vk::Format::eR8G8B8A8Snorm);
 
 
 		m_Device->UpdateDescriptorSet(m_DescriptorSetNoise, 0, 1, *m_NoiseImage, vk::ImageLayout::eGeneral, vk::DescriptorType::eStorageImage);
@@ -567,6 +567,8 @@ namespace Voidstar
 		// create uniform buffers for each frame
 	
 		
+		auto framesAmount = m_Swapchain->m_SwapchainFrames.size();
+
 		vk::DescriptorSetLayoutBinding layoutBinding;
 		layoutBinding.binding = 0;
 		layoutBinding.descriptorType = vk::DescriptorType::eUniformBuffer;
@@ -578,7 +580,6 @@ namespace Voidstar
 		m_DescriptorSetLayout = DescriptorSetLayout::Create(layoutBindings);
 
 		auto bufferSize = sizeof(UniformBufferObject);
-		auto framesAmount = m_Swapchain->GetFramesCount();
 		m_UniformBuffers.resize(framesAmount);
 		uniformBuffersMapped.resize(framesAmount);
 
@@ -602,18 +603,18 @@ namespace Voidstar
 
 			vk::DescriptorPoolSize poolSize;
 			poolSize.type = vk::DescriptorType::eUniformBuffer;
-			poolSize.descriptorCount = static_cast<uint32_t>(m_Swapchain->GetFramesCount());
+			poolSize.descriptorCount = static_cast<uint32_t>(framesAmount);
 			
 			std::vector<vk::DescriptorPoolSize> poolSizes{ poolSize };
 			
-			m_DescriptorPool = DescriptorPool::Create(poolSizes, m_Swapchain->GetFramesCount());
+			m_DescriptorPool = DescriptorPool::Create(poolSizes, framesAmount);
 		}
 		
 
-		std::vector<vk::DescriptorSetLayout> layouts(m_Swapchain->GetFramesCount(), m_DescriptorSetLayout->GetLayout());
+		std::vector<vk::DescriptorSetLayout> layouts(framesAmount, m_DescriptorSetLayout->GetLayout());
 
 		
-		m_DescriptorSets =  m_DescriptorPool->AllocateDescriptorSets(m_Swapchain->GetFramesCount(), layouts.data());
+		m_DescriptorSets =  m_DescriptorPool->AllocateDescriptorSets(framesAmount, layouts.data());
 			
 
 			
@@ -621,7 +622,7 @@ namespace Voidstar
 			
 
 
-		for (int i = 0; i < m_Swapchain->GetFramesCount(); i++)
+		for (int i = 0; i < framesAmount; i++)
 		{
 		
 			
@@ -891,16 +892,16 @@ namespace Voidstar
 			vkCreateDescriptorPool(m_Device->GetDevice(), &pool_info, VK_NULL_HANDLE, &imguiData.g_DescriptorPool);
 		}
 
-		g_MinImageCount = m_Swapchain->GetFramesCount();
+		g_MinImageCount = m_Swapchain->m_SwapchainFrames.size();
 		g_Device = m_Device->GetDevice();
 		g_QueueFamily = m_Device->GetGraphicsIndex();
 		g_Queue = m_Device->GetGraphicsQueue();
 		imguiData.g_CommandPool = m_CommandPoolManager->GetFreePool();
-		imguiData.g_CommandBuffers = CommandBuffer::CreateBuffers(imguiData.g_CommandPool, vk::CommandBufferLevel::ePrimary, m_Swapchain->GetFramesCount());
+		imguiData.g_CommandBuffers = CommandBuffer::CreateBuffers(imguiData.g_CommandPool, vk::CommandBufferLevel::ePrimary, m_Swapchain->m_SwapchainFrames.size());
 		// Create the Render Pass
 		{
 			VkAttachmentDescription attachment = {};
-			attachment.format = (VkFormat)m_Swapchain->GetFormat();
+			attachment.format = (VkFormat)m_Swapchain->m_SwapchainFormat;
 			attachment.samples = VK_SAMPLE_COUNT_1_BIT;
 			attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 			attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -941,10 +942,10 @@ namespace Voidstar
 		g_wd->Width = m_ViewportWidth;
 		g_wd->Height = m_ViewportHeight;
 		g_wd->Surface = m_Surface;
-		g_wd->ImageCount= m_Swapchain->GetFramesCount();
+		g_wd->ImageCount= m_Swapchain->m_SwapchainFrames.size();
 		g_wd->PresentMode = VK_PRESENT_MODE_MAILBOX_KHR;
 		g_wd->SurfaceFormat.format = VK_FORMAT_B8G8R8A8_UNORM;
-		g_wd->Swapchain = m_Swapchain->GetSwapChain();
+		g_wd->Swapchain = m_Swapchain->m_Swapchain;
 
 		{
 			VkImageView attachment[1];
@@ -959,8 +960,8 @@ namespace Voidstar
 			g_wd->Frames = new ImGui_ImplVulkanH_Frame[g_wd->ImageCount];
 			for (uint32_t i = 0; i < g_wd->ImageCount; i++)
 			{
-				g_wd->Frames[i].Backbuffer = m_Swapchain->GetFrames()[i].image;
-				g_wd->Frames[i].BackbufferView = m_Swapchain->GetFrames()[i].imageView;
+				g_wd->Frames[i].Backbuffer = m_Swapchain->m_SwapchainFrames[i].image;
+				g_wd->Frames[i].BackbufferView = m_Swapchain->m_SwapchainFrames[i].imageView;
 				g_wd->Frames[i].CommandBuffer = imguiData.g_CommandBuffers[i].GetCommandBuffer();
 				ImGui_ImplVulkanH_Frame* fd = &g_wd->Frames[i];
 				attachment[0] = fd->BackbufferView;
@@ -987,8 +988,8 @@ namespace Voidstar
 		init_info.Device = m_Device->GetDevice();
 		init_info.Queue = m_Device->GetGraphicsQueue();
 		init_info.DescriptorPool = imguiData.g_DescriptorPool;
-		init_info.MinImageCount = m_Swapchain->GetFramesCount();
-		init_info.ImageCount = m_Swapchain->GetFramesCount();
+		init_info.MinImageCount = m_Swapchain->m_SwapchainFrames.size();
+		init_info.ImageCount = m_Swapchain->m_SwapchainFrames.size();
 		init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 
 		result = ImGui_ImplVulkan_Init(&init_info, g_MainWindowData.RenderPass);
@@ -1037,7 +1038,7 @@ namespace Voidstar
 		{
 			Log::GetLog()->error("failed to create fence");
 		}
-		auto frameAmount = m_Swapchain->GetFramesCount();
+		auto frameAmount = m_Swapchain->m_SwapchainFrames.size();
 		m_ComputeInFlightFences.resize(frameAmount);
 		m_ComputeFinishedSemaphores.resize(frameAmount);
 		for (int i = 0; i < frameAmount; i++)
@@ -1058,8 +1059,8 @@ namespace Voidstar
 	void Renderer::CreateMSAAFrame()
 	{
 		ImageSpecs specs;
-		auto extent = m_Swapchain->GetExtent();
-		auto swapchainFormat = m_Swapchain->GetFormat();
+		auto extent = m_Swapchain->m_SwapchainExtent;
+		auto swapchainFormat = m_Swapchain-> m_SwapchainFormat;
 		specs.width = extent.width;
 		specs.height= extent.height;
 		specs.tiling = vk::ImageTiling::eOptimal;
@@ -1094,7 +1095,7 @@ namespace Voidstar
 		//model = glm::rotate(model,glm::radians(-90.f) , glm::vec3(1, 0, 0));
 		//model = glm::rotate(model,glm::radians(90.f) , glm::vec3(0, 0, 1));
 		//ubo.model = model;
-		auto extent = m_Swapchain->GetExtent();
+		auto extent = m_Swapchain->m_SwapchainExtent;
 		//ubo.proj[1][1] *= -1,
 		memcpy(uniformBuffersMapped[imageIndex], &ubo, sizeof(ubo));
 	}
@@ -1153,61 +1154,6 @@ namespace Voidstar
 	void Renderer::RecordCommandBuffer(uint32_t imageIndex,vk::RenderPass& renderPass,vk::Pipeline& pipeline, vk::PipelineLayout& pipelineLayout, int instances)
 	{
 
-		vk::CommandBufferBeginInfo beginInfo = {};
-
-		auto commandBuffer = m_RenderCommandBuffer[imageIndex].GetCommandBuffer();
-
-		commandBuffer.begin(beginInfo);
-		{
-			TracyVkZone(ctx, commandBuffer, "Rendering");
-			m_RenderCommandBuffer[imageIndex].BeginRenderPass(&renderPass, &m_Swapchain->GetFrames()[imageIndex].framebuffer, &m_Swapchain->GetExtent());
-			vk::Viewport viewport;
-			viewport.x = 0;
-			viewport.y = 0;
-			viewport.minDepth = 0;
-			viewport.maxDepth = 1;
-			viewport.height = m_ViewportHeight;
-			viewport.width = m_ViewportWidth;
-
-			vk::Rect2D scissors;
-			scissors.offset = vk::Offset2D{(uint32_t)0,(uint32_t)0};
-			scissors.extent= vk::Extent2D{ (uint32_t)m_ViewportWidth,(uint32_t)m_ViewportHeight};
-
-			commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout, 0, m_DescriptorSets[imageIndex],nullptr);
-			commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout, 1, m_DescriptorSetTex, nullptr);
-			commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout, 2, m_DescriptorSetNoise, nullptr);
-			
-			commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
-			vk::DeviceSize offsets[] = { 0 };
-
-			{
-				vk::Buffer vertexBuffers[] = { m_ModelBuffer->GetBuffer()};
-				commandBuffer.bindVertexBuffers(0, 1, vertexBuffers, offsets);
-
-			}
-
-			{
-				vk::Buffer vertexBuffers[] = { m_InstancedDataBuffer->GetBuffer()};
-				commandBuffer.bindVertexBuffers(1, 1, vertexBuffers, offsets);
-
-			}
-
-
-			commandBuffer.setViewport(0, 1, &viewport);
-			commandBuffer.setScissor(0, 1, &scissors);
-
-			commandBuffer.bindIndexBuffer(m_IndexBuffer->GetBuffer(), 0, m_IndexBuffer->GetIndexType());
-            auto amount = m_IndexBuffer->GetIndexAmount();
-			commandBuffer.drawIndexed(static_cast<uint32_t>(amount),instances, 0, 0, 0);
-			
-			//commandBuffer.draw(8192, 1, 0, 0);
-		
-		}
-
-
-		m_RenderCommandBuffer[imageIndex].EndRenderPass();
-		TracyVkCollect(ctx, commandBuffer);
-		commandBuffer.end();
 		
 	}
 
@@ -1255,7 +1201,7 @@ namespace Voidstar
 		m_Device->GetDevice().resetFences(m_InFlightFence);
 
 		uint32_t imageIndex;
-		auto swapchain = m_Swapchain->GetSwapChain();
+		auto swapchain = m_Swapchain->m_Swapchain;
 		{
 			ZoneScopedN("Acquiring new Image");
 			m_Device->GetDevice().acquireNextImageKHR(swapchain, UINT64_MAX, m_ImageAvailableSemaphore, nullptr, &imageIndex);
@@ -1289,14 +1235,6 @@ namespace Voidstar
 		memcpy(m_InstancedPtr, &m_InstanceData[0],sizeof(m_InstanceData) * m_InstanceData.size());
 
 		
-		//renderCommandBuffer.GetCommandBuffer().pipelineBarrier(
-		//	vk::PipelineStageFlagBits::eVertexInput,    
-		//	vk::PipelineStageFlagBits::eHost,    
-		//	vk::DependencyFlags{},                      
-		//	0, nullptr,                                 
-		//	1, &bufferBarrier,                          
-		//	0, nullptr                                  
-		//);
 		m_TransferCommandBuffer[imageIndex].EndTransfering();
 		m_TransferCommandBuffer[imageIndex].SubmitSingle();
 			vk::Semaphore waitSemaphores[] = { m_ImageAvailableSemaphore };
@@ -1307,14 +1245,71 @@ namespace Voidstar
 			ZoneScopedN("Sumbit render commands");
 			renderCommandBuffer.BeginRendering();
 
-			RecordCommandBuffer(imageIndex,m_RenderPass,m_Pipeline,m_PipelineLayout,m_InstanceData.size());
-			//RecordCommandBuffer(imageIndex,  m_DebugRenderPass, m_DebugPipeline, m_DebugPipelineLayout,1);
 			
 
-			//renderCommandBuffer.Submit(waitSemaphores, signalSemaphores, &m_InFlightFence);
+			vk::CommandBufferBeginInfo beginInfo = {};
+
+			auto commandBuffer = m_RenderCommandBuffer[imageIndex].GetCommandBuffer();
+
+			commandBuffer.begin(beginInfo);
+			{
+				TracyVkZone(ctx, commandBuffer, "Terrain Rendering ");
+				m_RenderCommandBuffer[imageIndex].BeginRenderPass(&m_TerrainPipeline->m_RenderPass, &m_Swapchain->m_SwapchainFrames[imageIndex].framebuffer, &m_Swapchain->m_SwapchainExtent);
+				vk::Viewport viewport;
+				viewport.x = 0;
+				viewport.y = 0;
+				viewport.minDepth = 0;
+				viewport.maxDepth = 1;
+				viewport.height = m_ViewportHeight;
+				viewport.width = m_ViewportWidth;
+
+				vk::Rect2D scissors;
+				scissors.offset = vk::Offset2D{ (uint32_t)0,(uint32_t)0 };
+				scissors.extent = vk::Extent2D{ (uint32_t)m_ViewportWidth,(uint32_t)m_ViewportHeight };
+
+				commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_TerrainPipeline->m_PipelineLayout, 0, m_DescriptorSets[imageIndex], nullptr);
+				commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_TerrainPipeline->m_PipelineLayout, 1, m_DescriptorSetTex, nullptr);
+				commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_TerrainPipeline->m_PipelineLayout, 2, m_DescriptorSetNoise, nullptr);
+
+				commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_TerrainPipeline->m_Pipeline);
+				vk::DeviceSize offsets[] = { 0 };
+
+				{
+					vk::Buffer vertexBuffers[] = { m_ModelBuffer->GetBuffer() };
+					commandBuffer.bindVertexBuffers(0, 1, vertexBuffers, offsets);
+
+				}
+
+				{
+					vk::Buffer vertexBuffers[] = { m_InstancedDataBuffer->GetBuffer() };
+					commandBuffer.bindVertexBuffers(1, 1, vertexBuffers, offsets);
+
+				}
+
+
+				commandBuffer.setViewport(0, 1, &viewport);
+				commandBuffer.setScissor(0, 1, &scissors);
+
+				commandBuffer.bindIndexBuffer(m_IndexBuffer->GetBuffer(), 0, m_IndexBuffer->GetIndexType());
+				auto amount = m_IndexBuffer->GetIndexAmount();
+				commandBuffer.drawIndexed(static_cast<uint32_t>(amount), m_InstanceData.size(), 0, 0, 0);
+
+				
+			}
+
+			// water rendering
+			{
+
+			}
+			m_RenderCommandBuffer[imageIndex].EndRenderPass();
+			TracyVkCollect(ctx, commandBuffer);
+			commandBuffer.end();
 			renderCommandBuffer.EndRendering();
 
 		}
+
+
+		
 
 		
 			
@@ -1374,7 +1369,7 @@ namespace Voidstar
 		{
 			m_Device->GetDevice().waitIdle();
 			m_NoiseImage.reset();
-			m_NoiseImage = Image::CreateEmptyImage(noiseData.textureWidth,noiseData.textureHeight);
+			m_NoiseImage = Image::CreateEmptyImage(noiseData.textureWidth,noiseData.textureHeight,vk::Format::eR8G8B8A8Snorm);
 			m_Device->UpdateDescriptorSet(m_DescriptorSetNoise, 0, 1, *m_NoiseImage, vk::ImageLayout::eGeneral, vk::DescriptorType::eStorageImage);
 			m_Device->UpdateDescriptorSet(m_DescriptorSetTex, 0, 1, *m_NoiseImage, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
 		}
@@ -1399,14 +1394,13 @@ namespace Voidstar
 				m_PolygoneMode = vk::PolygonMode::eLine;
 
 			}
-			m_Device->GetDevice().destroyPipeline(m_Pipeline);
-			m_Device->GetDevice().destroyPipelineLayout(m_PipelineLayout);
-			m_Device->GetDevice().destroyRenderPass(m_RenderPass);
+			m_TerrainPipeline.reset();
+			
 			CreatePipeline();
 			
 		}
 
-		currentFrame = (currentFrame + 1) % m_Swapchain->GetFramesCount();
+		currentFrame = (currentFrame + 1) % m_Swapchain->m_SwapchainFrames.size();
 
 		
 		
@@ -1416,8 +1410,8 @@ namespace Voidstar
 	
 	void Renderer::CreateFramebuffers()
 	{
-		auto& frames = m_Swapchain->GetFrames();
-		auto swapChainExtent = m_Swapchain->GetExtent();
+		auto& frames = m_Swapchain->m_SwapchainFrames;
+		auto swapChainExtent = m_Swapchain->m_SwapchainExtent;
 		for (int i = 0; i < frames.size(); ++i) {
 
 			std::vector<vk::ImageView> attachments = {
@@ -1428,7 +1422,7 @@ namespace Voidstar
 
 			vk::FramebufferCreateInfo framebufferInfo;
 			framebufferInfo.flags = vk::FramebufferCreateFlags();
-			framebufferInfo.renderPass = m_RenderPass;
+			framebufferInfo.renderPass = m_TerrainPipeline->m_RenderPass;
 			framebufferInfo.attachmentCount = attachments.size();
 			framebufferInfo.pAttachments = attachments.data();
 			framebufferInfo.width = swapChainExtent.width;
@@ -1509,139 +1503,105 @@ namespace Voidstar
 	void Renderer::CreatePipeline()
 	{
 		// terrain pipeline
-		GraphicsPipelineSpecification specs;
-
-		auto swapchainFormat = m_Swapchain->GetFormat();
-		auto swapChainExtent = m_Swapchain->GetExtent();
-		specs.device = m_Device->GetDevice();
-		
-		specs.vertexFilepath = BASE_SPIRV_OUTPUT +"noise.spvV";
-		specs.fragmentFilepath = BASE_SPIRV_OUTPUT +"default.spvF";
-		specs.tessCFilepath = BASE_SPIRV_OUTPUT +"tessC.spvC";
-		specs.tessEFilepath = BASE_SPIRV_OUTPUT +"tessE.spvE";
-		specs.swapchainExtent = swapChainExtent;
-		specs.swapchainImageFormat = swapchainFormat;
-
-
-		std::vector<vk::VertexInputBindingDescription> bindings{ CreateBindingDescription(0,sizeof(Vertex),vk::VertexInputRate::eVertex) ,CreateBindingDescription (1,sizeof(InstanceData),vk::VertexInputRate::eInstance)};
-
-		std::vector<vk::VertexInputAttributeDescription> attributeDescriptions;
-
-		attributeDescriptions =
 		{
-			VertexInputAttributeDescription(0,0,vk::Format::eR32G32B32Sfloat,offsetof(Vertex, Position)),
-			VertexInputAttributeDescription(0,1,vk::Format::eR32G32B32A32Sfloat,offsetof(Vertex, Color)),
-			VertexInputAttributeDescription(0,2,vk::Format::eR32G32Sfloat,offsetof(Vertex, UV)),
-			VertexInputAttributeDescription(0,3,vk::Format::eR32Sfloat,offsetof(Vertex, noiseValue)),
+			GraphicsPipelineSpecification specs;
 
-			VertexInputAttributeDescription(1,4,vk::Format::eR32G32B32Sfloat,offsetof(InstanceData, pos)),
-			VertexInputAttributeDescription(1,5,vk::Format::eR32G32B32A32Sfloat,offsetof(InstanceData, edges)),
-			VertexInputAttributeDescription(1,6,vk::Format::eR32Sfloat,offsetof(InstanceData, scale)),
-		};
+			auto swapchainFormat = m_Swapchain->m_SwapchainFormat;
+			auto swapChainExtent = m_Swapchain->m_SwapchainExtent;
+			specs.device = m_Device->GetDevice();
 
-		specs.bindingDescription = bindings;
+			specs.vertexFilepath = BASE_SPIRV_OUTPUT + "noise.spvV";
+			specs.fragmentFilepath = BASE_SPIRV_OUTPUT + "default.spvF";
+			specs.tessCFilepath = BASE_SPIRV_OUTPUT + "tessC.spvC";
+			specs.tessEFilepath = BASE_SPIRV_OUTPUT + "tessE.spvE";
+			specs.swapchainExtent = swapChainExtent;
+			specs.swapchainImageFormat = swapchainFormat;
+
+
+			std::vector<vk::VertexInputBindingDescription> bindings{ CreateBindingDescription(0,sizeof(Vertex),vk::VertexInputRate::eVertex) ,CreateBindingDescription(1,sizeof(InstanceData),vk::VertexInputRate::eInstance) };
+
+			std::vector<vk::VertexInputAttributeDescription> attributeDescriptions;
+
+			attributeDescriptions =
+			{
+				VertexInputAttributeDescription(0,0,vk::Format::eR32G32B32Sfloat,offsetof(Vertex, Position)),
+				VertexInputAttributeDescription(0,1,vk::Format::eR32G32B32A32Sfloat,offsetof(Vertex, Color)),
+				VertexInputAttributeDescription(0,2,vk::Format::eR32G32Sfloat,offsetof(Vertex, UV)),
+
+				VertexInputAttributeDescription(1,4,vk::Format::eR32G32B32Sfloat,offsetof(InstanceData, pos)),
+				VertexInputAttributeDescription(1,5,vk::Format::eR32G32B32A32Sfloat,offsetof(InstanceData, edges)),
+				VertexInputAttributeDescription(1,6,vk::Format::eR32Sfloat,offsetof(InstanceData, scale)),
+			};
+
+			specs.bindingDescription = bindings;
 
 
 
-		specs.attributeDescription = attributeDescriptions;
-		//specs.attributeDescription = Particle::GetAttributeDescriptions();
+			specs.attributeDescription = attributeDescriptions;
+			//specs.attributeDescription = Particle::GetAttributeDescriptions();
 
-		auto samples = RenderContext::GetDevice()->GetSamples();
-		specs.samples = samples;
-		m_DescriptorSetLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutTex->GetLayout(),m_DescriptorSetLayoutNoise->GetLayout() };
+			auto samples = RenderContext::GetDevice()->GetSamples();
+			specs.samples = samples;
+			m_DescriptorSetLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutTex->GetLayout(),m_DescriptorSetLayoutNoise->GetLayout() };
 
-		specs.descriptorSetLayout = m_DescriptorSetLayouts;
-		auto pipline = CreatePipeline(specs, vk::PrimitiveTopology::ePatchList);
-		m_Pipeline = pipline.pipeline;
-		m_PipelineLayout= pipline.layout;
-		m_RenderPass= pipline.renderpass;
-
-		// debug pipeline
-
+			specs.descriptorSetLayout = m_DescriptorSetLayouts;
+			m_TerrainPipeline = Pipeline::CreateGraphicsPipeline(specs, vk::PrimitiveTopology::ePatchList, m_Swapchain->m_SwapchainFrames[0].depthFormat);
+		
+		}
+		
+		//// water pipeline 
 		//{
 		//	GraphicsPipelineSpecification specs;
-		//
-		//	auto swapchainFormat = m_Swapchain->GetFormat();
+
+		//	auto swapchainFormat = m_Swapchain->m_SwapchainFormat();
 		//	auto swapChainExtent = m_Swapchain->GetExtent();
 		//	specs.device = m_Device->GetDevice();
-		//
-		//	specs.vertexFilepath = BASE_SPIRV_OUTPUT + "debug.spvV";
-		//	specs.fragmentFilepath = BASE_SPIRV_OUTPUT + "default.spvF";
+
+		//	specs.vertexFilepath = BASE_SPIRV_OUTPUT + "water.spvV";
+		//	specs.fragmentFilepath = BASE_SPIRV_OUTPUT + "water.spvF";
+		//	specs.tessCFilepath = BASE_SPIRV_OUTPUT + "tessC.spvC";
+		//	specs.tessEFilepath = BASE_SPIRV_OUTPUT + "tessE.spvE";
 		//	specs.swapchainExtent = swapChainExtent;
 		//	specs.swapchainImageFormat = swapchainFormat;
-		//
-		//
-		//	std::vector<vk::VertexInputBindingDescription> bindings{ CreateBindingDescription(0,sizeof//(Vertex),vk::VertexInputRate::eVertex) ,CreateBindingDescription(1,sizeof//(InstanceData),vk::VertexInputRate::eInstance) };
-		//
+
+
+		//	std::vector<vk::VertexInputBindingDescription> bindings{ CreateBindingDescription(0,sizeof(Vertex),vk::VertexInputRate::eVertex) ,CreateBindingDescription(1,sizeof(InstanceData),vk::VertexInputRate::eInstance) };
+
 		//	std::vector<vk::VertexInputAttributeDescription> attributeDescriptions;
-		//
+
 		//	attributeDescriptions =
 		//	{
 		//		VertexInputAttributeDescription(0,0,vk::Format::eR32G32B32Sfloat,offsetof(Vertex, Position)),
 		//		VertexInputAttributeDescription(0,1,vk::Format::eR32G32B32A32Sfloat,offsetof(Vertex, Color)),
 		//		VertexInputAttributeDescription(0,2,vk::Format::eR32G32Sfloat,offsetof(Vertex, UV)),
-		//
-		//		VertexInputAttributeDescription(1,3,vk::Format::eR32G32B32Sfloat,offsetof(InstanceData, pos)),
-		//		VertexInputAttributeDescription(1,4,vk::Format::eR32Sfloat,offsetof(InstanceData, scale)),
-		//		VertexInputAttributeDescription(1,5,vk::Format::eR32Sint,offsetof(InstanceData, texIndex))
+
+		//		VertexInputAttributeDescription(1,4,vk::Format::eR32G32B32Sfloat,offsetof(InstanceData, pos)),
+		//		VertexInputAttributeDescription(1,5,vk::Format::eR32G32B32A32Sfloat,offsetof(InstanceData, edges)),
+		//		VertexInputAttributeDescription(1,6,vk::Format::eR32Sfloat,offsetof(InstanceData, scale)),
 		//	};
-		//
+
 		//	specs.bindingDescription = bindings;
-		//
-		//
-		//
+
+
+
 		//	specs.attributeDescription = attributeDescriptions;
 		//	//specs.attributeDescription = Particle::GetAttributeDescriptions();
-		//
+
 		//	auto samples = RenderContext::GetDevice()->GetSamples();
 		//	specs.samples = samples;
-		//	m_DescriptorSetLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout//(),m_DescriptorSetLayoutTex->GetLayout() };
-		//
+		//	m_DescriptorSetLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutTex->GetLayout(),m_DescriptorSetLayoutNoise->GetLayout() };
+
 		//	specs.descriptorSetLayout = m_DescriptorSetLayouts;
-		//
-		//	auto pipline = CreatePipeline(specs, vk::PrimitiveTopology::eTriangleList);
-		//	m_DebugPipeline = pipline.pipeline;
-		//	m_DebugPipelineLayout = pipline.layout;
-		//	m_DebugRenderPass = pipline.renderpass;
-		//
+		//	auto pipline = CreatePipeline(specs, vk::PrimitiveTopology::ePatchList);
+		//	m_Pipeline = pipline.pipeline;
+		//	m_PipelineLayout = pipline.layout;
+		//	m_RenderPass = pipline.renderpass;
 		//}
+		
 	}
 
-	std::vector<char> ReadFile(std::string filename)
-	{
+	
 
-		std::ifstream file(filename, std::ios::ate | std::ios::binary);
-
-		if (!file.is_open()) {
-			Log::GetLog()->error("Failed to load {0}", filename);
-		}
-
-		size_t filesize{ static_cast<size_t>(file.tellg()) };
-
-		std::vector<char> buffer(filesize);
-		file.seekg(0);
-		file.read(buffer.data(), filesize);
-
-		file.close();
-		return buffer;
-	}
-	vk::ShaderModule CreateModule(std::string filename, vk::Device device) {
-
-		std::vector<char> sourceCode = ReadFile(filename);
-		vk::ShaderModuleCreateInfo moduleInfo = {};
-		moduleInfo.flags = vk::ShaderModuleCreateFlags();
-		moduleInfo.codeSize = sourceCode.size();
-		moduleInfo.pCode = reinterpret_cast<const uint32_t*>(sourceCode.data());
-
-		try {
-			return device.createShaderModule(moduleInfo);
-		}
-		catch (vk::SystemError err) {
-
-			Log::GetLog()->error("Failed to create shader module for{0}", filename);
-			
-		}
-	}
 
 	std::unordered_map < glm::vec3 , int > indexes;
 	std::vector<int> erased;
@@ -2055,285 +2015,6 @@ namespace Voidstar
 		}
 	}
 
-	GraphicsPipeline Renderer::CreatePipeline(GraphicsPipelineSpecification& spec, vk::PrimitiveTopology topology)
-	{
-		/*
-		* Build and return a graphics pipeline based on the given info.
-		*/
-
-		//The info for the graphics pipeline
-		vk::GraphicsPipelineCreateInfo pipelineInfo = {};
-		pipelineInfo.flags = vk::PipelineCreateFlags();
-
-
-		//Shader stages, to be populated later
-		std::vector<vk::PipelineShaderStageCreateInfo> shaderStages;
-
-		//Vertex Input
-
-
-		//vk::VertexInputBindingDescription bindingDescription = vkMesh::getPosColorBindingDescription();
-		//auto  attributeDescriptions = vkMesh::getPosColorAttributeDescriptions();
-		vk::PipelineVertexInputStateCreateInfo vertexInputInfo = {};
-
-		vertexInputInfo.flags = vk::PipelineVertexInputStateCreateFlags();
-		vertexInputInfo.vertexBindingDescriptionCount = spec.bindingDescription.size();
-		vertexInputInfo.pVertexBindingDescriptions = spec.bindingDescription.data();
-
-		vertexInputInfo.vertexAttributeDescriptionCount = spec.attributeDescription.size();
-		vertexInputInfo.pVertexAttributeDescriptions = spec.attributeDescription.data();
-
-		pipelineInfo.pVertexInputState = &vertexInputInfo;
-
-		//Input Assembly
-		vk::PipelineInputAssemblyStateCreateInfo inputAssemblyInfo = {};
-		inputAssemblyInfo.flags = vk::PipelineInputAssemblyStateCreateFlags();
-		inputAssemblyInfo.topology = topology;
-		pipelineInfo.pInputAssemblyState = &inputAssemblyInfo;
-
-		vk::PipelineTessellationStateCreateInfo tesselationState;
-		if (spec.tessCFilepath != "")
-		{	
-			tesselationState.patchControlPoints = 4;
-
-			pipelineInfo.pTessellationState = &tesselationState;
-		}
-	
-
-
-
-
-
-
-
-
-		//Viewport and Scissor
-		vk::Viewport viewport = {};
-		viewport.x = 0.0f;
-		viewport.y = 0.0f;
-		viewport.width = (float)spec.swapchainExtent.width;
-		viewport.height = (float)spec.swapchainExtent.height;
-		viewport.minDepth = 0.0f;
-		viewport.maxDepth = 1.0f;
-		vk::Rect2D scissor = {};
-		scissor.offset.x = 0.0f;
-		scissor.offset.y = 0.0f;
-		scissor.extent = spec.swapchainExtent;
-		vk::PipelineViewportStateCreateInfo viewportState = {};
-		viewportState.flags = vk::PipelineViewportStateCreateFlags();
-		viewportState.viewportCount = 1;
-		viewportState.pViewports = &viewport;
-		viewportState.scissorCount = 1;
-		viewportState.pScissors = &scissor;
-		pipelineInfo.pViewportState = &viewportState;
-
-		const vk::DynamicState dynamicStates[] = {
-		vk::DynamicState::eViewport,
-		vk::DynamicState::eScissor
-		};
-		vk::PipelineDynamicStateCreateInfo createInfo{};
-		createInfo.pNext = nullptr;
-		createInfo.flags = {};
-		createInfo.dynamicStateCount = 2;
-		createInfo.pDynamicStates = &dynamicStates[0];
-
-		pipelineInfo.pDynamicState = &createInfo;
-
-
-		//Rasterizer
-		vk::PipelineRasterizationStateCreateInfo rasterizer = {};
-		rasterizer.flags = vk::PipelineRasterizationStateCreateFlags();
-		rasterizer.depthClampEnable = VK_FALSE; //discard out of bounds fragments, don't clamp them
-		rasterizer.rasterizerDiscardEnable = VK_FALSE; //This flag would disable fragment output
-		rasterizer.polygonMode = m_PolygoneMode;
-		rasterizer.lineWidth = 1.0f;
-		rasterizer.cullMode = vk::CullModeFlagBits::eNone;
-		rasterizer.frontFace = vk::FrontFace::eClockwise;
-		rasterizer.depthBiasEnable = VK_FALSE; //Depth bias can be useful in shadow maps.
-		pipelineInfo.pRasterizationState = &rasterizer;
-
-
-
-		vk::ShaderModule vertexShader = CreateModule(
-			spec.vertexFilepath, spec.device
-		);
-	{
-		vk::PipelineShaderStageCreateInfo vertexShaderInfo = {};
-		vertexShaderInfo.flags = vk::PipelineShaderStageCreateFlags();
-		vertexShaderInfo.stage = vk::ShaderStageFlagBits::eVertex;
-		vertexShaderInfo.module = vertexShader;
-		vertexShaderInfo.pName = "main";
-		shaderStages.push_back(vertexShaderInfo);
-	}
-
-		
-
-			vk::ShaderModule fragmentShader = CreateModule(
-				spec.fragmentFilepath, spec.device
-			);
-		{
-			vk::PipelineShaderStageCreateInfo fragmentShaderInfo = {};
-			fragmentShaderInfo.flags = vk::PipelineShaderStageCreateFlags();
-			fragmentShaderInfo.stage = vk::ShaderStageFlagBits::eFragment;
-			fragmentShaderInfo.module = fragmentShader;
-			fragmentShaderInfo.pName = "main";
-			shaderStages.push_back(fragmentShaderInfo);
-		}
-		
-		vk::ShaderModule tessControl, tessEvaulation;
-		if (spec.tessCFilepath != "")
-		{
-
-			tessControl = CreateModule(
-				spec.tessCFilepath, spec.device
-			);
-			{
-				vk::PipelineShaderStageCreateInfo tessShaderInfo = {};
-				tessShaderInfo.flags = vk::PipelineShaderStageCreateFlags();
-				tessShaderInfo.stage = vk::ShaderStageFlagBits::eTessellationControl;
-				tessShaderInfo.module = tessControl;
-				tessShaderInfo.pName = "main";
-				shaderStages.push_back(tessShaderInfo);
-			}
-			tessEvaulation = CreateModule(
-				spec.tessEFilepath, spec.device
-			);
-			{
-				vk::PipelineShaderStageCreateInfo tessShaderInfo = {};
-				tessShaderInfo.flags = vk::PipelineShaderStageCreateFlags();
-				tessShaderInfo.stage = vk::ShaderStageFlagBits::eTessellationEvaluation;
-				tessShaderInfo.module = tessEvaulation;
-				tessShaderInfo.pName = "main";
-				shaderStages.push_back(tessShaderInfo);
-			}
-		}
-		vk::ShaderModule computeModule;
-		if (spec.computeFilepath != "")
-		{
-
-			computeModule = CreateModule(
-				spec.computeFilepath, spec.device
-			);
-			{
-				vk::PipelineShaderStageCreateInfo computeShaderInfo = {};
-				computeShaderInfo.flags = vk::PipelineShaderStageCreateFlags();
-				computeShaderInfo.stage = vk::ShaderStageFlagBits::eCompute;
-				computeShaderInfo.module = computeModule;
-				computeShaderInfo.pName = "main";
-				shaderStages.push_back(computeShaderInfo);
-			}
-		
-			
-		}
-
-
-
-
-
-		pipelineInfo.stageCount = shaderStages.size();
-		pipelineInfo.pStages = shaderStages.data();
-		
-
-
-
-		vk::PipelineDepthStencilStateCreateInfo depthState;
-		depthState.flags = vk::PipelineDepthStencilStateCreateFlags();
-		depthState.depthTestEnable = true;
-		depthState.depthWriteEnable = true;
-		depthState.depthCompareOp = vk::CompareOp::eLess;
-		depthState.depthBoundsTestEnable = false;
-		depthState.stencilTestEnable = false;
-		pipelineInfo.pDepthStencilState = &depthState;
-
-		//Multisampling
-		vk::PipelineMultisampleStateCreateInfo multisampling = {};
-		multisampling.flags = vk::PipelineMultisampleStateCreateFlags();
-		multisampling.sampleShadingEnable = VK_FALSE;
-		multisampling.rasterizationSamples = spec.samples;
-		pipelineInfo.pMultisampleState = &multisampling;
-
-		//Color Blend
-		vk::PipelineColorBlendAttachmentState colorBlendAttachment = {};
-		colorBlendAttachment.colorWriteMask = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA;
-		
-		
-		colorBlendAttachment.blendEnable = VK_TRUE;
-		colorBlendAttachment.colorBlendOp = vk::BlendOp::eAdd;
-		colorBlendAttachment.srcColorBlendFactor = vk::BlendFactor::eSrcAlpha;
-		colorBlendAttachment.dstColorBlendFactor = vk::BlendFactor::eOneMinusSrcAlpha;
-
-
-
-		vk::PipelineColorBlendStateCreateInfo colorBlending = {};
-		colorBlending.flags = vk::PipelineColorBlendStateCreateFlags();
-		colorBlending.logicOpEnable = VK_FALSE;
-		colorBlending.logicOp = vk::LogicOp::eCopy;
-		colorBlending.attachmentCount = 1;
-		colorBlending.pAttachments = &colorBlendAttachment;
-		colorBlending.blendConstants[0] = 0.0f;
-		colorBlending.blendConstants[1] = 0.0f;
-		colorBlending.blendConstants[2] = 0.0f;
-		colorBlending.blendConstants[3] = 0.0f;
-		pipelineInfo.pColorBlendState = &colorBlending;
-
-		
-		vk::PipelineLayout m_pipelineLayout = MakePipelineLayout(spec.device, spec.descriptorSetLayout);
-		pipelineInfo.layout = m_pipelineLayout;
-
-
-
-
-		//Renderpass
-		
-		vk::RenderPass renderpass = MakeRenderPass(spec.device, spec.swapchainImageFormat,m_Swapchain->GetFrames()[0].depthFormat);
-		pipelineInfo.renderPass = renderpass;
-		pipelineInfo.subpass = 0;
-
-
-		//Extra stuff
-		pipelineInfo.basePipelineHandle = nullptr;
-
-		//Make the Pipeline
-	
-		vk::Pipeline graphicsPipeline;
-		try
-		{
-			graphicsPipeline = (spec.device.createGraphicsPipeline(nullptr, pipelineInfo)).value;
-		}
-		catch (vk::SystemError err)
-		{
-			Log::GetLog()->error("Failed to create Pipeline");
-		}
-
-		GraphicsPipeline output;
-		output.layout = m_pipelineLayout;
-		output.renderpass = renderpass;
-		output.pipeline = graphicsPipeline;
-
-		//Finally clean up by destroying shader modules
-		spec.device.destroyShaderModule(vertexShader);
-		spec.device.destroyShaderModule(fragmentShader);
-		if (tessControl)
-		{
-			spec.device.destroyShaderModule(tessControl);
-			spec.device.destroyShaderModule(tessEvaulation);
-		}
-		
-		if (computeModule)
-		{
-			spec.device.destroyShaderModule(computeModule);
-
-		}
-		Log::GetLog()->info("Pipeline is Created!");
-		return output;
-
-
-	}
-	void Renderer::DestroySwapchain()
-	{
-		
-
-	}
 
 	void Renderer::SubmitInstanceData(const InstanceData& instance)
 	{
@@ -2374,7 +2055,7 @@ namespace Voidstar
 		//m_GraphicsCommandBuffer.GetCommandBuffer().reset();
 		//m_GraphicsCommandBuffer.Free();
 
-		for (size_t i = 0; i < m_Swapchain->GetFramesCount(); i++) {
+		for (size_t i = 0; i < m_Swapchain->m_SwapchainFrames.size(); i++) {
 			delete m_UniformBuffers[i];
 		}
 		for (auto& buffer : m_ShaderStorageBuffers)
@@ -2410,10 +2091,10 @@ namespace Voidstar
 		{
 			m_Device->GetDevice().destroyFence(fence);
 		}
-		m_Device->GetDevice().destroyPipeline(m_Pipeline);
-		m_Device->GetDevice().destroyPipelineLayout(m_PipelineLayout);
+		
+		m_TerrainPipeline.reset();
+		
 		m_Swapchain.reset();
-		m_Device->GetDevice().destroyRenderPass(m_RenderPass);
 
 		m_Device->GetDevice().destroyPipeline(m_ComputePipeline);
 		m_Device->GetDevice().destroyPipelineLayout(m_ComputePipelineLayout);
@@ -2425,7 +2106,6 @@ namespace Voidstar
 		m_Instance->GetInstance().destroyDebugUtilsMessengerEXT(m_DebugMessenger, nullptr, m_Dldi);
 		m_Instance->GetInstance().destroy();
 
-		Log::GetLog()->info("Leaks {0}", allocationMetrics.Leaks());
 
 	}
 	void Renderer::CreateDevice()

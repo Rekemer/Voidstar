@@ -22,24 +22,9 @@ namespace Voidstar
 	public:
 		static UPtr<Swapchain> Create(SwapChainSupportDetails& info);
 		~Swapchain();
-		std::vector<SwapChainFrame>& GetFrames()
-		{
-			return m_SwapchainFrames;
-		}
-		vk::Extent2D& GetExtent()
-		{
-			return m_SwapchainExtent;
-		}
-		vk::Format& GetFormat()
-		{
-			return m_SwapchainFormat;
-		}
-		vk::SwapchainKHR& GetSwapChain()
-		{
-			return m_Swapchain;
-		}
-		size_t GetFramesCount() { return m_SwapchainFrames.size(); }
+		
 	private:
+		friend class Renderer;
 		vk::SwapchainKHR m_Swapchain{ VK_NULL_HANDLE };
 		std::vector<SwapChainFrame> m_SwapchainFrames;
 		vk::Format m_SwapchainFormat;

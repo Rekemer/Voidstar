@@ -18,6 +18,7 @@ namespace Voidstar
 	class Image;
 	class DescriptorPool;
 	class Model;
+	class Pipeline;
 
 
 	enum class RenderPrimitive
@@ -71,32 +72,7 @@ namespace Voidstar
 	};
 
 
-	struct GraphicsPipelineSpecification
-	{
-		
-		vk::Device device;
-		std::string vertexFilepath="";
-		std::string fragmentFilepath="";
-		std::string geometryShader = "";
-
-		// tesselation shaders
-		// control shader
-		std::string tessCFilepath = "";
-		// evalatuation shader
-		std::string tessEFilepath = "";
-
-
-		std::string computeFilepath = "";
-
-
-
-		vk::SampleCountFlagBits samples;
-		vk::Extent2D swapchainExtent;
-		vk::Format swapchainImageFormat;
-		std::vector<vk::VertexInputBindingDescription> bindingDescription;
-		std::vector<vk::VertexInputAttributeDescription>  attributeDescription;
-		std::vector<vk::DescriptorSetLayout> descriptorSetLayout;
-	};
+	
 
 	struct GraphicsPipeline
 	{
@@ -155,7 +131,6 @@ namespace Voidstar
 		void CreateDevice();
 		void CreatePipeline();
 		void CreateFramebuffers();
-		GraphicsPipeline CreatePipeline(GraphicsPipelineSpecification& spec, vk::PrimitiveTopology topology);
 		void DestroySwapchain();
 		void CreateSyncObjects();
 		void CreateMSAAFrame();
@@ -227,11 +202,9 @@ namespace Voidstar
 		
 	
 
-		
+		UPtr<Pipeline> m_TerrainPipeline;
 
-		vk::Pipeline m_Pipeline;
-		vk::RenderPass m_RenderPass;
-		vk::PipelineLayout m_PipelineLayout;
+		
 		vk::Pipeline m_DebugPipeline;
 		vk::PipelineLayout m_DebugPipelineLayout;
 		vk::RenderPass m_DebugRenderPass;
