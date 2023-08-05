@@ -5,15 +5,26 @@ layout(location = 0) out vec4  outColor;
 layout(location = 0) in vec4 color;
 layout(location = 1) in vec2 uv ;
 layout(location = 2) in vec2 uvMesh ;
+layout(location = 3) in vec4 worldPos;
 //layout(location = 2) in float scale;
-//layout(location = 3) in vec4 worldSpacePos;
 //layout(location = 4) in float depth;
 
+layout(set = 0, binding = 0) uniform UniformBufferObject {
+    mat4 view;
+    mat4 proj;
+    vec4 playerPos;
 
-layout(set = 1, binding = 0) uniform sampler2D u_Noise;
+    float time;
+    
+} ubo;
+
+
+layout(set = 1, binding = 0) uniform sampler2D[2] u_Noise;
 layout(set = 1, binding = 1) uniform sampler2D u_Tex1;
 layout(set = 1, binding = 2) uniform sampler2D u_Tex2;
 layout(set = 1, binding = 3) uniform sampler2D u_Tex3;
+//layout(set = 1, binding = 4) uniform sampler2D u_WaterNormal;
+//layout(set = 1, binding = 5) uniform sampler2D u_WaterNormal1;
 
 vec4 random_color(vec4 st)
 {
@@ -102,13 +113,48 @@ vec3 blend(vec4 texture1, float a1, vec4 texture2, float a2)
     //return a1 > a2 ? texture1.rgb  *a1 :  texture2.rgb *a2;
 }
 
+//vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir)
+//{
+//    vec3 lightDir = normalize(-light.direction);
+//    // diffuse shading
+//    float diff = max(dot(normal, lightDir), 0.0);
+//    // specular shading
+//   vec3 reflectDir = reflect(-lightDir, normal);
+  // float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
+//    // combine results
+//    vec3 ambient  = light.ambient  * vec3(texture(material.texture_diffuse1, diffuseTexCoords));
+//    vec3 diffuse  = light.diffuse  * diff * vec3(texture(material.texture_diffuse1, diffuseTexCoords));
+//  //  vec3 specular = light.specular * spec * vec3(texture(material.texture_specular1, diffuseTexCoords));
+//    return vec3(ambient);
+//}
+
 void main() 
 {
+    float tiling = 1;
 
-  
-    outColor.xyz =color.xyz;
+    float speed = 30*ubo.time;
+    float speed1 = -20*ubo.time;
+    vec3 lightPos = vec3(3,12,-5);
+   // vec4 waterNormal = texture(u_WaterNormal,uvMesh*tiling+speed);
+    //vec4 waterNormal1 = texture(u_WaterNormal1,uvMesh*tiling+speed1);
+    vec3 combinedTex= texture(u_Noise[1],uv).xyz;
+   
+    //vec3 lightDir = normalize(lightPos - worldPos.xyz);
+    vec3 lightDir = normalize(vec3(3,12,12));
+    vec3 norm = normalize(vec3(combinedTex));
+    float diff = max(dot(norm, lightDir), 0.0);
+    vec3 reflectDir = reflect(-lightDir, norm);
+    vec3 viewDir = normalize(ubo.playerPos.xyz - worldPos.xyz);
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 2);
+    //outColor.xy =uvMesh;
+    //outColor.z = 0; 
+    //dist = color.z;
+   // diff = length(ubo.playerPos.xyz - worldPos.xyz);
+    vec3 diffuse  =  diff * combinedTex;
+    vec3 finalColor= diffuse+spec;
+    outColor.xyz = finalColor* vec3(0.2,0.4,0.4);
+    //outColor.xyz = color.xyz;
 	outColor.a = 1;
-
 
     
    

@@ -5,13 +5,13 @@
 
 
 layout(set = 0,binding = 0) uniform UniformBufferObject {
-    mat4 model;
     mat4 view;
     mat4 proj;
+    vec4 playerPos;
     float time;
 } ubo;
 layout(set = 1, binding = 0) uniform sampler2D[2] u_Tex;
-layout(set=2,binding = 1) uniform NoiseData {
+layout(set=2,binding = 2) uniform NoiseData {
 
     float frequence ;
 	float amplitude ;

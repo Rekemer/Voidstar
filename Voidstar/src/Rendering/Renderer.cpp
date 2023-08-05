@@ -421,13 +421,20 @@ namespace Voidstar
 
 			vk::DescriptorSetLayoutBinding layoutBinding2;
 			layoutBinding2.binding = 1;
-			layoutBinding2.descriptorType = vk::DescriptorType::eUniformBuffer;
+			layoutBinding2.descriptorType = vk::DescriptorType::eCombinedImageSampler;
 			layoutBinding2.stageFlags = vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex |
 				vk::ShaderStageFlagBits::eTessellationEvaluation;
-			layoutBinding2.descriptorCount = 1;
+			layoutBinding2.descriptorCount = 2;
+
+			vk::DescriptorSetLayoutBinding layoutBinding3;
+			layoutBinding3.binding = 2;
+			layoutBinding3.descriptorType = vk::DescriptorType::eUniformBuffer;
+			layoutBinding3.stageFlags = vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex |
+				vk::ShaderStageFlagBits::eTessellationEvaluation;
+			layoutBinding3.descriptorCount = 1;
 
 
-			std::vector<vk::DescriptorSetLayoutBinding> layoutBindings{ layoutBinding1,layoutBinding2 };
+			std::vector<vk::DescriptorSetLayoutBinding> layoutBindings{ layoutBinding1,layoutBinding2,layoutBinding3 };
 
 			m_DescriptorSetLayoutNoise = DescriptorSetLayout::Create(layoutBindings);
 
@@ -438,8 +445,6 @@ namespace Voidstar
 		m_NoiseImage = Image::CreateEmptyImage(noiseData.textureWidth, noiseData.textureHeight, vk::Format::eR8G8B8A8Snorm);
 		m_AnimatedNoiseImage = Image::CreateEmptyImage(noiseData.textureWidth, noiseData.textureHeight, vk::Format::eR8G8B8A8Snorm);
 
-		//m_Device->UpdateDescriptorSet(m_DescriptorSetNoise, 0, 1, *m_NoiseImage, vk::ImageLayout::eGeneral, vk::DescriptorType::eStorageImage);
-		//m_Device->UpdateDescriptorSet(m_DescriptorSetTex, 0, 1, *m_NoiseImage, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
 		
 
 		{
@@ -453,7 +458,6 @@ namespace Voidstar
 			imageDescriptor1.sampler = m_AnimatedNoiseImage->m_Sampler;
 			std::vector<vk::DescriptorImageInfo> images{ imageDescriptor0 ,imageDescriptor1 };
 			m_Device->UpdateDescriptorSet(m_DescriptorSetNoise, 0, images, vk::DescriptorType::eStorageImage);
-		//	m_Device->UpdateDescriptorSet(m_DescriptorSetNoise, 1, images, vk::DescriptorType::eStorageImage);
 
 			{
 				vk::DescriptorImageInfo imageDescriptor0;
@@ -466,15 +470,13 @@ namespace Voidstar
 				imageDescriptor1.sampler = m_AnimatedNoiseImage->m_Sampler;
 				std::vector<vk::DescriptorImageInfo> images{ imageDescriptor0 ,imageDescriptor1 };
 				m_Device->UpdateDescriptorSet(m_DescriptorSetTex, 0, images, vk::DescriptorType::eCombinedImageSampler);
-			//	m_Device->UpdateDescriptorSet(m_DescriptorSetTex, 0, images, vk::DescriptorType::eCombinedImageSampler);
 			}
 			
 
 
 		}
 
-		//m_Device->UpdateDescriptorSet(m_DescriptorSetNoise, 0, 1, *m_AnimatedNoiseImage, vk::ImageLayout::eGeneral, vk::DescriptorType::eStorageImage);
-		//m_Device->UpdateDescriptorSet(m_DescriptorSetTex, 0, 1, *m_AnimatedNoiseImage, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
+
 
 
 		m_SnowTex = Image::CreateImage(BASE_RES_PATH + "terrain/snow/Snow_003_COLOR.jpg",m_DescriptorSetTex);
@@ -483,6 +485,21 @@ namespace Voidstar
 		m_Device->UpdateDescriptorSet(m_DescriptorSetTex,2,1,*m_GrassTex, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
 		m_StoneTex = Image::CreateImage(BASE_RES_PATH + "terrain/GroundTex/rock_01_diffuse.jpg", m_DescriptorSetTex);
 		m_Device->UpdateDescriptorSet(m_DescriptorSetTex,3,1,*m_StoneTex, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
+
+		m_WaterNormalImage = Image::CreateImage(BASE_RES_PATH + "water/water-normal-1.jpg", m_DescriptorSetTex);
+		m_WaterNormalImage2 = Image::CreateImage(BASE_RES_PATH + "water/water-normal-2.jpg", m_DescriptorSetTex);
+		{
+			vk::DescriptorImageInfo imageDescriptor0;
+			imageDescriptor0.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+			imageDescriptor0.imageView = m_WaterNormalImage->m_ImageView;
+			imageDescriptor0.sampler = m_WaterNormalImage->m_Sampler;
+			vk::DescriptorImageInfo imageDescriptor1;
+			imageDescriptor1.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+			imageDescriptor1.imageView = m_WaterNormalImage2->m_ImageView;
+			imageDescriptor1.sampler = m_WaterNormalImage2->m_Sampler;
+			std::vector<vk::DescriptorImageInfo> images{ imageDescriptor0 ,imageDescriptor1 };
+			m_Device->UpdateDescriptorSet(m_DescriptorSetNoise, 1, images, vk::DescriptorType::eCombinedImageSampler);
+		}
 
 		{
 			BufferInputChunk inputBuffer;
@@ -494,7 +511,7 @@ namespace Voidstar
 			m_NoiseDataPtr= m_Device->GetDevice().mapMemory(m_NoiseData->GetMemory(), 0, sizeof(NoiseData));
 			memcpy(m_NoiseDataPtr, &noiseData, sizeof(NoiseData));
 
-			m_Device->UpdateDescriptorSet(m_DescriptorSetNoise,1,1, *m_NoiseData, vk::DescriptorType::eUniformBuffer);
+			m_Device->UpdateDescriptorSet(m_DescriptorSetNoise,2,1, *m_NoiseData, vk::DescriptorType::eUniformBuffer);
 			
 		}
 		
@@ -617,7 +634,7 @@ namespace Voidstar
 		layoutBinding.binding = 0;
 		layoutBinding.descriptorType = vk::DescriptorType::eUniformBuffer;
 		layoutBinding.stageFlags = vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex| vk::ShaderStageFlagBits::eTessellationControl
-			| vk::ShaderStageFlagBits::eTessellationEvaluation;
+			| vk::ShaderStageFlagBits::eTessellationEvaluation | vk::ShaderStageFlagBits::eFragment;
 		layoutBinding.descriptorCount = 1;
 
 		std::vector<vk::DescriptorSetLayoutBinding> layoutBindings{ layoutBinding };
@@ -679,7 +696,7 @@ namespace Voidstar
 
 			vk::DescriptorPoolSize poolSize;
 			poolSize.type = vk::DescriptorType::eCombinedImageSampler;
-			poolSize.descriptorCount = 4;
+			poolSize.descriptorCount = 5;
 		
 			std::vector<vk::DescriptorPoolSize> poolSizes{poolSize};
 
@@ -715,7 +732,19 @@ namespace Voidstar
 			layoutBinding3.stageFlags = vk::ShaderStageFlagBits::eFragment;
 			layoutBinding3.descriptorCount = 1;
 
-			std::vector<vk::DescriptorSetLayoutBinding> layoutBindings{ layoutBinding,layoutBinding1,layoutBinding2,layoutBinding3 };
+			vk::DescriptorSetLayoutBinding layoutBinding4;
+			layoutBinding4.binding = 4;
+			layoutBinding4.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+			layoutBinding4.stageFlags = vk::ShaderStageFlagBits::eFragment;
+			layoutBinding4.descriptorCount = 1;
+
+			vk::DescriptorSetLayoutBinding layoutBinding5;
+			layoutBinding5.binding = 5;
+			layoutBinding5.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+			layoutBinding5.stageFlags = vk::ShaderStageFlagBits::eFragment;
+			layoutBinding5.descriptorCount = 1;
+
+			std::vector<vk::DescriptorSetLayoutBinding> layoutBindings{ layoutBinding,layoutBinding1,layoutBinding2,layoutBinding3,layoutBinding4,layoutBinding5 };
 
 			m_DescriptorSetLayoutTex = DescriptorSetLayout::Create(layoutBindings);
 
@@ -739,10 +768,6 @@ namespace Voidstar
 
 
 
-		//m_Image = Image::CreateImage(BASE_RES_PATH+"noise.jpg", m_DescriptorSetTex);
-		
-		//std::string modelPath = BASE_RES_PATH+"viking_room/viking_room.obj";
-		//m_Model = Model::Load(modelPath);
 
 		std::vector<IndexType> indices;
 		auto vertices = GeneratePlane(1, indices);
@@ -801,52 +826,6 @@ namespace Voidstar
 		}
 		m_InstancedPtr = m_Device->GetDevice().mapMemory(m_InstancedDataBuffer->GetMemory(), 0, INSTANCE_COUNT * sizeof(InstanceData));
 		//m_InstanceData.reserve(100);
-
-
-
-		//{
-		//	std::vector<IndexType> indices;
-		//	auto vertices = GenerateSphere(1.,20.,20, indices);
-		//	auto indexSize = SizeOfBuffer(indices.size(), indices[0]);
-		//	{
-		//		SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(indexSize);
-		//
-		//
-		//		{
-		//			BufferInputChunk inputBuffer;
-		//			inputBuffer.size = indexSize;
-		//			inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
-		//			inputBuffer.usage = vk::BufferUsageFlagBits::eIndexBuffer | //vk::BufferUsageFlagBits::eTransferDst;
-		//			m_IndexSphereBuffer = CreateUPtr<IndexBuffer>(inputBuffer, indices.size(), //vk::IndexType::eUint32);
-		//
-		//		}
-		//
-		//		m_TransferCommandBuffer[0].BeginTransfering();
-		//		m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_IndexSphereBuffer.get(), //(void*)indices.data(), indexSize);
-		//		m_TransferCommandBuffer[0].EndTransfering();
-		//		m_TransferCommandBuffer[0].SubmitSingle();
-		//
-		//
-		//
-		//	}
-		//
-		//	auto vertexSize = SizeOfBuffer(vertices.size(), vertices[0]);
-		//	void* vertexData = const_cast<void*>(static_cast<const void*>(vertices.data()));
-		//	SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(vertexSize);
-		//	{
-		//		BufferInputChunk inputBuffer;
-		//		inputBuffer.size = vertexSize;
-		//		inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
-		//		inputBuffer.usage = vk::BufferUsageFlagBits::eTransferDst | //vk::BufferUsageFlagBits::eVertexBuffer;
-		//
-		//		m_SphereBuffer = CreateUPtr<Buffer>(inputBuffer);
-		//	}
-		//
-		//	m_TransferCommandBuffer[0].BeginTransfering();
-		//	m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_SphereBuffer.get(), (void*)//vertices.data(), vertexSize);
-		//	m_TransferCommandBuffer[0].EndTransfering();
-		//	m_TransferCommandBuffer[0].SubmitSingle();
-		//}
 		
 
 
@@ -871,8 +850,6 @@ namespace Voidstar
 			vkGetPhysicalDeviceCalibrateableTimeDomainsEXT, vkGetCalibratedTimestampsEXT);
 
 
-		//UpdateUniformBuffer(currentFrame);
-		//m_Device->GetDevice().waitIdle();
 		UpdateNoiseTexure();
 
 #if IMGUI_ENABLED
@@ -1131,6 +1108,7 @@ namespace Voidstar
 		//ubo.model = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 		//ubo.view = glm::lookAt(glm::vec3(-2.0f, 0.0f, 4.0f), glm::vec3(0.5f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f));
 		////ubo.proj = glm::perspective(glm::radians(45.0f), extent.width / (float)extent.height, 0.0001f, 10.0f);
+		ubo.playerPos = glm::vec4{ m_App->GetCamera()->m_Position ,0};
 		ubo.view = cameraView;
 		ubo.proj = cameraProj;
 		ubo.time = exeTime;
@@ -1219,7 +1197,7 @@ namespace Voidstar
 		exeTime += deltaTime;
 		m_InstanceData.clear();
 		auto cameraPos = m_App->GetCamera()->m_Position;
-		//cameraPos = { 5,0,-5 };
+		//cameraPos = { 0,0,0 };
 		auto quadTree = Quadtree::Build(cameraPos);
 
 		
@@ -2096,6 +2074,8 @@ namespace Voidstar
 		m_SnowTex.reset();
 		m_GrassTex.reset();
 		m_StoneTex.reset();
+		m_WaterNormalImage.reset();
+		m_WaterNormalImage2.reset();
 
 		m_InstancedDataBuffer.reset();
 		delete m_NoiseData;

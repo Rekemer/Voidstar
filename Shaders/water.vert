@@ -5,13 +5,13 @@
 
 
 layout(binding = 0) uniform UniformBufferObject {
-    mat4 model;
     mat4 view;
     mat4 proj;
+    vec4 playerPos;
 } ubo;
 layout(set = 1, binding = 0) uniform sampler2D[2]  u_Tex;
 layout(set = 1, binding = 1) uniform sampler2D u_AnimatedTex;
-layout(set=2,binding = 1) uniform NoiseData {
+layout(set=2,binding = 2) uniform NoiseData {
 
     float frequence ;
 	float amplitude ;
@@ -46,6 +46,7 @@ layout(location = 0) out vec4 color ;
 layout(location = 1) out vec2 uv ;
 layout(location = 2) out vec4 edges;
 layout(location = 3) out vec2 uvMesh;
+layout(location = 4) out vec4 outWorldPos;
 
 float norm(float val, float max,float min)
  {
@@ -89,8 +90,11 @@ void main()
 	color =vec4( worldPos.y, noiseData.multipler, in_uv) ;
   
 	vec4 pos =	 worldPos;
-    pos.y+=noiseValue;
-	color.xyz = vec3(noiseValue,noiseValue,noiseValue);
+    vec3 offset = texture(u_Tex[1],newUv).xyz;
+    //pos.xyz+=offset; 
+    //noiseValue = length(worldPos.xz);
+	color.xyz = vec3(offset);
+    outWorldPos = pos;
 	gl_Position = pos;
     edges = instanceEdges;
     uvMesh = in_uv;

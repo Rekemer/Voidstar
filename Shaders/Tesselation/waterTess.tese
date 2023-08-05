@@ -3,13 +3,13 @@
 
 
 layout(binding = 0) uniform UniformBufferObject {
-    mat4 model;
     mat4 view;
     mat4 proj;
+    vec4 playerPos;
     
 } ubo;
 layout(set = 1, binding = 0) uniform sampler2D[2] u_Tex;
-layout(set=2,binding = 1) uniform NoiseData {
+layout(set=2,binding = 2) uniform NoiseData {
 
     float frequence ;
 	float amplitude ;
@@ -22,9 +22,11 @@ layout(set=2,binding = 1) uniform NoiseData {
 layout(location = 0) in vec4[] inColor ;
 layout(location = 1) in vec2[] ivUv ;
 layout(location = 2) in vec2[] inUvMesh ;
+layout(location = 3) in vec4[] worldPos ;
 layout(location = 0) out vec4 outColor;
 layout(location = 1) out vec2 outUv;
 layout(location = 2) out vec2 outUvMesh;
+layout(location = 3) out vec4 worldSpacePos;
 layout (quads) in;
 
 
@@ -93,9 +95,12 @@ void main()
         barycentricCoord.z
     );
 
+    vec3 offset = texture(u_Tex[1],newUv).xyz;
+    p.xyz+=offset*noiseData.multipler; 
      outColor = vec4(newUv,0,1);
      outColor =color;
      outUv = newUv;
      outUvMesh = gl_TessCoord.xy;
+     worldSpacePos = p;
     gl_Position = ubo.proj*ubo.view*p;
 }

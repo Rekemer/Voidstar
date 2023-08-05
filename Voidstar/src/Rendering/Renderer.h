@@ -35,10 +35,10 @@ namespace Voidstar
 			: pos(position), scale(scaling) {}
 	};
 	struct UniformBufferObject {
-		glm::mat4 model;
 		glm::mat4 view;
 		glm::mat4 proj;
-		float time;
+		alignas(16)glm::vec4 playerPos;
+		alignas(4)float time;
 	};
 
 	struct Particle {
@@ -158,8 +158,13 @@ namespace Voidstar
 
 		SPtr<Image> m_Image;
 		SPtr<Image> m_NoiseImage;
+
 		SPtr<Image> m_AnimatedNoiseImage;
 		
+		SPtr<Image> m_WaterNormalImage;
+		SPtr<Image> m_WaterNormalImage2;
+
+
 		SPtr<Image> m_SnowTex;
 		SPtr<Image>	m_GrassTex;
 		SPtr<Image>	m_StoneTex;
