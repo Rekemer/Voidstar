@@ -128,8 +128,11 @@ vec3 blend(vec4 texture1, float a1, vec4 texture2, float a2)
 //    return vec3(ambient);
 //}
 
+
+const float farPlane =10000.0;
 void main() 
 {
+    
     float tiling = 1;
 
     float speed = 30*ubo.time;
@@ -150,9 +153,10 @@ void main()
     //outColor.z = 0; 
     //dist = color.z;
    // diff = length(ubo.playerPos.xyz - worldPos.xyz);
-    vec3 diffuse  =  diff * combinedTex;
+   vec3 waterColor =  vec3(0.2,0.4,0.4);
+    vec3 diffuse  =  diff * waterColor;
     vec3 finalColor= diffuse+spec;
-    outColor.xyz = finalColor* vec3(0.2,0.4,0.4);
+    outColor.xyz = finalColor;
     //outColor.xyz = color.xyz;
 	outColor.a = 1;
 

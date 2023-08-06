@@ -19,8 +19,11 @@ layout(set=1,binding = 2) uniform NoiseData {
 	float multipler;
 	float exponent ;
 	float scale;
+    float normalStrength ;
+	float waterScale;
     
 } noiseData;
+
 layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
 
@@ -151,15 +154,21 @@ void main()
     float v = float(coords.y) / float(imageSize.y);
     vec2 st = vec2 (u,v);
     float noise = fbm(st*noiseData.scale);
+    imageStore(storageImage[0], coords, vec4(noise,noise,noise, 1.0));
+    
+    
+    
+    
+    
     float noise_dynamic = fbm(st*noiseData.scale);
     noise_dynamic = fbm_time(st*noiseData.scale); 
 
 
     float speed = 10*ubo.time;
     float speed1 = -5*ubo.time;
+    //speed = speed1 =0;
 
-
-    float tiling = noiseData.scale;
+    float tiling =  noiseData.waterScale;
     vec2 imageSizeNormal = vec2(512,512);
     u = float(coords.x) / float(imageSizeNormal.x);
     v = float(coords.y) / float(imageSizeNormal.y);
@@ -167,8 +176,9 @@ void main()
     vec4 waterNormal = texture(normals[0],st*tiling+speed);
     vec4 waterNormal1 = texture(normals[1],st*tiling+speed1);
     //static noise
-    imageStore(storageImage[0], coords, vec4(noise,noise,noise, 1.0));
     // dynamic noise
-    imageStore(storageImage[1], coords, waterNormal+waterNormal1);
+    vec4 combinedNormals = waterNormal+waterNormal1;
+
+    imageStore(storageImage[1], coords,   noiseData.normalStrength* combinedNormals);
 
 }

@@ -17,6 +17,8 @@ layout(set=2,binding = 2) uniform NoiseData {
 	float textureHeight ;
 	float textureWidth ;
 	float multipler ;
+        float normalStrength ;
+	float waterScale;
     
 } noiseData;
 layout(location = 0) in vec4[] inColor ;
@@ -96,7 +98,7 @@ void main()
     );
 
     vec3 offset = texture(u_Tex[1],newUv).xyz;
-    p.xyz+=offset*noiseData.multipler; 
+    p.xyz+=offset *noiseData.normalStrength *noiseData.multipler  ; 
      outColor = vec4(newUv,0,1);
      outColor =color;
      outUv = newUv;

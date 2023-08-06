@@ -1322,7 +1322,7 @@ namespace Voidstar
 				commandBuffer.setScissor(0, 1, &scissors);
 
 				commandBuffer.bindIndexBuffer(m_IndexBuffer->GetBuffer(), 0, m_IndexBuffer->GetIndexType());
-		//		commandBuffer.drawIndexed(static_cast<uint32_t>(amount), m_InstanceData.size(), 0, 0, 0);
+			//	commandBuffer.drawIndexed(static_cast<uint32_t>(amount), m_InstanceData.size(), 0, 0, 0);
 
 				
 			}
@@ -1828,12 +1828,16 @@ namespace Voidstar
 
 
 		ImGui::Begin("NoiseParametrs", &show_another_window);
+		ImGui::Text("Terrain");
 		m_IsNewParametrs |= ImGui::SliderFloat("Frequency", &noiseData.frequence, 0, 400);
 		m_IsNewParametrs |= ImGui::SliderFloat("Amplitude", &noiseData.amplitude, 0, 1);
 		m_IsNewParametrs |= ImGui::SliderFloat("Octaves", &noiseData.octaves, 0, 50);
 		m_IsNewParametrs |= ImGui::SliderFloat("Vertex amplitude", &noiseData.multipler, 0, 100);
 		m_IsNewParametrs |= ImGui::SliderFloat("exponent ", &noiseData.exponent, 0, 10);
 		m_IsNewParametrs |= ImGui::SliderFloat("uv scale ", &noiseData.scale, 0, 100);
+		ImGui::Text("Water");
+		m_IsNewParametrs |= ImGui::SliderFloat("normal strength", &noiseData.normalStrength, 0, 1);
+		m_IsNewParametrs |= ImGui::SliderFloat("water scale ", &noiseData.waterScale, 0, 5000);
 		m_IsPolygon = ImGui::Button("change mode");
 		
 		//std::string strMemory = "Allocated memory " + std::to_string(allocationMetrics.Current()) + " Bytes";

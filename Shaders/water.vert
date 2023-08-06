@@ -91,7 +91,7 @@ void main()
   
 	vec4 pos =	 worldPos;
     vec3 offset = texture(u_Tex[1],newUv).xyz;
-    //pos.xyz+=offset; 
+    //pos.xyz+=offset*noiseData.multipler; 
     //noiseValue = length(worldPos.xz);
 	color.xyz = vec3(offset);
     outWorldPos = pos;

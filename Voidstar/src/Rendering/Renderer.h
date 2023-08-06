@@ -91,6 +91,7 @@ namespace Voidstar
 	};
 	struct NoiseData
 	{
+		// terrain
 		float frequence = 5.f;
 		float amplitude = 0.3f;
 		float octaves = 3;
@@ -99,7 +100,9 @@ namespace Voidstar
 		float multipler = 8.f;
 		float exponent = 4.f;
 		float scale = 3.f;
-		float time = 0;
+		// water
+		float normalStrength;
+		float waterScale;
 		
 
 	};
