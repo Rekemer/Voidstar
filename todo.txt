@@ -2,6 +2,8 @@ make world space left hand coordinate system so that x positive is right
 
 Create pipeline from pipeline cache
 
+refactor change imageLayout
+
 // takeaways from filament
 
 update materials if dirty samplers or uniforms in prepare method

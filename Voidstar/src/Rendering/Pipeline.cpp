@@ -9,9 +9,8 @@ namespace Voidstar
 	std::vector<char> ReadFile(std::string filename);
 	vk::ShaderModule CreateModule(std::string filename, vk::Device device);
 	static vk::PipelineLayout MakePipelineLayout(vk::Device device, std::vector<vk::DescriptorSetLayout> layout);
-	static vk::RenderPass MakeRenderPass(vk::Device device, vk::Format swapchainImageFormat, vk::Format depthFormat);
 
-	UPtr<Pipeline> Pipeline::CreateGraphicsPipeline(GraphicsPipelineSpecification& spec, vk::PrimitiveTopology topology, vk::Format depthFormat,vk::PolygonMode polygonMode)
+	UPtr<Pipeline> Pipeline::CreateGraphicsPipeline(GraphicsPipelineSpecification& spec, vk::PrimitiveTopology topology, vk::Format depthFormat, vk::RenderPass renderpass ,int subpass,vk::PolygonMode polygonMode)
 	{
 		auto pipeline = CreateUPtr<Pipeline>();
 
@@ -244,9 +243,8 @@ namespace Voidstar
 
 		//Renderpass
 
-		vk::RenderPass renderpass = MakeRenderPass(spec.device, spec.swapchainImageFormat, depthFormat);
 		pipelineInfo.renderPass = renderpass;
-		pipelineInfo.subpass = 0;
+		pipelineInfo.subpass = subpass;
 
 
 		//Extra stuff
@@ -310,105 +308,7 @@ namespace Voidstar
 
 		}
 	}
-	static vk::RenderPass MakeRenderPass(vk::Device device, vk::Format swapchainImageFormat, vk::Format depthFormat) {
-
-		auto samples = RenderContext::GetDevice()->GetSamples();
-		//Define a general attachment, with its load/store operations
-		vk::AttachmentDescription msaaAttachment = {};
-		msaaAttachment.flags = vk::AttachmentDescriptionFlags();
-		msaaAttachment.format = swapchainImageFormat;
-		msaaAttachment.samples = samples;
-		msaaAttachment.loadOp = vk::AttachmentLoadOp::eClear;
-		msaaAttachment.storeOp = vk::AttachmentStoreOp::eStore;
-		msaaAttachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
-		msaaAttachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
-		msaaAttachment.initialLayout = vk::ImageLayout::eUndefined;
-		msaaAttachment.finalLayout = vk::ImageLayout::eColorAttachmentOptimal;
-		//msaaAttachment.finalLayout = vk::ImageLayout::ePresentSrcKHR;
-
-
-		vk::AttachmentReference msaaAttachmentRef = {};
-		msaaAttachmentRef.attachment = 0;
-		msaaAttachmentRef.layout = vk::ImageLayout::eColorAttachmentOptimal;
-		//msaaAttachmentRef.layout = vk::ImageLayout::ePresentSrcKHR;
-
-
-
-		vk::AttachmentDescription depthAttachment = {};
-		depthAttachment.flags = vk::AttachmentDescriptionFlags();
-		depthAttachment.format = depthFormat;
-		depthAttachment.samples = samples;
-		depthAttachment.loadOp = vk::AttachmentLoadOp::eClear;
-		depthAttachment.storeOp = vk::AttachmentStoreOp::eStore;
-		depthAttachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
-		depthAttachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
-		depthAttachment.initialLayout = vk::ImageLayout::eUndefined;
-		depthAttachment.finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
-
-		vk::AttachmentReference depthAttachmentRef = {};
-		depthAttachmentRef.attachment = 1;
-		depthAttachmentRef.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
-
-		//Define a general attachment, with its load/store operations
-		vk::AttachmentDescription colorAttachmentResolve = {};
-		colorAttachmentResolve.flags = vk::AttachmentDescriptionFlags();
-		colorAttachmentResolve.format = swapchainImageFormat;
-		colorAttachmentResolve.samples = vk::SampleCountFlagBits::e1;
-		colorAttachmentResolve.loadOp = vk::AttachmentLoadOp::eClear;
-		colorAttachmentResolve.storeOp = vk::AttachmentStoreOp::eStore;
-		colorAttachmentResolve.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
-		colorAttachmentResolve.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
-		colorAttachmentResolve.initialLayout = vk::ImageLayout::eUndefined;
-		colorAttachmentResolve.finalLayout = vk::ImageLayout::eColorAttachmentOptimal;
-
-		//Declare that attachment to be color buffer 0 of the framebuffer
-		vk::AttachmentReference colorAttachmentRef = {};
-		colorAttachmentRef.attachment = 2;
-		colorAttachmentRef.layout = vk::ImageLayout::eColorAttachmentOptimal;
-
-
-		//Renderpasses are broken down into subpasses, there's always at least one.
-		vk::SubpassDescription subpass = {};
-		subpass.flags = vk::SubpassDescriptionFlags();
-		subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
-		subpass.colorAttachmentCount = 1;
-		subpass.pColorAttachments = &msaaAttachmentRef;
-		subpass.pDepthStencilAttachment = &depthAttachmentRef;
-		subpass.pResolveAttachments = &colorAttachmentRef;
-
-
-		vk::SubpassDependency dependency{};
-		dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-		dependency.dstSubpass = 0;
-		// define order of subpasses?
-		dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests;
-		dependency.srcAccessMask = vk::AccessFlagBits::eNone;
-		// define rights of subpasses?
-		dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests;
-		dependency.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
-
-		//Now create the renderpass
-		vk::RenderPassCreateInfo renderpassInfo = {};
-
-		std::vector<vk::AttachmentDescription> attachments = { msaaAttachment,depthAttachment,colorAttachmentResolve };
-		// to be able to map NDC to screen coordinates - Viewport ans Scissors Transform
-		renderpassInfo.flags = vk::RenderPassCreateFlags();
-		renderpassInfo.attachmentCount = attachments.size();
-		renderpassInfo.pAttachments = attachments.data();
-		renderpassInfo.subpassCount = 1;
-		renderpassInfo.pSubpasses = &subpass;
-		renderpassInfo.dependencyCount = 1;
-		renderpassInfo.pDependencies = &dependency;
-
-		try {
-			return device.createRenderPass(renderpassInfo);
-		}
-		catch (vk::SystemError err)
-		{
-			Log::GetLog()->error("Failed to create renderpass!");
-		}
-
-	}
+	
 
 	static vk::PipelineLayout MakePipelineLayout(vk::Device device, std::vector<vk::DescriptorSetLayout> layout) {
 

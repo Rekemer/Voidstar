@@ -4,7 +4,6 @@
 #include "../Types.h"
 namespace Voidstar
 {
-
 	struct ImageSpecs
 	{
 		int width, height;

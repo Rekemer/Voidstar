@@ -234,6 +234,93 @@ namespace Voidstar
 
 		m_CommandBuffer.pipelineBarrier(sourceStage, destinationStage, vk::DependencyFlags(), nullptr, nullptr, barrier);
 	}
+
+	
+
+	void CommandBuffer::ChangeImageLayout(vk::Image& image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout, int mipMap)
+	{
+
+		/*
+			typedef struct VkImageSubresourceRange {
+			VkImageAspectFlags    aspectMask;
+			uint32_t              baseMipLevel;
+			uint32_t              levelCount;
+			uint32_t              baseArrayLayer;
+			uint32_t              layerCount;
+		} VkImageSubresourceRange;
+		*/
+		vk::ImageSubresourceRange access;
+		access.aspectMask = vk::ImageAspectFlagBits::eColor;
+		access.baseMipLevel = 0;
+		access.levelCount = mipMap;
+		access.baseArrayLayer = 0;
+		access.layerCount = 1;
+
+		/*
+		typedef struct VkImageMemoryBarrier {
+			VkStructureType            sType;
+			const void* pNext;
+			VkAccessFlags              srcAccessMask;
+			VkAccessFlags              dstAccessMask;
+			VkImageLayout              oldLayout;
+			VkImageLayout              newLayout;
+			uint32_t                   srcQueueFamilyIndex;
+			uint32_t                   dstQueueFamilyIndex;
+			VkImage                    image;
+			VkImageSubresourceRange    subresourceRange;
+		} VkImageMemoryBarrier;
+		*/
+		vk::ImageMemoryBarrier barrier;
+		barrier.oldLayout = oldLayout;
+		barrier.newLayout = newLayout;
+		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.image = image;
+		barrier.subresourceRange = access;
+
+		vk::PipelineStageFlags sourceStage, destinationStage;
+
+		if (oldLayout == vk::ImageLayout::eUndefined
+			&& newLayout == vk::ImageLayout::eTransferDstOptimal) {
+
+			barrier.srcAccessMask = vk::AccessFlagBits::eNoneKHR;
+			barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+
+			sourceStage = vk::PipelineStageFlagBits::eTopOfPipe;
+			destinationStage = vk::PipelineStageFlagBits::eTransfer;
+		}
+		else if (oldLayout == vk::ImageLayout::eUndefined && newLayout == vk::ImageLayout::eGeneral)
+		{
+			barrier.srcAccessMask = vk::AccessFlagBits::eNone;
+			barrier.dstAccessMask = vk::AccessFlagBits::eShaderWrite | vk::AccessFlagBits::eShaderRead;
+			sourceStage = vk::PipelineStageFlagBits::eTopOfPipe;
+			destinationStage = vk::PipelineStageFlagBits::eComputeShader;
+		}
+		else if (oldLayout == vk::ImageLayout::eGeneral && newLayout == vk::ImageLayout::eShaderReadOnlyOptimal)
+		{
+			barrier.srcAccessMask = vk::AccessFlagBits::eShaderWrite;
+			barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+			sourceStage = vk::PipelineStageFlagBits::eComputeShader;
+			destinationStage = vk::PipelineStageFlagBits::eVertexShader | vk::PipelineStageFlagBits::eTessellationEvaluationShader;
+		}
+		else if (oldLayout == vk::ImageLayout::eDepthStencilAttachmentOptimal && newLayout == vk::ImageLayout::eShaderReadOnlyOptimal)
+		{
+			barrier.srcAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+			barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+			sourceStage = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+			destinationStage = vk::PipelineStageFlagBits::eFragmentShader;
+		}
+		else {
+
+			barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+			barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+
+			sourceStage = vk::PipelineStageFlagBits::eTransfer;
+			destinationStage = vk::PipelineStageFlagBits::eFragmentShader;
+		}
+
+		m_CommandBuffer.pipelineBarrier(sourceStage, destinationStage, vk::DependencyFlags(), nullptr, nullptr, barrier);
+	}
 	void CommandBuffer::CopyBufferToImage(Buffer* buffer, vk::Image* image, int width, int height)
 	{
 		vk::BufferImageCopy copy;

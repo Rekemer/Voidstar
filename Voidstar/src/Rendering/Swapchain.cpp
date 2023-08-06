@@ -108,7 +108,7 @@ namespace Voidstar
 			ImageSpecs imageInfo;
 			
 			imageInfo.tiling = vk::ImageTiling::eOptimal;
-			imageInfo.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment;
+			imageInfo.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment| vk::ImageUsageFlagBits::eInputAttachment;
 			imageInfo.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
 			imageInfo.width = viewportWidth;
 			imageInfo.height = viewportHeight;

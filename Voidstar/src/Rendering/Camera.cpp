@@ -31,48 +31,6 @@ namespace Voidstar
     }
 
 
-    glm::mat4 PreparePerspectiveProjectionMatrix(float aspect_ratio,
-        float field_of_view,
-        float near_plane,
-        float far_plane)
-    {
-
-        const float tanHalfFovy = glm::tan(field_of_view / 2.f);
-
-        auto projectionMatrix = glm::mat4{ 0.0f };
-        projectionMatrix[0][0] = 1.f / (aspect_ratio * tanHalfFovy);
-        projectionMatrix[1][1] = 1.f / (tanHalfFovy);
-        projectionMatrix[2][2] = far_plane / (far_plane - near_plane);
-        projectionMatrix[2][3] = 1.f;
-        projectionMatrix[3][2] = -(far_plane * near_plane) / (far_plane - near_plane);
-
-       // return projectionMatrix;
-
-        float f = glm::tan(glm::radians(0.5f * field_of_view));
-        auto inverse_aspec = 1.f / aspect_ratio;
-        glm::mat4 perspective_projection_matrix = {
-          inverse_aspec / f,
-          0.0f,
-          0.0f,
-          0.0f,
-
-          0.0f,
-          1 / f,
-          0.0f,
-          0.0f,
-
-          0.0f,
-          0.0f,
-          far_plane / (far_plane - near_plane),
-          1.0f,
-
-          0.0f,
-          0.0f,
-          (-1 * near_plane*far_plane) / (far_plane - near_plane),
-          0.0f
-        };
-        return perspective_projection_matrix;
-    }
 
     void Camera::UpdateProj(float width, float height)
     {

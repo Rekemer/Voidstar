@@ -637,7 +637,12 @@ namespace Voidstar
 			| vk::ShaderStageFlagBits::eTessellationEvaluation | vk::ShaderStageFlagBits::eFragment;
 		layoutBinding.descriptorCount = 1;
 
-		std::vector<vk::DescriptorSetLayoutBinding> layoutBindings{ layoutBinding };
+		vk::DescriptorSetLayoutBinding layoutBinding1;
+		layoutBinding1.binding = 1;
+		layoutBinding1.descriptorType = vk::DescriptorType::eInputAttachment;
+		layoutBinding1.stageFlags = vk::ShaderStageFlagBits::eFragment;
+		layoutBinding1.descriptorCount = 1;
+		std::vector<vk::DescriptorSetLayoutBinding> layoutBindings{ layoutBinding,layoutBinding1 };
 		m_DescriptorSetLayout = DescriptorSetLayout::Create(layoutBindings);
 
 		auto bufferSize = sizeof(UniformBufferObject);
@@ -665,8 +670,11 @@ namespace Voidstar
 			vk::DescriptorPoolSize poolSize;
 			poolSize.type = vk::DescriptorType::eUniformBuffer;
 			poolSize.descriptorCount = static_cast<uint32_t>(framesAmount);
-			
-			std::vector<vk::DescriptorPoolSize> poolSizes{ poolSize };
+			vk::DescriptorPoolSize poolSize1;
+			poolSize1.type = vk::DescriptorType::eInputAttachment;
+			poolSize1.descriptorCount = static_cast<uint32_t>(framesAmount);
+
+			std::vector<vk::DescriptorPoolSize> poolSizes{ poolSize,poolSize1 };
 			
 			m_DescriptorPool = DescriptorPool::Create(poolSizes, framesAmount);
 		}
@@ -679,15 +687,45 @@ namespace Voidstar
 			
 
 			
+		//ImageSpecs specs;
+		//specs.width = m_Swapchain->m_SwapchainExtent.width;
+		//specs.height = m_Swapchain->m_SwapchainExtent.height;
+		//	
+		//specs.format = m_Swapchain->m_SwapchainFormat;
+		//specs.usage = vk::ImageUsageFlagBits::eInputAttachment;
+		//specs.tiling = vk::ImageTiling::eOptimal;
+		//auto vkImage = Image::CreateVKImage(specs,vk::SampleCountFlagBits::e1);
+		//auto depthFormat = Image::GetFormat(
+		//	m_Device->GetDevicePhys(),
+		//	{ vk::Format::eD32Sfloat, vk::Format::eD24UnormS8Uint },
+		//	vk::ImageTiling::eOptimal,
+		//	vk::FormatFeatureFlagBits::eDepthStencilAttachment
+		//);
+		//auto imageView = Image::CreateImageView(vkImage, depthFormat, vk::ImageAspectFlagBits::eColor);
 		
-			
-
 
 		for (int i = 0; i < framesAmount; i++)
 		{
 		
 			
 			m_Device->UpdateDescriptorSet(m_DescriptorSets[i],0,1, *m_UniformBuffers[i], vk::DescriptorType::eUniformBuffer);
+			vk::DescriptorImageInfo imageInfo;
+			imageInfo.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+			imageInfo.imageView = m_Swapchain->m_SwapchainFrames[i].imageDepthView;
+			imageInfo.sampler = VK_NULL_HANDLE; 
+			m_Device->UpdateDescriptorSet(m_DescriptorSets[i], 1, 1, imageInfo, vk::DescriptorType::eInputAttachment);
+
+			//descriptors[1].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			//descriptors[1].imageView = attachments[i].depth.view;
+			//descriptors[1].sampler = VK_NULL_HANDLE;
+			//
+			//writeDescriptorSets[1].dstSet = descriptorSets.attachmentRead[i];
+			//writeDescriptorSets[1].descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
+			//writeDescriptorSets[1].descriptorCount = 1;
+			//writeDescriptorSets[1].dstBinding = 1;
+			//writeDescriptorSets[1].pImageInfo = &descriptors[1];
+
+
 
 		}
 		
@@ -1322,15 +1360,20 @@ namespace Voidstar
 				commandBuffer.setScissor(0, 1, &scissors);
 
 				commandBuffer.bindIndexBuffer(m_IndexBuffer->GetBuffer(), 0, m_IndexBuffer->GetIndexType());
-			//	commandBuffer.drawIndexed(static_cast<uint32_t>(amount), m_InstanceData.size(), 0, 0, 0);
+				commandBuffer.drawIndexed(static_cast<uint32_t>(amount), m_InstanceData.size(), 0, 0, 0);
 
-				
+				//m_RenderCommandBuffer[imageIndex].ChangeImageLayout(m_Swapchain->m_SwapchainFrames[currentFrame].imageDepth, vk::ImageLayout::eDepthStencilAttachmentOptimal, vk::ImageLayout::eShaderReadOnlyOptimal);
 			}
-
+			// Second sub pass
+			//commandBuffer.nextSubpass();
+			vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
 			// water rendering
 			{
 
 				commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_WaterPipeline->m_Pipeline);
+				commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_WaterPipeline->m_PipelineLayout, 0, m_DescriptorSets[imageIndex], nullptr);
+				commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_WaterPipeline->m_PipelineLayout, 1, m_DescriptorSetTex, nullptr);
+				commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_WaterPipeline->m_PipelineLayout, 2, m_DescriptorSetNoise, nullptr);
 				commandBuffer.drawIndexed(static_cast<uint32_t>(amount), m_InstanceData.size(), 0, 0, 0);
 			}
 			m_RenderCommandBuffer[imageIndex].EndRenderPass();
@@ -1441,7 +1484,165 @@ namespace Voidstar
 		FrameMark;
 	}
 
-	
+
+	//On tile - based - renderer, which is pretty much anything on mobile,
+	//using input attachments is faster than the traditional multi - pass approach as pixel reads are fetched from tile memory instead of mainframebuffer, 
+	//so if you target the mobile market it’s always a good idea to use input attachments instead of multiple passes when possible.
+
+
+
+
+
+
+
+
+	/*No.The attachment reference layout tells Vulkan what layout to transition the image to at the beginning of the subpass for which this reference is defined.Or more to the point, it is the layout which the image will be in for the duration of the subpass.
+	* 
+
+		The first transition for an attached image of a render pass will be from the initialLayout 
+		for the render pass to the reference layout for the first subpass that uses the image.
+		The last transition for an attached image will be from reference layout of the final subpass 
+		that uses the attachment to the finalLayout for the render pass.*/
+
+
+	static vk::RenderPass MakeRenderPass(vk::Device device, vk::Format swapchainImageFormat, vk::Format depthFormat)
+	{
+
+		auto samples = RenderContext::GetDevice()->GetSamples();
+		//Define a general attachment, with its load/store operations
+		vk::AttachmentDescription msaaAttachment = {};
+		msaaAttachment.flags = vk::AttachmentDescriptionFlags();
+		msaaAttachment.format = swapchainImageFormat;
+		msaaAttachment.samples = samples;
+		msaaAttachment.loadOp = vk::AttachmentLoadOp::eClear;
+		msaaAttachment.storeOp = vk::AttachmentStoreOp::eStore;
+		msaaAttachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
+		msaaAttachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
+		msaaAttachment.initialLayout = vk::ImageLayout::eUndefined;
+		msaaAttachment.finalLayout = vk::ImageLayout::eColorAttachmentOptimal;
+		//msaaAttachment.finalLayout = vk::ImageLayout::ePresentSrcKHR;
+
+
+		vk::AttachmentReference msaaAttachmentRef = {};
+		msaaAttachmentRef.attachment = 0;
+		msaaAttachmentRef.layout = vk::ImageLayout::eColorAttachmentOptimal;
+		//msaaAttachmentRef.layout = vk::ImageLayout::ePresentSrcKHR;
+
+
+
+		vk::AttachmentDescription depthAttachment = {};
+		depthAttachment.flags = vk::AttachmentDescriptionFlags();
+		depthAttachment.format = depthFormat;
+		depthAttachment.samples = samples;
+		depthAttachment.loadOp = vk::AttachmentLoadOp::eClear;
+		depthAttachment.storeOp = vk::AttachmentStoreOp::eStore;
+		depthAttachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
+		depthAttachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
+		depthAttachment.initialLayout = vk::ImageLayout::eUndefined;
+		depthAttachment.finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+
+		// Define the depth attachment for reading(used in the second subpass as an input attachment)
+		vk::AttachmentDescription depthAttachmentRead = {};
+		depthAttachmentRead.format = depthFormat;
+		depthAttachmentRead.samples = samples;
+		depthAttachmentRead.loadOp = vk::AttachmentLoadOp::eLoad; // Load the existing depth data
+		depthAttachmentRead.storeOp = vk::AttachmentStoreOp::eDontCare; // We won't be using this attachment to render
+		depthAttachmentRead.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
+		depthAttachmentRead.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
+		depthAttachmentRead.initialLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal; // Use the layout from the first subpass
+		depthAttachmentRead.finalLayout = vk::ImageLayout::eShaderReadOnlyOptimal; // Transition to shader read layout for the second subpass
+
+		vk::AttachmentReference depthAttachmentRef = {};
+		depthAttachmentRef.attachment = 1;
+		depthAttachmentRef.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+
+		//Define a general attachment, with its load/store operations
+		vk::AttachmentDescription colorAttachmentResolve = {};
+		colorAttachmentResolve.flags = vk::AttachmentDescriptionFlags();
+		colorAttachmentResolve.format = swapchainImageFormat;
+		colorAttachmentResolve.samples = vk::SampleCountFlagBits::e1;
+		colorAttachmentResolve.loadOp = vk::AttachmentLoadOp::eClear;
+		colorAttachmentResolve.storeOp = vk::AttachmentStoreOp::eStore;
+		colorAttachmentResolve.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
+		colorAttachmentResolve.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
+		colorAttachmentResolve.initialLayout = vk::ImageLayout::eUndefined;
+		colorAttachmentResolve.finalLayout = vk::ImageLayout::eColorAttachmentOptimal;
+
+		//Declare that attachment to be color buffer 0 of the framebuffer
+		vk::AttachmentReference colorAttachmentRef = {};
+		colorAttachmentRef.attachment = 2;
+		colorAttachmentRef.layout = vk::ImageLayout::eColorAttachmentOptimal;
+
+
+		//Renderpasses are broken down into subpasses, there's always at least one.
+		vk::SubpassDescription subpass = {};
+		subpass.flags = vk::SubpassDescriptionFlags();
+		subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
+		subpass.colorAttachmentCount = 1;
+		subpass.pColorAttachments = &msaaAttachmentRef;
+		subpass.pDepthStencilAttachment = &depthAttachmentRef;
+		//subpass.pResolveAttachments = &colorAttachmentRef;
+
+
+
+		vk::SubpassDescription subpass1 = {};
+		subpass1.flags = vk::SubpassDescriptionFlags();
+		subpass1.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
+		subpass1.colorAttachmentCount = 1;
+		subpass1.pColorAttachments = &msaaAttachmentRef;
+		subpass1.pResolveAttachments = &colorAttachmentRef;
+		subpass1.pDepthStencilAttachment = &depthAttachmentRef;
+
+
+		vk::AttachmentReference reference = {};
+		reference.attachment = 1; // The index of the input attachment in the attachments array
+		reference.layout = vk::ImageLayout::eShaderReadOnlyOptimal; // The layout of the input attachment
+		std::vector<vk::AttachmentReference>inputReferences { reference };
+		//subpass1.inputAttachmentCount = inputReferences.size();
+		//subpass1.pInputAttachments = inputReferences.data();
+		
+		std::vector<vk::SubpassDescription> subpasses = { subpass ,subpass1 };
+
+
+		vk::SubpassDependency dependency = {};
+		dependency.srcSubpass = 0;
+		dependency.dstSubpass = 1;
+		dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+		dependency.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
+		dependency.dstStageMask = vk::PipelineStageFlagBits::eFragmentShader;
+		dependency.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+
+		//// define order of subpasses?
+		//// where srcAccess mask operations occurr
+		////list operatoins that must be completed before staring render pass
+		//dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests;
+		////dependency.srcAccessMask = vk::AccessFlagBits::eNone;
+		//dependency.srcAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+		//// define rights of subpasses?
+		//dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests;
+		//dependency.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+
+		//Now create the renderpass
+		vk::RenderPassCreateInfo renderpassInfo = {};
+
+		std::vector<vk::AttachmentDescription> attachments = { msaaAttachment,depthAttachment,colorAttachmentResolve };
+		// to be able to map NDC to screen coordinates - Viewport ans Scissors Transform
+		renderpassInfo.flags = vk::RenderPassCreateFlags();
+		renderpassInfo.attachmentCount = attachments.size();
+		renderpassInfo.pAttachments = attachments.data();
+		renderpassInfo.subpassCount = 2;
+		renderpassInfo.pSubpasses = subpasses.data();
+		renderpassInfo.dependencyCount = 1;
+		renderpassInfo.pDependencies = &dependency;
+
+		try {
+			return device.createRenderPass(renderpassInfo);
+		}
+		catch (vk::SystemError err)
+		{
+			Log::GetLog()->error("Failed to create renderpass!");
+		}
+	}
 	void Renderer::CreateFramebuffers()
 	{
 		auto& frames = m_Swapchain->m_SwapchainFrames;
@@ -1579,7 +1780,9 @@ namespace Voidstar
 			m_DescriptorSetLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutTex->GetLayout(),m_DescriptorSetLayoutNoise->GetLayout() };
 
 			specs.descriptorSetLayout = m_DescriptorSetLayouts;
-			m_TerrainPipeline = Pipeline::CreateGraphicsPipeline(specs, vk::PrimitiveTopology::ePatchList, m_Swapchain->m_SwapchainFrames[0].depthFormat,m_PolygoneMode);
+
+			auto terrainRenderPass = MakeRenderPass(m_Device->GetDevice(), specs.swapchainImageFormat,m_Swapchain->m_SwapchainFrames[0].depthFormat);
+			m_TerrainPipeline = Pipeline::CreateGraphicsPipeline(specs, vk::PrimitiveTopology::ePatchList, m_Swapchain->m_SwapchainFrames[0].depthFormat, terrainRenderPass,0,m_PolygoneMode);
 		
 		}
 		
@@ -1622,10 +1825,16 @@ namespace Voidstar
 
 			auto samples = RenderContext::GetDevice()->GetSamples();
 			specs.samples = samples;
-			m_DescriptorSetLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutTex->GetLayout(),m_DescriptorSetLayoutNoise->GetLayout() };
+
+
+
+
+			m_DescriptorSetLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutTex->GetLayout(),m_DescriptorSetLayoutNoise->GetLayout()};
 
 			specs.descriptorSetLayout = m_DescriptorSetLayouts;
-			m_WaterPipeline = Pipeline::CreateGraphicsPipeline(specs, vk::PrimitiveTopology::ePatchList, m_Swapchain->m_SwapchainFrames[0].depthFormat, m_PolygoneMode);
+		
+
+			m_WaterPipeline = Pipeline::CreateGraphicsPipeline(specs, vk::PrimitiveTopology::ePatchList, m_Swapchain->m_SwapchainFrames[0].depthFormat, m_TerrainPipeline->m_RenderPass,1,m_PolygoneMode);
 		}
 		
 	}
@@ -1928,105 +2137,7 @@ namespace Voidstar
 
 	}
 
-	vk::RenderPass MakeRenderPass(vk::Device device, vk::Format swapchainImageFormat, vk::Format depthFormat) {
-
-		auto samples = RenderContext::GetDevice()->GetSamples();
-		//Define a general attachment, with its load/store operations
-		vk::AttachmentDescription msaaAttachment = {};
-		msaaAttachment.flags = vk::AttachmentDescriptionFlags();
-		msaaAttachment.format = swapchainImageFormat;
-		msaaAttachment.samples = samples;
-		msaaAttachment.loadOp = vk::AttachmentLoadOp::eClear;
-		msaaAttachment.storeOp = vk::AttachmentStoreOp::eStore;
-		msaaAttachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
-		msaaAttachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
-		msaaAttachment.initialLayout = vk::ImageLayout::eUndefined;
-		msaaAttachment.finalLayout = vk::ImageLayout::eColorAttachmentOptimal;
-		//msaaAttachment.finalLayout = vk::ImageLayout::ePresentSrcKHR;
-		
-		
-		vk::AttachmentReference msaaAttachmentRef = {};
-		msaaAttachmentRef.attachment = 0;
-		msaaAttachmentRef.layout = vk::ImageLayout::eColorAttachmentOptimal;
-		//msaaAttachmentRef.layout = vk::ImageLayout::ePresentSrcKHR;
-		
-
-
-		vk::AttachmentDescription depthAttachment = {};
-		depthAttachment.flags = vk::AttachmentDescriptionFlags();
-		depthAttachment.format = depthFormat;
-		depthAttachment.samples = samples;
-		depthAttachment.loadOp = vk::AttachmentLoadOp::eClear;
-		depthAttachment.storeOp = vk::AttachmentStoreOp::eStore;
-		depthAttachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
-		depthAttachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
-		depthAttachment.initialLayout = vk::ImageLayout::eUndefined;
-		depthAttachment.finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
-
-		vk::AttachmentReference depthAttachmentRef = {};
-		depthAttachmentRef.attachment = 1;
-		depthAttachmentRef.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
-
-		//Define a general attachment, with its load/store operations
-		vk::AttachmentDescription colorAttachmentResolve = {};
-		colorAttachmentResolve.flags = vk::AttachmentDescriptionFlags();
-		colorAttachmentResolve.format = swapchainImageFormat;
-		colorAttachmentResolve.samples = vk::SampleCountFlagBits::e1;
-		colorAttachmentResolve.loadOp = vk::AttachmentLoadOp::eClear;
-		colorAttachmentResolve.storeOp = vk::AttachmentStoreOp::eStore;
-		colorAttachmentResolve.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
-		colorAttachmentResolve.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
-		colorAttachmentResolve.initialLayout = vk::ImageLayout::eUndefined;
-		colorAttachmentResolve.finalLayout = vk::ImageLayout::eColorAttachmentOptimal;
-
-		//Declare that attachment to be color buffer 0 of the framebuffer
-		vk::AttachmentReference colorAttachmentRef = {};
-		colorAttachmentRef.attachment = 2;
-		colorAttachmentRef.layout = vk::ImageLayout::eColorAttachmentOptimal;
-
-
-		//Renderpasses are broken down into subpasses, there's always at least one.
-		vk::SubpassDescription subpass = {};
-		subpass.flags = vk::SubpassDescriptionFlags();
-		subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
-		subpass.colorAttachmentCount = 1;
-		subpass.pColorAttachments = &msaaAttachmentRef;
-		subpass.pDepthStencilAttachment= &depthAttachmentRef;
-		subpass.pResolveAttachments= &colorAttachmentRef;
-
-
-		vk::SubpassDependency dependency{};
-		dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-		dependency.dstSubpass = 0;
-		// define order of subpasses?
-		dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests;
-		dependency.srcAccessMask = vk::AccessFlagBits::eNone;
-		// define rights of subpasses?
-		dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput| vk::PipelineStageFlagBits::eEarlyFragmentTests;
-		dependency.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
-
-		//Now create the renderpass
-		vk::RenderPassCreateInfo renderpassInfo = {};
-
-		std::vector<vk::AttachmentDescription> attachments = {  msaaAttachment,depthAttachment,colorAttachmentResolve };
-		// to be able to map NDC to screen coordinates - Viewport ans Scissors Transform
-		renderpassInfo.flags = vk::RenderPassCreateFlags();
-		renderpassInfo.attachmentCount = attachments.size();
-		renderpassInfo.pAttachments = attachments.data();
-		renderpassInfo.subpassCount = 1;
-		renderpassInfo.pSubpasses = &subpass;
-		renderpassInfo.dependencyCount = 1;
-		renderpassInfo.pDependencies = &dependency;
-
-		try {
-			return device.createRenderPass(renderpassInfo);
-		}
-		catch (vk::SystemError err)
-		{
-			Log::GetLog()->error("Failed to create renderpass!");
-		}
-
-	}
+	
 
 
 	vk::PipelineLayout MakePipelineLayout(vk::Device device, std::vector<vk::DescriptorSetLayout> layout) {

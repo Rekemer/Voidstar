@@ -17,7 +17,7 @@ layout(set = 0, binding = 0) uniform UniformBufferObject {
     float time;
     
 } ubo;
-
+layout (input_attachment_index = 0, set = 0, binding = 1) uniform subpassInputMS inputDepth;
 
 layout(set = 1, binding = 0) uniform sampler2D[2] u_Noise;
 layout(set = 1, binding = 1) uniform sampler2D u_Tex1;
@@ -132,8 +132,15 @@ vec3 blend(vec4 texture1, float a1, vec4 texture2, float a2)
 const float farPlane =10000.0;
 void main() 
 {
-    
+   // const float currentDepth  = subpassLoad(inputDepth,8).r;
+    const float currentDepth  = 1;
+    const float waterDepth = 0;
     float tiling = 1;
+
+    vec4 screenPos = ubo.proj*ubo.view* worldPos;
+    float depthDiff = currentDepth*farPlane -(screenPos.z +waterDepth); 
+
+
 
     float speed = 30*ubo.time;
     float speed1 = -20*ubo.time;
@@ -156,6 +163,7 @@ void main()
    vec3 waterColor =  vec3(0.2,0.4,0.4);
     vec3 diffuse  =  diff * waterColor;
     vec3 finalColor= diffuse+spec;
+   finalColor = vec3(depthDiff,depthDiff,depthDiff);   
     outColor.xyz = finalColor;
     //outColor.xyz = color.xyz;
 	outColor.a = 1;

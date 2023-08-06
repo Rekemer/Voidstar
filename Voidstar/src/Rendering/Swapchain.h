@@ -10,6 +10,7 @@ namespace Voidstar
 		VkDeviceMemory depthImageMemory;
 		vk::Image imageDepth;
 		vk::ImageView imageDepthView;
+
 		vk::Format depthFormat;
 		
 		vk::Framebuffer framebuffer;
