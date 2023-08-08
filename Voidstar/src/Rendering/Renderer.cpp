@@ -1237,8 +1237,10 @@ namespace Voidstar
 		auto cameraPos = m_App->GetCamera()->m_Position;
 		//cameraPos = { 0,0,0 };
 		auto quadTree = Quadtree::Build(cameraPos);
-
 		
+		auto test1 = glm::vec3(-0.5, 0, -0.5) * 9.705f + glm::vec3(-4.8828, 0, 24.414);
+		glm::vec4 test = m_App->GetCamera()->GetProj() * m_App->GetCamera()->GetView() * glm::vec4(test1,1);
+		auto norm = test / test.w;
 		for (auto& entry : quadTree.nodes)
 		{
 			for (auto node : entry.second)
@@ -1253,10 +1255,6 @@ namespace Voidstar
 					data.edges[3] = node.edges[3];
 					m_InstanceData.emplace_back(data);
 				}
-				
-				
-				
-				
 			}
 		}
 		
@@ -1320,9 +1318,78 @@ namespace Voidstar
 			auto commandBuffer = m_RenderCommandBuffer[imageIndex].GetCommandBuffer();
 			auto amount = m_IndexBuffer->GetIndexAmount();
 
+
+
+
+
+
+
 			commandBuffer.begin(beginInfo);
 			{
+
+
+
 				TracyVkZone(ctx, commandBuffer, "Terrain Rendering ");
+
+#if 0
+				// z prepass
+				{
+					m_RenderCommandBuffer[imageIndex].BeginRenderPass(&m_ZTerrainPipeline->m_RenderPass, &m_Swapchain->m_SwapchainFrames[imageIndex].framebuffer, &m_Swapchain->m_SwapchainExtent);
+					vk::Viewport viewport;
+					viewport.x = 0;
+					viewport.y = 0;
+					viewport.minDepth = 0;
+					viewport.maxDepth = 1;
+					viewport.height = m_ViewportHeight;
+					viewport.width = m_ViewportWidth;
+
+					vk::Rect2D scissors;
+					scissors.offset = vk::Offset2D{ (uint32_t)0,(uint32_t)0 };
+					scissors.extent = vk::Extent2D{ (uint32_t)m_ViewportWidth,(uint32_t)m_ViewportHeight };
+
+					commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_ZTerrainPipeline->m_PipelineLayout, 0, m_DescriptorSets[imageIndex], nullptr);
+					commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_ZTerrainPipeline->m_PipelineLayout, 1, m_DescriptorSetTex, nullptr);
+					commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_ZTerrainPipeline->m_PipelineLayout, 2, m_DescriptorSetNoise, nullptr);
+
+					commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_ZTerrainPipeline->m_Pipeline);
+					vk::DeviceSize offsets[] = { 0 };
+
+					{
+						vk::Buffer vertexBuffers[] = { m_ModelBuffer->GetBuffer() };
+						commandBuffer.bindVertexBuffers(0, 1, vertexBuffers, offsets);
+
+					}
+
+					{
+						vk::Buffer vertexBuffers[] = { m_InstancedDataBuffer->GetBuffer() };
+						commandBuffer.bindVertexBuffers(1, 1, vertexBuffers, offsets);
+
+					}
+
+
+					commandBuffer.setViewport(0, 1, &viewport);
+					commandBuffer.setScissor(0, 1, &scissors);
+
+					commandBuffer.bindIndexBuffer(m_IndexBuffer->GetBuffer(), 0, m_IndexBuffer->GetIndexType());
+					commandBuffer.drawIndexed(static_cast<uint32_t>(amount), m_InstanceData.size(), 0, 0, 0);
+
+
+					vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
+					// water rendering
+					{
+
+						commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_ZWaterPipeline->m_Pipeline);
+						commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_ZWaterPipeline->m_PipelineLayout, 0, m_DescriptorSets[imageIndex], nullptr);
+						commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_ZWaterPipeline->m_PipelineLayout, 1, m_DescriptorSetTex, nullptr);
+						commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_ZWaterPipeline->m_PipelineLayout, 2, m_DescriptorSetNoise, nullptr);
+						commandBuffer.drawIndexed(static_cast<uint32_t>(amount), m_InstanceData.size(), 0, 0, 0);
+					}
+				}
+
+				m_Device->GetDevice().waitIdle();
+#endif // 0
+
+				
 				m_RenderCommandBuffer[imageIndex].BeginRenderPass(&m_TerrainPipeline->m_RenderPass, &m_Swapchain->m_SwapchainFrames[imageIndex].framebuffer, &m_Swapchain->m_SwapchainExtent);
 				vk::Viewport viewport;
 				viewport.x = 0;
@@ -1362,19 +1429,17 @@ namespace Voidstar
 				commandBuffer.bindIndexBuffer(m_IndexBuffer->GetBuffer(), 0, m_IndexBuffer->GetIndexType());
 				commandBuffer.drawIndexed(static_cast<uint32_t>(amount), m_InstanceData.size(), 0, 0, 0);
 
-				//m_RenderCommandBuffer[imageIndex].ChangeImageLayout(m_Swapchain->m_SwapchainFrames[currentFrame].imageDepth, vk::ImageLayout::eDepthStencilAttachmentOptimal, vk::ImageLayout::eShaderReadOnlyOptimal);
-			}
-			// Second sub pass
-			//commandBuffer.nextSubpass();
+			
 			vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
 			// water rendering
-			{
+				{
 
 				commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_WaterPipeline->m_Pipeline);
 				commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_WaterPipeline->m_PipelineLayout, 0, m_DescriptorSets[imageIndex], nullptr);
 				commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_WaterPipeline->m_PipelineLayout, 1, m_DescriptorSetTex, nullptr);
 				commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_WaterPipeline->m_PipelineLayout, 2, m_DescriptorSetNoise, nullptr);
 				commandBuffer.drawIndexed(static_cast<uint32_t>(amount), m_InstanceData.size(), 0, 0, 0);
+				}
 			}
 			m_RenderCommandBuffer[imageIndex].EndRenderPass();
 			TracyVkCollect(ctx, commandBuffer);
@@ -1541,16 +1606,7 @@ namespace Voidstar
 		depthAttachment.initialLayout = vk::ImageLayout::eUndefined;
 		depthAttachment.finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
 
-		// Define the depth attachment for reading(used in the second subpass as an input attachment)
-		vk::AttachmentDescription depthAttachmentRead = {};
-		depthAttachmentRead.format = depthFormat;
-		depthAttachmentRead.samples = samples;
-		depthAttachmentRead.loadOp = vk::AttachmentLoadOp::eLoad; // Load the existing depth data
-		depthAttachmentRead.storeOp = vk::AttachmentStoreOp::eDontCare; // We won't be using this attachment to render
-		depthAttachmentRead.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
-		depthAttachmentRead.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
-		depthAttachmentRead.initialLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal; // Use the layout from the first subpass
-		depthAttachmentRead.finalLayout = vk::ImageLayout::eShaderReadOnlyOptimal; // Transition to shader read layout for the second subpass
+		
 
 		vk::AttachmentReference depthAttachmentRef = {};
 		depthAttachmentRef.attachment = 1;
@@ -1579,39 +1635,51 @@ namespace Voidstar
 		subpass.flags = vk::SubpassDescriptionFlags();
 		subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
 		subpass.colorAttachmentCount = 1;
-		subpass.pColorAttachments = &msaaAttachmentRef;
+		subpass.pColorAttachments = &colorAttachmentRef;
 		subpass.pDepthStencilAttachment = &depthAttachmentRef;
 		//subpass.pResolveAttachments = &colorAttachmentRef;
 
 
 
+		vk::AttachmentReference depthStencilAttachmentRef = {};
+		depthStencilAttachmentRef.attachment = 1; // The index of the depth/stencil attachment in the attachments array
+		depthStencilAttachmentRef.layout = vk::ImageLayout::eGeneral; // The layout of the depth/stencil attachment
 		vk::SubpassDescription subpass1 = {};
 		subpass1.flags = vk::SubpassDescriptionFlags();
 		subpass1.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
 		subpass1.colorAttachmentCount = 1;
-		subpass1.pColorAttachments = &msaaAttachmentRef;
-		subpass1.pResolveAttachments = &colorAttachmentRef;
-		subpass1.pDepthStencilAttachment = &depthAttachmentRef;
+		subpass1.pColorAttachments = &colorAttachmentRef;
+		//subpass1.pResolveAttachments = &colorAttachmentRef;
+	//	subpass1.pDepthStencilAttachment = &depthStencilAttachmentRef;
 
-
-		vk::AttachmentReference reference = {};
-		reference.attachment = 1; // The index of the input attachment in the attachments array
-		reference.layout = vk::ImageLayout::eShaderReadOnlyOptimal; // The layout of the input attachment
-		std::vector<vk::AttachmentReference>inputReferences { reference };
-		//subpass1.inputAttachmentCount = inputReferences.size();
-		//subpass1.pInputAttachments = inputReferences.data();
+		std::vector<vk::AttachmentReference>inputReferences;
+		{
+			vk::AttachmentReference reference = {};
+			reference.attachment = 1; // The index of the input attachment in the attachments array
+			reference.layout = vk::ImageLayout::eShaderReadOnlyOptimal; // The layout of the input attachment
+			inputReferences .push_back(reference );
+			subpass1.inputAttachmentCount = inputReferences.size();
+			subpass1.pInputAttachments = inputReferences.data();
+		}
 		
 		std::vector<vk::SubpassDescription> subpasses = { subpass ,subpass1 };
 
 
+		vk::SubpassDependency dependency0{};
+		dependency0.srcSubpass = VK_SUBPASS_EXTERNAL;
+		dependency0.dstSubpass = 0;
+		dependency0.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+		dependency0.srcAccessMask = vk::AccessFlagBits::eNone;
+		dependency0.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+		dependency0.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
 		vk::SubpassDependency dependency = {};
 		dependency.srcSubpass = 0;
 		dependency.dstSubpass = 1;
 		dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
 		dependency.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
 		dependency.dstStageMask = vk::PipelineStageFlagBits::eFragmentShader;
-		dependency.dstAccessMask = vk::AccessFlagBits::eShaderRead;
-
+		dependency.dstAccessMask = vk::AccessFlagBits::eInputAttachmentRead;
+		std::vector<vk::SubpassDependency> dependencies = { dependency0 ,dependency };
 		//// define order of subpasses?
 		//// where srcAccess mask operations occurr
 		////list operatoins that must be completed before staring render pass
@@ -1632,8 +1700,8 @@ namespace Voidstar
 		renderpassInfo.pAttachments = attachments.data();
 		renderpassInfo.subpassCount = 2;
 		renderpassInfo.pSubpasses = subpasses.data();
-		renderpassInfo.dependencyCount = 1;
-		renderpassInfo.pDependencies = &dependency;
+		renderpassInfo.dependencyCount = dependencies.size();
+		renderpassInfo.pDependencies = dependencies.data();
 
 		try {
 			return device.createRenderPass(renderpassInfo);
@@ -1781,8 +1849,119 @@ namespace Voidstar
 
 			specs.descriptorSetLayout = m_DescriptorSetLayouts;
 
+			#if 0
+			// z render pass creation
+			{
+				auto device = m_Device->GetDevice();
+				auto samples = RenderContext::GetDevice()->GetSamples();
+				auto swapchainImageFormat = specs.swapchainImageFormat;
+				auto depthFormat = m_Swapchain->m_SwapchainFrames[0].depthFormat;
+
+
+
+				vk::AttachmentDescription depthAttachment = {};
+				depthAttachment.flags = vk::AttachmentDescriptionFlags();
+				depthAttachment.format = depthFormat;
+				depthAttachment.samples = samples;
+				depthAttachment.loadOp = vk::AttachmentLoadOp::eClear;
+				depthAttachment.storeOp = vk::AttachmentStoreOp::eStore;
+				depthAttachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
+				depthAttachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
+				depthAttachment.initialLayout = vk::ImageLayout::eUndefined;
+				depthAttachment.finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+
+
+				vk::AttachmentReference depthAttachmentRef = {};
+				depthAttachmentRef.attachment = 0;
+				depthAttachmentRef.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+
+
+
+				//Renderpasses are broken down into subpasses, there's always at least one.
+				vk::SubpassDescription subpass = {};
+				subpass.flags = vk::SubpassDescriptionFlags();
+				subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
+				subpass.pDepthStencilAttachment = &depthAttachmentRef;
+
+
+
+
+
+				std::vector<vk::SubpassDescription> subpasses = { subpass };
+
+
+				
+
+					//Now create the renderpass
+				vk::RenderPassCreateInfo renderpassInfo = {};
+
+				std::vector<vk::AttachmentDescription> attachments = { depthAttachment };
+				renderpassInfo.flags = vk::RenderPassCreateFlags();
+				renderpassInfo.attachmentCount = attachments.size();
+				renderpassInfo.pAttachments = attachments.data();
+				renderpassInfo.subpassCount = subpasses.size();
+				renderpassInfo.pSubpasses = subpasses.data();
+			
+
+				try {
+					m_ZPass = device.createRenderPass(renderpassInfo);
+				}
+				catch (vk::SystemError err)
+				{
+					Log::GetLog()->error("Failed to create Z prepass!");
+				}
+
+				// create Z pipelines
+
+				{
+
+					specs.vertexFilepath = BASE_SPIRV_OUTPUT + "noise.spvV";
+					specs.fragmentFilepath = BASE_SPIRV_OUTPUT + "ZPrepass.spvF";
+					specs.tessCFilepath = BASE_SPIRV_OUTPUT + "tess.spvC";
+					specs.tessEFilepath = BASE_SPIRV_OUTPUT + "tess.spvE";
+					attributeDescriptions =
+					{
+						VertexInputAttributeDescription(0,0,vk::Format::eR32G32B32Sfloat,offsetof(Vertex, Position)),
+						VertexInputAttributeDescription(0,1,vk::Format::eR32G32B32A32Sfloat,offsetof(Vertex, Color)),
+						VertexInputAttributeDescription(0,2,vk::Format::eR32G32Sfloat,offsetof(Vertex, UV)),
+
+						VertexInputAttributeDescription(1,4,vk::Format::eR32G32B32Sfloat,offsetof(InstanceData, pos)),
+						VertexInputAttributeDescription(1,5,vk::Format::eR32G32B32A32Sfloat,offsetof(InstanceData, edges)),
+						VertexInputAttributeDescription(1,6,vk::Format::eR32Sfloat,offsetof(InstanceData, scale)),
+					};
+
+					specs.bindingDescription = bindings;
+					m_ZTerrainPipeline = Pipeline::CreateGraphicsPipeline(specs, vk::PrimitiveTopology::ePatchList, m_Swapchain->m_SwapchainFrames[0].depthFormat, m_ZPass, 0, true, m_PolygoneMode);
+				}
+				{
+
+					specs.vertexFilepath = BASE_SPIRV_OUTPUT + "water.spvV";
+					specs.fragmentFilepath = BASE_SPIRV_OUTPUT + "ZPrepass.spvF";
+					specs.tessCFilepath = BASE_SPIRV_OUTPUT + "waterTess.spvC";
+					specs.tessEFilepath = BASE_SPIRV_OUTPUT + "waterTess.spvE";;
+					attributeDescriptions =
+					{
+						VertexInputAttributeDescription(0,0,vk::Format::eR32G32B32Sfloat,offsetof(Vertex, Position)),
+						VertexInputAttributeDescription(0,1,vk::Format::eR32G32B32A32Sfloat,offsetof(Vertex, Color)),
+						VertexInputAttributeDescription(0,2,vk::Format::eR32G32Sfloat,offsetof(Vertex, UV)),
+
+						VertexInputAttributeDescription(1,4,vk::Format::eR32G32B32Sfloat,offsetof(InstanceData, pos)),
+						VertexInputAttributeDescription(1,5,vk::Format::eR32G32B32A32Sfloat,offsetof(InstanceData, edges)),
+						VertexInputAttributeDescription(1,6,vk::Format::eR32Sfloat,offsetof(InstanceData, scale)),
+					};
+
+					specs.bindingDescription = bindings;
+				m_ZWaterPipeline = Pipeline::CreateGraphicsPipeline(specs, vk::PrimitiveTopology::ePatchList, m_Swapchain->m_SwapchainFrames[0].depthFormat, m_ZPass, 0, true, m_PolygoneMode);
+				}
+			}
+			#endif // 0
+
+			
+
+
+
 			auto terrainRenderPass = MakeRenderPass(m_Device->GetDevice(), specs.swapchainImageFormat,m_Swapchain->m_SwapchainFrames[0].depthFormat);
-			m_TerrainPipeline = Pipeline::CreateGraphicsPipeline(specs, vk::PrimitiveTopology::ePatchList, m_Swapchain->m_SwapchainFrames[0].depthFormat, terrainRenderPass,0,m_PolygoneMode);
+			m_TerrainPipeline = Pipeline::CreateGraphicsPipeline(specs, vk::PrimitiveTopology::ePatchList, m_Swapchain->m_SwapchainFrames[0].depthFormat, terrainRenderPass,0,true,m_PolygoneMode);
 		
 		}
 		
@@ -1834,7 +2013,7 @@ namespace Voidstar
 			specs.descriptorSetLayout = m_DescriptorSetLayouts;
 		
 
-			m_WaterPipeline = Pipeline::CreateGraphicsPipeline(specs, vk::PrimitiveTopology::ePatchList, m_Swapchain->m_SwapchainFrames[0].depthFormat, m_TerrainPipeline->m_RenderPass,1,m_PolygoneMode);
+			m_WaterPipeline = Pipeline::CreateGraphicsPipeline(specs, vk::PrimitiveTopology::ePatchList, m_Swapchain->m_SwapchainFrames[0].depthFormat, m_TerrainPipeline->m_RenderPass,1,false,m_PolygoneMode);
 		}
 		
 	}

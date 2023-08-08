@@ -10,7 +10,7 @@ namespace Voidstar
 	vk::ShaderModule CreateModule(std::string filename, vk::Device device);
 	static vk::PipelineLayout MakePipelineLayout(vk::Device device, std::vector<vk::DescriptorSetLayout> layout);
 
-	UPtr<Pipeline> Pipeline::CreateGraphicsPipeline(GraphicsPipelineSpecification& spec, vk::PrimitiveTopology topology, vk::Format depthFormat, vk::RenderPass renderpass ,int subpass,vk::PolygonMode polygonMode)
+	UPtr<Pipeline> Pipeline::CreateGraphicsPipeline(GraphicsPipelineSpecification& spec, vk::PrimitiveTopology topology, vk::Format depthFormat, vk::RenderPass renderpass ,int subpass,bool writeToDepthBuffer, vk::PolygonMode polygonMode)
 	{
 		auto pipeline = CreateUPtr<Pipeline>();
 
@@ -197,7 +197,7 @@ namespace Voidstar
 		vk::PipelineDepthStencilStateCreateInfo depthState;
 		depthState.flags = vk::PipelineDepthStencilStateCreateFlags();
 		depthState.depthTestEnable = true;
-		depthState.depthWriteEnable = true;
+		depthState.depthWriteEnable = writeToDepthBuffer;
 		depthState.depthCompareOp = vk::CompareOp::eLess;
 		depthState.depthBoundsTestEnable = false;
 		depthState.stencilTestEnable = false;

@@ -150,6 +150,7 @@ namespace Voidstar
 		vk::SampleCountFlags counts = physicalDeviceProperties.limits.framebufferColorSampleCounts &
 			physicalDeviceProperties.limits.framebufferDepthSampleCounts;
 
+		return vk::SampleCountFlagBits::e1;
 		if (counts & vk::SampleCountFlagBits::e64) { return vk::SampleCountFlagBits::e64; }
 		if (counts & vk::SampleCountFlagBits::e32) { return vk::SampleCountFlagBits::e32; }
 		if (counts & vk::SampleCountFlagBits::e16) { return vk::SampleCountFlagBits::e16; }
@@ -157,7 +158,6 @@ namespace Voidstar
 		if (counts & vk::SampleCountFlagBits::e4) { return vk::SampleCountFlagBits::e4; }
 		if (counts & vk::SampleCountFlagBits::e2) { return vk::SampleCountFlagBits::e2; }
 
-		return vk::SampleCountFlagBits::e1;
 	}
 	uint32_t Device::FindMemoryTypeIndex( uint32_t supportedMemoryIndices, vk::MemoryPropertyFlags requestedProperties)
 	{

@@ -6,7 +6,8 @@ layout(location = 0) in vec4 color;
 layout(location = 1) in vec2 uv ;
 layout(location = 2) in vec2 uvMesh ;
 //layout(location = 2) in float scale;
-//layout(location = 3) in vec4 worldSpacePos;
+layout(location = 3) in vec3 worldSpacePos;
+layout(location = 4) in vec4 clipSpace;
 //layout(location = 4) in float depth;
 
 
@@ -102,6 +103,16 @@ vec3 blend(vec4 texture1, float a1, vec4 texture2, float a2)
     //return a1 > a2 ? texture1.rgb  *a1 :  texture2.rgb *a2;
 }
 
+const float far = 10000;
+ const float near = 0.01;
+ float linerizeDepth(float depth)
+{
+    float ndc = depth * 2.0 - 1.0;
+    float linearDepth = (2.0 * near * far) / (far + near - ndc * (far - near));
+    linearDepth/=far;
+    return linearDepth;
+}
+    
 void main() 
 {
 
@@ -149,11 +160,20 @@ void main()
 
 
 
+    float currentDepth = gl_FragCoord.z*(1/gl_FragCoord.w);
+   // outColor.xyz = vec3(currentDepth,currentDepth,currentDepth);
+  outColor.xyz =blendedColor.xyz;
 
-    outColor.xyz =blendedColor.xyz;
-	outColor.a = 1;
+ float linearDepth = linerizeDepth(gl_FragCoord.z);
 
+//linearDepth = clipSpace.z/clipSpace.w;
+if(linearDepth<gl_FragCoord.z)
+{
+    //outColor.xyz = vec3(linearDepth,linearDepth,linearDepth);
+}
 
-    
+ //outColor.xyz= vec3(linearDepth,linearDepth,linearDepth);
+ outColor.a = 1;
+// gl_FragDepth = linearDepth;
    
 }

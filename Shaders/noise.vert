@@ -46,6 +46,7 @@ layout(location = 0) out vec4 color ;
 layout(location = 1) out vec2 uv ;
 layout(location = 2) out vec4 edges;
 layout(location = 3) out vec2 uvMesh;
+layout(location = 4) out vec3 outWorldPos;
 
 float norm(float val, float max,float min)
  {
@@ -91,6 +92,7 @@ void main()
 	color =vec4( worldPos.y, noiseData.multipler, in_uv) ;
   
 	vec4 pos =	 worldPos;
+    outWorldPos = pos.xyz;
 	gl_Position = pos;
     edges = instanceEdges;
     uvMesh = in_uv;

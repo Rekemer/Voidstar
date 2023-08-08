@@ -14,6 +14,8 @@ namespace Voidstar
 		vk::Format depthFormat;
 		
 		vk::Framebuffer framebuffer;
+
+
 	};
 
 	struct SwapChainSupportDetails;

@@ -33,7 +33,7 @@ namespace Voidstar
 	class Pipeline
 	{
 	public:
-		static UPtr<Pipeline> CreateGraphicsPipeline(GraphicsPipelineSpecification& spec, vk::PrimitiveTopology topology, vk::Format depthFormat, vk::RenderPass renderpass, int subpass, vk::PolygonMode polygonMode = vk::PolygonMode::eFill);
+		static UPtr<Pipeline> CreateGraphicsPipeline(GraphicsPipelineSpecification& spec, vk::PrimitiveTopology topology, vk::Format depthFormat, vk::RenderPass renderpass, int subpass, bool writeToDepthBuffer, vk::PolygonMode polygonMode = vk::PolygonMode::eFill);
 		static UPtr<Pipeline> CreateComputePipeline();
 		~Pipeline();
 

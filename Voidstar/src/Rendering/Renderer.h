@@ -214,6 +214,9 @@ namespace Voidstar
 
 		UPtr<Pipeline> m_TerrainPipeline;
 		UPtr<Pipeline> m_WaterPipeline;
+		// Z Prepass
+		UPtr<Pipeline> m_ZTerrainPipeline;
+		UPtr<Pipeline> m_ZWaterPipeline;
 
 		
 		vk::Pipeline m_DebugPipeline;
@@ -256,6 +259,8 @@ namespace Voidstar
 
 		bool m_IsResized, m_IsNewParametrs, m_IsPolygon;
 
+
+		vk::RenderPass m_ZPass;
 	
 	};
 

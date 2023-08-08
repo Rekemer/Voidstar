@@ -22,9 +22,12 @@ layout(set=2,binding = 2) uniform NoiseData {
 layout(location = 0) in vec4[] inColor ;
 layout(location = 1) in vec2[] ivUv ;
 layout(location = 2) in vec2[] inUvMesh ;
+layout(location = 3) in vec3[] inWorldPos ;
 layout(location = 0) out vec4 outColor;
 layout(location = 1) out vec2 outUv;
 layout(location = 2) out vec2 outUvMesh;
+layout(location = 3) out vec3 worldPos;
+layout(location = 4) out vec4 outClipSpace;
 layout (quads) in;
 
 
@@ -98,5 +101,8 @@ void main()
      outColor =vec4(p.y,noiseData.multipler,inUvMesh[0]);
      outUv = newUv;
      outUvMesh = gl_TessCoord.xy;
-    gl_Position = ubo.proj*ubo.view*p;
+     vec4 clipSpace =ubo.proj*ubo.view*p; 
+    gl_Position = clipSpace;
+    worldPos = p.xyz;
+    outClipSpace = clipSpace;
 }
