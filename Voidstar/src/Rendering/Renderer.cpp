@@ -61,6 +61,9 @@ namespace Voidstar
 	#define	IMGUI_ENABLED 1
 	size_t currentFrame = 0;
 	static float exeTime = 24;
+	// noise
+	const float noiseTextureWidth = 450.f;
+	const float noiseTextureHeight = 450.f;
 	// Data
 	static VkAllocationCallbacks* g_Allocator = nullptr;
 	static VkInstance               g_Instance = VK_NULL_HANDLE;
@@ -442,8 +445,10 @@ namespace Voidstar
 			m_DescriptorSetNoise = m_DescriptorPoolNoise->AllocateDescriptorSets(1, layouts.data())[0];
 		}
 
-		m_NoiseImage = Image::CreateEmptyImage(noiseData.textureWidth, noiseData.textureHeight, vk::Format::eR8G8B8A8Snorm);
-		m_AnimatedNoiseImage = Image::CreateEmptyImage(noiseData.textureWidth, noiseData.textureHeight, vk::Format::eR8G8B8A8Snorm);
+
+		
+		m_NoiseImage = Image::CreateEmptyImage(noiseTextureWidth, noiseTextureHeight, vk::Format::eR8G8B8A8Snorm);
+		m_AnimatedNoiseImage = Image::CreateEmptyImage(noiseTextureWidth, noiseTextureHeight, vk::Format::eR8G8B8A8Snorm);
 
 		
 
@@ -574,7 +579,7 @@ namespace Voidstar
 		cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_ComputePipelineLayout, 0, 1, &m_DescriptorSets[currentFrame], 0, 0);
 		cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_ComputePipelineLayout, 1, 1, &m_DescriptorSetNoise, 0, 0);
 
-		vkCmdDispatch(cmdBuffer, noiseData.textureWidth / 16, noiseData.textureHeight / 16, 1);
+		vkCmdDispatch(cmdBuffer, noiseTextureWidth / 16, noiseTextureHeight / 16, 1);
 
 		m_ComputeCommandBuffer[currentFrame].ChangeImageLayout(m_NoiseImage.get(), vk::ImageLayout::eGeneral, vk::ImageLayout::eShaderReadOnlyOptimal);
 		m_ComputeCommandBuffer[currentFrame].ChangeImageLayout(m_AnimatedNoiseImage.get(), vk::ImageLayout::eGeneral, vk::ImageLayout::eShaderReadOnlyOptimal);
@@ -1509,7 +1514,7 @@ namespace Voidstar
 		{
 			m_Device->GetDevice().waitIdle();
 			m_NoiseImage.reset();
-			m_NoiseImage = Image::CreateEmptyImage(noiseData.textureWidth,noiseData.textureHeight,vk::Format::eR8G8B8A8Snorm);
+			m_NoiseImage = Image::CreateEmptyImage(noiseTextureWidth, noiseTextureHeight,vk::Format::eR8G8B8A8Snorm);
 			m_Device->UpdateDescriptorSet(m_DescriptorSetNoise, 0, 1, *m_NoiseImage, vk::ImageLayout::eGeneral, vk::DescriptorType::eStorageImage);
 			m_Device->UpdateDescriptorSet(m_DescriptorSetTex, 0, 1, *m_NoiseImage, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
 		}

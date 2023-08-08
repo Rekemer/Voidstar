@@ -116,7 +116,7 @@ vec3 blend(vec4 texture1, float a1, vec4 texture2, float a2)
 
 
 const float far = 10000;
- const float near = 0.01;
+ const float near = 10.00;
 
 float linerizeDepth(float depth)
 {
@@ -141,7 +141,8 @@ void main()
 
       // Sample the depth texture to get the depth value of the fragment from the depth buffer
     float depthValue = subpassLoad(inputDepth).r;
-    if (depthValue < gl_FragCoord.z)
+    float linearCurrentDepth = linerizeDepth(gl_FragCoord.z);
+    if (depthValue < linearCurrentDepth)
     {
         discard;
     }
@@ -156,8 +157,8 @@ void main()
     // Calculate the distance between the current fragment and the fragment in the depth buffer
     linearDepthFromDepthBuffer*= far;
     float currentDepth = gl_FragCoord.z*(1/gl_FragCoord.w);
-    currentDepth +=1 ;
-    float distanceFromShore = linearDepthFromDepthBuffer-currentDepth;
+    currentDepth +=15.0 ;
+    float distanceFromShore = depthValue*far-currentDepth;
     // Distance at which the shoreline effect starts (adjust as needed)
     float shorelineDistanceThreshold = 0.1;
 

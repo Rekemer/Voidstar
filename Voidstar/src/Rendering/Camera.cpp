@@ -36,8 +36,9 @@ namespace Voidstar
     {
 
        /* m_Proj = PreparePerspectiveProjectionMatrix(width / height, 45.0f,0,100);*/
-
-        m_Proj = glm::perspective(glm::radians(45.0f), width / height, 0.01f, 10000.0f);
+        const float farPlane = 10000;
+        const float nearPlane = 10.00;
+        m_Proj = glm::perspective(glm::radians(45.0f), width / height, nearPlane, farPlane);
         m_Proj[1][1] *= -1;
 
     }
@@ -50,7 +51,7 @@ namespace Voidstar
 
     void Camera::ProcessInput(float deltaTime)
 	{
-            const float cameraSpeed = 15.f; 
+            const float cameraSpeed = speed;
             deltaTime = 0.01f;
             if (Input::IsKeyPressed(VS_KEY_W))
             {

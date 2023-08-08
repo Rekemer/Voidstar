@@ -16,9 +16,12 @@ layout(set=2,binding = 2) uniform NoiseData {
     float frequence ;
 	float amplitude ;
 	float octaves ;
-	float textureHeight ;
-	float textureWidth ;
 	float multipler ;
+    float exponent;
+	float scale;
+    
+    float normalStrength;
+	float waterScale;
     
 } noiseData;
 // vertexAttributes

@@ -14,9 +14,9 @@ layout(set=2,binding = 2) uniform NoiseData {
     float frequence ;
 	float amplitude ;
 	float octaves ;
-	float textureHeight ;
-	float textureWidth ;
 	float multipler ;
+    float exponent;
+    float uvScale;
     
 } noiseData;
 layout(location = 0) in vec4[] inColor ;

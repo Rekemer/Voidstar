@@ -14,10 +14,11 @@ layout(set=2,binding = 2) uniform NoiseData {
     float frequence ;
 	float amplitude ;
 	float octaves ;
-	float textureHeight ;
-	float textureWidth ;
 	float multipler ;
-        float normalStrength ;
+    float exponent;
+	float scale;
+    
+    float normalStrength;
 	float waterScale;
     
 } noiseData;
@@ -98,7 +99,8 @@ void main()
     );
 
     vec3 offset = texture(u_Tex[1],newUv).xyz;
-    p.xyz+=offset *noiseData.normalStrength *noiseData.multipler  ; 
+    p.xz+=offset.xy *noiseData.normalStrength   ; 
+    p.y +=(offset.y*noiseData.multipler);
      outColor = vec4(newUv,0,1);
      outColor =color;
      outUv = newUv;

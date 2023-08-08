@@ -95,14 +95,12 @@ namespace Voidstar
 		float frequence = 5.f;
 		float amplitude = 0.3f;
 		float octaves = 3;
-		float textureHeight = 450;
-		float textureWidth = 450;
 		float multipler = 8.f;
 		float exponent = 4.f;
 		float scale = 3.f;
 		// water
-		float normalStrength;
-		float waterScale;
+		float normalStrength =0.4f ;
+		float waterScale = 10.f;
 		
 
 	};

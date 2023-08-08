@@ -104,7 +104,7 @@ vec3 blend(vec4 texture1, float a1, vec4 texture2, float a2)
 }
 
 const float far = 10000;
- const float near = 0.01;
+ const float near = 10.00;
  float linerizeDepth(float depth)
 {
     float ndc = depth * 2.0 - 1.0;
@@ -174,6 +174,6 @@ if(linearDepth<gl_FragCoord.z)
 
  //outColor.xyz= vec3(linearDepth,linearDepth,linearDepth);
  outColor.a = 1;
-// gl_FragDepth = linearDepth;
+ gl_FragDepth = linearDepth;
    
 }

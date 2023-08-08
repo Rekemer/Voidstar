@@ -14,11 +14,10 @@ layout(set=1,binding = 2) uniform NoiseData {
     float frequence ;
 	float amplitude ;
 	float octaves ;
-	float textureHeight ;
-	float textureWidth ;
 	float multipler;
 	float exponent ;
 	float scale;
+
     float normalStrength ;
 	float waterScale;
     
@@ -149,7 +148,7 @@ void main()
 {
    // Get the image coordinates
     ivec2 coords = ivec2(gl_GlobalInvocationID.xy);
-    vec2 imageSize = vec2(noiseData.textureWidth,noiseData.textureHeight);
+    vec2 imageSize = vec2(450,450);
     float u = float(coords.x) / float(imageSize.x);
     float v = float(coords.y) / float(imageSize.y);
     vec2 st = vec2 (u,v);
