@@ -1640,7 +1640,7 @@ namespace Voidstar
 		subpass.flags = vk::SubpassDescriptionFlags();
 		subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
 		subpass.colorAttachmentCount = 1;
-		subpass.pColorAttachments = &colorAttachmentRef;
+		subpass.pColorAttachments = &msaaAttachmentRef;
 		subpass.pDepthStencilAttachment = &depthAttachmentRef;
 		//subpass.pResolveAttachments = &colorAttachmentRef;
 
@@ -1653,8 +1653,8 @@ namespace Voidstar
 		subpass1.flags = vk::SubpassDescriptionFlags();
 		subpass1.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
 		subpass1.colorAttachmentCount = 1;
-		subpass1.pColorAttachments = &colorAttachmentRef;
-		//subpass1.pResolveAttachments = &colorAttachmentRef;
+		subpass1.pColorAttachments = &msaaAttachmentRef;
+		subpass1.pResolveAttachments = &colorAttachmentRef;
 	//	subpass1.pDepthStencilAttachment = &depthStencilAttachmentRef;
 
 		std::vector<vk::AttachmentReference>inputReferences;

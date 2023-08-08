@@ -17,7 +17,7 @@ layout(set = 0, binding = 0) uniform UniformBufferObject {
     float time;
     
 } ubo;
-layout (input_attachment_index = 0, set = 0, binding = 1) uniform subpassInput inputDepth;
+layout (input_attachment_index = 0, set = 0, binding = 1) uniform subpassInputMS inputDepth;
 
 layout(set = 1, binding = 0) uniform sampler2D[2] u_Noise;
 layout(set = 1, binding = 1) uniform sampler2D u_Tex1;
@@ -140,7 +140,7 @@ void main()
     // Calculate the distance from the camera to the fragment
 
       // Sample the depth texture to get the depth value of the fragment from the depth buffer
-    float depthValue = subpassLoad(inputDepth).r;
+    float depthValue = subpassLoad(inputDepth,2).r;
     float linearCurrentDepth = linerizeDepth(gl_FragCoord.z);
     if (depthValue < linearCurrentDepth)
     {
@@ -203,6 +203,7 @@ void main()
     }
    finalColor = vec3(distanceFromShore,distanceFromShore,distanceFromShore);  
    //finalColor =  subpassLoad(inputDepth,).xyz;  
+   // finalColor = vec3(1,0,1);
     outColor.xyz = finalColor;
 	outColor.a = 1;
 
