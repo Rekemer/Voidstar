@@ -481,15 +481,21 @@ namespace Voidstar
 
 		}
 
-
-		std::vector<std::string> cubemap = { BASE_RES_PATH+"sky/bluecloud_lf.jpg",
-		BASE_RES_PATH + "sky/bluecloud_rt.jpg", 
-		BASE_RES_PATH + "sky/bluecloud_up.jpg", 
-		BASE_RES_PATH + "sky/bluecloud_dn.jpg", 
-		BASE_RES_PATH + "sky/bluecloud_ft.jpg", 
-		BASE_RES_PATH + "sky/bluecloud_bk.jpg", };
+		std::string right = "sky/bluecloud_rt.jpg";
+		std::string left = "sky/bluecloud_lf.jpg";
+		std::string top = "sky/bluecloud_up.jpg";
+		std::string down = "sky/bluecloud_dn.jpg";
+		std::string forward= "sky/bluecloud_ft.jpg";
+		std::string back= "sky/bluecloud_bk.jpg";
+		// left x
+		std::vector<std::string> cubemap = { BASE_RES_PATH+ right,
+		BASE_RES_PATH + left,
+		BASE_RES_PATH + top,
+		BASE_RES_PATH + top,
+		BASE_RES_PATH + back, // back -z
+		BASE_RES_PATH + forward }; // forward +z
 		m_Cubemap = Image::CreateCubemap(cubemap);
-
+		m_Device->UpdateDescriptorSet(m_DescriptorSetSky, 0, 1, *m_Cubemap, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
 		m_SnowTex = Image::CreateImage(BASE_RES_PATH + "terrain/snow/Snow_003_COLOR.jpg");
 		m_Device->UpdateDescriptorSet(m_DescriptorSetTex,1,1,*m_SnowTex,vk::ImageLayout::eShaderReadOnlyOptimal,vk::DescriptorType::eCombinedImageSampler);
 		m_GrassTex = Image::CreateImage(BASE_RES_PATH +"terrain/grass.jpg");
@@ -1148,7 +1154,10 @@ namespace Voidstar
 		
 		auto cameraView = m_App->GetCamera()->GetView();
 		auto cameraProj = m_App->GetCamera()->GetProj();
-
+		//glm::vec3 eye = { 1.0f, 0.0f, 5.0f };
+		//glm::vec3 center = { 0.5f, -1.0f, 0.0f };
+		//glm::vec3 up = { 0.0f, 0.0f, 1.0f };
+		//cameraView = glm::lookAt(eye,center,up);
 		//ubo.model = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 		//ubo.view = glm::lookAt(glm::vec3(-2.0f, 0.0f, 4.0f), glm::vec3(0.5f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f));
 		////ubo.proj = glm::perspective(glm::radians(45.0f), extent.width / (float)extent.height, 0.0001f, 10.0f);
@@ -1451,7 +1460,7 @@ namespace Voidstar
 				commandBuffer.setScissor(0, 1, &scissors);
 
 				commandBuffer.bindIndexBuffer(m_IndexBuffer->GetBuffer(), 0, m_IndexBuffer->GetIndexType());
-			//	commandBuffer.drawIndexed(static_cast<uint32_t>(amount), m_InstanceData.size(), 0, 0, 0);
+				//commandBuffer.drawIndexed(static_cast<uint32_t>(amount), m_InstanceData.size(), 0, 0, 0);
 
 			
 			vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);

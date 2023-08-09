@@ -21,7 +21,7 @@ namespace Voidstar
 	{
 	public:
 		// create image
-		static VkImageView CreateImageView(vk::Image& image, vk::Format format, vk::ImageAspectFlags aspect, int mipmap = 1, int layers = 1);
+		static VkImageView CreateImageView(vk::Image& image, vk::Format format, vk::ImageAspectFlags aspect, vk::ImageViewType viewType =  vk::ImageViewType::e2D, int mipmap = 1, int layers = 1);
 
 		static vk::Image CreateVKImage(ImageSpecs& specs, vk::SampleCountFlagBits samples = vk::SampleCountFlagBits::e1, int mipmap = 1);
 		static vk::DeviceMemory CreateMemory(vk::Image& image, ImageSpecs& specs);

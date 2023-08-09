@@ -11,11 +11,11 @@
 #include "Renderer.h"
 namespace Voidstar
 {
-	VkImageView Image::CreateImageView(vk::Image& image, vk::Format format, vk::ImageAspectFlags aspect, int mipmap, int layers)
+	VkImageView Image::CreateImageView(vk::Image& image, vk::Format format, vk::ImageAspectFlags aspect, vk::ImageViewType viewType,int mipmap, int layers)
 	{
 		vk::ImageViewCreateInfo createInfo = {};
 		createInfo.image = image;
-		createInfo.viewType = vk::ImageViewType::e2D;
+		createInfo.viewType = viewType;
 		createInfo.format = format;
 		createInfo.components.r = vk::ComponentSwizzle::eIdentity;
 		createInfo.components.g = vk::ComponentSwizzle::eIdentity;
@@ -148,7 +148,7 @@ namespace Voidstar
 		free(pixels);
 
 
-		image->m_ImageView = CreateImageView(image->m_Image, vk::Format::eR8G8B8A8Unorm, vk::ImageAspectFlagBits::eColor, mipMaps);
+		image->m_ImageView = CreateImageView(image->m_Image, vk::Format::eR8G8B8A8Unorm, vk::ImageAspectFlagBits::eColor, vk::ImageViewType::e2D, mipMaps);
 
 
 		/*
@@ -289,10 +289,10 @@ namespace Voidstar
 
 
 
-		//commandBuffer.BeginTransfering();
-		//commandBuffer.ChangeImageLayout(image.get(), vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal, mipMaps);
-		//commandBuffer.EndTransfering();
-		//commandBuffer.SubmitSingle();
+		commandBuffer.BeginTransfering();
+		commandBuffer.ChangeImageLayout(image.get(), vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal, mipMaps,6);
+		commandBuffer.EndTransfering();
+		commandBuffer.SubmitSingle();
 
 		//image->GenerateMipmaps(image->m_Image, (VkFormat)image->m_Format, image->m_Width, image->m_Height, mipMaps);
 
@@ -303,7 +303,7 @@ namespace Voidstar
 		}
 
 
-		image->m_ImageView = CreateImageView(image->m_Image, vk::Format::eR8G8B8A8Unorm, vk::ImageAspectFlagBits::eColor, mipMaps);
+		image->m_ImageView = CreateImageView(image->m_Image, vk::Format::eR8G8B8A8Unorm, vk::ImageAspectFlagBits::eColor, vk::ImageViewType::eCube, mipMaps,6);
 
 
 		/*
