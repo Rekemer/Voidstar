@@ -17,6 +17,25 @@ layout(set = 0, binding = 0) uniform UniformBufferObject {
     float time;
     
 } ubo;
+layout(set=2,binding = 2) uniform NoiseData {
+
+    float frequence ;
+	float amplitude ;
+	float octaves ;
+	float multipler ;
+    float exponent;
+	float scale;
+    
+    float normalStrength;
+	float waterScale;
+    float waterDepth;
+    float waterStrength;
+
+    vec3 deepWaterColor;
+    vec3 shallowWaterColor;
+
+    
+} noiseData;
 layout (input_attachment_index = 0, set = 0, binding = 1) uniform subpassInputMS inputDepth;
 
 layout(set = 1, binding = 0) uniform sampler2D[2] u_Noise;
@@ -135,7 +154,7 @@ void main()
    // float linearDepth =linerizeDepth();
 
     // Calculate the view direction
-    vec3 viewDir = normalize(worldPos.xyz - ubo.playerPos.xyz);
+    
 
     // Calculate the distance from the camera to the fragment
 
@@ -157,7 +176,7 @@ void main()
     // Calculate the distance between the current fragment and the fragment in the depth buffer
     linearDepthFromDepthBuffer*= far;
     float currentDepth = gl_FragCoord.z*(1/gl_FragCoord.w);
-    currentDepth +=15.0 ;
+    currentDepth +=noiseData.waterDepth;
     float distanceFromShore = depthValue*far-currentDepth;
     // Distance at which the shoreline effect starts (adjust as needed)
     float shorelineDistanceThreshold = 0.1;
@@ -183,25 +202,19 @@ void main()
     //vec4 waterNormal1 = texture(u_WaterNormal1,uvMesh*tiling+speed1);
     vec3 combinedTex= texture(u_Noise[1],uv).xyz;
    
-    //vec3 lightDir = normalize(lightPos - worldPos.xyz);
-    // vec3 lightDir = normalize(vec3(3,12,12));
-    // vec3 norm = normalize(vec3(combinedTex));
-    // float diff = max(dot(norm, lightDir), 0.0);
-    // vec3 reflectDir = reflect(-lightDir, norm);
-    // vec3 viewDir = normalize(ubo.playerPos.xyz - worldPos.xyz);
-    // float spec = pow(max(dot(viewDir, reflectDir), 0.0), 2);
-    //outColor.xy =uvMesh;
-    //outColor.z = 0; 
-    //dist = color.z;
-   // diff = length(ubo.playerPos.xyz - worldPos.xyz);
-   //vec3 waterColor =  vec3(0.2,0.4,0.4);
-   // vec3 diffuse  =  diff * waterColor;
-     //vec3 finalColor= diffuse+spec;
-    //if (currentDepth < gl_FragCoord.z)
-    {
-       // finalColor = vec3(1,0,1);
-    }
-   finalColor = vec3(distanceFromShore,distanceFromShore,distanceFromShore);  
+
+    vec3 lightDir = normalize(vec3(3,12,12));
+    vec3 norm = normalize(vec3(combinedTex));
+    float diff = max(dot(norm, lightDir), 0.0);
+    vec3 reflectDir = reflect(-lightDir, norm);
+    vec3 viewDir = normalize(ubo.playerPos.xyz - worldPos.xyz);
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0),100);
+
+   float blendFactor = clamp(distanceFromShore* noiseData.waterStrength,0,1);
+   
+   finalColor = vec3(blendFactor,blendFactor,blendFactor);  
+    finalColor =(diff*combinedTex + spec*combinedTex) + mix(noiseData.shallowWaterColor,noiseData.deepWaterColor,blendFactor);
+   // finalColor = noiseData.shallowWaterColor;
    //finalColor =  subpassLoad(inputDepth,).xyz;  
    // finalColor = vec3(1,0,1);
     outColor.xyz = finalColor;

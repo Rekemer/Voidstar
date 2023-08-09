@@ -89,7 +89,7 @@ void main()
     float noiseValue = texture(u_Tex[1],newUv).x;
 	color =vec4( worldPos.y, noiseData.multipler, in_uv) ;
   
-	vec4 pos =	 worldPos;
+	vec4 pos =	 worldPos + vec4(0,1,0,0);
     vec3 offset = texture(u_Tex[1],newUv).xyz;
     //pos.xyz+=offset*noiseData.multipler; 
     //noiseValue = length(worldPos.xz);

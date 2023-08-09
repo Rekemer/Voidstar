@@ -178,6 +178,6 @@ void main()
     // dynamic noise
     vec4 combinedNormals = waterNormal+waterNormal1;
 
-    imageStore(storageImage[1], coords,   noiseData.normalStrength* combinedNormals);
+    imageStore(storageImage[1], coords,   noiseData.normalStrength* normalize(combinedNormals));
 
 }

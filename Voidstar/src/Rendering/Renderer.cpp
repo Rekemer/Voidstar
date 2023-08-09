@@ -433,7 +433,7 @@ namespace Voidstar
 			layoutBinding3.binding = 2;
 			layoutBinding3.descriptorType = vk::DescriptorType::eUniformBuffer;
 			layoutBinding3.stageFlags = vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex |
-				vk::ShaderStageFlagBits::eTessellationEvaluation;
+				vk::ShaderStageFlagBits::eTessellationEvaluation | vk::ShaderStageFlagBits::eFragment;
 			layoutBinding3.descriptorCount = 1;
 
 
@@ -2231,6 +2231,10 @@ namespace Voidstar
 		ImGui::Text("Water");
 		m_IsNewParametrs |= ImGui::SliderFloat("normal strength", &noiseData.normalStrength, 0, 1);
 		m_IsNewParametrs |= ImGui::SliderFloat("water scale ", &noiseData.waterScale, 0, 5000);
+		m_IsNewParametrs |= ImGui::SliderFloat("water depth ", &noiseData.waterDepth, 0, 100);
+		m_IsNewParametrs |= ImGui::SliderFloat("water strength ", &noiseData.waterStrength, 0, 1);
+		m_IsNewParametrs |= ImGui::ColorEdit3("deep water color ", &noiseData.deepWaterColor[0]);
+		m_IsNewParametrs |= ImGui::ColorEdit3("shallow water color", &noiseData.shallowWaterColor[0]);
 		m_IsPolygon = ImGui::Button("change mode");
 		
 		//std::string strMemory = "Allocated memory " + std::to_string(allocationMetrics.Current()) + " Bytes";

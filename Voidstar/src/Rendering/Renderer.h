@@ -101,7 +101,11 @@ namespace Voidstar
 		// water
 		float normalStrength =0.4f ;
 		float waterScale = 10.f;
-		
+		float waterDepth = 0.3f;
+		float waterStrength=0.3f;
+		alignas(16)glm::vec3 deepWaterColor = {14/255.f,129/255.f,184/255.f};
+		alignas(16)glm::vec3 shallowWaterColor = { 118/255.f,196/255.f,216/255.f };
+
 
 	};
 	class Instance;
