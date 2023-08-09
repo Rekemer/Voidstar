@@ -487,13 +487,30 @@ namespace Voidstar
 		std::string down = "sky/bluecloud_dn.jpg";
 		std::string forward= "sky/bluecloud_ft.jpg";
 		std::string back= "sky/bluecloud_bk.jpg";
+
+		 right = "test/skybox/right.jpg";
+		 left = "test/skybox/left.jpg";
+		 top = "test/skybox/top.jpg";
+		 down = "test/skybox/bottom.jpg";
+		 forward = "test/skybox/front.jpg";
+		 back = "test/skybox/back.jpg";
+
 		// left x
-		std::vector<std::string> cubemap = { BASE_RES_PATH+ right,
-		BASE_RES_PATH + left,
-		BASE_RES_PATH + top,
-		BASE_RES_PATH + top,
-		BASE_RES_PATH + back, // back -z
-		BASE_RES_PATH + forward }; // forward +z
+		//std::vector<std::string> cubemap = { BASE_RES_PATH+ left,
+		//BASE_RES_PATH + right,
+		//BASE_RES_PATH + down,
+		//BASE_RES_PATH + top,
+		//BASE_RES_PATH + back, // back -z
+		//BASE_RES_PATH + forward }; // forward +z
+
+		 std::vector<std::string> cubemap = {
+		 BASE_RES_PATH + right,    // Positive X
+		 BASE_RES_PATH + left,     // Negative X
+		 BASE_RES_PATH + down,     // Positive Y
+		 BASE_RES_PATH + top,      // Negative Y
+		 BASE_RES_PATH + forward,  // Positive Z
+		 BASE_RES_PATH + back      // Negative Z
+		 };
 		m_Cubemap = Image::CreateCubemap(cubemap);
 		m_Device->UpdateDescriptorSet(m_DescriptorSetSky, 0, 1, *m_Cubemap, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
 		m_SnowTex = Image::CreateImage(BASE_RES_PATH + "terrain/snow/Snow_003_COLOR.jpg");
@@ -1460,7 +1477,7 @@ namespace Voidstar
 				commandBuffer.setScissor(0, 1, &scissors);
 
 				commandBuffer.bindIndexBuffer(m_IndexBuffer->GetBuffer(), 0, m_IndexBuffer->GetIndexType());
-				//commandBuffer.drawIndexed(static_cast<uint32_t>(amount), m_InstanceData.size(), 0, 0, 0);
+				commandBuffer.drawIndexed(static_cast<uint32_t>(amount), m_InstanceData.size(), 0, 0, 0);
 
 			
 			vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
@@ -1471,7 +1488,7 @@ namespace Voidstar
 				commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_WaterPipeline->m_PipelineLayout, 0, m_DescriptorSets[imageIndex], nullptr);
 				commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_WaterPipeline->m_PipelineLayout, 1, m_DescriptorSetTex, nullptr);
 				commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_WaterPipeline->m_PipelineLayout, 2, m_DescriptorSetNoise, nullptr);
-			//	commandBuffer.drawIndexed(static_cast<uint32_t>(amount), m_InstanceData.size(), 0, 0, 0);
+				commandBuffer.drawIndexed(static_cast<uint32_t>(amount), m_InstanceData.size(), 0, 0, 0);
 				}
 			}
 			m_RenderCommandBuffer[imageIndex].EndRenderPass();

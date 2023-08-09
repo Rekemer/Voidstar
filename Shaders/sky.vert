@@ -21,12 +21,12 @@ void main() {
     // Extract the forward, up, and right vectors from the view matrix
     vec3 fragForward = normalize(ubo.view[2].xyz);
     vec3 fragUp = normalize(ubo.view[1].xyz);
-    vec3 fragRight = normalize(-ubo.view[0].xyz);
+    vec3 fragRight = normalize(ubo.view[0].xyz);
   
-   //fragForward = vec3 (0.8f,  0.0f, 0.2f);
+    //fragForward = vec3 (0.7f,  0.3f, 0.0f);
 	//fragRight =    vec3(   0.0f, -1.0f, 0.0f);
 	//fragUp =       vec3( 0.0f,  0.0f, 1.0f);
 	vec2 pos = screen_corners[gl_VertexIndex];
 	gl_Position = vec4(pos, 0.0, 1.0);
-	forwards = normalize(fragForward + pos.x * fragRight - pos.y * fragUp).xyz;
+	forwards = normalize(fragForward + pos.x * fragRight + pos.y * fragUp).xyz;
 }
