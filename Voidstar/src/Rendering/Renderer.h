@@ -173,6 +173,7 @@ namespace Voidstar
 		SPtr<Image> m_SnowTex;
 		SPtr<Image>	m_GrassTex;
 		SPtr<Image>	m_StoneTex;
+		SPtr<Image>	m_Cubemap;
 		
 		SPtr<Model> m_Model;
 
@@ -192,9 +193,13 @@ namespace Voidstar
 
 		std::vector<void*> uniformBuffersMapped;
 		
+		vk::DescriptorSet m_DescriptorSetSky;
+		DescriptorSetLayout* m_DescriptorSetLayoutSky;
+		SPtr<DescriptorPool> m_DescriptorPoolSky;
+
 		DescriptorSetLayout* m_DescriptorSetLayout;
+
 		DescriptorSetLayout* m_DescriptorSetLayoutTex;
-		std::vector<vk::DescriptorSetLayout> m_DescriptorSetLayouts;
 		std::vector<vk::DescriptorSet> m_DescriptorSets;
 		std::vector<UPtr<Buffer>> m_ShaderStorageBuffers;
 		vk::CommandPool m_TracyCommandPool;
@@ -216,6 +221,7 @@ namespace Voidstar
 
 		UPtr<Pipeline> m_TerrainPipeline;
 		UPtr<Pipeline> m_WaterPipeline;
+		UPtr<Pipeline> m_SkyPipeline;
 		// Z Prepass
 		UPtr<Pipeline> m_ZTerrainPipeline;
 		UPtr<Pipeline> m_ZWaterPipeline;

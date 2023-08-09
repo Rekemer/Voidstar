@@ -11,7 +11,7 @@
 #include "Renderer.h"
 namespace Voidstar
 {
-	VkImageView Image::CreateImageView(vk::Image& image, vk::Format format, vk::ImageAspectFlags aspect, int mipmap)
+	VkImageView Image::CreateImageView(vk::Image& image, vk::Format format, vk::ImageAspectFlags aspect, int mipmap, int layers)
 	{
 		vk::ImageViewCreateInfo createInfo = {};
 		createInfo.image = image;
@@ -25,7 +25,7 @@ namespace Voidstar
 		createInfo.subresourceRange.baseMipLevel = 0;
 		createInfo.subresourceRange.levelCount = mipmap;
 		createInfo.subresourceRange.baseArrayLayer = 0;
-		createInfo.subresourceRange.layerCount = 1;
+		createInfo.subresourceRange.layerCount = layers;
 
 		auto device = RenderContext::GetDevice();
 		return device->GetDevice().createImageView(createInfo);
@@ -34,7 +34,7 @@ namespace Voidstar
 	{
 		auto device = RenderContext::GetDevice();
 		vk::ImageCreateInfo imageInfo;
-		imageInfo.flags = vk::ImageCreateFlagBits();
+		imageInfo.flags = vk::ImageCreateFlagBits() | specs.flags;
 		imageInfo.imageType = vk::ImageType::e2D;
 		imageInfo.extent = vk::Extent3D(specs.width, specs.height, 1);
 		imageInfo.mipLevels = mipmap;
@@ -45,6 +45,7 @@ namespace Voidstar
 		imageInfo.usage = specs.usage;
 		imageInfo.sharingMode = vk::SharingMode::eExclusive;
 		imageInfo.samples = samples;
+		imageInfo.arrayLayers = specs.arrayCount;
 		return device->GetDevice().createImage(imageInfo);
 	}
 	vk::DeviceMemory Image::CreateMemory(vk::Image& image, ImageSpecs& specs)
@@ -63,7 +64,7 @@ namespace Voidstar
 		return imageMemory;
 		
 	}
-	SPtr<Image> Image::CreateImage(std::string path,vk::DescriptorSet descriptorSet)
+	SPtr<Image> Image::CreateImage(std::string path)
 	{
 		
 		auto image = CreateUPtr<Image>();
@@ -201,6 +202,161 @@ namespace Voidstar
 		catch (vk::SystemError err)
 		{
 			Log::GetLog()->error("Failed to make sampler for image: {0}", path);
+
+		}
+
+
+
+
+		return image;
+	}
+	SPtr<Image> Image::CreateCubemap(std::vector<std::string> pathes)
+	{
+		auto image = CreateUPtr<Image>();
+
+		image->m_CommandPool = Renderer::Instance()->GetCommandPoolManager()->GetFreePool();
+		stbi_set_flip_vertically_on_load(true);
+		stbi_uc* pixels[6];
+
+		for (int i = 0; i < 6; i++)
+		{
+			pixels[i] = stbi_load(pathes[i].c_str(), &image->m_Width, &image->m_Height, &image->m_Channels, STBI_rgb_alpha);
+			if (!pixels[i]) {
+				Log::GetLog()->error("Unable to load: {0}", pathes[i]);
+			}
+		}
+
+		auto mipMaps = static_cast<uint32_t>(std::floor(std::log2(std::max(image->m_Width, image->m_Height)))) + 1;
+		mipMaps = 1;
+
+		auto device = RenderContext::GetDevice();
+		ImageSpecs specs;
+		specs.width = image->m_Width;
+		specs.height = image->m_Height;
+		specs.format = vk::Format::eR8G8B8A8Unorm;
+		specs.tiling = vk::ImageTiling::eOptimal;
+		specs.usage = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eSampled;
+		specs.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+		specs.arrayCount = 6;
+		specs.flags = vk::ImageCreateFlagBits::eCubeCompatible;
+		image->m_Format = specs.format;
+		try {
+			image->m_Image = CreateVKImage(specs, vk::SampleCountFlagBits::e1, mipMaps);
+		}
+		catch (vk::SystemError err)
+		{
+			Log::GetLog()->error("Unable to make cube image");
+		}
+
+		try
+		{
+			image->m_ImageMemory = CreateMemory(image->m_Image, specs);
+		}
+		catch (vk::SystemError err)
+		{
+			Log::GetLog()->error("Unable to make memory for cube image");
+		}
+
+		// populate memory with data
+		auto imageSize = image->m_Width * image->m_Height * 4;
+		auto buffer = Buffer::CreateStagingBuffer(6*imageSize);
+
+
+
+
+		//...then fill it,
+		for (int i = 0; i < 6; ++i) {
+			void* writeLocation = device->GetDevice().mapMemory(buffer->GetMemory(), imageSize * i,  imageSize);
+			memcpy(writeLocation, pixels[i], imageSize);
+			device->GetDevice().unmapMemory(buffer->GetMemory());
+		}
+
+
+
+		//then transfer it to image memory
+		auto commandBuffer = CommandBuffer::CreateBuffer(image->m_CommandPool, vk::CommandBufferLevel::ePrimary);
+
+
+		commandBuffer.BeginTransfering();
+		commandBuffer.ChangeImageLayout(image.get(), vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal, mipMaps,6);
+		commandBuffer.EndTransfering();
+		commandBuffer.SubmitSingle();
+
+		commandBuffer.BeginTransfering();
+		commandBuffer.CopyBufferToImage(buffer.get(), &image->m_Image, image->m_Width, image->m_Height,6);
+		commandBuffer.EndTransfering();
+		commandBuffer.SubmitSingle();
+
+
+
+		//commandBuffer.BeginTransfering();
+		//commandBuffer.ChangeImageLayout(image.get(), vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal, mipMaps);
+		//commandBuffer.EndTransfering();
+		//commandBuffer.SubmitSingle();
+
+		//image->GenerateMipmaps(image->m_Image, (VkFormat)image->m_Format, image->m_Width, image->m_Height, mipMaps);
+
+
+		commandBuffer.Free();
+		for (int i = 0; i < 6; ++i) {
+			free(pixels[i]);
+		}
+
+
+		image->m_ImageView = CreateImageView(image->m_Image, vk::Format::eR8G8B8A8Unorm, vk::ImageAspectFlagBits::eColor, mipMaps);
+
+
+		/*
+	typedef struct VkSamplerCreateInfo {
+		VkStructureType         sType;
+		const void* pNext;
+		VkSamplerCreateFlags    flags;
+		VkFilter                magFilter;
+		VkFilter                minFilter;
+		VkSamplerMipmapMode     mipmapMode;
+		VkSamplerAddressMode    addressModeU;
+		VkSamplerAddressMode    addressModeV;
+		VkSamplerAddressMode    addressModeW;
+		float                   mipLodBias;
+		VkBool32                anisotropyEnable;
+		float                   maxAnisotropy;
+		VkBool32                compareEnable;
+		VkCompareOp             compareOp;
+		float                   minLod;
+		float                   maxLod;
+		VkBorderColor           borderColor;
+		VkBool32                unnormalizedCoordinates;
+	} VkSamplerCreateInfo;
+	*/
+		vk::SamplerCreateInfo samplerInfo;
+		samplerInfo.flags = vk::SamplerCreateFlags();
+		samplerInfo.minFilter = vk::Filter::eLinear;
+		samplerInfo.magFilter = vk::Filter::eLinear;
+		samplerInfo.addressModeU = vk::SamplerAddressMode::eRepeat;
+		samplerInfo.addressModeV = vk::SamplerAddressMode::eRepeat;
+		samplerInfo.addressModeW = vk::SamplerAddressMode::eRepeat;
+
+		samplerInfo.anisotropyEnable = false;
+		samplerInfo.maxAnisotropy = 1.0f;
+
+		samplerInfo.borderColor = vk::BorderColor::eIntOpaqueBlack;
+		samplerInfo.unnormalizedCoordinates = false;
+		samplerInfo.compareEnable = false;
+		samplerInfo.compareOp = vk::CompareOp::eAlways;
+
+		samplerInfo.mipmapMode = vk::SamplerMipmapMode::eLinear;
+		samplerInfo.mipLodBias = 0.0f;
+		samplerInfo.minLod = 0.0f;
+		samplerInfo.maxLod = (float)mipMaps;
+		//samplerInfo.maxLod = 0;
+
+		try
+		{
+			image->m_Sampler = device->GetDevice().createSampler(samplerInfo);
+		}
+		catch (vk::SystemError err)
+		{
+			Log::GetLog()->error("Failed to make sampler for cube image");
 
 		}
 

@@ -482,17 +482,23 @@ namespace Voidstar
 		}
 
 
+		std::vector<std::string> cubemap = { BASE_RES_PATH+"sky/bluecloud_lf.jpg",
+		BASE_RES_PATH + "sky/bluecloud_rt.jpg", 
+		BASE_RES_PATH + "sky/bluecloud_up.jpg", 
+		BASE_RES_PATH + "sky/bluecloud_dn.jpg", 
+		BASE_RES_PATH + "sky/bluecloud_ft.jpg", 
+		BASE_RES_PATH + "sky/bluecloud_bk.jpg", };
+		m_Cubemap = Image::CreateCubemap(cubemap);
 
-
-		m_SnowTex = Image::CreateImage(BASE_RES_PATH + "terrain/snow/Snow_003_COLOR.jpg",m_DescriptorSetTex);
+		m_SnowTex = Image::CreateImage(BASE_RES_PATH + "terrain/snow/Snow_003_COLOR.jpg");
 		m_Device->UpdateDescriptorSet(m_DescriptorSetTex,1,1,*m_SnowTex,vk::ImageLayout::eShaderReadOnlyOptimal,vk::DescriptorType::eCombinedImageSampler);
-		m_GrassTex = Image::CreateImage(BASE_RES_PATH +"terrain/grass.jpg", m_DescriptorSetTex);
+		m_GrassTex = Image::CreateImage(BASE_RES_PATH +"terrain/grass.jpg");
 		m_Device->UpdateDescriptorSet(m_DescriptorSetTex,2,1,*m_GrassTex, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
-		m_StoneTex = Image::CreateImage(BASE_RES_PATH + "terrain/GroundTex/rock_01_diffuse.jpg", m_DescriptorSetTex);
+		m_StoneTex = Image::CreateImage(BASE_RES_PATH + "terrain/GroundTex/rock_01_diffuse.jpg");
 		m_Device->UpdateDescriptorSet(m_DescriptorSetTex,3,1,*m_StoneTex, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
 
-		m_WaterNormalImage = Image::CreateImage(BASE_RES_PATH + "water/water-normal-1.jpg", m_DescriptorSetTex);
-		m_WaterNormalImage2 = Image::CreateImage(BASE_RES_PATH + "water/water-normal-2.jpg", m_DescriptorSetTex);
+		m_WaterNormalImage = Image::CreateImage(BASE_RES_PATH + "water/water-normal-1.jpg");
+		m_WaterNormalImage2 = Image::CreateImage(BASE_RES_PATH + "water/water-normal-2.jpg");
 		{
 			vk::DescriptorImageInfo imageDescriptor0;
 			imageDescriptor0.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
@@ -650,6 +656,31 @@ namespace Voidstar
 		std::vector<vk::DescriptorSetLayoutBinding> layoutBindings{ layoutBinding,layoutBinding1 };
 		m_DescriptorSetLayout = DescriptorSetLayout::Create(layoutBindings);
 
+		{
+
+			vk::DescriptorSetLayoutBinding layoutBinding;
+			layoutBinding.binding = 0;
+			layoutBinding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+			layoutBinding.stageFlags =  vk::ShaderStageFlagBits::eFragment;
+			layoutBinding.descriptorCount = 1;
+
+		
+			std::vector<vk::DescriptorSetLayoutBinding> layoutBindings1{ layoutBinding };
+			m_DescriptorSetLayoutSky = DescriptorSetLayout::Create(layoutBindings1);
+
+			vk::DescriptorPoolSize poolSize;
+			poolSize.type = vk::DescriptorType::eCombinedImageSampler;
+			poolSize.descriptorCount = 1;
+
+			std::vector<vk::DescriptorPoolSize> poolSizes{ poolSize };
+
+			m_DescriptorPoolSky = DescriptorPool::Create(poolSizes, 1);
+			std::vector<vk::DescriptorSetLayout> layouts = { m_DescriptorSetLayoutSky->GetLayout() };
+			m_DescriptorSetSky = m_DescriptorPoolSky->AllocateDescriptorSets(1, layouts.data())[0];
+		}
+
+
+
 		auto bufferSize = sizeof(UniformBufferObject);
 		m_UniformBuffers.resize(framesAmount);
 		uniformBuffersMapped.resize(framesAmount);
@@ -691,24 +722,6 @@ namespace Voidstar
 		m_DescriptorSets =  m_DescriptorPool->AllocateDescriptorSets(framesAmount, layouts.data());
 			
 
-			
-		//ImageSpecs specs;
-		//specs.width = m_Swapchain->m_SwapchainExtent.width;
-		//specs.height = m_Swapchain->m_SwapchainExtent.height;
-		//	
-		//specs.format = m_Swapchain->m_SwapchainFormat;
-		//specs.usage = vk::ImageUsageFlagBits::eInputAttachment;
-		//specs.tiling = vk::ImageTiling::eOptimal;
-		//auto vkImage = Image::CreateVKImage(specs,vk::SampleCountFlagBits::e1);
-		//auto depthFormat = Image::GetFormat(
-		//	m_Device->GetDevicePhys(),
-		//	{ vk::Format::eD32Sfloat, vk::Format::eD24UnormS8Uint },
-		//	vk::ImageTiling::eOptimal,
-		//	vk::FormatFeatureFlagBits::eDepthStencilAttachment
-		//);
-		//auto imageView = Image::CreateImageView(vkImage, depthFormat, vk::ImageAspectFlagBits::eColor);
-		
-
 		for (int i = 0; i < framesAmount; i++)
 		{
 		
@@ -719,18 +732,6 @@ namespace Voidstar
 			imageInfo.imageView = m_Swapchain->m_SwapchainFrames[i].imageDepthView;
 			imageInfo.sampler = VK_NULL_HANDLE; 
 			m_Device->UpdateDescriptorSet(m_DescriptorSets[i], 1, 1, imageInfo, vk::DescriptorType::eInputAttachment);
-
-			//descriptors[1].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			//descriptors[1].imageView = attachments[i].depth.view;
-			//descriptors[1].sampler = VK_NULL_HANDLE;
-			//
-			//writeDescriptorSets[1].dstSet = descriptorSets.attachmentRead[i];
-			//writeDescriptorSets[1].descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
-			//writeDescriptorSets[1].descriptorCount = 1;
-			//writeDescriptorSets[1].dstBinding = 1;
-			//writeDescriptorSets[1].pImageInfo = &descriptors[1];
-
-
 
 		}
 		
@@ -1408,6 +1409,24 @@ namespace Voidstar
 				scissors.offset = vk::Offset2D{ (uint32_t)0,(uint32_t)0 };
 				scissors.extent = vk::Extent2D{ (uint32_t)m_ViewportWidth,(uint32_t)m_ViewportHeight };
 
+
+				//sky
+				{
+					commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_SkyPipeline->m_PipelineLayout, 0, m_DescriptorSets[imageIndex], nullptr);
+					commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_SkyPipeline->m_PipelineLayout, 1, m_DescriptorSetSky, nullptr);
+				
+					commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_SkyPipeline->m_Pipeline);
+				
+					commandBuffer.setViewport(0, 1, &viewport);
+					commandBuffer.setScissor(0, 1, &scissors);
+				
+					commandBuffer.draw(6, 1, 0, 0);
+				}
+
+
+				
+
+				vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
 				commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_TerrainPipeline->m_PipelineLayout, 0, m_DescriptorSets[imageIndex], nullptr);
 				commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_TerrainPipeline->m_PipelineLayout, 1, m_DescriptorSetTex, nullptr);
 				commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_TerrainPipeline->m_PipelineLayout, 2, m_DescriptorSetNoise, nullptr);
@@ -1432,7 +1451,7 @@ namespace Voidstar
 				commandBuffer.setScissor(0, 1, &scissors);
 
 				commandBuffer.bindIndexBuffer(m_IndexBuffer->GetBuffer(), 0, m_IndexBuffer->GetIndexType());
-				commandBuffer.drawIndexed(static_cast<uint32_t>(amount), m_InstanceData.size(), 0, 0, 0);
+			//	commandBuffer.drawIndexed(static_cast<uint32_t>(amount), m_InstanceData.size(), 0, 0, 0);
 
 			
 			vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
@@ -1443,7 +1462,7 @@ namespace Voidstar
 				commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_WaterPipeline->m_PipelineLayout, 0, m_DescriptorSets[imageIndex], nullptr);
 				commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_WaterPipeline->m_PipelineLayout, 1, m_DescriptorSetTex, nullptr);
 				commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_WaterPipeline->m_PipelineLayout, 2, m_DescriptorSetNoise, nullptr);
-				commandBuffer.drawIndexed(static_cast<uint32_t>(amount), m_InstanceData.size(), 0, 0, 0);
+			//	commandBuffer.drawIndexed(static_cast<uint32_t>(amount), m_InstanceData.size(), 0, 0, 0);
 				}
 			}
 			m_RenderCommandBuffer[imageIndex].EndRenderPass();
@@ -1636,6 +1655,13 @@ namespace Voidstar
 
 
 		//Renderpasses are broken down into subpasses, there's always at least one.
+
+		vk::SubpassDescription subpass0 = {};
+		subpass0.flags = vk::SubpassDescriptionFlags();
+		subpass0.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
+		subpass0.colorAttachmentCount = 1;
+		subpass0.pColorAttachments = &msaaAttachmentRef;
+
 		vk::SubpassDescription subpass = {};
 		subpass.flags = vk::SubpassDescriptionFlags();
 		subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
@@ -1667,7 +1693,7 @@ namespace Voidstar
 			subpass1.pInputAttachments = inputReferences.data();
 		}
 		
-		std::vector<vk::SubpassDescription> subpasses = { subpass ,subpass1 };
+		std::vector<vk::SubpassDescription> subpasses = { subpass0 , subpass ,subpass1 };
 
 
 		vk::SubpassDependency dependency0{};
@@ -1677,14 +1703,23 @@ namespace Voidstar
 		dependency0.srcAccessMask = vk::AccessFlagBits::eNone;
 		dependency0.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
 		dependency0.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
-		vk::SubpassDependency dependency = {};
-		dependency.srcSubpass = 0;
-		dependency.dstSubpass = 1;
-		dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-		dependency.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
-		dependency.dstStageMask = vk::PipelineStageFlagBits::eFragmentShader;
-		dependency.dstAccessMask = vk::AccessFlagBits::eInputAttachmentRead;
-		std::vector<vk::SubpassDependency> dependencies = { dependency0 ,dependency };
+
+		vk::SubpassDependency dependency1 = {};
+		dependency1.srcSubpass = 0;
+		dependency1.dstSubpass = 1;
+		dependency1.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+		dependency1.srcAccessMask = vk::AccessFlagBits::eNone;
+		dependency1.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+		dependency1.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
+
+		vk::SubpassDependency dependency2 = {};
+		dependency2.srcSubpass = 1;
+		dependency2.dstSubpass = 2;
+		dependency2.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+		dependency2.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
+		dependency2.dstStageMask = vk::PipelineStageFlagBits::eFragmentShader;
+		dependency2.dstAccessMask = vk::AccessFlagBits::eInputAttachmentRead;
+		std::vector<vk::SubpassDependency> dependencies = { dependency0 ,dependency1,dependency2 };
 		//// define order of subpasses?
 		//// where srcAccess mask operations occurr
 		////list operatoins that must be completed before staring render pass
@@ -1703,7 +1738,7 @@ namespace Voidstar
 		renderpassInfo.flags = vk::RenderPassCreateFlags();
 		renderpassInfo.attachmentCount = attachments.size();
 		renderpassInfo.pAttachments = attachments.data();
-		renderpassInfo.subpassCount = 2;
+		renderpassInfo.subpassCount = subpasses.size();
 		renderpassInfo.pSubpasses = subpasses.data();
 		renderpassInfo.dependencyCount = dependencies.size();
 		renderpassInfo.pDependencies = dependencies.data();
@@ -1812,6 +1847,11 @@ namespace Voidstar
 	{
 		auto swapchainFormat = m_Swapchain->m_SwapchainFormat;
 		auto swapChainExtent = m_Swapchain->m_SwapchainExtent;
+
+
+		
+
+
 		// terrain pipeline
 		{
 			GraphicsPipelineSpecification specs;
@@ -1850,9 +1890,9 @@ namespace Voidstar
 
 			auto samples = RenderContext::GetDevice()->GetSamples();
 			specs.samples = samples;
-			m_DescriptorSetLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutTex->GetLayout(),m_DescriptorSetLayoutNoise->GetLayout() };
+			auto pipelineLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutTex->GetLayout(),m_DescriptorSetLayoutNoise->GetLayout() };
 
-			specs.descriptorSetLayout = m_DescriptorSetLayouts;
+			specs.descriptorSetLayout = pipelineLayouts;
 
 			#if 0
 			// z render pass creation
@@ -1966,7 +2006,7 @@ namespace Voidstar
 
 
 			auto terrainRenderPass = MakeRenderPass(m_Device->GetDevice(), specs.swapchainImageFormat,m_Swapchain->m_SwapchainFrames[0].depthFormat);
-			m_TerrainPipeline = Pipeline::CreateGraphicsPipeline(specs, vk::PrimitiveTopology::ePatchList, m_Swapchain->m_SwapchainFrames[0].depthFormat, terrainRenderPass,0,true,m_PolygoneMode);
+			m_TerrainPipeline = Pipeline::CreateGraphicsPipeline(specs, vk::PrimitiveTopology::ePatchList, m_Swapchain->m_SwapchainFrames[0].depthFormat, terrainRenderPass,1,true,m_PolygoneMode);
 		
 		}
 		
@@ -2013,12 +2053,46 @@ namespace Voidstar
 
 
 
-			m_DescriptorSetLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutTex->GetLayout(),m_DescriptorSetLayoutNoise->GetLayout()};
+			auto pipelineLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutTex->GetLayout(),m_DescriptorSetLayoutNoise->GetLayout()};
 
-			specs.descriptorSetLayout = m_DescriptorSetLayouts;
+			specs.descriptorSetLayout = pipelineLayouts;
 		
 
-			m_WaterPipeline = Pipeline::CreateGraphicsPipeline(specs, vk::PrimitiveTopology::ePatchList, m_Swapchain->m_SwapchainFrames[0].depthFormat, m_TerrainPipeline->m_RenderPass,1,false,m_PolygoneMode);
+			m_WaterPipeline = Pipeline::CreateGraphicsPipeline(specs, vk::PrimitiveTopology::ePatchList, m_Swapchain->m_SwapchainFrames[0].depthFormat, m_TerrainPipeline->m_RenderPass,2,false,m_PolygoneMode);
+		}
+		// sky pipeline 
+		{
+
+			GraphicsPipelineSpecification specs;
+
+
+
+			specs.device = m_Device->GetDevice();
+
+			specs.vertexFilepath = BASE_SPIRV_OUTPUT + "sky.spvV";
+			specs.fragmentFilepath = BASE_SPIRV_OUTPUT + "sky.spvF";
+			specs.swapchainExtent = swapChainExtent;
+			specs.swapchainImageFormat = swapchainFormat;
+
+
+
+
+
+
+
+
+			auto samples = RenderContext::GetDevice()->GetSamples();
+			specs.samples = samples;
+
+
+
+
+			auto pipelineLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutSky->GetLayout()};
+
+			specs.descriptorSetLayout = pipelineLayouts;
+
+
+			m_SkyPipeline = Pipeline::CreateGraphicsPipeline(specs, vk::PrimitiveTopology::eTriangleList, m_Swapchain->m_SwapchainFrames[0].depthFormat, m_WaterPipeline->m_RenderPass, 0, false, m_PolygoneMode);
 		}
 		
 	}
@@ -2379,6 +2453,7 @@ namespace Voidstar
 		m_StoneTex.reset();
 		m_WaterNormalImage.reset();
 		m_WaterNormalImage2.reset();
+		m_Cubemap.reset();
 
 		m_InstancedDataBuffer.reset();
 		delete m_NoiseData;
@@ -2402,13 +2477,14 @@ namespace Voidstar
 		m_DescriptorPool.reset();
 		m_DescriptorPoolTex.reset();
 		m_DescriptorPoolNoise.reset();
-		//m_Device->GetDevice().destroyDescriptorSetLayout(m_DescriptorSetLayoutNoise->GetLayout());
+	    m_DescriptorPoolSky.reset();
+		m_Device->GetDevice().destroyDescriptorSetLayout(m_DescriptorSetLayoutSky->GetLayout());
+		m_Device->GetDevice().destroyDescriptorSetLayout(m_DescriptorSetLayoutTex->GetLayout());
+		m_Device->GetDevice().destroyDescriptorSetLayout(m_DescriptorSetLayoutNoise->GetLayout());
+		m_Device->GetDevice().destroyDescriptorSetLayout(m_DescriptorSetLayout->GetLayout());
 	
 
-		for (int i = 0; i < m_DescriptorSetLayouts.size(); i++)
-		{
-			m_Device->GetDevice().destroyDescriptorSetLayout(m_DescriptorSetLayouts[i]);
-		}
+	
 		
 	
 		
@@ -2424,9 +2500,10 @@ namespace Voidstar
 		{
 			m_Device->GetDevice().destroyFence(fence);
 		}
-		
+		device.destroyRenderPass(m_TerrainPipeline->m_RenderPass);
 		m_TerrainPipeline.reset();
 		m_WaterPipeline.reset();
+		m_SkyPipeline.reset();
 		
 		m_Swapchain.reset();
 

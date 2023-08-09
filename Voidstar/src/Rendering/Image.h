@@ -12,17 +12,22 @@ namespace Voidstar
 		vk::ImageUsageFlags usage;
 		vk::MemoryPropertyFlags memoryProperties;
 		vk::Format format;
+
+		int arrayCount = 1;
+		vk::ImageCreateFlags flags;
 	};
 
 	class Image
 	{
 	public:
 		// create image
-		static VkImageView CreateImageView(vk::Image& image, vk::Format format, vk::ImageAspectFlags aspect, int mipmap = 1);
+		static VkImageView CreateImageView(vk::Image& image, vk::Format format, vk::ImageAspectFlags aspect, int mipmap = 1, int layers = 1);
 
 		static vk::Image CreateVKImage(ImageSpecs& specs, vk::SampleCountFlagBits samples = vk::SampleCountFlagBits::e1, int mipmap = 1);
 		static vk::DeviceMemory CreateMemory(vk::Image& image, ImageSpecs& specs);
-		static SPtr<Image> CreateImage(std::string path, vk::DescriptorSet descriptorSet);
+		static SPtr<Image> CreateImage(std::string path);
+		static SPtr<Image> CreateCubemap(std::vector<std::string> pathes);
+
 		static SPtr<Image> CreateEmptyImage( int width, int height,vk::Format format);
 		~Image();
 		void Bind();

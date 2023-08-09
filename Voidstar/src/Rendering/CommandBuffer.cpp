@@ -155,7 +155,7 @@ namespace Voidstar
 		m_CommandBuffer.copyBuffer(src->GetBuffer(), target->GetBuffer(), copyRegion);
 
 	}
-	void CommandBuffer::ChangeImageLayout(Image* image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout, int mipMap )
+	void CommandBuffer::ChangeImageLayout(Image* image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout, int mipMap, int layers )
 	{
 		auto vkImage = image->m_Image;
 		image->m_ImageLayout  = newLayout;
@@ -169,12 +169,12 @@ namespace Voidstar
 			uint32_t              layerCount;
 		} VkImageSubresourceRange;
 		*/
-			vk::ImageSubresourceRange access;
+		vk::ImageSubresourceRange access;
 		access.aspectMask = vk::ImageAspectFlagBits::eColor;
 		access.baseMipLevel = 0;
 		access.levelCount = mipMap;
 		access.baseArrayLayer = 0;
-		access.layerCount = 1;
+		access.layerCount = layers;
 
 		/*
 		typedef struct VkImageMemoryBarrier {
@@ -321,7 +321,7 @@ namespace Voidstar
 
 		m_CommandBuffer.pipelineBarrier(sourceStage, destinationStage, vk::DependencyFlags(), nullptr, nullptr, barrier);
 	}
-	void CommandBuffer::CopyBufferToImage(Buffer* buffer, vk::Image* image, int width, int height)
+	void CommandBuffer::CopyBufferToImage(Buffer* buffer, vk::Image* image, int width, int height, int layers)
 	{
 		vk::BufferImageCopy copy;
 		copy.bufferOffset = 0;
@@ -332,7 +332,7 @@ namespace Voidstar
 		access.aspectMask = vk::ImageAspectFlagBits::eColor;
 		access.mipLevel = 0;
 		access.baseArrayLayer = 0;
-		access.layerCount = 1;
+		access.layerCount = layers;
 		copy.imageSubresource = access;
 
 		copy.imageOffset = vk::Offset3D(0, 0, 0);

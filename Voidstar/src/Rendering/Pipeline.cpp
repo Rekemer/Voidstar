@@ -288,7 +288,7 @@ namespace Voidstar
 		auto& device = RenderContext::GetDevice()->GetDevice();
 		device.destroyPipeline(m_Pipeline);
 		device.destroyPipelineLayout(m_PipelineLayout);
-		device.destroyRenderPass(m_RenderPass);
+	
 	}
 
 	vk::ShaderModule CreateModule(std::string filename, vk::Device device) {
