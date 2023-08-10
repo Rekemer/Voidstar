@@ -488,12 +488,12 @@ namespace Voidstar
 		std::string forward= "sky/bluecloud_ft.jpg";
 		std::string back= "sky/bluecloud_bk.jpg";
 
-		 right = "test/skybox/right.jpg";
-		 left = "test/skybox/left.jpg";
-		 top = "test/skybox/top.jpg";
-		 down = "test/skybox/bottom.jpg";
-		 forward = "test/skybox/front.jpg";
-		 back = "test/skybox/back.jpg";
+		right = "test/skybox/right.jpg";
+		left = "test/skybox/left.jpg";
+		top = "test/skybox/top.jpg";
+		down = "test/skybox/bottom.jpg";
+		forward = "test/skybox/front.jpg";
+		back = "test/skybox/back.jpg";
 
 		// left x
 		//std::vector<std::string> cubemap = { BASE_RES_PATH+ left,
@@ -1446,7 +1446,7 @@ namespace Voidstar
 					commandBuffer.setViewport(0, 1, &viewport);
 					commandBuffer.setScissor(0, 1, &scissors);
 				
-					commandBuffer.draw(6, 1, 0, 0);
+				//	commandBuffer.draw(6, 1, 0, 0);
 				}
 
 
@@ -1477,7 +1477,7 @@ namespace Voidstar
 				commandBuffer.setScissor(0, 1, &scissors);
 
 				commandBuffer.bindIndexBuffer(m_IndexBuffer->GetBuffer(), 0, m_IndexBuffer->GetIndexType());
-				commandBuffer.drawIndexed(static_cast<uint32_t>(amount), m_InstanceData.size(), 0, 0, 0);
+			//	commandBuffer.drawIndexed(static_cast<uint32_t>(amount), m_InstanceData.size(), 0, 0, 0);
 
 			
 			vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
@@ -1488,7 +1488,16 @@ namespace Voidstar
 				commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_WaterPipeline->m_PipelineLayout, 0, m_DescriptorSets[imageIndex], nullptr);
 				commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_WaterPipeline->m_PipelineLayout, 1, m_DescriptorSetTex, nullptr);
 				commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_WaterPipeline->m_PipelineLayout, 2, m_DescriptorSetNoise, nullptr);
-				commandBuffer.drawIndexed(static_cast<uint32_t>(amount), m_InstanceData.size(), 0, 0, 0);
+			//	commandBuffer.drawIndexed(static_cast<uint32_t>(amount), m_InstanceData.size(), 0, 0, 0);
+				}
+
+
+				vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
+				// water rendering
+				{
+
+					commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_RayMarchPipeline->m_Pipeline);
+					commandBuffer.draw(6, 1, 0, 0);
 				}
 			}
 			m_RenderCommandBuffer[imageIndex].EndRenderPass();
@@ -1706,8 +1715,14 @@ namespace Voidstar
 		subpass1.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
 		subpass1.colorAttachmentCount = 1;
 		subpass1.pColorAttachments = &msaaAttachmentRef;
-		subpass1.pResolveAttachments = &colorAttachmentRef;
 	//	subpass1.pDepthStencilAttachment = &depthStencilAttachmentRef;
+
+		vk::SubpassDescription subpass2 = {};
+		subpass2.flags = vk::SubpassDescriptionFlags();
+		subpass2.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
+		subpass2.colorAttachmentCount = 1;
+		subpass2.pColorAttachments = &msaaAttachmentRef;
+		subpass2.pResolveAttachments = &colorAttachmentRef;
 
 		std::vector<vk::AttachmentReference>inputReferences;
 		{
@@ -1719,7 +1734,7 @@ namespace Voidstar
 			subpass1.pInputAttachments = inputReferences.data();
 		}
 		
-		std::vector<vk::SubpassDescription> subpasses = { subpass0 , subpass ,subpass1 };
+		std::vector<vk::SubpassDescription> subpasses = { subpass0 , subpass ,subpass1,subpass2 };
 
 
 		vk::SubpassDependency dependency0{};
@@ -1745,7 +1760,16 @@ namespace Voidstar
 		dependency2.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
 		dependency2.dstStageMask = vk::PipelineStageFlagBits::eFragmentShader;
 		dependency2.dstAccessMask = vk::AccessFlagBits::eInputAttachmentRead;
-		std::vector<vk::SubpassDependency> dependencies = { dependency0 ,dependency1,dependency2 };
+
+		vk::SubpassDependency dependency3 = {};
+		dependency3.srcSubpass = 2;
+		dependency3.dstSubpass = 3;
+		dependency3.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+		dependency3.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
+		dependency3.dstStageMask = vk::PipelineStageFlagBits::eFragmentShader;
+		dependency3.dstAccessMask = vk::AccessFlagBits::eInputAttachmentRead;
+
+		std::vector<vk::SubpassDependency> dependencies = { dependency0 ,dependency1,dependency2,dependency3 };
 		//// define order of subpasses?
 		//// where srcAccess mask operations occurr
 		////list operatoins that must be completed before staring render pass
@@ -2119,6 +2143,41 @@ namespace Voidstar
 
 
 			m_SkyPipeline = Pipeline::CreateGraphicsPipeline(specs, vk::PrimitiveTopology::eTriangleList, m_Swapchain->m_SwapchainFrames[0].depthFormat, m_WaterPipeline->m_RenderPass, 0, false, m_PolygoneMode);
+		}
+		// ray march
+		// sky pipeline 
+		{
+
+			GraphicsPipelineSpecification specs;
+
+
+
+			specs.device = m_Device->GetDevice();
+
+			specs.vertexFilepath = BASE_SPIRV_OUTPUT + "rayMarch.spvV";
+			specs.fragmentFilepath = BASE_SPIRV_OUTPUT + "rayMarch.spvF";
+			specs.swapchainExtent = swapChainExtent;
+			specs.swapchainImageFormat = swapchainFormat;
+
+
+
+
+
+
+
+
+			auto samples = RenderContext::GetDevice()->GetSamples();
+			specs.samples = samples;
+
+			auto pipelineLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout() };
+
+			specs.descriptorSetLayout = pipelineLayouts;
+
+
+
+
+
+			m_RayMarchPipeline = Pipeline::CreateGraphicsPipeline(specs, vk::PrimitiveTopology::eTriangleList, m_Swapchain->m_SwapchainFrames[0].depthFormat, m_WaterPipeline->m_RenderPass, 3, false, m_PolygoneMode);
 		}
 		
 	}
@@ -2530,6 +2589,7 @@ namespace Voidstar
 		m_TerrainPipeline.reset();
 		m_WaterPipeline.reset();
 		m_SkyPipeline.reset();
+		m_RayMarchPipeline.reset();
 		
 		m_Swapchain.reset();
 

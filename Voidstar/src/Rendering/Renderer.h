@@ -222,6 +222,7 @@ namespace Voidstar
 		UPtr<Pipeline> m_TerrainPipeline;
 		UPtr<Pipeline> m_WaterPipeline;
 		UPtr<Pipeline> m_SkyPipeline;
+		UPtr<Pipeline> m_RayMarchPipeline;
 		// Z Prepass
 		UPtr<Pipeline> m_ZTerrainPipeline;
 		UPtr<Pipeline> m_ZWaterPipeline;

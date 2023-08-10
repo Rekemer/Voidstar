@@ -27,7 +27,7 @@ namespace Voidstar
 		glm::mat4 m_View;
 		float m_Yaw = 90.0f;
 		float m_Pitch = 0.f; // up and down axis
-		float speed = 100.f;
+		float speed = 1000.f;
 		bool m_IsControlEnabled = true;
 	};
 }
