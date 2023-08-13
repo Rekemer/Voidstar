@@ -146,7 +146,8 @@ namespace Voidstar
 		void RecreateSwapchain();
 		void Shutdown();
 		void CreateComputePipeline();
-		void UpdateNoiseTexure();
+		void UpdateNoiseTexture();
+		void UpdateCloudTexture();
 	private:
 		Voidstar::Instance* m_Instance;
 		int m_ViewportWidth, m_ViewportHeight;
@@ -165,6 +166,7 @@ namespace Voidstar
 		SPtr<Image> m_NoiseImage;
 
 		SPtr<Image> m_AnimatedNoiseImage;
+		SPtr<Image> m_3DNoiseTexture;
 		
 		SPtr<Image> m_WaterNormalImage;
 		SPtr<Image> m_WaterNormalImage2;
@@ -184,6 +186,9 @@ namespace Voidstar
 
 
 		SPtr<DescriptorPool> m_DescriptorPool;
+		SPtr<DescriptorPool> m_DescriptorPoolClouds;
+		DescriptorSetLayout* m_DescriptorSetLayoutClouds;
+		vk::DescriptorSet m_DescriptorSetClouds;
 
 		// can be in one buffer?
 		std::vector<Buffer*> m_UniformBuffers;
@@ -231,6 +236,8 @@ namespace Voidstar
 		vk::Pipeline m_DebugPipeline;
 		vk::PipelineLayout m_DebugPipelineLayout;
 		vk::RenderPass m_DebugRenderPass;
+		vk::Pipeline m_ComputePipelineClouds;
+		vk::PipelineLayout m_ComputePipelineLayoutClouds;
 
 		vk::Pipeline m_ComputePipeline;
 		vk::PipelineLayout m_ComputePipelineLayout;

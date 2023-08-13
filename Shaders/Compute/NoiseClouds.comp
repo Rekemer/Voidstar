@@ -9,9 +9,7 @@ layout(set = 0, binding = 0) uniform UniformBufferObject {
 } ubo;
 // 1 - static noise for terrain,
 // 2 -  dynamic noise for water rendering
-// 3 -  worley noise for clouds
-layout(set = 1, binding = 0, rgba8) uniform writeonly image2D[2] storageImage;
-layout(set = 1, binding = 1) uniform sampler2D[2] normals;
+//layout(set = 1, binding = 0, rgba8) uniform writeonly image2D[2] storageImage;
 layout(set=1,binding = 2) uniform NoiseData {
 
     float frequence ;
@@ -25,8 +23,10 @@ layout(set=1,binding = 2) uniform NoiseData {
 	float waterScale;
     
 } noiseData;
+//   worley noise for clouds
+layout(set = 1, binding =3 , rgba8) uniform writeonly image3D worleyNoiseImage;
 
-layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+layout (local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 
 
 
@@ -149,38 +149,6 @@ float fbm_time (in vec2 st) {
 
 void main() 
 {
-   // Get the image coordinates
-    ivec2 coords = ivec2(gl_GlobalInvocationID.xy);
-    vec2 imageSize = vec2(450,450);
-    float u = float(coords.x) / float(imageSize.x);
-    float v = float(coords.y) / float(imageSize.y);
-    vec2 st = vec2 (u,v);
-    float noise = fbm(st*noiseData.scale);
-    imageStore(storageImage[0], coords, vec4(noise,noise,noise, 1.0));
-    
-    
-    
-    
-    
-    float noise_dynamic = fbm(st*noiseData.scale);
-    noise_dynamic = fbm_time(st*noiseData.scale); 
-
-
-    float speed = 10*ubo.time;
-    float speed1 = -5*ubo.time;
-    //speed = speed1 =0;
-
-    float tiling =  noiseData.waterScale;
-    vec2 imageSizeNormal = vec2(512,512);
-    u = float(coords.x) / float(imageSizeNormal.x);
-    v = float(coords.y) / float(imageSizeNormal.y);
-    st = vec2 (u,v);
-    vec4 waterNormal = texture(normals[0],st*tiling+speed);
-    vec4 waterNormal1 = texture(normals[1],st*tiling+speed1);
-    //static noise
-    // dynamic noise
-    vec4 combinedNormals = waterNormal+waterNormal1;
-
-    imageStore(storageImage[1], coords,   noiseData.normalStrength* normalize(combinedNormals));
-
+    ivec3 gridPos = ivec3(gl_GlobalInvocationID);
+    imageStore(worleyNoiseImage, gridPos, vec4(1,0,1,1));
 }

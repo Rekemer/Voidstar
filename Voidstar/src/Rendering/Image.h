@@ -6,7 +6,7 @@ namespace Voidstar
 {
 	struct ImageSpecs
 	{
-		int width, height;
+		int width, height, depth = 1;
 		
 		vk::ImageTiling tiling;
 		vk::ImageUsageFlags usage;
@@ -15,6 +15,7 @@ namespace Voidstar
 
 		int arrayCount = 1;
 		vk::ImageCreateFlags flags;
+		vk::ImageType imageType = vk::ImageType::e2D;
 	};
 
 	class Image
@@ -29,6 +30,7 @@ namespace Voidstar
 		static SPtr<Image> CreateCubemap(std::vector<std::string> pathes);
 
 		static SPtr<Image> CreateEmptyImage( int width, int height,vk::Format format);
+		static SPtr<Image> CreateEmpty3DImage(int width, int height, int depth, vk::Format format);
 		~Image();
 		void Bind();
 		static vk::Format GetFormat(vk::PhysicalDevice physicalDevice,
@@ -49,7 +51,7 @@ namespace Voidstar
 		friend class Renderer;
 		friend class CommandBuffer;
 		friend class Device;
-		int m_Width, m_Height, m_Channels;
+		int m_Width, m_Height,m_Depth = 0, m_Channels;
 		int m_MipMapLevels;
 		vk::Image m_Image;
 		vk::Format m_Format;

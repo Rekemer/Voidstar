@@ -228,8 +228,8 @@ namespace Voidstar
 		vk::WriteDescriptorSet descriptorWrite;
 		descriptorWrite.dstSet = dscSet;
 		descriptorWrite.descriptorType = type;
-		descriptorWrite.descriptorCount = 1;
-		descriptorWrite.dstBinding = 1;
+		descriptorWrite.descriptorCount = descriptorCount;
+		descriptorWrite.dstBinding = binding;
 		descriptorWrite.pImageInfo = &imageInfo;
 		m_Device.updateDescriptorSets(descriptorWrite, nullptr);
 

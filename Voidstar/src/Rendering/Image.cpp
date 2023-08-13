@@ -35,8 +35,8 @@ namespace Voidstar
 		auto device = RenderContext::GetDevice();
 		vk::ImageCreateInfo imageInfo;
 		imageInfo.flags = vk::ImageCreateFlagBits() | specs.flags;
-		imageInfo.imageType = vk::ImageType::e2D;
-		imageInfo.extent = vk::Extent3D(specs.width, specs.height, 1);
+		imageInfo.imageType = specs.imageType;
+		imageInfo.extent = vk::Extent3D(specs.width, specs.height, specs.depth);
 		imageInfo.mipLevels = mipmap;
 		imageInfo.arrayLayers = 1;
 		imageInfo.format = specs.format;
@@ -485,6 +485,132 @@ namespace Voidstar
 
 
 		
+
+		return image;
+	}
+	SPtr<Image> Image::CreateEmpty3DImage(int width, int height,int depth, vk::Format format)
+	{
+		auto image = CreateUPtr<Image>();
+
+		image->m_CommandPool = Renderer::Instance()->GetCommandPoolManager()->GetFreePool();
+		image->m_Width = width;
+		image->m_Height = height;
+		image->m_Depth = depth;
+
+
+		auto device = RenderContext::GetDevice();
+		ImageSpecs specs;
+		specs.width = image->m_Width;
+		specs.height = image->m_Height;
+		specs.depth = image->m_Depth;
+		specs.format = format;
+		specs.tiling = vk::ImageTiling::eOptimal;
+		specs.usage = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled;
+		specs.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+		specs.imageType = vk::ImageType::e3D;
+		image->m_Format = specs.format;
+		try {
+			image->m_Image = CreateVKImage(specs, vk::SampleCountFlagBits::e1);
+		}
+		catch (vk::SystemError err)
+		{
+			Log::GetLog()->error("Unable to make empty image: ");
+		}
+
+		try
+		{
+			image->m_ImageMemory = CreateMemory(image->m_Image, specs);
+		}
+		catch (vk::SystemError err)
+		{
+			Log::GetLog()->error("Unable to allocate memory for empty image");
+		}
+
+		// populate memory with data
+		auto imageSize = image->m_Width * image->m_Height*image->m_Depth * 4;
+		auto buffer = Buffer::CreateStagingBuffer(imageSize);
+
+
+
+
+
+
+
+
+
+
+
+
+
+		image->m_ImageView = CreateImageView(image->m_Image, format, vk::ImageAspectFlagBits::eColor,vk::ImageViewType::e3D);
+
+
+		/*
+	typedef struct VkSamplerCreateInfo {
+		VkStructureType         sType;
+		const void* pNext;
+		VkSamplerCreateFlags    flags;
+		VkFilter                magFilter;
+		VkFilter                minFilter;
+		VkSamplerMipmapMode     mipmapMode;
+		VkSamplerAddressMode    addressModeU;
+		VkSamplerAddressMode    addressModeV;
+		VkSamplerAddressMode    addressModeW;
+		float                   mipLodBias;
+		VkBool32                anisotropyEnable;
+		float                   maxAnisotropy;
+		VkBool32                compareEnable;
+		VkCompareOp             compareOp;
+		float                   minLod;
+		float                   maxLod;
+		VkBorderColor           borderColor;
+		VkBool32                unnormalizedCoordinates;
+	} VkSamplerCreateInfo;
+	*/
+		vk::SamplerCreateInfo samplerInfo;
+		samplerInfo.flags = vk::SamplerCreateFlags();
+		samplerInfo.minFilter = vk::Filter::eLinear;
+		samplerInfo.magFilter = vk::Filter::eLinear;
+		samplerInfo.addressModeU = vk::SamplerAddressMode::eRepeat;
+		samplerInfo.addressModeV = vk::SamplerAddressMode::eRepeat;
+		samplerInfo.addressModeW = vk::SamplerAddressMode::eRepeat;
+
+		samplerInfo.anisotropyEnable = false;
+		samplerInfo.maxAnisotropy = 1.0f;
+
+		samplerInfo.borderColor = vk::BorderColor::eIntOpaqueBlack;
+		samplerInfo.unnormalizedCoordinates = false;
+		samplerInfo.compareEnable = false;
+		samplerInfo.compareOp = vk::CompareOp::eAlways;
+
+		samplerInfo.mipmapMode = vk::SamplerMipmapMode::eLinear;
+		samplerInfo.mipLodBias = 0.0f;
+		samplerInfo.minLod = 0.0f;
+		samplerInfo.maxLod = 0.0f;
+
+		try
+		{
+			image->m_Sampler = device->GetDevice().createSampler(samplerInfo);
+		}
+		catch (vk::SystemError err)
+		{
+			Log::GetLog()->error("Failed to make sampler for empty image");
+
+		}
+
+		//then transfer it to image memory
+		auto commandBuffer = CommandBuffer::CreateBuffer(image->m_CommandPool, vk::CommandBufferLevel::ePrimary);
+
+
+		commandBuffer.BeginTransfering();
+		commandBuffer.ChangeImageLayout(image.get(), vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral);
+		commandBuffer.EndTransfering();
+		commandBuffer.SubmitSingle();
+
+		commandBuffer.Free();
+
+
+
 
 		return image;
 	}

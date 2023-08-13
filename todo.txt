@@ -2,7 +2,7 @@ make world space left hand coordinate system so that x positive is right
 
 Create pipeline from pipeline cache
 
-refactor change imageLayout
+move ray march vector direction multiplication to compute shader from fragment shader
 
 // takeaways from filament
 

@@ -419,7 +419,7 @@ namespace Voidstar
 			layoutBinding1.binding = 0;
 			layoutBinding1.descriptorType = vk::DescriptorType::eStorageImage;
 			layoutBinding1.stageFlags = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eTessellationEvaluation |
-				vk::ShaderStageFlagBits::eCompute;
+				vk::ShaderStageFlagBits::eCompute ;
 			layoutBinding1.descriptorCount = 2;
 
 			vk::DescriptorSetLayoutBinding layoutBinding2;
@@ -436,8 +436,15 @@ namespace Voidstar
 				vk::ShaderStageFlagBits::eTessellationEvaluation | vk::ShaderStageFlagBits::eFragment;
 			layoutBinding3.descriptorCount = 1;
 
+			vk::DescriptorSetLayoutBinding layoutBinding4;
+			layoutBinding4.binding = 3;
+			layoutBinding4.descriptorType = vk::DescriptorType::eStorageImage;
+			layoutBinding4.stageFlags = vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex |
+				vk::ShaderStageFlagBits::eTessellationEvaluation;
+			layoutBinding4.descriptorCount = 1;
 
-			std::vector<vk::DescriptorSetLayoutBinding> layoutBindings{ layoutBinding1,layoutBinding2,layoutBinding3 };
+
+			std::vector<vk::DescriptorSetLayoutBinding> layoutBindings{ layoutBinding1,layoutBinding2,layoutBinding3,layoutBinding4 };
 
 			m_DescriptorSetLayoutNoise = DescriptorSetLayout::Create(layoutBindings);
 
@@ -449,6 +456,7 @@ namespace Voidstar
 		
 		m_NoiseImage = Image::CreateEmptyImage(noiseTextureWidth, noiseTextureHeight, vk::Format::eR8G8B8A8Snorm);
 		m_AnimatedNoiseImage = Image::CreateEmptyImage(noiseTextureWidth, noiseTextureHeight, vk::Format::eR8G8B8A8Snorm);
+		m_3DNoiseTexture = Image::CreateEmpty3DImage(64, 64, 64, vk::Format::eR8G8B8A8Snorm);
 
 		
 
@@ -461,8 +469,15 @@ namespace Voidstar
 			imageDescriptor1.imageLayout = vk::ImageLayout::eGeneral;
 			imageDescriptor1.imageView = m_AnimatedNoiseImage->m_ImageView;
 			imageDescriptor1.sampler = m_AnimatedNoiseImage->m_Sampler;
-			std::vector<vk::DescriptorImageInfo> images{ imageDescriptor0 ,imageDescriptor1 };
+			vk::DescriptorImageInfo imageDescriptor2;
+			imageDescriptor2.imageLayout = vk::ImageLayout::eGeneral;
+			imageDescriptor2.imageView = m_3DNoiseTexture->m_ImageView;
+			imageDescriptor2.sampler = m_3DNoiseTexture->m_Sampler;
+
+			std::vector<vk::DescriptorImageInfo> images{ imageDescriptor0 ,imageDescriptor1};
 			m_Device->UpdateDescriptorSet(m_DescriptorSetNoise, 0, images, vk::DescriptorType::eStorageImage);
+			m_Device->UpdateDescriptorSet(m_DescriptorSetNoise, 3,1, imageDescriptor2, vk::DescriptorType::eStorageImage);
+
 
 			{
 				vk::DescriptorImageInfo imageDescriptor0;
@@ -475,6 +490,12 @@ namespace Voidstar
 				imageDescriptor1.sampler = m_AnimatedNoiseImage->m_Sampler;
 				std::vector<vk::DescriptorImageInfo> images{ imageDescriptor0 ,imageDescriptor1 };
 				m_Device->UpdateDescriptorSet(m_DescriptorSetTex, 0, images, vk::DescriptorType::eCombinedImageSampler);
+
+				vk::DescriptorImageInfo imageDescriptor2;
+				imageDescriptor2.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+				imageDescriptor2.imageView = m_3DNoiseTexture->m_ImageView;
+				imageDescriptor2.sampler = m_3DNoiseTexture->m_Sampler;
+				m_Device->UpdateDescriptorSet(m_DescriptorSetClouds, 0,1, imageDescriptor2, vk::DescriptorType::eCombinedImageSampler);
 			}
 			
 
@@ -581,10 +602,78 @@ namespace Voidstar
 
 
 		vkDestroyShaderModule(device->GetDevice(), computeShaderModule, nullptr);
+
+
+		{
+
+			auto device = RenderContext::GetDevice();
+			auto computeShaderModule = CreateModule(BASE_SPIRV_OUTPUT + "NoiseClouds.spvCmp", device->GetDevice());
+
+			vk::PipelineShaderStageCreateInfo computeShaderStageInfo{};
+			computeShaderStageInfo.flags = vk::PipelineShaderStageCreateFlags();
+			computeShaderStageInfo.stage = vk::ShaderStageFlagBits::eCompute;
+			computeShaderStageInfo.module = computeShaderModule;
+			computeShaderStageInfo.pName = "main";
+
+
+			std::vector<vk::DescriptorSetLayout> layouts = { m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutNoise->GetLayout() };
+
+			vk::PipelineLayoutCreateInfo pipelineLayoutInfo{};
+			pipelineLayoutInfo.sType = vk::StructureType::ePipelineLayoutCreateInfo;
+			pipelineLayoutInfo.setLayoutCount = layouts.size();
+			pipelineLayoutInfo.pSetLayouts = layouts.data();
+			m_ComputePipelineLayoutClouds = device->GetDevice().createPipelineLayout(pipelineLayoutInfo, nullptr);
+
+
+			vk::ComputePipelineCreateInfo pipelineInfo{};
+
+			pipelineInfo.sType = vk::StructureType::eComputePipelineCreateInfo;
+			pipelineInfo.layout = m_ComputePipelineLayoutClouds;
+			pipelineInfo.stage = computeShaderStageInfo;
+			m_ComputePipelineClouds = device->GetDevice().createComputePipeline(nullptr, pipelineInfo).value;
+
+
+
+			vkDestroyShaderModule(device->GetDevice(), computeShaderModule, nullptr);
+		}
+
+	}
+
+	void Renderer::UpdateCloudTexture()
+	{
+		auto device = m_Device->GetDevice();
+		if (m_3DNoiseTexture->m_ImageLayout != vk::ImageLayout::eGeneral)
+		{
+			auto cmdBuffer = m_ComputeCommandBuffer[currentFrame].BeginTransfering();
+
+
+			m_ComputeCommandBuffer[currentFrame].ChangeImageLayout(m_3DNoiseTexture.get(), vk::ImageLayout::eShaderReadOnlyOptimal, vk::ImageLayout::eGeneral);
+
+			m_ComputeCommandBuffer[currentFrame].EndTransfering();
+			m_ComputeCommandBuffer[currentFrame].SubmitSingle();
+
+		}
+		auto cmdBuffer = m_ComputeCommandBuffer[currentFrame].BeginTransfering();
+
+
+
+
+		vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_ComputePipelineClouds);
+		cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_ComputePipelineLayoutClouds, 0, 1, &m_DescriptorSets[currentFrame], 0, 0);
+		cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_ComputePipelineLayoutClouds, 1, 1, &m_DescriptorSetNoise, 0, 0);
+
+		vkCmdDispatch(cmdBuffer, m_3DNoiseTexture->m_Width / 8, m_3DNoiseTexture->m_Height / 8, m_3DNoiseTexture->m_Depth/8);
+
+		m_ComputeCommandBuffer[currentFrame].ChangeImageLayout(m_3DNoiseTexture.get(), vk::ImageLayout::eGeneral, vk::ImageLayout::eShaderReadOnlyOptimal);
+		m_ComputeCommandBuffer[currentFrame].EndTransfering();
+		m_ComputeCommandBuffer[currentFrame].SubmitSingle();
+
+
+		device.waitIdle();
 	}
 
 
-	void Renderer::UpdateNoiseTexure()
+	void Renderer::UpdateNoiseTexture()
 	{
 		auto device = m_Device->GetDevice();
 		if (m_NoiseImage->m_ImageLayout != vk::ImageLayout::eGeneral)
@@ -701,7 +790,28 @@ namespace Voidstar
 			std::vector<vk::DescriptorSetLayout> layouts = { m_DescriptorSetLayoutSky->GetLayout() };
 			m_DescriptorSetSky = m_DescriptorPoolSky->AllocateDescriptorSets(1, layouts.data())[0];
 		}
+		// clouds
+		{
+			vk::DescriptorSetLayoutBinding layoutBinding;
+			layoutBinding.binding = 0;
+			layoutBinding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+			layoutBinding.stageFlags = vk::ShaderStageFlagBits::eFragment;
+			layoutBinding.descriptorCount = 1;
 
+
+			std::vector<vk::DescriptorSetLayoutBinding> layoutBindings1{ layoutBinding };
+			m_DescriptorSetLayoutClouds = DescriptorSetLayout::Create(layoutBindings1);
+
+
+
+			vk::DescriptorPoolSize poolSize;
+			poolSize.type = vk::DescriptorType::eCombinedImageSampler;
+			poolSize.descriptorCount = 1;
+			std::vector<vk::DescriptorPoolSize> poolSizes{ poolSize};
+
+			m_DescriptorPoolClouds = DescriptorPool::Create(poolSizes, 1);
+			m_DescriptorSetClouds = m_DescriptorPoolClouds->AllocateDescriptorSets(1,&m_DescriptorSetLayoutClouds->GetLayout())[0];
+		}
 
 
 		auto bufferSize = sizeof(UniformBufferObject);
@@ -763,7 +873,7 @@ namespace Voidstar
 
 			vk::DescriptorPoolSize poolSize;
 			poolSize.type = vk::DescriptorType::eCombinedImageSampler;
-			poolSize.descriptorCount = 5;
+			poolSize.descriptorCount = 6;
 		
 			std::vector<vk::DescriptorPoolSize> poolSizes{poolSize};
 
@@ -917,8 +1027,8 @@ namespace Voidstar
 			vkGetPhysicalDeviceCalibrateableTimeDomainsEXT, vkGetCalibratedTimestampsEXT);
 
 
-		UpdateNoiseTexure();
-
+		UpdateNoiseTexture();
+		UpdateCloudTexture();
 #if IMGUI_ENABLED
 		InitImGui();
 #endif	
@@ -1493,10 +1603,12 @@ namespace Voidstar
 
 
 				vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
-				// water rendering
+			// ray march rendering
 				{
 
 					commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_RayMarchPipeline->m_Pipeline);
+					commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_RayMarchPipeline->m_PipelineLayout, 0, m_DescriptorSets[imageIndex], nullptr);
+					commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_RayMarchPipeline->m_PipelineLayout, 1, m_DescriptorSetClouds, nullptr);
 					commandBuffer.draw(6, 1, 0, 0);
 				}
 			}
@@ -1579,7 +1691,7 @@ namespace Voidstar
 			//m_IsNewParametrs = false;
 			m_Device->GetDevice().waitIdle();
 			memcpy(m_NoiseDataPtr, &noiseData, sizeof(NoiseData));
-			UpdateNoiseTexure();
+			UpdateNoiseTexture();
 		}
 		if (m_IsPolygon)
 		{
@@ -2169,7 +2281,7 @@ namespace Voidstar
 			auto samples = RenderContext::GetDevice()->GetSamples();
 			specs.samples = samples;
 
-			auto pipelineLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout() };
+			auto pipelineLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutClouds->GetLayout() };
 
 			specs.descriptorSetLayout = pipelineLayouts;
 
@@ -2185,183 +2297,6 @@ namespace Voidstar
 	
 
 
-	std::unordered_map < glm::vec3 , int > indexes;
-	std::vector<int> erased;
-	static int id = 0;
-	void GenerateChildren(std::vector<InstanceData>& tiles, glm::vec3 centerOfParentTile, float tileScale,int depth)
-	{
-		// assign indexes of neighbours?
-		//tileScale /= 2;
-		float len = glm::dot(centerOfParentTile, glm::vec3{0,0,0});
-		if (indexes.find(centerOfParentTile) != indexes.end())
-		{
-			{
-				if (std::find(erased.begin(), erased.end(), indexes.at(centerOfParentTile)) == erased.end())
-				{
-					erased.push_back(indexes[centerOfParentTile]);
-				}
-			}
-		glm::vec3 leftTop;
-		leftTop.x = centerOfParentTile.x + tileScale/2 ;
-		leftTop.y = 0.f;
-		leftTop.z = centerOfParentTile.z + tileScale/2;
-		glm::vec3 rightTop;
-
-		rightTop.x = centerOfParentTile.x -tileScale/2;
-		rightTop.y = 0.f;
-		rightTop.z = centerOfParentTile.z + tileScale/2 ;
-
-		glm::vec3 leftBottom;
-
-		leftBottom.x = centerOfParentTile.x + tileScale/2;
-		leftBottom.y = 0.f;
-		leftBottom.z = centerOfParentTile.z - tileScale/2;
-
-
-		glm::vec3 rightBottom;
-
-
-		rightBottom.x = centerOfParentTile.x - tileScale/2 ;
-		rightBottom.y = 0.f;
-		rightBottom.z = centerOfParentTile.z - tileScale/2 ;
-		tiles.emplace_back(leftTop, tileScale, ++id);
-		indexes[leftTop] = id;
-		tiles.emplace_back(rightTop, tileScale,  ++id);
-		indexes[rightTop] = id;
-		tiles.emplace_back(leftBottom, tileScale,  ++id);
-		indexes[leftBottom] = id;
-		tiles.emplace_back(rightBottom, tileScale,  ++id);
-		indexes[rightBottom] = id;
-		}
-		
-		
-	}
-	//tile scale is width and height of tile
-	void GenerateLeftTopChildren(std::vector<InstanceData>& tiles,glm::vec3 centerOfParentTile,float tileScale)
-	{
-		glm::vec3 leftTop;
-		leftTop.x = centerOfParentTile.x +tileScale*2 - tileScale /2;
-		leftTop.y = 0.f;
-		leftTop.z = centerOfParentTile.z + tileScale * 2  - tileScale / 2;
-		glm::vec3 rightTop;
-		
-		rightTop.x = centerOfParentTile.x - tileScale / 2;
-		rightTop.y = 0.f;
-		rightTop.z = centerOfParentTile.z + tileScale + tileScale / 2;
-		
-		glm::vec3 leftBottom;
-		
-		leftBottom.x = centerOfParentTile.x + tileScale * 2 - tileScale / 2;
-		leftBottom.y = 0.f;
-		leftBottom.z = centerOfParentTile.z+tileScale / 2;
-		
-		
-		glm::vec3 rightBottom;
-		
-		
-		rightBottom.x = centerOfParentTile.x + tileScale / 2;
-		rightBottom.y = 0.f;
-		rightBottom.z = centerOfParentTile.z+tileScale / 2;
-
-		tiles.emplace_back(leftTop, tileScale, 0);
-		tiles.emplace_back(rightTop, tileScale, 0);
-		tiles.emplace_back(leftBottom, tileScale, 0);
-		tiles.emplace_back(rightBottom, tileScale, 0);
-	}
-	void GenerateRightTopChildren(std::vector<InstanceData>& tiles, glm::vec3 centerOfParentTile, float tileScale)
-	{
-		glm::vec3 leftTop;
-		leftTop.x = centerOfParentTile.x - tileScale  + tileScale / 2;
-		leftTop.y = 0.f;
-		leftTop.z = centerOfParentTile.z + tileScale * 2 - tileScale / 2;
-		glm::vec3 rightTop;
-
-		rightTop.x = centerOfParentTile.x - tileScale *2 + tileScale / 2;
-		rightTop.y = 0.f;
-		rightTop.z = centerOfParentTile.z + tileScale * 2 - tileScale / 2;
-
-		glm::vec3 leftBottom;
-
-		leftBottom.x = centerOfParentTile.x - tileScale + tileScale / 2;
-		leftBottom.y = 0.f;
-		leftBottom.z = centerOfParentTile.z + tileScale / 2;
-
-
-		glm::vec3 rightBottom;
-
-
-		rightBottom.x = centerOfParentTile.x - tileScale * 2 + tileScale / 2;
-		rightBottom.y = 0.f;
-		rightBottom.z = centerOfParentTile.z + tileScale / 2;
-
-		tiles.emplace_back(leftTop, tileScale, 0);
-		tiles.emplace_back(rightTop, tileScale, 0);
-		tiles.emplace_back(leftBottom, tileScale, 0);
-		tiles.emplace_back(rightBottom, tileScale, 0);
-	}
-
-	void GenerateRightBottomChildren(std::vector<InstanceData>& tiles, glm::vec3 centerOfParentTile, float tileScale)
-	{
-		glm::vec3 leftTop;
-		leftTop.x = centerOfParentTile.x - tileScale + tileScale / 2;
-		leftTop.y = 0.f;
-		leftTop.z = centerOfParentTile.z -  tileScale / 2;
-		glm::vec3 rightTop;
-
-		rightTop.x = centerOfParentTile.x - tileScale * 2 + tileScale / 2;
-		rightTop.y = 0.f;
-		rightTop.z = centerOfParentTile.z - tileScale / 2;
-
-		glm::vec3 leftBottom;
-
-		leftBottom.x = centerOfParentTile.x - tileScale/2;
-		leftBottom.y = 0.f;
-		leftBottom.z = centerOfParentTile.z - tileScale * 2 + tileScale / 2;
-
-
-		glm::vec3 rightBottom;
-
-
-		rightBottom.x = centerOfParentTile.x - tileScale * 2 + tileScale / 2;
-		rightBottom.y = 0.f;
-		rightBottom.z = centerOfParentTile.z - tileScale * 2 + tileScale / 2;
-
-		tiles.emplace_back(leftTop, tileScale, 0);
-		tiles.emplace_back(rightTop, tileScale, 0);
-		tiles.emplace_back(leftBottom, tileScale, 0);
-		tiles.emplace_back(rightBottom, tileScale, 0);
-	}
-	void GenerateLeftBottomChildren(std::vector<InstanceData>& tiles, glm::vec3 centerOfParentTile, float tileScale)
-	{
-		glm::vec3 leftTop;
-		leftTop.x = centerOfParentTile.x + tileScale * 2 - tileScale / 2;
-		leftTop.y = 0.f;
-		leftTop.z = centerOfParentTile.z - tileScale / 2;
-		glm::vec3 rightTop;
-
-		rightTop.x = centerOfParentTile.x + tileScale / 2;
-		rightTop.y = 0.f;
-		rightTop.z = centerOfParentTile.z - tileScale / 2;
-
-		glm::vec3 leftBottom;
-
-		leftBottom.x = centerOfParentTile.x + tileScale * 2 - tileScale / 2;
-		leftBottom.y = 0.f;
-		leftBottom.z = centerOfParentTile.z - tileScale * 2 + tileScale / 2;
-
-
-		glm::vec3 rightBottom;
-
-
-		rightBottom.x = centerOfParentTile.x + tileScale / 2;
-		rightBottom.y = 0.f;
-		rightBottom.z = centerOfParentTile.z - tileScale * 2 + tileScale / 2;
-
-		tiles.emplace_back(leftTop, tileScale, 0);
-		tiles.emplace_back(rightTop, tileScale, 0);
-		tiles.emplace_back(leftBottom, tileScale, 0);
-		tiles.emplace_back(rightBottom, tileScale, 0);
-	}
 
 	
 	void Renderer::RenderImGui(int imageIndex)
@@ -2532,6 +2467,7 @@ namespace Voidstar
 		m_Image.reset();
 		m_NoiseImage.reset();
 		m_AnimatedNoiseImage.reset();
+		m_3DNoiseTexture.reset();
 		
 		m_SnowTex.reset();
 		m_GrassTex.reset();
@@ -2560,12 +2496,14 @@ namespace Voidstar
 		//delete m_DescriptorSetLayout;
 		//delete m_DescriptorSetLayoutTex;
 		m_DescriptorPool.reset();
+		m_DescriptorPoolClouds.reset();
 		m_DescriptorPoolTex.reset();
 		m_DescriptorPoolNoise.reset();
 	    m_DescriptorPoolSky.reset();
 		m_Device->GetDevice().destroyDescriptorSetLayout(m_DescriptorSetLayoutSky->GetLayout());
 		m_Device->GetDevice().destroyDescriptorSetLayout(m_DescriptorSetLayoutTex->GetLayout());
 		m_Device->GetDevice().destroyDescriptorSetLayout(m_DescriptorSetLayoutNoise->GetLayout());
+		m_Device->GetDevice().destroyDescriptorSetLayout(m_DescriptorSetLayoutClouds->GetLayout());
 		m_Device->GetDevice().destroyDescriptorSetLayout(m_DescriptorSetLayout->GetLayout());
 	
 
@@ -2595,6 +2533,8 @@ namespace Voidstar
 
 		m_Device->GetDevice().destroyPipeline(m_ComputePipeline);
 		m_Device->GetDevice().destroyPipelineLayout(m_ComputePipelineLayout);
+		m_Device->GetDevice().destroyPipeline(m_ComputePipelineClouds);
+		m_Device->GetDevice().destroyPipelineLayout(m_ComputePipelineLayoutClouds);
 
 		m_CommandPoolManager->Release();
 		m_Device->GetDevice().destroy();
