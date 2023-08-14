@@ -161,6 +161,7 @@ namespace Voidstar
 		Application* m_App;
 		
 		UPtr<Buffer> m_InstancedDataBuffer;
+		UPtr<Buffer> m_PointsData;
 
 		SPtr<Image> m_Image;
 		SPtr<Image> m_NoiseImage;

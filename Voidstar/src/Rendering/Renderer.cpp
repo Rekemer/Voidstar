@@ -31,6 +31,7 @@
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_vulkan.h"
 #include "Pipeline.h"
+#include <random>
 namespace std
 {
 	template<>
@@ -443,8 +444,14 @@ namespace Voidstar
 				vk::ShaderStageFlagBits::eTessellationEvaluation;
 			layoutBinding4.descriptorCount = 1;
 
+			vk::DescriptorSetLayoutBinding layoutBinding5;
+			layoutBinding5.binding = 4;
+			layoutBinding5.descriptorType = vk::DescriptorType::eStorageBuffer;
+			layoutBinding5.stageFlags = vk::ShaderStageFlagBits::eCompute;
+			layoutBinding5.descriptorCount = 1;
 
-			std::vector<vk::DescriptorSetLayoutBinding> layoutBindings{ layoutBinding1,layoutBinding2,layoutBinding3,layoutBinding4 };
+
+			std::vector<vk::DescriptorSetLayoutBinding> layoutBindings{ layoutBinding1,layoutBinding2,layoutBinding3,layoutBinding4,layoutBinding5 };
 
 			m_DescriptorSetLayoutNoise = DescriptorSetLayout::Create(layoutBindings);
 
@@ -456,7 +463,10 @@ namespace Voidstar
 		
 		m_NoiseImage = Image::CreateEmptyImage(noiseTextureWidth, noiseTextureHeight, vk::Format::eR8G8B8A8Snorm);
 		m_AnimatedNoiseImage = Image::CreateEmptyImage(noiseTextureWidth, noiseTextureHeight, vk::Format::eR8G8B8A8Snorm);
-		m_3DNoiseTexture = Image::CreateEmpty3DImage(64, 64, 64, vk::Format::eR8G8B8A8Snorm);
+		
+		int size = 64;
+		m_3DNoiseTexture = Image::CreateEmpty3DImage(size, size, size, vk::Format::eR8G8B8A8Snorm);
+		//m_3DNoiseTexture = Image::CreateEmpty3DImage(64, 64, 64, vk::Format::eR8G8B8A8Uint);
 
 		
 
@@ -661,8 +671,11 @@ namespace Voidstar
 		vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_ComputePipelineClouds);
 		cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_ComputePipelineLayoutClouds, 0, 1, &m_DescriptorSets[currentFrame], 0, 0);
 		cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_ComputePipelineLayoutClouds, 1, 1, &m_DescriptorSetNoise, 0, 0);
+		float invocations = 64;
+		int localSize= 8;
+	
 
-		vkCmdDispatch(cmdBuffer, m_3DNoiseTexture->m_Width / 8, m_3DNoiseTexture->m_Height / 8, m_3DNoiseTexture->m_Depth/8);
+		vkCmdDispatch(cmdBuffer, invocations/ localSize, invocations/ localSize, invocations/ localSize);
 
 		m_ComputeCommandBuffer[currentFrame].ChangeImageLayout(m_3DNoiseTexture.get(), vk::ImageLayout::eGeneral, vk::ImageLayout::eShaderReadOnlyOptimal);
 		m_ComputeCommandBuffer[currentFrame].EndTransfering();
@@ -1002,17 +1015,90 @@ namespace Voidstar
 
 		}
 		m_InstancedPtr = m_Device->GetDevice().mapMemory(m_InstancedDataBuffer->GetMemory(), 0, INSTANCE_COUNT * sizeof(InstanceData));
-		//m_InstanceData.reserve(100);
+		
+		
+		CreateMSAAFrame();
+
+	
 		
 
-
-		CreateMSAAFrame();
 		CreateComputePipeline();
 		CreatePipeline();
 		CreateFramebuffers();
-		
-		// create compute pipeline 
 
+		auto GetRandomNumber = []() {
+			std::random_device rd;
+			std::default_random_engine e{ rd() };
+			std::uniform_real_distribution<float> dist{ 0.0f, 1.0f };
+			return dist(e);
+		};
+
+		
+		// create a buffer with points
+		int numCellsPerAxis = 4;
+		float cellSize = 1.f/ numCellsPerAxis;
+
+		std::vector<glm::vec3> points;
+#if 1
+		points.resize(numCellsPerAxis* numCellsPerAxis* numCellsPerAxis);
+		for (int x = 0; x < numCellsPerAxis; x++) {
+			for (int y = 0; y < numCellsPerAxis; y++) {
+				for (int z = 0; z < numCellsPerAxis; z++) {
+					float randomX = GetRandomNumber();
+					float randomY = GetRandomNumber();
+					float randomZ = GetRandomNumber();
+					glm::vec3 randomOffset = glm::vec3(randomX, randomY, randomZ) * cellSize;
+					glm::vec3 cellCorner = glm::vec3(x, y, z) * cellSize;
+
+					int index = x + numCellsPerAxis * (y + z * numCellsPerAxis);
+					assert(index < points.size());
+					points[index] = cellCorner + randomOffset;
+				}
+			}
+		}
+#else
+		points.resize(numCellsPerAxis * numCellsPerAxis);
+		for (int x = 0; x < numCellsPerAxis; x++) {
+			for (int y = 0; y < numCellsPerAxis; y++) {
+					float randomX = GetRandomNumber();
+					float randomY = GetRandomNumber();
+					float randomZ = GetRandomNumber();
+					glm::vec3 randomOffset = glm::vec3(randomX, randomY, 0) * cellSize;
+					glm::vec3 cellCorner = glm::vec3(x, y, 0) * cellSize;
+
+					int index = x + numCellsPerAxis * (y);
+					assert(index < points.size());
+					points[index] = cellCorner + randomOffset;
+			}
+		}
+#endif // 0
+
+		
+
+		{
+			auto bufferSize = points.size() * sizeof(glm::vec3);
+			{
+				SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(bufferSize);
+
+
+				{
+					BufferInputChunk inputBuffer;
+					inputBuffer.size = bufferSize;
+					inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+					inputBuffer.usage = vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst;
+					m_PointsData = CreateUPtr<Buffer>(inputBuffer);
+
+				}
+
+				m_TransferCommandBuffer[0].BeginTransfering();
+				m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_PointsData.get(), (void*)points.data(), bufferSize);
+				m_TransferCommandBuffer[0].EndTransfering();
+				m_TransferCommandBuffer[0].SubmitSingle();
+
+
+				m_Device->UpdateDescriptorSet(m_DescriptorSetNoise, 4, 1, *m_PointsData, vk::DescriptorType::eStorageBuffer);
+			}
+		}
 
 		auto physDev = m_Device->GetDevicePhys();
 		auto dev = m_Device->GetDevice();
@@ -2478,6 +2564,7 @@ namespace Voidstar
 
 		m_InstancedDataBuffer.reset();
 		delete m_NoiseData;
+		m_PointsData.reset();
 		m_Device->GetDevice().freeMemory(m_MsaaImageMemory);
 		m_Device->GetDevice().destroyImage(m_MsaaImage);
 		m_Device->GetDevice().destroyImageView(m_MsaaImageView);
