@@ -49,6 +49,7 @@ vec4 ray_march(in vec3 ro, in vec3 rd)
        distanceInsideCube = 0;
        vec3 current_position = ro;
        float totalDensity = 0;
+       vec3 color = vec3(0,0,0);
     for (int i = 0; i < NUMBER_OF_STEPS; ++i)
     {
          current_position = ro + total_distance_traveled * rd;
@@ -68,10 +69,19 @@ vec4 ray_march(in vec3 ro, in vec3 rd)
 
        if (distance_to_closest < MINIMUM_HIT_DISTANCE) 
        {
-          float densityFromTex = texture(u_worleyNoise,current_position.xyz).x;
-           density.x+=0.1;
+         vec3 texCoords= (current_position.xyz - spherePos);
+         texCoords.xz/=scale;
+         texCoords.y/=scale;
+         texCoords=(texCoords+1)/2;
+         color = texture(u_worleyNoise,texCoords).xxx;
+         //color = texCoords;
+        // break;
+         //texCoords.x /=14;
+        // texCoords.y /=2;
+          float densityFromTex =color.x ;
+           //density.x+=0.1;
            //distanceInsideCube+=segmentsDistance*densityFromTex;
-           totalDensity +=densityFromTex*segmentsDistance;
+          totalDensity +=densityFromTex*segmentsDistance;
 
           // return vec4(1.0, 0.0, 0.0,1.0);
        }
@@ -90,7 +100,7 @@ vec4 ray_march(in vec3 ro, in vec3 rd)
     density.x = totalDensity;
     density.w = totalDensity;
 
-    return exp(-density);
+    return exp(-vec4(density.xxx,density.w));
 }
 
 void main()
@@ -115,6 +125,6 @@ void main()
 
     vec4 shaded_color = ray_march(ro, rd_world.xyz);
 
-    o_color = vec4(shaded_color.xyz,shaded_color.w);
+    o_color = vec4(shaded_color.xxx,shaded_color.w);
    // o_color = vec4(uv,0,1);
 }
