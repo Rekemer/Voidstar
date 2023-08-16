@@ -9,8 +9,16 @@ layout(set=0,binding = 0) uniform UniformBufferObject {
     vec4 playerPos;
 } ubo;
 
+
+
 //layout(set = 1, binding = 0) uniform sampler2D[2]  u_Tex;
 layout(set = 1, binding = 0) uniform sampler3D u_worleyNoise;
+layout(set=1,binding = 1) uniform CloudParams {
+    float densityOffset;
+	float densityMult;
+    float scale;
+    vec4 weights;
+} cloudParams;
 
 float sdfBox(vec3 p, vec3 position, vec3 size)
 {
@@ -33,7 +41,7 @@ vec4 ray_march(in vec3 ro, in vec3 rd)
     float absorbption = 1.1f;
      float minEntry = 0.f;
      float maxExit  = 0.f;
-     float scale = 10.f;
+     float scale = cloudParams.scale;
 
       vec3 invRd = 1.0 / rd;
        vec3 cubeMin = vec3(-scale,-scale/5,-scale)+spherePos;
@@ -74,6 +82,19 @@ vec4 ray_march(in vec3 ro, in vec3 rd)
          texCoords.y/=scale;
          texCoords=(texCoords+1)/2;
          color = texture(u_worleyNoise,texCoords).xxx;
+        float densityOffset = cloudParams.densityOffset;
+        float densityMult =cloudParams.densityMult;
+
+        vec4  shapeNoiseWeights = cloudParams.weights; 
+        vec4 normalizedShapeWeights = shapeNoiseWeights / dot(shapeNoiseWeights, vec4(1));
+        float shapeFBM = dot(vec4(color,1), normalizedShapeWeights);
+        float baseShapeDensity = color.x + densityOffset * .1;
+
+        color.x = baseShapeDensity;
+        //break;
+        color.x = pow(color.x,densityMult); 
+         //color = mix(vec3(0,0,0), color, 0.6);
+        // break;
          //color = texCoords;
         // break;
          //texCoords.x /=14;
@@ -93,14 +114,11 @@ vec4 ray_march(in vec3 ro, in vec3 rd)
        }
         total_distance_traveled += distance_to_closest;
     }
-    vec3 cubeCoords = (current_position - cubeMin) / (cubeMax - cubeMin);
-    vec3 textureDimensions = vec3(64);
-    vec3 textureCoords = cubeCoords * textureDimensions;
-    vec4 noise = texture(u_worleyNoise,textureCoords);
-    density.x = totalDensity;
+    density.x = exp(-totalDensity);
     density.w = totalDensity;
-
-    return exp(-vec4(density.xxx,density.w));
+    vec3 pinkColor = vec3(100.f/255.f,71.f/255.f,76.f/255.f);
+   // return vec4(color,1);
+    return vec4(density.xxx,density.w);
 }
 
 void main()
@@ -125,6 +143,6 @@ void main()
 
     vec4 shaded_color = ray_march(ro, rd_world.xyz);
 
-    o_color = vec4(shaded_color.xxx,shaded_color.w);
+    o_color = vec4(shaded_color.xxx,1);
    // o_color = vec4(uv,0,1);
 }

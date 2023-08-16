@@ -7,9 +7,6 @@ layout(set = 0, binding = 0) uniform UniformBufferObject {
     float time;
     
 } ubo;
-// 1 - static noise for terrain,
-// 2 -  dynamic noise for water rendering
-//layout(set = 1, binding = 0, rgba8) uniform writeonly image2D[2] storageImage;
 layout(set=1,binding = 2) uniform NoiseData {
 
     float frequence ;
@@ -19,13 +16,24 @@ layout(set=1,binding = 2) uniform NoiseData {
 	float exponent ;
 	float scale;
 
-    float normalStrength ;
+    float normalStrength;
 	float waterScale;
+    float waterDepth;
+    float waterStrength;
+
+    vec3 deepWaterColor;
+    vec3 shallowWaterColor;
+
+
+    float numCellsA;
+    float numCellsB;
+    float numCellsC;
+    float persistence;
     
 } noiseData;
 //   worley noise for clouds
 layout(set = 1, binding =3 , rgba8) uniform writeonly image3D worleyNoiseImage;
-layout(set = 1, binding =4) buffer StorageBuffer {
+layout(std430, set = 1, binding =4) buffer StorageBuffer {
     vec3 points[];
 };
 
@@ -93,113 +101,54 @@ vec2 random2( vec2 p ) {
 vec3 random3( vec3 p ) {
     return fract(sin(vec3(dot(p,vec3(127.1,311.7,54.1)),dot(p,vec3(269.5,183.3,21.7)),dot(p,vec3(721.1,113.7,45.1))))*43758.5453);
 }
-void main() {
-	float scale = 100.2f;
-    vec3 gridPos = vec3(ivec3(gl_GlobalInvocationID));
-	vec3 imageSize = vec3(64,64,64);
-//	vec3 coords= gridPos%imageSize;
-    int CoordsX = int(gl_GlobalInvocationID.x) % 12;
-    int CoordsY =  int(gl_GlobalInvocationID.y) % 12;
-    int CoordsZ =  int(gl_GlobalInvocationID.z) % 12;
-    // Grid size and number of cell centers
-    const int gridSize = 64;
-    const int numCells = 4;
+float worleyNoise(vec3 pos, float numcCells, vec3 seed) 
+{
+    ivec3 cellID = ivec3(floor(pos * float(numcCells)));
+    vec3 i_st = vec3(cellID.xyz);
+    vec3 f_st = fract(pos.xyz * numcCells);
+    float layer = 100;
+    for (int y = -1; y <= 1; y++) {
+        for (int x = -1; x <= 1; x++) {
+            for (int z = -1; z <= 1; z++) {
+                vec3 neighbor = vec3(float(x), float(y), float(z));
 
-    // vec3 cellCenters[numCells];
+                vec3 point = random3(mod(i_st + neighbor, numcCells) + seed);
+                vec3 perturbation = random3(i_st + neighbor); // Add some perturbation
 
-    // // Generate cell centers
-    // for (int i = 0; i < numCells; ++i) {
-    //     cellCenters[i] = random(gridPos) + coords;
-    // }
+                // Calculate distance using Manhattan distance and perturbation
+                vec3 diff = neighbor + point + perturbation - f_st;
+                float dist = distance(diff, vec3(0.5)); // Manhattan distance
+                layer = min(layer,dist);
 
-    // // Calculate distances to cell centers and find the two closest
-    // float minDist = 1000.0;
-
-    // for (int i = 0; i < numCells; ++i) {
-    //     float dist = length(cellCenters[i] - vec3(coords));
-    //      // Keep the closer distance
-    //     minDist= min(minDist, dist);
-    // }
-
-    // Calculate Worley noise value
-  //  float worleyNoise = minDist;
-   vec3 pos = vec3(gl_GlobalInvocationID) / imageSize;
-   pos = mod(pos * 1.0, 1.0);
-   ivec3 cellID = ivec3(floor(pos * float(numCells)));
-   float minSqrDst = 1;
-//   for (int cellOffsetIndex = 0; cellOffsetIndex < 27; cellOffsetIndex ++)
-//   { 
-//        ivec3 adjID = cellID + offsets[cellOffsetIndex];
-//       // Adjacent cell is outside map, so wrap around to other side to allow for seamless tiling
-//     //   //if (minComponent(adjID) == -1 || maxComponent(adjID) == numCells) {
-//     //     if(false)
-//     //   {  ivec3 wrappedID = (adjID + numCells) % ivec3(numCells);
-//     //       int adjCellIndex = wrappedID.x + numCells * (wrappedID.y + wrappedID.z * numCells);
-//     //       vec3 wrappedPoint = points[adjCellIndex];
-//     //       // Offset the wrappedPoint by all offsets to find which is closest to samplePos
-//     //       for (int wrapOffsetIndex = 0; wrapOffsetIndex < 27; wrapOffsetIndex ++) {
-//     //           vec3 sampleOffset = (pos - (wrappedPoint + offsets[wrapOffsetIndex]));
-//     //           minSqrDst = min(minSqrDst, dot(sampleOffset, sampleOffset));
-//     //       }
-//     //   }
-//       //else
-//       {
-         
-//           int index = adjID.x + numCells*(adjID.y +adjID.z * numCells );
-//           vec3 sampleOffset = pos - points[index];
-//           minSqrDst = min(minSqrDst, dot(sampleOffset, sampleOffset));
-//       } 
-//  }
-  vec2 point[4];
-    point[0] = vec2(0.83,0.75);
-    point[1] = vec2(0.60,0.07);
-    point[2] = vec2(0.28,0.64);
-    point[3] =  vec2(0.31,0.26);
-  vec3 i_st = vec3(cellID.xyz);
-  vec3 f_st = fract(pos.xyz*numCells);
-//  // Iterate through the points positions
-   // for (int i = 0; i < 4; i++) {
-   //      //vec2 point = random2(i_st);
-   //     float dist = distance(f_st, point[i]);
-   //     //float dist = distance(f_st,point);
-   //     // Keep the closer distance
-   //     minSqrDst = min(minSqrDst, dist);
-   // }
-   for (int y= -1; y <= 1; y++) 
-    {
-        for (int x= -1; x <= 1; x++)
-            for (int z = -1; z<=1;z++)
-        
-        {
-            vec3 neighbor = vec3(float(x),float(y),float(z));
-
-            // Random position from current + neighbor place in the grid
-            vec3 point = random3(mod(i_st + neighbor,numCells));
-
-
-			// Vector between the pixel and the point
-            vec3 diff = neighbor + point - f_st;
-
-            // Distance to the point
-            float dist = length(diff);
-
-            // Keep the closer distance
-            minSqrDst = min(minSqrDst, dist);
+            }
         }
     }
-   // vec3 pointPos = points[index];
-    // Normalize the noise value to [0, 1]
-  //  worleyNoise = clamp(worleyNoise, 0.0, 1.0);
+    return layer;
+}
+void main()
+{
 
-    // Output the noise value to the texture
-    int index = cellID.x + numCells*(cellID.y +cellID.z * numCells );
-    vec4 noiseValue = vec4(points[index],1);
-   // minSqrDst = sqrt(minSqrDst);
-    //noiseValue = vec4(pos,1);
-   // minSqrDst = sqrt(minSqrDst);
-    noiseValue = vec4(minSqrDst,minSqrDst,minSqrDst,1);
-   // noiseValue = vec4(f_st,0,1);
-   //noiseValue = vec4(i_st,0,1);
+vec3 imageSize = vec3(64,64,64);
+vec3 pos = vec3(gl_GlobalInvocationID) / imageSize;
+
+float layer1 = worleyNoise(pos,floor(noiseData.numCellsA),vec3(0,1,0));
+float layer2 = worleyNoise(pos,floor(noiseData.numCellsB),vec3(0,0,1));
+float layer3 = worleyNoise(pos,floor(noiseData.numCellsC),vec3(1,1,1));
+
+
+float persistence  = noiseData.persistence;
+// Combine and rescale the layers to create final noise value
+float worleyNoise = (layer1 + layer2 * pow(persistence,1) + layer3 *pow(persistence,2)) ;
+float noiseSum = layer1 + (layer2 * persistence) + (layer3 * persistence * persistence);
+float maxVal = 1 + (persistence) + (persistence * persistence);
+
+    // keep inside range [0,1] as will be clamped in texture
+    worleyNoise  /= maxVal;
+   // worleyNoise = 1-worleyNoise;
+   // noiseSum = 1 - noiseSum;
+    layer3 = sqrt(layer3);
+    layer3= 1-layer3;
+    vec4 noiseValue = vec4(worleyNoise,worleyNoise,worleyNoise ,1);
     imageStore(worleyNoiseImage, ivec3(gl_GlobalInvocationID),noiseValue );
 }
 

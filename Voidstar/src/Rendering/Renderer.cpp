@@ -810,9 +810,13 @@ namespace Voidstar
 			layoutBinding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
 			layoutBinding.stageFlags = vk::ShaderStageFlagBits::eFragment;
 			layoutBinding.descriptorCount = 1;
+			vk::DescriptorSetLayoutBinding layoutBinding1;
+			layoutBinding1.binding = 1;
+			layoutBinding1.descriptorType = vk::DescriptorType::eUniformBuffer;
+			layoutBinding1.stageFlags = vk::ShaderStageFlagBits::eFragment;
+			layoutBinding1.descriptorCount = 1;
 
-
-			std::vector<vk::DescriptorSetLayoutBinding> layoutBindings1{ layoutBinding };
+			std::vector<vk::DescriptorSetLayoutBinding> layoutBindings1{ layoutBinding,layoutBinding1 };
 			m_DescriptorSetLayoutClouds = DescriptorSetLayout::Create(layoutBindings1);
 
 
@@ -824,6 +828,16 @@ namespace Voidstar
 
 			m_DescriptorPoolClouds = DescriptorPool::Create(poolSizes, 1);
 			m_DescriptorSetClouds = m_DescriptorPoolClouds->AllocateDescriptorSets(1,&m_DescriptorSetLayoutClouds->GetLayout())[0];
+
+
+			BufferInputChunk inputBuffer;
+			inputBuffer.size = sizeof(CloudParams);
+			inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+			inputBuffer.usage = vk::BufferUsageFlagBits::eUniformBuffer;
+			m_CloudBuffer = CreateUPtr<Buffer>(inputBuffer);
+			m_CloudPtr = m_Device->GetDevice().mapMemory(m_CloudBuffer->GetMemory(), 0, sizeof(CloudParams));
+			memcpy(m_CloudPtr, &cloudParams, sizeof(CloudParams));
+			m_Device->UpdateDescriptorSet(m_DescriptorSetClouds, 1, 1, *m_CloudBuffer, vk::DescriptorType::eUniformBuffer);
 		}
 
 
@@ -1035,7 +1049,7 @@ namespace Voidstar
 
 		
 		// create a buffer with points
-		int numCellsPerAxis = 4;
+		int numCellsPerAxis = noiseData.cellAmountA;
 		float cellSize = 1.f/ numCellsPerAxis;
 
 		std::vector<glm::vec3> points;
@@ -1047,12 +1061,12 @@ namespace Voidstar
 					float randomX = GetRandomNumber();
 					float randomY = GetRandomNumber();
 					float randomZ = GetRandomNumber();
-					glm::vec3 randomOffset = glm::vec3(randomX, randomY, randomZ) * cellSize;
-					glm::vec3 cellCorner = glm::vec3(x, y, z) * cellSize;
-
+					glm::vec3 randomOffset = glm::vec3(randomX, randomY, randomZ);
+					glm::vec3 cellCorner = glm::vec3(x, y, z);
+					glm::vec3 pos = (cellCorner + randomOffset) * cellSize;
 					int index = x + numCellsPerAxis * (y + z * numCellsPerAxis);
 					assert(index < points.size());
-					points[index] = cellCorner + randomOffset;
+					points[index] = pos;
 				}
 			}
 		}
@@ -1770,7 +1784,7 @@ namespace Voidstar
 			m_Device->UpdateDescriptorSet(m_DescriptorSetNoise, 0, 1, *m_NoiseImage, vk::ImageLayout::eGeneral, vk::DescriptorType::eStorageImage);
 			m_Device->UpdateDescriptorSet(m_DescriptorSetTex, 0, 1, *m_NoiseImage, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
 		}
-		// should be updated separately
+		// clouds terrain and water be updated separately
 		if (true)
 		{
 			// update noise descriptor 
@@ -1778,6 +1792,12 @@ namespace Voidstar
 			m_Device->GetDevice().waitIdle();
 			memcpy(m_NoiseDataPtr, &noiseData, sizeof(NoiseData));
 			UpdateNoiseTexture();
+		}
+		if (m_IsNewParametrs)
+		{
+			m_IsNewParametrs = false;
+			memcpy(m_CloudPtr, &cloudParams, sizeof(CloudParams));
+			UpdateCloudTexture();
 		}
 		if (m_IsPolygon)
 		{
@@ -2415,12 +2435,19 @@ namespace Voidstar
 		m_IsNewParametrs |= ImGui::SliderFloat("water strength ", &noiseData.waterStrength, 0, 1);
 		m_IsNewParametrs |= ImGui::ColorEdit3("deep water color ", &noiseData.deepWaterColor[0]);
 		m_IsNewParametrs |= ImGui::ColorEdit3("shallow water color", &noiseData.shallowWaterColor[0]);
+		ImGui::Text("Clouds");
+		m_IsNewParametrs |= ImGui::SliderFloat("Cell amountA ",  &noiseData.cellAmountA, 0, 100);
+		m_IsNewParametrs |= ImGui::SliderFloat("Cell amountB ",  &noiseData.cellAmountB, 0, 100);
+		m_IsNewParametrs |= ImGui::SliderFloat("Cell amountC ",  &noiseData.cellAmountC, 0, 100);
+		m_IsNewParametrs |= ImGui::SliderFloat("Persistence", &noiseData.persistence, 0, 1);
+
+		m_IsNewParametrs |= ImGui::SliderFloat("Density Offset", &cloudParams.densityOffset, 0, 1);
+		m_IsNewParametrs |= ImGui::SliderFloat("Density Mult", &cloudParams.densityMult, 0, 10);
+		m_IsNewParametrs |= ImGui::SliderFloat("Scale", &cloudParams.scale, 0, 100);
+		m_IsNewParametrs |= ImGui::SliderFloat4("weights", &cloudParams.weights[0], 0, 100);
 		m_IsPolygon = ImGui::Button("change mode");
 		
-		//std::string strMemory = "Allocated memory " + std::to_string(allocationMetrics.Current()) + " Bytes";
-		//std::string strLeaks = "Leaks " + std::to_string(allocationMetrics.Leaks());
-		//ImGui::Text(strMemory.c_str());
-		//ImGui::Text(strLeaks.c_str());
+	
 
 		ImGui::End();
 		m_IsNewParametrs |= m_IsResized;
@@ -2563,6 +2590,7 @@ namespace Voidstar
 		m_Cubemap.reset();
 
 		m_InstancedDataBuffer.reset();
+		m_CloudBuffer.reset();
 		delete m_NoiseData;
 		m_PointsData.reset();
 		m_Device->GetDevice().freeMemory(m_MsaaImageMemory);
