@@ -1792,12 +1792,12 @@ namespace Voidstar
 			m_Device->GetDevice().waitIdle();
 			memcpy(m_NoiseDataPtr, &noiseData, sizeof(NoiseData));
 			UpdateNoiseTexture();
+			UpdateCloudTexture();
 		}
 		if (m_IsNewParametrs)
 		{
 			m_IsNewParametrs = false;
 			memcpy(m_CloudPtr, &cloudParams, sizeof(CloudParams));
-			UpdateCloudTexture();
 		}
 		if (m_IsPolygon)
 		{
@@ -2441,10 +2441,11 @@ namespace Voidstar
 		m_IsNewParametrs |= ImGui::SliderFloat("Cell amountC ",  &noiseData.cellAmountC, 0, 100);
 		m_IsNewParametrs |= ImGui::SliderFloat("Persistence", &noiseData.persistence, 0, 1);
 
-		m_IsNewParametrs |= ImGui::SliderFloat("Density Offset", &cloudParams.densityOffset, 0, 1);
+		m_IsNewParametrs |= ImGui::SliderFloat("Density Offset", &cloudParams.densityOffset, -10, 10);
 		m_IsNewParametrs |= ImGui::SliderFloat("Density Mult", &cloudParams.densityMult, 0, 10);
-		m_IsNewParametrs |= ImGui::SliderFloat("Scale", &cloudParams.scale, 0, 100);
-		m_IsNewParametrs |= ImGui::SliderFloat4("weights", &cloudParams.weights[0], 0, 100);
+		m_IsNewParametrs |= ImGui::SliderFloat("Scale", &noiseData.cloudScale, 0, 100);
+		m_IsNewParametrs |= ImGui::SliderFloat("Speed", &noiseData.cloudSpeed, -100, 100);
+		m_IsNewParametrs |= ImGui::SliderFloat4("Weights", &cloudParams.weights[0], 0, 100);
 		m_IsPolygon = ImGui::Button("change mode");
 		
 	

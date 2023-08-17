@@ -29,6 +29,9 @@ layout(set=1,binding = 2) uniform NoiseData {
     float numCellsB;
     float numCellsC;
     float persistence;
+
+    float cloudScale;
+    float cloudSpeed;
     
 } noiseData;
 //   worley noise for clouds
@@ -101,19 +104,27 @@ vec2 random2( vec2 p ) {
 vec3 random3( vec3 p ) {
     return fract(sin(vec3(dot(p,vec3(127.1,311.7,54.1)),dot(p,vec3(269.5,183.3,21.7)),dot(p,vec3(721.1,113.7,45.1))))*43758.5453);
 }
-float worleyNoise(vec3 pos, float numcCells, vec3 seed) 
+float worleyNoise(vec3 pos, float numcCells, vec3 seed,float scale) 
 {
+    numcCells*=scale;
+    float speed = noiseData.cloudSpeed;
+    vec3 offset = speed*ubo.time*vec3(1,0,0); 
+    pos+=offset;
     ivec3 cellID = ivec3(floor(pos * float(numcCells)));
     vec3 i_st = vec3(cellID.xyz);
     vec3 f_st = fract(pos.xyz * numcCells);
     float layer = 100;
     for (int y = -1; y <= 1; y++) {
-        for (int x = -1; x <= 1; x++) {
+        for (int x = -1; x <= 1; x++) { 
             for (int z = -1; z <= 1; z++) {
                 vec3 neighbor = vec3(float(x), float(y), float(z));
-
-                vec3 point = random3(mod(i_st + neighbor, numcCells) + seed);
-                vec3 perturbation = random3(i_st + neighbor); // Add some perturbation
+                vec3 neighbori_st = i_st + neighbor;
+                 if (minComponent(i_st) == -1 || maxComponent(i_st) == numcCells)
+                {
+                        neighbori_st = mod((neighbor + vec3(numcCells)) ,vec3(numcCells));    
+                }
+                vec3 point = random3(mod(neighbori_st, numcCells) + seed);
+                vec3 perturbation = random3(neighbori_st); // Add some perturbation
 
                 // Calculate distance using Manhattan distance and perturbation
                 vec3 diff = neighbor + point + perturbation - f_st;
@@ -129,25 +140,24 @@ void main()
 {
 
 vec3 imageSize = vec3(64,64,64);
-vec3 pos = vec3(gl_GlobalInvocationID) / imageSize;
+vec3 pos = vec3(gl_GlobalInvocationID) / (imageSize);
 
-float layer1 = worleyNoise(pos,floor(noiseData.numCellsA),vec3(0,1,0));
-float layer2 = worleyNoise(pos,floor(noiseData.numCellsB),vec3(0,0,1));
-float layer3 = worleyNoise(pos,floor(noiseData.numCellsC),vec3(1,1,1));
+float layer1 = worleyNoise(pos,floor(noiseData.numCellsA),vec3(0,1,0),noiseData.cloudScale*2);
+float layer2 = worleyNoise(pos,floor(noiseData.numCellsB),vec3(0,0,1),noiseData.cloudScale/2);
+float layer3 = worleyNoise(pos,floor(noiseData.numCellsC),vec3(1,1,1),noiseData.cloudScale);
 
 
 float persistence  = noiseData.persistence;
 // Combine and rescale the layers to create final noise value
-float worleyNoise = (layer1 + layer2 * pow(persistence,1) + layer3 *pow(persistence,2)) ;
+float worleyNoise = (layer1 + layer2 * pow(persistence,1) - layer3 *pow(persistence,0)) ;
 float noiseSum = layer1 + (layer2 * persistence) + (layer3 * persistence * persistence);
 float maxVal = 1 + (persistence) + (persistence * persistence);
 
     // keep inside range [0,1] as will be clamped in texture
     worleyNoise  /= maxVal;
    // worleyNoise = 1-worleyNoise;
-   // noiseSum = 1 - noiseSum;
-    layer3 = sqrt(layer3);
-    layer3= 1-layer3;
+    noiseSum = 1 - noiseSum;
+    layer1= 1-layer1;
     vec4 noiseValue = vec4(worleyNoise,worleyNoise,worleyNoise ,1);
     imageStore(worleyNoiseImage, ivec3(gl_GlobalInvocationID),noiseValue );
 }

@@ -111,13 +111,14 @@ namespace Voidstar
 		alignas(4)float cellAmountC = 5.f;
 		alignas(4)float persistence;
 
+		float cloudScale = 10;
+		float cloudSpeed = 40;
 	};
 
 	struct CloudParams
 	{
 		float densityMult = 0.5;
 		float densityOffset = 0.5;
-		float scale = 10;
 		alignas(16)glm::vec4 weights = {1,1,1,1};
 	};
 	class Instance;
