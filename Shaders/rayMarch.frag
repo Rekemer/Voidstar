@@ -26,6 +26,7 @@ layout(set=1,binding = 1) uniform CloudParams {
 
 
 } cloudParams;
+layout(set = 1, binding = 2) uniform sampler3D u_worleyNoiseLowRes;
 
 float sdfBox(vec3 p, vec3 position, vec3 size)
 {
@@ -117,11 +118,15 @@ vec4 ray_march(in vec3 ro, in vec3 rd)
             color = texture(u_worleyNoise,fract(texCoords)).xxx;
             float densityOffset = cloudParams.densityOffset;
             float densityMult =cloudParams.densityMult;
-            float baseShapeDensity = color.x + densityOffset * .1;
+            float baseShapeDensity = color.x + densityOffset * .01;
 
             float densityFromTex =baseShapeDensity*densityMult;
             color.x = baseShapeDensity;
+            vec3 densityFromLowerResTex = texture(u_worleyNoiseLowRes,fract(texCoords)).xxx;
+            color.xyz = densityFromLowerResTex.xxx+color.xxx;
+            color.xyz = densityFromLowerResTex.xxx;
             //break;
+            densityFromTex+=densityFromLowerResTex.x;
             totalDensity +=max(0,densityFromTex*segmentsDistance);
             total_distance_traveled+=segmentsDistance;
             vec3 lightDir = normalize(cloudParams.lightDir);
@@ -134,7 +139,7 @@ vec4 ray_march(in vec3 ro, in vec3 rd)
             }
             //if(minMax.y > 10)
             
-            const float NUMBER_OF_STEPS_LIGHT =32;
+            const float NUMBER_OF_STEPS_LIGHT =8;
             
             float segmentsDistanceLight = distanceInsideCubeLight/NUMBER_OF_STEPS_LIGHT;
             if( segmentsDistanceLight<=0)
@@ -148,8 +153,9 @@ vec4 ray_march(in vec3 ro, in vec3 rd)
               texCoords/=cloudBoxScale;
               texCoords=(texCoords+1)/2;
               float density = texture(u_worleyNoise,fract(texCoords)).x;
+              float densityFromLowerResTex = texture(u_worleyNoiseLowRes,fract(texCoords)).x;
               float angle = dot(rd,-lightDir);
-              totalDensityLight +=max(0,density*segmentsDistanceLight)*hg(angle,0.5);
+              totalDensityLight +=max(0,(density)*segmentsDistanceLight)*hg(angle,0.9);
               lightPos = lightPos+ segmentsDistanceLight* -lightDir;
             }
           }   
@@ -168,7 +174,8 @@ vec4 ray_march(in vec3 ro, in vec3 rd)
     density.x = totalDensity;
     density.w = totalDensity;
     float lightTransmittance = exp(-totalDensityLight)  ;
-   
+    
+    //return vec4(totalDensity,totalDensity,totalDensity,1);
     //return vec4(color,1);
     vec4 finalColor = vec4(vec3(lightTransmittance),density.w);
     return finalColor;

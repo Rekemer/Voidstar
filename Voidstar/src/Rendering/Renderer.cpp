@@ -446,12 +446,19 @@ namespace Voidstar
 
 			vk::DescriptorSetLayoutBinding layoutBinding5;
 			layoutBinding5.binding = 4;
-			layoutBinding5.descriptorType = vk::DescriptorType::eStorageBuffer;
+			layoutBinding5.descriptorType = vk::DescriptorType::eStorageImage;
 			layoutBinding5.stageFlags = vk::ShaderStageFlagBits::eCompute;
 			layoutBinding5.descriptorCount = 1;
 
+			vk::DescriptorSetLayoutBinding layoutBinding6;
+			layoutBinding6.binding = 5;
+			layoutBinding6.descriptorType = vk::DescriptorType::eStorageImage;
+			layoutBinding6.stageFlags = vk::ShaderStageFlagBits::eCompute;
+			layoutBinding6.descriptorCount = 1;
 
-			std::vector<vk::DescriptorSetLayoutBinding> layoutBindings{ layoutBinding1,layoutBinding2,layoutBinding3,layoutBinding4,layoutBinding5 };
+
+
+			std::vector<vk::DescriptorSetLayoutBinding> layoutBindings{ layoutBinding1,layoutBinding2,layoutBinding3,layoutBinding4,layoutBinding5,layoutBinding6 };
 
 			m_DescriptorSetLayoutNoise = DescriptorSetLayout::Create(layoutBindings);
 
@@ -464,9 +471,10 @@ namespace Voidstar
 		m_NoiseImage = Image::CreateEmptyImage(noiseTextureWidth, noiseTextureHeight, vk::Format::eR8G8B8A8Snorm);
 		m_AnimatedNoiseImage = Image::CreateEmptyImage(noiseTextureWidth, noiseTextureHeight, vk::Format::eR8G8B8A8Snorm);
 		
-		int size = 64;
+		int size = 128;
 		m_3DNoiseTexture = Image::CreateEmpty3DImage(size, size, size, vk::Format::eR8G8B8A8Snorm);
-		//m_3DNoiseTexture = Image::CreateEmpty3DImage(64, 64, 64, vk::Format::eR8G8B8A8Uint);
+		m_3DNoiseTextureLowRes = Image::CreateEmpty3DImage(32, 32, 32, vk::Format::eR8G8B8A8Snorm);
+	
 
 		
 
@@ -484,9 +492,17 @@ namespace Voidstar
 			imageDescriptor2.imageView = m_3DNoiseTexture->m_ImageView;
 			imageDescriptor2.sampler = m_3DNoiseTexture->m_Sampler;
 
+			vk::DescriptorImageInfo imageDescriptor3;
+			imageDescriptor3.imageLayout = vk::ImageLayout::eGeneral;
+			imageDescriptor3.imageView = m_3DNoiseTextureLowRes->m_ImageView;
+			imageDescriptor3.sampler = m_3DNoiseTextureLowRes->m_Sampler;
+		
+
 			std::vector<vk::DescriptorImageInfo> images{ imageDescriptor0 ,imageDescriptor1};
 			m_Device->UpdateDescriptorSet(m_DescriptorSetNoise, 0, images, vk::DescriptorType::eStorageImage);
 			m_Device->UpdateDescriptorSet(m_DescriptorSetNoise, 3,1, imageDescriptor2, vk::DescriptorType::eStorageImage);
+			m_Device->UpdateDescriptorSet(m_DescriptorSetNoise, 4,1, imageDescriptor3, vk::DescriptorType::eStorageImage);
+		
 
 
 			{
@@ -505,7 +521,17 @@ namespace Voidstar
 				imageDescriptor2.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
 				imageDescriptor2.imageView = m_3DNoiseTexture->m_ImageView;
 				imageDescriptor2.sampler = m_3DNoiseTexture->m_Sampler;
+
+				vk::DescriptorImageInfo imageDescriptor3;
+				imageDescriptor3.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+				imageDescriptor3.imageView = m_3DNoiseTextureLowRes->m_ImageView;
+				imageDescriptor3.sampler = m_3DNoiseTextureLowRes->m_Sampler;
+
+				vk::DescriptorImageInfo imageDescriptor4;
+				imageDescriptor4.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+
 				m_Device->UpdateDescriptorSet(m_DescriptorSetClouds, 0,1, imageDescriptor2, vk::DescriptorType::eCombinedImageSampler);
+				m_Device->UpdateDescriptorSet(m_DescriptorSetClouds, 2,1, imageDescriptor3, vk::DescriptorType::eCombinedImageSampler);
 			}
 			
 
@@ -658,7 +684,7 @@ namespace Voidstar
 
 
 			m_ComputeCommandBuffer[currentFrame].ChangeImageLayout(m_3DNoiseTexture.get(), vk::ImageLayout::eShaderReadOnlyOptimal, vk::ImageLayout::eGeneral);
-
+			m_ComputeCommandBuffer[currentFrame].ChangeImageLayout(m_3DNoiseTextureLowRes.get(), vk::ImageLayout::eShaderReadOnlyOptimal, vk::ImageLayout::eGeneral);
 			m_ComputeCommandBuffer[currentFrame].EndTransfering();
 			m_ComputeCommandBuffer[currentFrame].SubmitSingle();
 
@@ -671,13 +697,14 @@ namespace Voidstar
 		vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_ComputePipelineClouds);
 		cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_ComputePipelineLayoutClouds, 0, 1, &m_DescriptorSets[currentFrame], 0, 0);
 		cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_ComputePipelineLayoutClouds, 1, 1, &m_DescriptorSetNoise, 0, 0);
-		float invocations = 64;
+		float invocations = 128;
 		int localSize= 8;
 	
 
 		vkCmdDispatch(cmdBuffer, invocations/ localSize, invocations/ localSize, invocations/ localSize);
 
 		m_ComputeCommandBuffer[currentFrame].ChangeImageLayout(m_3DNoiseTexture.get(), vk::ImageLayout::eGeneral, vk::ImageLayout::eShaderReadOnlyOptimal);
+		m_ComputeCommandBuffer[currentFrame].ChangeImageLayout(m_3DNoiseTextureLowRes.get(), vk::ImageLayout::eGeneral, vk::ImageLayout::eShaderReadOnlyOptimal);
 		m_ComputeCommandBuffer[currentFrame].EndTransfering();
 		m_ComputeCommandBuffer[currentFrame].SubmitSingle();
 
@@ -816,7 +843,13 @@ namespace Voidstar
 			layoutBinding1.stageFlags = vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eVertex;
 			layoutBinding1.descriptorCount = 1;
 
-			std::vector<vk::DescriptorSetLayoutBinding> layoutBindings1{ layoutBinding,layoutBinding1 };
+			vk::DescriptorSetLayoutBinding layoutBinding2;
+			layoutBinding2.binding = 2;
+			layoutBinding2.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+			layoutBinding2.stageFlags = vk::ShaderStageFlagBits::eFragment;
+			layoutBinding2.descriptorCount = 1;
+
+			std::vector<vk::DescriptorSetLayoutBinding> layoutBindings1{ layoutBinding,layoutBinding1,layoutBinding2 };
 			m_DescriptorSetLayoutClouds = DescriptorSetLayout::Create(layoutBindings1);
 
 
@@ -1203,7 +1236,7 @@ namespace Voidstar
 
 		
 
-		{
+		/*{
 			auto bufferSize = points.size() * sizeof(glm::vec3);
 			{
 				SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(bufferSize);
@@ -1226,7 +1259,7 @@ namespace Voidstar
 
 				m_Device->UpdateDescriptorSet(m_DescriptorSetNoise, 4, 1, *m_PointsData, vk::DescriptorType::eStorageBuffer);
 			}
-		}
+		}*/
 
 		auto physDev = m_Device->GetDevicePhys();
 		auto dev = m_Device->GetDevice();
@@ -2722,6 +2755,7 @@ namespace Voidstar
 		m_NoiseImage.reset();
 		m_AnimatedNoiseImage.reset();
 		m_3DNoiseTexture.reset();
+		m_3DNoiseTextureLowRes.reset();
 		
 		m_SnowTex.reset();
 		m_GrassTex.reset();

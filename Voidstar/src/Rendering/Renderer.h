@@ -190,6 +190,7 @@ namespace Voidstar
 
 		SPtr<Image> m_AnimatedNoiseImage;
 		SPtr<Image> m_3DNoiseTexture;
+		SPtr<Image> m_3DNoiseTextureLowRes;
 		
 		SPtr<Image> m_WaterNormalImage;
 		SPtr<Image> m_WaterNormalImage2;
