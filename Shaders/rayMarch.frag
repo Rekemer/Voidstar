@@ -18,6 +18,13 @@ layout(set=1,binding = 1) uniform CloudParams {
     float densityOffset;
 	float densityMult;
     vec4 weights;
+
+    vec3 lightDir;
+    vec3 lightPos;
+    vec3 cloudPos;
+    vec3 cloudBoxScale;
+
+
 } cloudParams;
 
 float sdfBox(vec3 p, vec3 position, vec3 size)
@@ -30,6 +37,32 @@ float distance_from_sphere(in vec3 p, in vec3 c, float r)
 {
     return length(p - c) - r;
 }
+
+
+vec2 GetMinMaxBox(vec3 boxScale, vec3 boxPos, vec3 ro,vec3 rd)
+{
+    float minEntry = 0.f;
+     float maxExit  = 0.f;
+  
+      vec3 invRd = 1.0 / rd;
+    
+       vec3 cubeMin = vec3(-boxScale)+boxPos;
+       vec3 cubeMax =  vec3(boxScale)+boxPos;
+       vec3 t1 = (cubeMin - ro) * invRd;
+       vec3 t2 = (cubeMax - ro) * invRd;
+       vec3 tmin = min(t1, t2);
+       vec3 tmax = max(t1, t2);
+       minEntry = max(max(tmin.x, tmin.y), tmin.z);
+       maxExit = min(min(tmax.x, tmax.y), tmax.z);
+       return vec2(minEntry,maxExit);
+}
+
+// Henyey-Greenstein
+float hg(float a, float g) {
+    float g2 = g*g;
+    return (1-g2) / (4*3.1415*pow(1+g2-2*g*(a), 1.5));
+}
+
 vec4 ray_march(in vec3 ro, in vec3 rd)
 {
     float total_distance_traveled = 0.0;
@@ -40,31 +73,26 @@ vec4 ray_march(in vec3 ro, in vec3 rd)
     float absorbption = 1.1f;
      float minEntry = 0.f;
      float maxExit  = 0.f;
-     float scale = 10;
-    const vec3  spherePos = vec3(0,120,4);
-
-      vec3 invRd = 1.0 / rd;
-       vec3 cubeMin = vec3(-scale,-scale/5,-scale)+spherePos;
-       vec3 cubeMax =  vec3(scale,scale/5,scale)+spherePos;
-       vec3 t1 = (cubeMin - ro) * invRd;
-       vec3 t2 = (cubeMax - ro) * invRd;
-       vec3 tmin = min(t1, t2);
-       vec3 tmax = max(t1, t2);
-       minEntry = max(max(tmin.x, tmin.y), tmin.z);
-       maxExit = min(min(tmax.x, tmax.y), tmax.z);
+  
+      vec3 cloudPos = cloudParams.cloudPos;
+      vec3 cloudBoxScale= cloudParams.cloudBoxScale;
+      vec2 minMax = GetMinMaxBox(cloudBoxScale, cloudPos, ro, rd);
+      minEntry = minMax.x;
+      maxExit = minMax.y;
        float distanceInsideCube = max(0.0, maxExit - minEntry);
        float segmentsDistance = distanceInsideCube/NUMBER_OF_STEPS;
        distanceInsideCube = 0;
        vec3 current_position = ro;
        float totalDensity = 0;
        vec3 color = vec3(0,0,0);
+       float totalDensityLight = 0;
     for (int i = 0; i < NUMBER_OF_STEPS; ++i)
     {
          current_position = ro + total_distance_traveled * rd;
 
         //float distance_to_closest = distance_from_sphere(current_position, spherePos, 1.0);
         //scale *=(1- i/NUMBER_OF_STEPS);
-        float distance_to_closest = sdfBox(current_position,spherePos, vec3(scale,scale/5,scale));
+        float distance_to_closest = sdfBox(current_position,cloudPos, vec3(cloudBoxScale));
        //distance_to_closest = 0.1f;
      
       
@@ -81,36 +109,51 @@ vec4 ray_march(in vec3 ro, in vec3 rd)
        {
          
           for (int j = 0; j < NUMBER_OF_STEPS; ++j)
-        {
-             current_position = ro + total_distance_traveled * rd;
-            vec3 texCoords= (current_position.xyz - spherePos);
-            texCoords.xz/=scale;
-            texCoords.y/=scale;
+          {
+            current_position = ro + total_distance_traveled * rd;
+            vec3 texCoords= (current_position.xyz - cloudPos);
+            texCoords/=cloudBoxScale;
             texCoords=(texCoords+1)/2;
             color = texture(u_worleyNoise,fract(texCoords)).xxx;
             float densityOffset = cloudParams.densityOffset;
             float densityMult =cloudParams.densityMult;
             float baseShapeDensity = color.x + densityOffset * .1;
 
-            float densityFromTex =color.x ;
-         color.x = baseShapeDensity;
-        // break;
-         //color.x = pow(color.x,densityMult); 
-         color.x *=densityMult; 
-         totalDensity +=densityFromTex*segmentsDistance;
-          total_distance_traveled+=segmentsDistance;
-        }   
-       break;
-         //color = mix(vec3(0,0,0), color, 0.6);
-        // break;
-         //color = texCoords;
-        // break;
-         //texCoords.x /=14;
-        // texCoords.y /=2;
-           //density.x+=0.1;
-           //distanceInsideCube+=segmentsDistance*densityFromTex;
+            float densityFromTex =baseShapeDensity*densityMult;
+            color.x = baseShapeDensity;
+            //break;
+            totalDensity +=max(0,densityFromTex*segmentsDistance);
+            total_distance_traveled+=segmentsDistance;
+            vec3 lightDir = normalize(cloudParams.lightDir);
+            vec2 minMax = GetMinMaxBox(cloudBoxScale, cloudPos, current_position, -lightDir);
 
-          // return vec4(1.0, 0.0, 0.0,1.0);
+            float distanceInsideCubeLight = max(0.0, minMax.y);
+            if( minMax.y<0 && minMax.x<0)
+            {
+                //    return vec4(1,0,1,1);
+            }
+            //if(minMax.y > 10)
+            
+            const float NUMBER_OF_STEPS_LIGHT =32;
+            
+            float segmentsDistanceLight = distanceInsideCubeLight/NUMBER_OF_STEPS_LIGHT;
+            if( segmentsDistanceLight<=0)
+            {
+            //        return vec4(1,1,0,1);
+            }
+            vec3 lightPos = current_position+ segmentsDistanceLight* -lightDir;
+            for (int jj = 0; jj < NUMBER_OF_STEPS_LIGHT; ++jj)
+            {
+              vec3 texCoords= (lightPos.xyz - cloudPos);
+              texCoords/=cloudBoxScale;
+              texCoords=(texCoords+1)/2;
+              float density = texture(u_worleyNoise,fract(texCoords)).x;
+              float angle = dot(rd,-lightDir);
+              totalDensityLight +=max(0,density*segmentsDistanceLight)*hg(angle,0.5);
+              lightPos = lightPos+ segmentsDistanceLight* -lightDir;
+            }
+          }   
+       break;
        }
        
        if (total_distance_traveled > MAXIMUM_TRACE_DISTANCE)
@@ -120,35 +163,49 @@ vec4 ray_march(in vec3 ro, in vec3 rd)
        }
         total_distance_traveled += distance_to_closest;
     }
-    density.x = exp(-totalDensity);
-    density.w = exp(-totalDensity);
-    vec3 pinkColor = vec3(100.f/255.f,71.f/255.f,76.f/255.f);
+   // float transmittance = exp(-totalDensityLight*3);
+
+    density.x = totalDensity;
+    density.w = totalDensity;
+    float lightTransmittance = exp(-totalDensityLight)  ;
+   
     //return vec4(color,1);
-    return vec4(pinkColor*density.xxx,density.w);
+    vec4 finalColor = vec4(vec3(lightTransmittance),density.w);
+    return finalColor;
+}
+const float far = 10000;
+ const float near = 10.00;
+float linerizeDepth(float depth)
+{
+    float ndc = depth * 2.0 - 1.0;
+    float linearDepth = (2.0 * near * far) / (far + near - ndc * (far - near));
+    linearDepth/=far;
+    return linearDepth;
 }
 
 void main()
 {   
-    const int res = 100;
-	vec2 aspect = vec2( 16 * res, 9 * res);
-    vec2 uv = vUV.st * 2.0 - 1.0;
-    //uv.x*= aspect.x/aspect.y;
-    vec3 camera_position = vec3(0.0, 0.0, -15.0);
-    camera_position = vec3(inverse(ubo.view)[3]);
-    vec3 ro = camera_position;
-  //  vec3 direction =  normalize(spherePos - ro); 
-    vec3 rd = vec3(uv, 1.0);
+        const int res = 100;
+    	vec2 aspect = vec2( 16 * res, 9 * res);
+        vec2 uv = vUV.st * 2.0 - 1.0;
+        //uv.x*= aspect.x/aspect.y;
+        vec3 camera_position = vec3(0.0, 0.0, -15.0);
+        camera_position = vec3(inverse(ubo.view)[3]);
+        vec3 ro = camera_position;
+      //  vec3 direction =  normalize(spherePos - ro); 
+        vec3 rd = vec3(uv, 1.0);
 
-    //world space
-    vec4 rd_camera = inverse(ubo.proj)*vec4(rd,1);
-    rd_camera/= rd_camera.w;
-    rd_camera = normalize(rd_camera);
-    vec4 rd_world = inverse(ubo.view) * rd_camera;
+        //world space
+        vec4 rd_camera = inverse(ubo.proj)*vec4(rd,1);
+        rd_camera/= rd_camera.w;
+        rd_camera = normalize(rd_camera);
+        vec4 rd_world = inverse(ubo.view) * rd_camera;
 
-   //vec3 rd =direction;
+       //vec3 rd =direction;
 
-    vec4 shaded_color = ray_march(ro, rd_world.xyz);
-
-    o_color = vec4(shaded_color.xxx,shaded_color.w);
-   // o_color = vec4(uv,0,1);
+        vec4 shaded_color = ray_march(ro, rd_world.xyz);
+         vec3 pinkColor = vec3(100.f/255.f,71.f/255.f,76.f/255.f);
+      //  o_color = vec4(shaded_color.x*pinkColor,shaded_color.w);
+     o_color = vec4((shaded_color.xyz),shaded_color.w);
+   //o_color = vec4(uv,0,1);
 }

@@ -32,6 +32,9 @@ layout(set=1,binding = 2) uniform NoiseData {
 
     float cloudScale;
     float cloudSpeed;
+    float cloudScaleMinus;
+    float numCellsMinus;
+
     
 } noiseData;
 //   worley noise for clouds
@@ -145,11 +148,13 @@ vec3 pos = vec3(gl_GlobalInvocationID) / (imageSize);
 float layer1 = worleyNoise(pos,floor(noiseData.numCellsA),vec3(0,1,0),noiseData.cloudScale*2);
 float layer2 = worleyNoise(pos,floor(noiseData.numCellsB),vec3(0,0,1),noiseData.cloudScale/2);
 float layer3 = worleyNoise(pos,floor(noiseData.numCellsC),vec3(1,1,1),noiseData.cloudScale);
+float layer4 = worleyNoise(pos,floor(noiseData.numCellsMinus),vec3(1,0.2,1),noiseData.cloudScaleMinus);
 
 
 float persistence  = noiseData.persistence;
 // Combine and rescale the layers to create final noise value
-float worleyNoise = (layer1 + layer2 * pow(persistence,1) - layer3 *pow(persistence,0)) ;
+//float worleyNoise = (layer1 + layer2 * pow(persistence,1) - layer3 *pow(persistence,0)) ;
+float worleyNoise = (layer1 + layer2 * pow(persistence,1) + layer3 *pow(persistence,2)) - layer4 * pow(persistence,0);
 float noiseSum = layer1 + (layer2 * persistence) + (layer3 * persistence * persistence);
 float maxVal = 1 + (persistence) + (persistence * persistence);
 

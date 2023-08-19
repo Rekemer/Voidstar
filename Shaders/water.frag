@@ -44,7 +44,7 @@ layout(set = 1, binding = 2) uniform sampler2D u_Tex2;
 layout(set = 1, binding = 3) uniform sampler2D u_Tex3;
 //layout(set = 1, binding = 4) uniform sampler2D u_WaterNormal;
 //layout(set = 1, binding = 5) uniform sampler2D u_WaterNormal1;
-
+ const vec3 lightDir = normalize(vec3(3,12,12));
 vec4 random_color(vec4 st)
 {
 	float dotProduct1 = dot(st, vec4(127.1, 311.7, 23423.1, 98.2));
@@ -203,7 +203,7 @@ void main()
     vec3 combinedTex= texture(u_Noise[1],uv).xyz;
    
 
-    vec3 lightDir = normalize(vec3(3,12,12));
+   
     vec3 norm = normalize(vec3(combinedTex));
     float diff = max(dot(norm, lightDir), 0.0);
     vec3 reflectDir = reflect(-lightDir, norm);

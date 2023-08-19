@@ -11,7 +11,7 @@ namespace Voidstar
 			{
 				float x, y, z;
 			};
-		};
+		} ;
 		alignas(16)float Color[4];
 		union
 		{

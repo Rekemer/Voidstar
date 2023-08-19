@@ -813,7 +813,7 @@ namespace Voidstar
 			vk::DescriptorSetLayoutBinding layoutBinding1;
 			layoutBinding1.binding = 1;
 			layoutBinding1.descriptorType = vk::DescriptorType::eUniformBuffer;
-			layoutBinding1.stageFlags = vk::ShaderStageFlagBits::eFragment;
+			layoutBinding1.stageFlags = vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eVertex;
 			layoutBinding1.descriptorCount = 1;
 
 			std::vector<vk::DescriptorSetLayoutBinding> layoutBindings1{ layoutBinding,layoutBinding1 };
@@ -1030,7 +1030,121 @@ namespace Voidstar
 		}
 		m_InstancedPtr = m_Device->GetDevice().mapMemory(m_InstancedDataBuffer->GetMemory(), 0, INSTANCE_COUNT * sizeof(InstanceData));
 		
+		{
+			std::vector<Vertex> CubeVerticies;
+			CubeVerticies.resize(8);
+			//vertices[0].Position = { -1, -1, -1 };
+			CubeVerticies[0].Position[0] = -1;
+			CubeVerticies[0].Position[1] = -1;
+			CubeVerticies[0].Position[2] = -1;
+
+
+			//vertices[1].Position = { 1, -1, -1 };
+			CubeVerticies[1].Position[0] = 1;
+			CubeVerticies[1].Position[1] = -1;
+			CubeVerticies[1].Position[2] = -1;
+			//vertices[2].Position = { 1, 1, -1};
+			CubeVerticies[2].Position[0] = 1;
+			CubeVerticies[2].Position[1] = 1;
+			CubeVerticies[2].Position[2] = -1;
+			//vertices[3].Position = { -1, 1, -1 };
+			CubeVerticies[3].Position[0] = -1;
+			CubeVerticies[3].Position[1] = 1;
+			CubeVerticies[3].Position[2] = -1;
+			//vertices[4].Position = { -1, -1, 1 };
+			CubeVerticies[4].Position[0] = -1;
+			CubeVerticies[4].Position[1] = -1;
+			CubeVerticies[4].Position[2] = 1;
+			//vertices[5].Position = { 1, -1, 1};
+			CubeVerticies[5].Position[0] = 1;
+			CubeVerticies[5].Position[1] = -1;
+			CubeVerticies[5].Position[2] = 1;
+			//vertices[6].Position = { 1, 1, 1};
+			CubeVerticies[6].Position[0] = 1;
+			CubeVerticies[6].Position[1] = 1;
+			CubeVerticies[6].Position[2] = 1;
+			//vertices[7].Position = { -1, 1, 1 };
+			CubeVerticies[7].Position[0] = -1;
+			CubeVerticies[7].Position[1] = 1;
+			CubeVerticies[7].Position[2] = 1;
+
+			CubeVerticies[0].UV[0] = 0.0f; // U coordinate
+			CubeVerticies[0].UV[1] = 0.0f; // V coordinate
+
+			CubeVerticies[1].UV[0] = 1.0f;
+			CubeVerticies[1].UV[1] = 0.0f;
+
+			CubeVerticies[2].UV[0] = 1.0f;
+			CubeVerticies[2].UV[1] = 1.0f;
+
+			CubeVerticies[3].UV[0] = 0.0f;
+			CubeVerticies[3].UV[1] = 1.0f;
+
+			CubeVerticies[4].UV[0] = 0.0f;
+			CubeVerticies[4].UV[1] = 0.0f;
+
+			CubeVerticies[5].UV[0] = 1.0f;
+			CubeVerticies[5].UV[1] = 0.0f;
+
+			CubeVerticies[6].UV[0] = 1.0f;
+			CubeVerticies[6].UV[1] = 1.0f;
+
+			CubeVerticies[7].UV[0] = 0.0f;
+			CubeVerticies[7].UV[1] = 1.0f;
+
+
+			const std::vector<uint32_t> indices =
+			{
+				0, 1, 3, 3, 1, 2,
+				1, 5, 2, 2, 5, 6,
+				5, 4, 6, 6, 4, 7,
+				4, 0, 7, 7, 0, 3,
+				3, 2, 7, 7, 2, 6,
+				4, 5, 0, 0, 5, 1
+			};
+			{
+				auto indexSize = sizeof(indices[0]) * indices.size();
+				SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(indexSize);
+
+
+				{
+					BufferInputChunk inputBuffer;
+					inputBuffer.size = indexSize;
+					inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+					inputBuffer.usage = vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst;
+					m_IndexCubeBuffer = CreateUPtr<IndexBuffer>(inputBuffer, indices.size(), vk::IndexType::eUint32);
+
+				}
+
+				m_TransferCommandBuffer[0].BeginTransfering();
+				m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_IndexCubeBuffer.get(), (void*)indices.data(), indexSize);
+				m_TransferCommandBuffer[0].EndTransfering();
+				m_TransferCommandBuffer[0].SubmitSingle();
+
+
+
+			}
+
+			auto vertexSize = SizeOfBuffer(CubeVerticies.size(), CubeVerticies[0]);
+			void* vertexData = const_cast<void*>(static_cast<const void*>(CubeVerticies.data()));
+			SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(vertexSize);
+			{
+				BufferInputChunk inputBuffer;
+				inputBuffer.size = vertexSize;
+				inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+				inputBuffer.usage = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer;
+
+				m_CubeBuffer = CreateUPtr<Buffer>(inputBuffer);
+			}
+
+			m_TransferCommandBuffer[0].BeginTransfering();
+			m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_CubeBuffer.get(), (void*)CubeVerticies.data(), vertexSize);
+			m_TransferCommandBuffer[0].EndTransfering();
+			m_TransferCommandBuffer[0].SubmitSingle();
+
+		}
 		
+
 		CreateMSAAFrame();
 
 	
@@ -1709,6 +1823,13 @@ namespace Voidstar
 					commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_RayMarchPipeline->m_Pipeline);
 					commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_RayMarchPipeline->m_PipelineLayout, 0, m_DescriptorSets[imageIndex], nullptr);
 					commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_RayMarchPipeline->m_PipelineLayout, 1, m_DescriptorSetClouds, nullptr);
+					{
+						vk::Buffer vertexBuffers[] = { m_CubeBuffer->GetBuffer() };
+						//commandBuffer.bindVertexBuffers(0, 1, vertexBuffers, offsets);
+
+					}
+					//commandBuffer.bindIndexBuffer(m_IndexCubeBuffer->GetBuffer(), 0, m_IndexCubeBuffer->GetIndexType());
+					//commandBuffer.drawIndexed(m_IndexCubeBuffer->GetIndexAmount(), 1, 0, 0, 0);
 					commandBuffer.draw(6, 1, 0, 0);
 				}
 			}
@@ -1928,12 +2049,12 @@ namespace Voidstar
 		vk::AttachmentReference depthStencilAttachmentRef = {};
 		depthStencilAttachmentRef.attachment = 1; // The index of the depth/stencil attachment in the attachments array
 		depthStencilAttachmentRef.layout = vk::ImageLayout::eGeneral; // The layout of the depth/stencil attachment
+
 		vk::SubpassDescription subpass1 = {};
 		subpass1.flags = vk::SubpassDescriptionFlags();
 		subpass1.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
 		subpass1.colorAttachmentCount = 1;
 		subpass1.pColorAttachments = &msaaAttachmentRef;
-	//	subpass1.pDepthStencilAttachment = &depthStencilAttachmentRef;
 
 		vk::SubpassDescription subpass2 = {};
 		subpass2.flags = vk::SubpassDescriptionFlags();
@@ -1941,6 +2062,7 @@ namespace Voidstar
 		subpass2.colorAttachmentCount = 1;
 		subpass2.pColorAttachments = &msaaAttachmentRef;
 		subpass2.pResolveAttachments = &colorAttachmentRef;
+		subpass2.pDepthStencilAttachment = &depthStencilAttachmentRef;
 
 		std::vector<vk::AttachmentReference>inputReferences;
 		{
@@ -2388,8 +2510,17 @@ namespace Voidstar
 			specs.samples = samples;
 
 			auto pipelineLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutClouds->GetLayout() };
+			std::vector<vk::VertexInputAttributeDescription> attributeDescriptions;
 
+			attributeDescriptions =
+			{
+				VertexInputAttributeDescription(0,0,vk::Format::eR32G32B32Sfloat,offsetof(Vertex, Position)),
+				VertexInputAttributeDescription(0,1,vk::Format::eR32G32Sfloat,offsetof(Vertex, UV))
+			};
+			std::vector<vk::VertexInputBindingDescription> bindings{ CreateBindingDescription(0,sizeof(Vertex),vk::VertexInputRate::eVertex) };
 			specs.descriptorSetLayout = pipelineLayouts;
+			//specs.attributeDescription = attributeDescriptions;
+			//specs.bindingDescription =bindings;
 
 
 
@@ -2439,13 +2570,19 @@ namespace Voidstar
 		m_IsNewParametrs |= ImGui::SliderFloat("Cell amountA ",  &noiseData.cellAmountA, 0, 100);
 		m_IsNewParametrs |= ImGui::SliderFloat("Cell amountB ",  &noiseData.cellAmountB, 0, 100);
 		m_IsNewParametrs |= ImGui::SliderFloat("Cell amountC ",  &noiseData.cellAmountC, 0, 100);
+		m_IsNewParametrs |= ImGui::SliderFloat("Cloud minus scale ", &noiseData.cloudScaleMinus, -100, 100);
+		m_IsNewParametrs |= ImGui::SliderFloat("Cloud minus cell", &noiseData.cellAmountMinus, -100, 100);
 		m_IsNewParametrs |= ImGui::SliderFloat("Persistence", &noiseData.persistence, 0, 1);
 
 		m_IsNewParametrs |= ImGui::SliderFloat("Density Offset", &cloudParams.densityOffset, -10, 10);
 		m_IsNewParametrs |= ImGui::SliderFloat("Density Mult", &cloudParams.densityMult, 0, 10);
-		m_IsNewParametrs |= ImGui::SliderFloat("Scale", &noiseData.cloudScale, 0, 100);
-		m_IsNewParametrs |= ImGui::SliderFloat("Speed", &noiseData.cloudSpeed, -100, 100);
+		m_IsNewParametrs |= ImGui::SliderFloat("Cloud Scale", &noiseData.cloudScale, 0, 100);
+		m_IsNewParametrs |= ImGui::SliderFloat("Cloud Speed", &noiseData.cloudSpeed, -100, 100);
 		m_IsNewParametrs |= ImGui::SliderFloat4("Weights", &cloudParams.weights[0], 0, 100);
+		m_IsNewParametrs |= ImGui::SliderFloat3("Sun direction", &cloudParams.lightDir[0], -200, 200);
+		m_IsNewParametrs |= ImGui::SliderFloat3("Sun position", &cloudParams.lightPos[0], -200, 200);
+		m_IsNewParametrs |= ImGui::SliderFloat3("Cloud position", &cloudParams.cloudPos[0], -200, 200);
+		m_IsNewParametrs |= ImGui::SliderFloat3("Cloud box Scale", &cloudParams.boxScale[0], -200, 200);
 		m_IsPolygon = ImGui::Button("change mode");
 		
 	
@@ -2578,6 +2715,9 @@ namespace Voidstar
 			m_IndexBuffer.reset();
 
 		}
+		m_CubeBuffer.reset();
+		m_IndexCubeBuffer.reset();
+
 		m_Image.reset();
 		m_NoiseImage.reset();
 		m_AnimatedNoiseImage.reset();

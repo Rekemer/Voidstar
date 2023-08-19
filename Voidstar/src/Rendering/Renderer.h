@@ -111,8 +111,11 @@ namespace Voidstar
 		alignas(4)float cellAmountC = 5.f;
 		alignas(4)float persistence;
 
-		float cloudScale = 10;
-		float cloudSpeed = 40;
+		float cloudScale = 2;
+		float cloudSpeed = 5;
+		float cloudScaleMinus = 2.f;
+		float cellAmountMinus = 2.f; 
+
 	};
 
 	struct CloudParams
@@ -120,6 +123,10 @@ namespace Voidstar
 		float densityMult = 0.5;
 		float densityOffset = 0.5;
 		alignas(16)glm::vec4 weights = {1,1,1,1};
+		alignas(16)glm::vec3 lightDir = glm::normalize(glm::vec3(0.5, -1, 0));
+		alignas(16)glm::vec3 lightPos = { 0, 124, 4 };
+		alignas(16)glm::vec3 cloudPos = { 0, 120, 4 };
+		alignas(16)glm::vec3 boxScale = { 10, 4, 10 };
 	};
 	class Instance;
 	class Device;
@@ -167,7 +174,9 @@ namespace Voidstar
 		Device* m_Device;
 		UPtr<Swapchain> m_Swapchain;
 		UPtr<Buffer> m_ModelBuffer{nullptr};
+		UPtr<Buffer> m_CubeBuffer{nullptr};
 		UPtr<IndexBuffer> m_IndexBuffer;
+		UPtr<IndexBuffer> m_IndexCubeBuffer;
 		UPtr<Buffer> m_SphereBuffer;
 		UPtr<IndexBuffer> m_IndexSphereBuffer;
 		
