@@ -168,7 +168,7 @@ float maxVal = 1 + (persistence) + (persistence * persistence);
 
     // keep inside range [0,1] as will be clamped in texture
     worleyNoiseValue  /= maxVal;
-   // worleyNoise = 1-worleyNoise;
+    worleyNoiseValue = 1-worleyNoiseValue;
     vec4 noiseValue = vec4(worleyNoiseValue,worleyNoiseValue,worleyNoiseValue ,1);
     imageStore(worleyNoiseImage, ivec3(gl_GlobalInvocationID),noiseValue );
 
@@ -190,7 +190,7 @@ float worleyNoiseValue = (layer1 + layer2 * pow(persistence,1) + (layer3) *pow(p
 
     // keep inside range [0,1] as will be clamped in texture
     worleyNoiseValue  /= maxVal;
-   // worleyNoise = 1-worleyNoise;
+    worleyNoiseValue = 1- worleyNoiseValue;
     vec4 noiseValue = vec4(worleyNoiseValue,worleyNoiseValue,worleyNoiseValue ,1);
     vec3 coords = mod(gl_GlobalInvocationID,32);
     imageStore(worleyNoiseImageLowRes, ivec3(gl_GlobalInvocationID),noiseValue );

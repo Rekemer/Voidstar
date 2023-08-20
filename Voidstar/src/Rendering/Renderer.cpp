@@ -552,6 +552,13 @@ namespace Voidstar
 		forward = "test/skybox/front.jpg";
 		back = "test/skybox/back.jpg";
 
+		right = "sky2/Daylight Box_Right.bmp";
+		left = "sky2/Daylight Box_Left.bmp";
+		top = "sky2/Daylight Box_Top.bmp";
+		down = "sky2/Daylight Box_Bottom.bmp";
+		forward = "sky2/Daylight Box_Front.bmp";
+		back = "sky2/Daylight Box_Back.bmp";
+
 		// left x
 		//std::vector<std::string> cubemap = { BASE_RES_PATH+ left,
 		//BASE_RES_PATH + right,
@@ -1803,7 +1810,7 @@ namespace Voidstar
 					commandBuffer.setViewport(0, 1, &viewport);
 					commandBuffer.setScissor(0, 1, &scissors);
 				
-				//	commandBuffer.draw(6, 1, 0, 0);
+					commandBuffer.draw(6, 1, 0, 0);
 				}
 
 
@@ -1834,7 +1841,7 @@ namespace Voidstar
 				commandBuffer.setScissor(0, 1, &scissors);
 
 				commandBuffer.bindIndexBuffer(m_IndexBuffer->GetBuffer(), 0, m_IndexBuffer->GetIndexType());
-			//	commandBuffer.drawIndexed(static_cast<uint32_t>(amount), m_InstanceData.size(), 0, 0, 0);
+				commandBuffer.drawIndexed(static_cast<uint32_t>(amount), m_InstanceData.size(), 0, 0, 0);
 
 			
 			vkCmdNextSubpass(commandBuffer, VK_SUBPASS_CONTENTS_INLINE);
@@ -1845,7 +1852,7 @@ namespace Voidstar
 				commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_WaterPipeline->m_PipelineLayout, 0, m_DescriptorSets[imageIndex], nullptr);
 				commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_WaterPipeline->m_PipelineLayout, 1, m_DescriptorSetTex, nullptr);
 				commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_WaterPipeline->m_PipelineLayout, 2, m_DescriptorSetNoise, nullptr);
-			//	commandBuffer.drawIndexed(static_cast<uint32_t>(amount), m_InstanceData.size(), 0, 0, 0);
+				commandBuffer.drawIndexed(static_cast<uint32_t>(amount), m_InstanceData.size(), 0, 0, 0);
 				}
 
 
@@ -2095,7 +2102,7 @@ namespace Voidstar
 		subpass2.colorAttachmentCount = 1;
 		subpass2.pColorAttachments = &msaaAttachmentRef;
 		subpass2.pResolveAttachments = &colorAttachmentRef;
-		subpass2.pDepthStencilAttachment = &depthStencilAttachmentRef;
+		//subpass2.pDepthStencilAttachment = &depthStencilAttachmentRef;
 
 		std::vector<vk::AttachmentReference>inputReferences;
 		{
@@ -2105,6 +2112,9 @@ namespace Voidstar
 			inputReferences .push_back(reference );
 			subpass1.inputAttachmentCount = inputReferences.size();
 			subpass1.pInputAttachments = inputReferences.data();
+			subpass2.inputAttachmentCount = inputReferences.size();
+			subpass2.pInputAttachments = inputReferences.data();
+
 		}
 		
 		std::vector<vk::SubpassDescription> subpasses = { subpass0 , subpass ,subpass1,subpass2 };
@@ -2559,7 +2569,7 @@ namespace Voidstar
 
 
 
-			m_RayMarchPipeline = Pipeline::CreateGraphicsPipeline(specs, vk::PrimitiveTopology::eTriangleList, m_Swapchain->m_SwapchainFrames[0].depthFormat, m_WaterPipeline->m_RenderPass, 3, false, m_PolygoneMode);
+			m_RayMarchPipeline = Pipeline::CreateGraphicsPipeline(specs, vk::PrimitiveTopology::eTriangleList, m_Swapchain->m_SwapchainFrames[0].depthFormat, m_WaterPipeline->m_RenderPass, 3, true, m_PolygoneMode);
 		}
 		
 	}
@@ -2612,15 +2622,15 @@ namespace Voidstar
 		m_IsNewParametrs |= ImGui::SliderFloat("Cell amountC LowRes ", &noiseData.numCellsCLowRes, 0, 100);
 		m_IsNewParametrs |= ImGui::SliderFloat("Persistence low res", &noiseData.persistenceLowRes, 0, 1);
 
-		m_IsNewParametrs |= ImGui::SliderFloat("Density Offset", &cloudParams.densityOffset, -10, 10);
+		m_IsNewParametrs |= ImGui::SliderFloat("Density Offset", &cloudParams.densityOffset, -100, 100);
 		m_IsNewParametrs |= ImGui::SliderFloat("Density Mult", &cloudParams.densityMult, 0, 10);
 		m_IsNewParametrs |= ImGui::SliderFloat("Cloud Scale", &noiseData.cloudScale, 0, 100);
 		m_IsNewParametrs |= ImGui::SliderFloat("Cloud Speed", &noiseData.cloudSpeed, -100, 100);
 		m_IsNewParametrs |= ImGui::SliderFloat4("Weights", &cloudParams.weights[0], 0, 100);
 		m_IsNewParametrs |= ImGui::SliderFloat3("Sun direction", &cloudParams.lightDir[0], -200, 200);
 		m_IsNewParametrs |= ImGui::SliderFloat3("Sun position", &cloudParams.lightPos[0], -200, 200);
-		m_IsNewParametrs |= ImGui::SliderFloat3("Cloud position", &cloudParams.cloudPos[0], -200, 200);
-		m_IsNewParametrs |= ImGui::SliderFloat3("Cloud box Scale", &cloudParams.boxScale[0], -200, 200);
+		m_IsNewParametrs |= ImGui::SliderFloat3("Cloud position", &cloudParams.cloudPos[0], -1200, 1200);
+		m_IsNewParametrs |= ImGui::SliderFloat3("Cloud box Scale", &cloudParams.boxScale[0], -100, 100);
 		m_IsNewParametrs |= ImGui::SliderFloat("Light Absorption", &cloudParams.lightAbsorption, -10, 10);
 		m_IsNewParametrs |= ImGui::SliderFloat("A hg", &cloudParams.aHg, -10, 10);
 		m_IsPolygon = ImGui::Button("change mode");

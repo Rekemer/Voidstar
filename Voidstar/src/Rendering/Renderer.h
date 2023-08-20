@@ -122,15 +122,16 @@ namespace Voidstar
 		float persistenceLowRes;
 	};
 
+	#define SIZE_CLOUDS  100.f
 	struct CloudParams
 	{
-		float densityMult = 0.5;
 		float densityOffset = 0.5;
+		float densityMult = 0.5;
 		alignas(16)glm::vec4 weights = {1,1,1,1};
 		alignas(16)glm::vec3 lightDir = glm::normalize(glm::vec3(0.5, -1, 0));
 		alignas(16)glm::vec3 lightPos = { 0, 124, 4 };
 		alignas(16)glm::vec3 cloudPos = { 0, 120, 4 };
-		alignas(16)glm::vec3 boxScale = { 10, 4, 10 };
+		alignas(16)glm::vec3 boxScale = { SIZE_CLOUDS, SIZE_CLOUDS /2.f,SIZE_CLOUDS };
 		float lightAbsorption = 1.f;
 		float aHg = 0.9f;
 	};
