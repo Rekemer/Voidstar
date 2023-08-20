@@ -35,6 +35,12 @@ layout(set=1,binding = 2) uniform NoiseData {
     float cloudScaleMinus;
     float numCellsMinus;
 
+    float numCellsALowRes;
+    float numCellsBLowRes;
+    float numCellsCLowRes; 
+    float persistenceLowRes;
+
+
     
 } noiseData;
 //   worley noise for clouds
@@ -169,12 +175,12 @@ float maxVal = 1 + (persistence) + (persistence * persistence);
 {
     vec3 imageSize = vec3(128,128,128);
     vec3 pos = (vec3(gl_GlobalInvocationID) /(imageSize));
-    float layer1 = worleyNoise(pos,floor(noiseData.numCellsA),vec3(0,1,0),noiseData.cloudScale);
-    float layer2 = worleyNoise(pos,floor(noiseData.numCellsB),vec3(0,0,1),noiseData.cloudScale);
-    float layer3 = worleyNoise(pos,floor(noiseData.numCellsC),vec3(1,1,1),noiseData.cloudScale);
+    float layer1 = worleyNoise(pos,floor(noiseData.numCellsALowRes),vec3(0,1,0),noiseData.cloudScale);
+    float layer2 = worleyNoise(pos,floor(noiseData.numCellsBLowRes),vec3(0,0,1),noiseData.cloudScale);
+    float layer3 = worleyNoise(pos,floor(noiseData.numCellsCLowRes),vec3(1,1,1),noiseData.cloudScale);
     float layer4 = worleyNoise(pos,floor(noiseData.numCellsMinus),vec3(1,0.2,1),noiseData.cloudScaleMinus);
 
-    float persistence  = noiseData.persistence;
+    float persistence  = noiseData.persistenceLowRes;
 // Combine and rescale the layers to create final noise value
 float worleyNoiseValue = (layer1 + layer2 * pow(persistence,1) + (layer3) *pow(persistence,2)) ;
   //  float worleyNoiseValue = (layer1 + layer2 * pow(persistence,1) + layer3 *pow(persistence,2)) - layer4 * pow(persistence,0);
@@ -185,7 +191,7 @@ float worleyNoiseValue = (layer1 + layer2 * pow(persistence,1) + (layer3) *pow(p
     // keep inside range [0,1] as will be clamped in texture
     worleyNoiseValue  /= maxVal;
    // worleyNoise = 1-worleyNoise;
-    vec4 noiseValue = vec4(layer1,layer1,layer1 ,1);
+    vec4 noiseValue = vec4(worleyNoiseValue,worleyNoiseValue,worleyNoiseValue ,1);
     vec3 coords = mod(gl_GlobalInvocationID,32);
     imageStore(worleyNoiseImageLowRes, ivec3(gl_GlobalInvocationID),noiseValue );
 

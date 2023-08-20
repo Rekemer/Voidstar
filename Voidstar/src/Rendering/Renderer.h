@@ -106,7 +106,7 @@ namespace Voidstar
 		alignas(16)glm::vec3 deepWaterColor = {14/255.f,129/255.f,184/255.f};
 		alignas(16)glm::vec3 shallowWaterColor = { 118/255.f,196/255.f,216/255.f };
 		// clouds
-		alignas(4)float cellAmountA =8.f;
+		alignas(4)float cellAmountA =1.f;
 		alignas(4)float cellAmountB = 2.f;
 		alignas(4)float cellAmountC = 5.f;
 		alignas(4)float persistence;
@@ -116,6 +116,10 @@ namespace Voidstar
 		float cloudScaleMinus = 2.f;
 		float cellAmountMinus = 2.f; 
 
+		float numCellsALowRes = 1.f;
+		float numCellsBLowRes = 2.f;
+		float numCellsCLowRes = 5.f;
+		float persistenceLowRes;
 	};
 
 	struct CloudParams
@@ -127,6 +131,8 @@ namespace Voidstar
 		alignas(16)glm::vec3 lightPos = { 0, 124, 4 };
 		alignas(16)glm::vec3 cloudPos = { 0, 120, 4 };
 		alignas(16)glm::vec3 boxScale = { 10, 4, 10 };
+		float lightAbsorption = 1.f;
+		float aHg = 0.9f;
 	};
 	class Instance;
 	class Device;

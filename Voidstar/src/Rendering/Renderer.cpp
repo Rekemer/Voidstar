@@ -2607,6 +2607,11 @@ namespace Voidstar
 		m_IsNewParametrs |= ImGui::SliderFloat("Cloud minus cell", &noiseData.cellAmountMinus, -100, 100);
 		m_IsNewParametrs |= ImGui::SliderFloat("Persistence", &noiseData.persistence, 0, 1);
 
+		m_IsNewParametrs |= ImGui::SliderFloat("Cell amountA LowRes ", &noiseData.numCellsALowRes, 0, 100);
+		m_IsNewParametrs |= ImGui::SliderFloat("Cell amountB LowRes ", &noiseData.numCellsBLowRes, 0, 100);
+		m_IsNewParametrs |= ImGui::SliderFloat("Cell amountC LowRes ", &noiseData.numCellsCLowRes, 0, 100);
+		m_IsNewParametrs |= ImGui::SliderFloat("Persistence low res", &noiseData.persistenceLowRes, 0, 1);
+
 		m_IsNewParametrs |= ImGui::SliderFloat("Density Offset", &cloudParams.densityOffset, -10, 10);
 		m_IsNewParametrs |= ImGui::SliderFloat("Density Mult", &cloudParams.densityMult, 0, 10);
 		m_IsNewParametrs |= ImGui::SliderFloat("Cloud Scale", &noiseData.cloudScale, 0, 100);
@@ -2616,6 +2621,8 @@ namespace Voidstar
 		m_IsNewParametrs |= ImGui::SliderFloat3("Sun position", &cloudParams.lightPos[0], -200, 200);
 		m_IsNewParametrs |= ImGui::SliderFloat3("Cloud position", &cloudParams.cloudPos[0], -200, 200);
 		m_IsNewParametrs |= ImGui::SliderFloat3("Cloud box Scale", &cloudParams.boxScale[0], -200, 200);
+		m_IsNewParametrs |= ImGui::SliderFloat("Light Absorption", &cloudParams.lightAbsorption, -10, 10);
+		m_IsNewParametrs |= ImGui::SliderFloat("A hg", &cloudParams.aHg, -10, 10);
 		m_IsPolygon = ImGui::Button("change mode");
 		
 	

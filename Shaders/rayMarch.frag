@@ -24,6 +24,9 @@ layout(set=1,binding = 1) uniform CloudParams {
     vec3 cloudPos;
     vec3 cloudBoxScale;
 
+    float lightAbsorption;
+    float aHg;
+
 
 } cloudParams;
 layout(set = 1, binding = 2) uniform sampler3D u_worleyNoiseLowRes;
@@ -62,6 +65,40 @@ vec2 GetMinMaxBox(vec3 boxScale, vec3 boxPos, vec3 ro,vec3 rd)
 float hg(float a, float g) {
     float g2 = g*g;
     return (1-g2) / (4*3.1415*pow(1+g2-2*g*(a), 1.5));
+}
+
+
+float sampleDenstiy( vec3 rayPos)
+{   
+    float totalDensity = 0;
+    vec3 cloudPos = cloudParams.cloudPos;
+    vec3 cloudBoxScale= cloudParams.cloudBoxScale;
+    vec3 texCoords= (rayPos.xyz - cloudPos);
+    texCoords/=cloudBoxScale;
+    texCoords=(texCoords+1)/2;
+    vec3 detailedTex = texture(u_worleyNoise,fract(texCoords)).xxx;
+    float densityOffset = cloudParams.densityOffset;
+    float densityMult =cloudParams.densityMult;
+    float detailedShape = detailedTex.x + densityOffset * .01;
+    float densityFromTex =detailedShape*densityMult;
+    vec3 densityFromLowerResTex = texture(u_worleyNoiseLowRes,fract(texCoords)).xxx;
+    //detailedTex.xyz = densityFromLowerResTex.xxx;
+    //break;
+    totalDensity =densityFromLowerResTex.x ;
+    if(totalDensity >0)
+    {
+
+        totalDensity+=densityFromTex;
+    }
+    return totalDensity;
+     // Subtract detail noise from base shape (weighted by inverse density so that edges get eroded more than centre)
+   //float oneMinusShape = 1 - densityFromLowerResTex.x;
+   //float detailErodeWeight = oneMinusShape * oneMinusShape * oneMinusShape;
+   //float cloudDensity = detailedShape - (1-detailedTex.x) * detailErodeWeight;
+
+   //densityFromTex+=densityFromLowerResTex.x;
+   //return densityFromTex;
+   //return cloudDensity;
 }
 
 vec4 ray_march(in vec3 ro, in vec3 rd)
@@ -112,21 +149,22 @@ vec4 ray_march(in vec3 ro, in vec3 rd)
           for (int j = 0; j < NUMBER_OF_STEPS; ++j)
           {
             current_position = ro + total_distance_traveled * rd;
-            vec3 texCoords= (current_position.xyz - cloudPos);
-            texCoords/=cloudBoxScale;
-            texCoords=(texCoords+1)/2;
-            color = texture(u_worleyNoise,fract(texCoords)).xxx;
-            float densityOffset = cloudParams.densityOffset;
-            float densityMult =cloudParams.densityMult;
-            float baseShapeDensity = color.x + densityOffset * .01;
-
-            float densityFromTex =baseShapeDensity*densityMult;
-            color.x = baseShapeDensity;
-            vec3 densityFromLowerResTex = texture(u_worleyNoiseLowRes,fract(texCoords)).xxx;
-            color.xyz = densityFromLowerResTex.xxx+color.xxx;
-            color.xyz = densityFromLowerResTex.xxx;
-            //break;
-            densityFromTex+=densityFromLowerResTex.x;
+            float densityFromTex = sampleDenstiy(current_position);
+           // vec3 texCoords= (current_position.xyz - cloudPos);
+           // texCoords/=cloudBoxScale;
+           // texCoords=(texCoords+1)/2;
+           // color = texture(u_worleyNoise,fract(texCoords)).xxx;
+           // float densityOffset = cloudParams.densityOffset;
+           // float densityMult =cloudParams.densityMult;
+           // float baseShapeDensity = color.x + densityOffset * .01;
+//
+           // float densityFromTex =baseShapeDensity*densityMult;
+           // color.x = baseShapeDensity;
+           // vec3 densityFromLowerResTex = texture(u_worleyNoiseLowRes,fract(texCoords)).xxx;
+           // color.xyz = densityFromLowerResTex.xxx+color.xxx;
+           // color.xyz = densityFromLowerResTex.xxx;
+           // //break;
+           // densityFromTex+=densityFromLowerResTex.x;
             totalDensity +=max(0,densityFromTex*segmentsDistance);
             total_distance_traveled+=segmentsDistance;
             vec3 lightDir = normalize(cloudParams.lightDir);
@@ -149,13 +187,15 @@ vec4 ray_march(in vec3 ro, in vec3 rd)
             vec3 lightPos = current_position+ segmentsDistanceLight* -lightDir;
             for (int jj = 0; jj < NUMBER_OF_STEPS_LIGHT; ++jj)
             {
-              vec3 texCoords= (lightPos.xyz - cloudPos);
-              texCoords/=cloudBoxScale;
-              texCoords=(texCoords+1)/2;
-              float density = texture(u_worleyNoise,fract(texCoords)).x;
-              float densityFromLowerResTex = texture(u_worleyNoiseLowRes,fract(texCoords)).x;
+             //vec3 texCoords= (lightPos.xyz - cloudPos);
+             //texCoords/=cloudBoxScale;
+             //texCoords=(texCoords+1)/2;
+             //float density = texture(u_worleyNoise,fract(texCoords)).x;
+             //float densityFromLowerResTex = texture(u_worleyNoiseLowRes,fract(texCoords)).x;
+              float densityFromTex = sampleDenstiy(current_position);
               float angle = dot(rd,-lightDir);
-              totalDensityLight +=max(0,(density)*segmentsDistanceLight)*hg(angle,0.9);
+              float a =cloudParams.aHg;
+              totalDensityLight +=max(0,(densityFromTex)*segmentsDistanceLight)*hg(angle,a);
               lightPos = lightPos+ segmentsDistanceLight* -lightDir;
             }
           }   
@@ -173,11 +213,11 @@ vec4 ray_march(in vec3 ro, in vec3 rd)
 
     density.x = totalDensity;
     density.w = totalDensity;
-    float lightTransmittance = exp(-totalDensityLight)  ;
+    float lightTransmittance = exp(-totalDensityLight*cloudParams.lightAbsorption)  ;
     
     //return vec4(totalDensity,totalDensity,totalDensity,1);
     //return vec4(color,1);
-    vec4 finalColor = vec4(vec3(lightTransmittance),density.w);
+    vec4 finalColor = vec4(vec3(totalDensity*lightTransmittance),density.w*lightTransmittance);
     return finalColor;
 }
 const float far = 10000;
