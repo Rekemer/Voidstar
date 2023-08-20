@@ -2629,8 +2629,10 @@ namespace Voidstar
 		m_IsNewParametrs |= ImGui::SliderFloat4("Weights", &cloudParams.weights[0], 0, 100);
 		m_IsNewParametrs |= ImGui::SliderFloat3("Sun direction", &cloudParams.lightDir[0], -200, 200);
 		m_IsNewParametrs |= ImGui::SliderFloat3("Sun position", &cloudParams.lightPos[0], -200, 200);
-		m_IsNewParametrs |= ImGui::SliderFloat3("Cloud position", &cloudParams.cloudPos[0], -1200, 1200);
-		m_IsNewParametrs |= ImGui::SliderFloat3("Cloud box Scale", &cloudParams.boxScale[0], -100, 100);
+		m_IsNewParametrs |= ImGui::SliderFloat3("Cloud position", &cloudParams.cloudPos[0], -4500, 4500);
+		m_IsNewParametrs |= ImGui::SliderFloat3("Cloud box Scale", &cloudParams.boxScale[0], -5000, 5000);
+		cloudParams.boxScale[2] = cloudParams.boxScale[0];
+		//cloudParams.boxScale[1] =cloudParams.boxScale[0] / 2;
 		m_IsNewParametrs |= ImGui::SliderFloat("Light Absorption", &cloudParams.lightAbsorption, -10, 10);
 		m_IsNewParametrs |= ImGui::SliderFloat("A hg", &cloudParams.aHg, -10, 10);
 		m_IsPolygon = ImGui::Button("change mode");

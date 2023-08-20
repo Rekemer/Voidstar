@@ -122,7 +122,7 @@ namespace Voidstar
 		float persistenceLowRes;
 	};
 
-	#define SIZE_CLOUDS  100.f
+	#define SIZE_CLOUDS  100
 	struct CloudParams
 	{
 		float densityOffset = 0.5;

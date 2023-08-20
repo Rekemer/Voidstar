@@ -109,7 +109,7 @@ vec4 ray_march(in vec3 ro, in vec3 rd)
 {
     float total_distance_traveled = 0.0;
     const int NUMBER_OF_STEPS = 64;
-    const float MINIMUM_HIT_DISTANCE = 0.001;
+    const float MINIMUM_HIT_DISTANCE = 1.1;
     vec4 density = vec4(0,0,0,1);
     float absorbption = 1.1f;
      float minEntry = 0.f;
@@ -124,19 +124,19 @@ vec4 ray_march(in vec3 ro, in vec3 rd)
        float segmentsDistance = distanceInsideCube/NUMBER_OF_STEPS;
        distanceInsideCube = 0;
 
-       vec3 current_position = ro+sdfBox(ro,cloudPos, vec3(cloudBoxScale))*rd;
+       vec3 current_position = ro;
        float totalDensity = 0;
        vec3 color = vec3(0,0,0);
        float totalDensityLight = 0;
-    const float MAXIMUM_TRACE_DISTANCE = 100000.0;
+    const float MAXIMUM_TRACE_DISTANCE = 1000.0;
      vec3 lightDir = normalize(cloudParams.lightDir);
     for (int i = 0; i < NUMBER_OF_STEPS; ++i)
     {
          current_position = ro + total_distance_traveled * rd;
+        float distance_to_closest = sdfBox(current_position,cloudPos, vec3(cloudBoxScale));
 
         //float distance_to_closest = distance_from_sphere(current_position, spherePos, 1.0);
         //scale *=(1- i/NUMBER_OF_STEPS);
-        float distance_to_closest = sdfBox(current_position,cloudPos, vec3(cloudBoxScale));
        //distance_to_closest = 0.1f;
      
       
@@ -152,7 +152,6 @@ vec4 ray_march(in vec3 ro, in vec3 rd)
        
        if (distance_to_closest < MINIMUM_HIT_DISTANCE) 
        {
-         
           for (int j = 0; j < NUMBER_OF_STEPS; ++j)
           {
             current_position = ro + total_distance_traveled * rd;
@@ -188,6 +187,9 @@ vec4 ray_march(in vec3 ro, in vec3 rd)
               float angle = dot(rd,-lightDir);
               float a =cloudParams.aHg;
               totalDensityLight +=max(0,(densityFromTex)*segmentsDistanceLight)*hg(angle,a);
+              //if (totalDensityLight < 0.11) {
+              //              break;
+              //          }
               lightPos = lightPos+ segmentsDistanceLight* -lightDir;
             }
           }   
@@ -248,8 +250,7 @@ void main()
         //world space
         vec4 rd_camera = inverse(ubo.proj)*vec4(rd,1);
         rd_camera/= rd_camera.w;
-        rd_camera = normalize(rd_camera);
-        vec4 rd_world = inverse(ubo.view) * rd_camera;
+        vec4 rd_world = inverse(ubo.view) * vec4(normalize(rd_camera.xyz),0);
 
        //vec3 rd =direction;
 
