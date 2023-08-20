@@ -43,6 +43,8 @@ layout(set=1,binding = 2) uniform NoiseData {
 
     
 } noiseData;
+
+
 //   worley noise for clouds
 layout(set = 1, binding =3 , rgba8) uniform writeonly image3D worleyNoiseImage;
 layout(set = 1, binding =4 , rgba8) uniform writeonly image3D worleyNoiseImageLowRes;

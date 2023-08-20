@@ -122,6 +122,7 @@ namespace Voidstar
 		float persistenceLowRes;
 	};
 
+	//2500
 	#define SIZE_CLOUDS  100
 	struct CloudParams
 	{

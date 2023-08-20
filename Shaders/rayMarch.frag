@@ -81,7 +81,15 @@ float sampleDenstiy( vec3 rayPos)
    // float densityFromTex =detailedShape*densityMult;
     //detailedTex.xyz = densityFromLowerResTex.xxx;
     //break;
-    totalDensity =baseShape.x ;
+
+    vec3 boundsMin = cloudParams.cloudPos - cloudParams.cloudBoxScale;
+    vec3 boundsMax = cloudParams.cloudPos + cloudParams.cloudBoxScale;
+    const float containerEdgeFadeDst = 10.125;
+    float dstFromEdgeX = min(containerEdgeFadeDst, min(rayPos.x - boundsMin.x, boundsMax.x - rayPos.x));
+    float dstFromEdgeZ = min(containerEdgeFadeDst, min(rayPos.z - boundsMin.z, boundsMax.z - rayPos.z));
+    float edgeWeight = min(dstFromEdgeZ,dstFromEdgeX)/containerEdgeFadeDst;
+
+    totalDensity =baseShape.x;
     if(totalDensity >0)
     {
         float oneMinusShape = 1 ;
@@ -90,7 +98,7 @@ float sampleDenstiy( vec3 rayPos)
         totalDensity+=totalDensity- (1-detailedShape.x) * detailErodeWeight;
         //totalDensity+= densityOffset * .01f;
     }
-    return totalDensity;
+    return totalDensity*cloudParams.densityMult;
      // Subtract detail noise from base shape (weighted by inverse density so that edges get eroded more than centre)
    //float oneMinusShape = 1 - densityFromLowerResTex.x;
    //float detailErodeWeight = oneMinusShape * oneMinusShape * oneMinusShape;
@@ -116,7 +124,7 @@ vec4 ray_march(in vec3 ro, in vec3 rd)
       vec2 minMax = GetMinMaxBox(cloudBoxScale, cloudPos, ro, rd);
       minEntry = minMax.x;
       maxExit = minMax.y;
-       float distanceInsideCube = max(0.0, maxExit - minEntry);
+       float distanceInsideCube = max(0.0, abs(maxExit - minEntry));
        float segmentsDistance = distanceInsideCube/NUMBER_OF_STEPS;
        distanceInsideCube = 0;
 
@@ -168,7 +176,7 @@ vec4 ray_march(in vec3 ro, in vec3 rd)
              //float densityFromLowerResTex = texture(u_worleyNoiseLowRes,fract(texCoords)).x;
               float densityFromTex = sampleDenstiy(current_position);
               float angle = dot(rd,-lightDir);
-              float a =cloudParams.aHg;
+              float a =cloudParams.aHg/10;
               totalDensityLight +=max(0,(densityFromTex)*segmentsDistanceLight)*hg(angle,a);
               //if (totalDensityLight < 0.11) {
               //              break;
@@ -196,8 +204,12 @@ vec4 ray_march(in vec3 ro, in vec3 rd)
     //return vec4(totalDensity,totalDensity,totalDensity,1);
     //return vec4(color,1);
     //totalDensity = 1-totalDensity;
-    float res = 1 - totalDensity*lightTransmittance;
-    vec4 finalColor = vec4(vec3(res),res);
+   // float res = 1 -totalDensity*lightTransmittance;
+   //  res =  totalDensity*lightTransmittance;
+     float res =  exp(-totalDensityLight*cloudParams.lightAbsorption*totalDensity);
+     //res = 1 - totalDensity;
+     //res = 1 - lightTransmittance;
+    vec4 finalColor = vec4(vec3(1-res),1-res);
     return finalColor;
 }
 const float far = 10000;
