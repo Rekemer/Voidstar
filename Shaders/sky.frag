@@ -14,8 +14,8 @@ float skyMaxY = 1;  // Example: The upper limit of the sky
     newY = clamp(forwards.y, skyMinY, skyMaxY);
     float offset = 2.f;
     float newZ = clamp(-forwards.z,-1,0);
-    newZ = -forwards.z;
-    vec3 coords = vec3(forwards.x,newY,newZ);
+    newZ = forwards.z;
+    vec3 coords = normalize(vec3(forwards.x,newY,newZ));
 	outColor = texture(material, coords);
 	//outColor = vec4(0.0, 1.0, 0.0, 1.0);
 }

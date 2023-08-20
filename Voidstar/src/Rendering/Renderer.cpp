@@ -1852,7 +1852,7 @@ namespace Voidstar
 				commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_WaterPipeline->m_PipelineLayout, 0, m_DescriptorSets[imageIndex], nullptr);
 				commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_WaterPipeline->m_PipelineLayout, 1, m_DescriptorSetTex, nullptr);
 				commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_WaterPipeline->m_PipelineLayout, 2, m_DescriptorSetNoise, nullptr);
-				commandBuffer.drawIndexed(static_cast<uint32_t>(amount), m_InstanceData.size(), 0, 0, 0);
+				//commandBuffer.drawIndexed(static_cast<uint32_t>(amount), m_InstanceData.size(), 0, 0, 0);
 				}
 
 
@@ -1869,7 +1869,7 @@ namespace Voidstar
 
 					}
 					//commandBuffer.bindIndexBuffer(m_IndexCubeBuffer->GetBuffer(), 0, m_IndexCubeBuffer->GetIndexType());
-					//commandBuffer.drawIndexed(m_IndexCubeBuffer->GetIndexAmount(), 1, 0, 0, 0);
+				//commandBuffer.drawIndexed(m_IndexCubeBuffer->GetIndexAmount(), 1, 0, 0, 0);
 					commandBuffer.draw(6, 1, 0, 0);
 				}
 			}

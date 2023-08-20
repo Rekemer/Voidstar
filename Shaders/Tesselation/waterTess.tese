@@ -105,7 +105,7 @@ void main()
      outColor =color;
      outUv = newUv;
      outUvMesh = gl_TessCoord.xy;
-     vec4 clipSpace =  ubo.proj*ubo.view*p;
+     vec4 clipSpace =  ubo.proj*ubo.view*vec4(p);
      worldSpacePos =p;
     gl_Position = clipSpace;
 }

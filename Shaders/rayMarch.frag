@@ -37,10 +37,6 @@ float sdfBox(vec3 p, vec3 position, vec3 size)
     return length(max(d, 0.0)) + min(max(d.x, max(d.y, d.z)), 0.0);
 }
 
-float distance_from_sphere(in vec3 p, in vec3 c, float r)
-{
-    return length(p - c) - r;
-}
 
 
 vec2 GetMinMaxBox(vec3 boxScale, vec3 boxPos, vec3 ro,vec3 rd)
@@ -128,30 +124,16 @@ vec4 ray_march(in vec3 ro, in vec3 rd)
        float totalDensity = 0;
        vec3 color = vec3(0,0,0);
        float totalDensityLight = 0;
-    const float MAXIMUM_TRACE_DISTANCE = 1000.0;
+    const float MAXIMUM_TRACE_DISTANCE = 10000.0 ;
      vec3 lightDir = normalize(cloudParams.lightDir);
     for (int i = 0; i < NUMBER_OF_STEPS; ++i)
     {
          current_position = ro + total_distance_traveled * rd;
         float distance_to_closest = sdfBox(current_position,cloudPos, vec3(cloudBoxScale));
-
-        //float distance_to_closest = distance_from_sphere(current_position, spherePos, 1.0);
-        //scale *=(1- i/NUMBER_OF_STEPS);
-       //distance_to_closest = 0.1f;
-     
-      
-       
-     
-     
-       
-       // Calculate the distance between entry and exit points
-      
-
-
-
-       
+        
        if (distance_to_closest < MINIMUM_HIT_DISTANCE) 
        {
+        //return vec4(1,0,1,1);
           for (int j = 0; j < NUMBER_OF_STEPS; ++j)
           {
             current_position = ro + total_distance_traveled * rd;
@@ -178,6 +160,7 @@ vec4 ray_march(in vec3 ro, in vec3 rd)
             vec3 lightPos = current_position+ segmentsDistanceLight* -lightDir;
             for (int jj = 0; jj < NUMBER_OF_STEPS_LIGHT; ++jj)
             {
+                
              //vec3 texCoords= (lightPos.xyz - cloudPos);
              //texCoords/=cloudBoxScale;
              //texCoords=(texCoords+1)/2;
@@ -196,20 +179,20 @@ vec4 ray_march(in vec3 ro, in vec3 rd)
        break;
        }
        
-       if (total_distance_traveled > MAXIMUM_TRACE_DISTANCE)
-       {
-          return vec4(0.4,0.4,0.4,0);
-          break;
-       }
+      if (total_distance_traveled > MAXIMUM_TRACE_DISTANCE)
+      {
+         return vec4(0.4,0.4,0.4,0);
+         break;
+      }
         total_distance_traveled += distance_to_closest;
     }
+   // return vec4(0,1,1,1);
    // float transmittance = exp(-totalDensityLight*3);
   //  float angle = dot(rd,-lightDir);
    // float a =cloudParams.aHg;
     density.x = totalDensity;
     density.w = totalDensity;
     float lightTransmittance = exp(-totalDensityLight*cloudParams.lightAbsorption)  ;
-    
     //return vec4(totalDensity,totalDensity,totalDensity,1);
     //return vec4(color,1);
     //totalDensity = 1-totalDensity;
@@ -218,7 +201,7 @@ vec4 ray_march(in vec3 ro, in vec3 rd)
     return finalColor;
 }
 const float far = 10000;
- const float near = 10.00;
+ const float near = 10.0;
 float linerizeDepth(float depth)
 {
     float ndc = depth * 2.0 - 1.0;
@@ -234,7 +217,7 @@ void main()
         float linearCurrentDepth = linerizeDepth(gl_FragCoord.z);
         if (depthValue < linearCurrentDepth)
         {
-            discard;
+           // discard;
         }
 
         const int res = 100;
@@ -250,11 +233,13 @@ void main()
         //world space
         vec4 rd_camera = inverse(ubo.proj)*vec4(rd,1);
         rd_camera/= rd_camera.w;
+        rd_camera = normalize(rd_camera);
+        //vec4 rd_world = inverse(ubo.view) * rd_camera;
         vec4 rd_world = inverse(ubo.view) * vec4(normalize(rd_camera.xyz),0);
 
        //vec3 rd =direction;
 
-        vec4 shaded_color = ray_march(ro, rd_world.xyz);
+        vec4 shaded_color = ray_march(ro, normalize(rd_world.xyz));
          vec3 pinkColor = vec3(100.f/255.f,71.f/255.f,76.f/255.f);
       //  o_color = vec4(shaded_color.x*pinkColor,shaded_color.w);
      o_color = vec4((shaded_color.xyz),shaded_color.w);

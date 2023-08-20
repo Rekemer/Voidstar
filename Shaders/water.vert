@@ -95,6 +95,7 @@ void main()
     //noiseValue = length(worldPos.xz);
 	color.xyz = vec3(offset);
     outWorldPos = pos;
+    vec4 clipSpace = ubo.proj*ubo.view*pos;
 	gl_Position = pos;
     edges = instanceEdges;
     uvMesh = in_uv;

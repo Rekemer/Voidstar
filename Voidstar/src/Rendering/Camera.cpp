@@ -40,7 +40,7 @@ namespace Voidstar
 
        /* m_Proj = PreparePerspectiveProjectionMatrix(width / height, 45.0f,0,100);*/
         const float farPlane = 10000;
-        const float nearPlane = 0.10;
+        const float nearPlane = 10.0;
         m_Proj = glm::perspective(glm::radians(45.0f), width / height, nearPlane, farPlane);
         m_Proj[1][1] *= -1;
 

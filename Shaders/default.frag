@@ -104,7 +104,7 @@ vec3 blend(vec4 texture1, float a1, vec4 texture2, float a2)
 }
 
 const float far = 10000;
- const float near = 10.00;
+ const float near = 10.00f;
  float linerizeDepth(float depth)
 {
     float ndc = depth * 2.0 - 1.0;
