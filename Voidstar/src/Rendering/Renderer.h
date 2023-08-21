@@ -135,6 +135,7 @@ namespace Voidstar
 		alignas(16)glm::vec3 boxScale = { SIZE_CLOUDS, SIZE_CLOUDS /2.f,SIZE_CLOUDS };
 		float lightAbsorption = 1.f;
 		float aHg = 0.9f;
+		float aHg2 = 0.9f;
 	};
 	class Instance;
 	class Device;
@@ -191,7 +192,6 @@ namespace Voidstar
 		Application* m_App;
 		
 		UPtr<Buffer> m_InstancedDataBuffer;
-		UPtr<Buffer> m_PointsData;
 
 		SPtr<Image> m_Image;
 		SPtr<Image> m_NoiseImage;

@@ -26,6 +26,7 @@ layout(set=1,binding = 1) uniform CloudParams {
 
     float lightAbsorption;
     float aHg;
+    float aHg2;
 
 
 } cloudParams;
@@ -63,7 +64,10 @@ float hg(float a, float g) {
     return (1-g2) / (4*3.1415*pow(1+g2-2*g*(a), 1.5));
 }
 
-
+float twoHg (float a, float g1, float g2, float  t)
+{
+    return mix(hg(a,g1),hg(a,g2), t );
+}
 float sampleDenstiy( vec3 rayPos)
 {   
     float totalDensity = 0;
@@ -176,8 +180,11 @@ vec4 ray_march(in vec3 ro, in vec3 rd)
              //float densityFromLowerResTex = texture(u_worleyNoiseLowRes,fract(texCoords)).x;
               float densityFromTex = sampleDenstiy(current_position);
               float angle = dot(rd,-lightDir);
-              float a =cloudParams.aHg/10;
-              totalDensityLight +=max(0,(densityFromTex)*segmentsDistanceLight)*hg(angle,a);
+              float hg1 =cloudParams.aHg/10;
+              float hg2 = cloudParams.aHg2/10;
+              float t = 0.5f; 
+             // totalDensityLight +=max(0,(densityFromTex)*segmentsDistanceLight)*hg(angle,hg1);
+              totalDensityLight +=max(0,(densityFromTex)*segmentsDistanceLight)*twoHg(angle,hg1,hg2,t);
               //if (totalDensityLight < 0.11) {
               //              break;
               //          }
@@ -232,7 +239,7 @@ void main()
            // discard;
         }
 
-        const int res = 100;
+        const int res = 120;
     	vec2 aspect = vec2( 16 * res, 9 * res);
         vec2 uv = vUV.st * 2.0 - 1.0;
         //uv.x*= aspect.x/aspect.y;

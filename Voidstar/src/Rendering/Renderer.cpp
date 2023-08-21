@@ -1852,7 +1852,7 @@ namespace Voidstar
 				commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_WaterPipeline->m_PipelineLayout, 0, m_DescriptorSets[imageIndex], nullptr);
 				commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_WaterPipeline->m_PipelineLayout, 1, m_DescriptorSetTex, nullptr);
 				commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_WaterPipeline->m_PipelineLayout, 2, m_DescriptorSetNoise, nullptr);
-				//commandBuffer.drawIndexed(static_cast<uint32_t>(amount), m_InstanceData.size(), 0, 0, 0);
+				commandBuffer.drawIndexed(static_cast<uint32_t>(amount), m_InstanceData.size(), 0, 0, 0);
 				}
 
 
@@ -2613,8 +2613,8 @@ namespace Voidstar
 		m_IsNewParametrs |= ImGui::SliderFloat("Cell amountA ",  &noiseData.cellAmountA, 0, 100);
 		m_IsNewParametrs |= ImGui::SliderFloat("Cell amountB ",  &noiseData.cellAmountB, 0, 100);
 		m_IsNewParametrs |= ImGui::SliderFloat("Cell amountC ",  &noiseData.cellAmountC, 0, 100);
-		m_IsNewParametrs |= ImGui::SliderFloat("Cloud minus scale ", &noiseData.cloudScaleMinus, -100, 100);
-		m_IsNewParametrs |= ImGui::SliderFloat("Cloud minus cell", &noiseData.cellAmountMinus, -100, 100);
+	//	m_IsNewParametrs |= ImGui::SliderFloat("Cloud minus scale ", &noiseData.cloudScaleMinus, -100, 100);
+	//	m_IsNewParametrs |= ImGui::SliderFloat("Cloud minus cell", &noiseData.cellAmountMinus, -100, 100);
 		m_IsNewParametrs |= ImGui::SliderFloat("Persistence", &noiseData.persistence, 0, 1);
 
 		m_IsNewParametrs |= ImGui::SliderFloat("Cell amountA LowRes ", &noiseData.numCellsALowRes, 0, 100);
@@ -2626,15 +2626,16 @@ namespace Voidstar
 		m_IsNewParametrs |= ImGui::SliderFloat("Density Mult", &cloudParams.densityMult, 0, 10);
 		m_IsNewParametrs |= ImGui::SliderFloat("Cloud Scale", &noiseData.cloudScale, 0, 100);
 		m_IsNewParametrs |= ImGui::SliderFloat("Cloud Speed", &noiseData.cloudSpeed, -100, 100);
-		m_IsNewParametrs |= ImGui::SliderFloat4("Weights", &cloudParams.weights[0], 0, 100);
+		//m_IsNewParametrs |= ImGui::SliderFloat4("Weights", &cloudParams.weights[0], 0, 100);
 		m_IsNewParametrs |= ImGui::SliderFloat3("Sun direction", &cloudParams.lightDir[0], -200, 200);
-		m_IsNewParametrs |= ImGui::SliderFloat3("Sun position", &cloudParams.lightPos[0], -200, 200);
+		//m_IsNewParametrs |= ImGui::SliderFloat3("Sun position", &cloudParams.lightPos[0], -200, 200);
 		m_IsNewParametrs |= ImGui::SliderFloat3("Cloud position", &cloudParams.cloudPos[0], -4500, 4500);
 		m_IsNewParametrs |= ImGui::SliderFloat3("Cloud box Scale", &cloudParams.boxScale[0], -5000, 5000);
 		cloudParams.boxScale[2] = cloudParams.boxScale[0];
 		//cloudParams.boxScale[1] =cloudParams.boxScale[0] / 2;
 		m_IsNewParametrs |= ImGui::SliderFloat("Light Absorption", &cloudParams.lightAbsorption, -10, 10);
 		m_IsNewParametrs |= ImGui::SliderFloat("A hg", &cloudParams.aHg, -10, 10);
+		m_IsNewParametrs |= ImGui::SliderFloat("A hg2", &cloudParams.aHg2, -10, 10);
 		m_IsPolygon = ImGui::Button("change mode");
 		
 	
@@ -2786,7 +2787,6 @@ namespace Voidstar
 		m_InstancedDataBuffer.reset();
 		m_CloudBuffer.reset();
 		delete m_NoiseData;
-		m_PointsData.reset();
 		m_Device->GetDevice().freeMemory(m_MsaaImageMemory);
 		m_Device->GetDevice().destroyImage(m_MsaaImage);
 		m_Device->GetDevice().destroyImageView(m_MsaaImageView);
