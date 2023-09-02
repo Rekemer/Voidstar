@@ -34,7 +34,7 @@ namespace Voidstar
 	{
 	public:
 		static UPtr<Pipeline> CreateGraphicsPipeline(GraphicsPipelineSpecification& spec, vk::PrimitiveTopology topology, vk::Format depthFormat, vk::RenderPass renderpass, int subpass, bool writeToDepthBuffer, vk::PolygonMode polygonMode = vk::PolygonMode::eFill);
-		static UPtr<Pipeline> CreateComputePipeline();
+		static UPtr<Pipeline> CreateComputePipeline(std::string computeShader, std::vector<vk::DescriptorSetLayout>& layouts);
 		~Pipeline();
 
 	private:

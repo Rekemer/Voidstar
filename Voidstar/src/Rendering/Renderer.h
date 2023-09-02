@@ -267,12 +267,11 @@ namespace Voidstar
 		
 		vk::Pipeline m_DebugPipeline;
 		vk::PipelineLayout m_DebugPipelineLayout;
-		vk::RenderPass m_DebugRenderPass;
-		vk::Pipeline m_ComputePipelineClouds;
-		vk::PipelineLayout m_ComputePipelineLayoutClouds;
+		vk::RenderPass m_RenderPass;
 
-		vk::Pipeline m_ComputePipeline;
-		vk::PipelineLayout m_ComputePipelineLayout;
+
+		UPtr<Pipeline> m_ComputePipelineClouds;
+		UPtr<Pipeline> m_ComputePipeline;
 		vk::DescriptorSet m_DescriptorSetNoise;
 		SPtr<DescriptorPool> m_DescriptorPoolNoise;
 		DescriptorSetLayout* m_DescriptorSetLayoutNoise;

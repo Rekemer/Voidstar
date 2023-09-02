@@ -283,6 +283,43 @@ namespace Voidstar
 		Log::GetLog()->info("Pipeline is Created!");
 		return pipeline;
 	}
+	UPtr<Pipeline> Pipeline::CreateComputePipeline(std::string computeShader, std::vector<vk::DescriptorSetLayout>& layouts)
+	{
+		UPtr<Pipeline> pipeline = CreateUPtr<Pipeline>();
+
+		auto device = RenderContext::GetDevice();
+		auto computeShaderModule = CreateModule(computeShader, device->GetDevice());
+
+		vk::PipelineShaderStageCreateInfo computeShaderStageInfo{};
+		computeShaderStageInfo.flags = vk::PipelineShaderStageCreateFlags();
+		computeShaderStageInfo.stage = vk::ShaderStageFlagBits::eCompute;
+		computeShaderStageInfo.module = computeShaderModule;
+		computeShaderStageInfo.pName = "main";
+
+
+
+		vk::PipelineLayoutCreateInfo pipelineLayoutInfo{};
+		pipelineLayoutInfo.sType = vk::StructureType::ePipelineLayoutCreateInfo;
+		pipelineLayoutInfo.setLayoutCount = layouts.size();
+		pipelineLayoutInfo.pSetLayouts = layouts.data();
+		pipeline->m_PipelineLayout = device->GetDevice().createPipelineLayout(pipelineLayoutInfo, nullptr);
+
+
+		vk::ComputePipelineCreateInfo pipelineInfo{};
+
+		pipelineInfo.sType = vk::StructureType::eComputePipelineCreateInfo;
+		pipelineInfo.layout = pipeline->m_PipelineLayout;
+		pipelineInfo.stage = computeShaderStageInfo;
+		pipeline->m_Pipeline = device->GetDevice().createComputePipeline(nullptr, pipelineInfo).value;
+
+
+
+		vkDestroyShaderModule(device->GetDevice(), computeShaderModule, nullptr);
+
+
+
+		return pipeline;
+	}
 	Pipeline::~Pipeline()
 	{
 		auto& device = RenderContext::GetDevice()->GetDevice();

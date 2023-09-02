@@ -157,6 +157,7 @@
     <ClInclude Include="src\Rendering\Device.h" />
     <ClInclude Include="src\Rendering\Image.h" />
     <ClInclude Include="src\Rendering\IndexBuffer.h" />
+    <ClInclude Include="src\Rendering\Initializers.h" />
     <ClInclude Include="src\Rendering\Instance.h" />
     <ClInclude Include="src\Rendering\Model.h" />
     <ClInclude Include="src\Rendering\Pipeline.h" />

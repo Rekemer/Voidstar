@@ -106,6 +106,7 @@
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\Rendering\Pipeline.h" />
+    <ClInclude Include="src\Rendering\Initializers.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Dependencies\Tracy\public\TracyClient.cpp">
