@@ -21,7 +21,8 @@ Voidstar::Application* Voidstar::CreateApplication()
 {
 	auto str = std::string("Example");
 	// 120 -> 1920 * 1080
-	const int res = 110;
+	// 110
+	const int res = 90;
 	return new ExampleApplication(str, 16 * res, 9 * res);
 }
 int main()

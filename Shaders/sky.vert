@@ -29,5 +29,5 @@ void main() {
 	//fragUp =       vec3( 0.0f,  0.0f, 1.0f);
 	vec2 pos = screen_corners[gl_VertexIndex];
 	gl_Position = vec4(pos, 0.0, 1.0);
-	forwards = normalize(fragForward - pos.x * fragRight + pos.y * fragUp).xyz;
+	forwards = normalize(fragForward + pos.x * fragRight - pos.y * fragUp).xyz;
 }
