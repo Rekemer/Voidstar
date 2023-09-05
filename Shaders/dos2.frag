@@ -16,40 +16,66 @@ float lerp(float a, float b, float t)
     return min(a,b) + t*(max(a,b)-a);
 }
 
+float catRom(float x, float a,float a1,float a2,float a3)
+{
+    return pow(x,3) * a3 +pow(x,2) * a2 +pow(x,1) * a1 +a;
+}
 
+vec2 points[4] = {quadNumber + vec2(-1,0),quadNumber + vec2(0,1),quadNumber + vec2(1,0),quadNumber + vec2(0,1)};
+
+float getSquare(vec2 point)
+{
+    float res = 0;
+     for (int j =0; j< 4; j++)
+    {
+        res = length(points[j] - point );
+    }
+    return res;
+}
+
+//https://danceswithcode.net/engineeringnotes/interpolation/interpolation.html
 float bicubic(vec2 scaledUv)
 {
     vec2 indexUv = floor(scaledUv);
     vec2 f = fract(scaledUv);
     f = vec2(1)-f;
-    float offset = 10;
+    float offset = 20;
     float splineX[4][4];
-
 
     for (int i =0; i< 4; i++)
     {
         for (int j =0; j< 4; j++)
         {
             splineX[i][j] = length(quadNumber - indexUv + vec2(i-1,j-1)) - offset;
+           // splineX[i][j] = length(points[j] - indexUv ) - offset;
         }
     }
-    vec2 t= f;
-    vec2 tt = t*t; 
-    vec2 ttt = t*t*t; 
-
-    vec2 q1 = 0.5 * (-ttt+2.0*tt-t);
-    vec2 q2 = 0.5 * (3.0*ttt -5.0*tt + vec2(2,2));
-    vec2 q3 = 0.5 * (-3.0*ttt + 4.0*tt + t);
-    vec2 q4 = 0.5 * (ttt -tt);
 
     float splineY[4];
     for (int i=0; i <4; i++)
     {
-        splineY[i] = splineX[i][0]*q1.x +splineX[i][1]*q2.x  + splineX[i][2]*q3.x  + splineX[i][3]*q4.x ;
+        float ya = splineX[0][i];
+        float yb = splineX[1][i];
+        float yc = splineX[2][i];
+        float yd = splineX[3][i];
+        float a0 = yb;
+        float a1 = 0.5 *(-ya+yc);
+        float a2 = 0.5 * (2*ya-5*yb+4*yc -yd);   
+        float a3 = 0.5 * (-ya+3*yb-3*yc +yd);   
+        splineY[i] = catRom(f.x,a0,a1,a2,a3);
     }
-     
-    float res = splineY[0] * q1.y + splineY[1] * q2.y + splineY[2] * q3.y + splineY[3] * q4.y;
+
+    float ya = splineY[0];
+    float yb = splineY[1];
+    float yc = splineY[2];
+    float yd = splineY[3];
+    float a0 = yb;
+    float a1 = 0.5 *(-ya+yc);
+    float a2 = 0.5 * (2*ya-5*yb+4*yc -yd);   
+    float a3 = 0.5 * (-ya+3*yb-3*yc +yd);   
+    float res = catRom(f.y,a0,a1,a2,a3);
     return res;
+
 }
 
 float billinear(vec2 scaledUv)
@@ -119,6 +145,12 @@ void main()
 	//outColor = vec4(len,len,len,1);
 	//outColor = vec4(invertedLen,invertedLen,invertedLen,1);
     outColor = vec4(bColor,bColor,bColor,1);
-    outColor = vec4(bbColor,bbColor,bbColor,1);
+    float inverBbColor = 1 - bbColor;
+    float inverBColor = 1 - bColor;
+
+    float res = noise.x*inverBbColor;
+     //res = inverBbColor;
+    // res = getSquare(indexUv);
+    outColor = vec4(res,res,res,res-0.15);
 
 }
