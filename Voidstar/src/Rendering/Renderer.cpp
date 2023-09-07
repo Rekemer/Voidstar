@@ -33,6 +33,7 @@
 #include "Pipeline.h"
 #include <random>
 #include "Initializers.h"
+#include "input.h"
 
 namespace Voidstar
 {
@@ -1263,6 +1264,52 @@ namespace Voidstar
 			RenderImGui(imageIndex);
 
 #endif
+			if (Input::IsMousePressed(0))
+			{
+				// find mouse pos in world coordinates
+				float scale = 100;
+				auto  mousePos = Input::GetMousePos();
+				auto mouseScreenPos = glm::vec2{ std::get<0>(mousePos),std::get<1>(mousePos) };
+				glm::vec3 ndc;
+				glm::vec2 screenSize ={ m_App->m_ScreenWidth, m_App->m_ScreenHeight};
+				ndc.x = (2.0f * mouseScreenPos.x / screenSize.x) - 1.0f;
+				ndc.y = (1.0f - (2.0f * mouseScreenPos.y / screenSize.y));
+				auto vertPos = glm::vec4(0.5 * scale, 0, -0.5 * scale, 0);
+				ndc.z = 0.1;
+				auto inverseProj = glm::inverse(m_App->m_Camera->GetProj());
+				auto inverseView= glm::inverse(m_App->m_Camera->GetView());
+				auto rayEye = inverseProj * glm::vec4{ ndc.x,ndc.y,ndc.z,1 };
+				
+				rayEye.z = 1;
+				rayEye.w = 0;
+				glm::vec3 rayDir = glm::normalize(glm::vec3(inverseView * rayEye));
+				glm::vec3 cameraPos = glm::vec3(inverseView[3]);
+				glm::vec3 rayOrigin = cameraPos;
+				glm::vec3 rayEnd = cameraPos + rayDir * 50; // Define a maximum length for the ray if needed
+				glm::vec3 intersectionPoint;
+
+				auto RayIntersectObjects = [](glm::vec3 rayOrigin, glm::vec3 rayEnd, glm::vec3 intersectionPoint)
+				{
+					return false;
+				};
+
+				bool hit = RayIntersectObjects(rayOrigin, rayEnd, intersectionPoint);
+				/*worldSpace = worldSpace / worldSpace.w;
+
+				auto positionOfPlane = vertPos;
+				auto localPosition = worldSpace - positionOfPlane;
+				glm::vec3 uAxis = glm::vec3(-1, 0, 0);
+				glm::vec3 vAxis = glm::vec3(0, 0, -1);
+				glm::vec2 uvSpace = glm::vec2{ glm::dot(glm::vec3{localPosition} , uAxis),glm::dot(glm::vec3{localPosition}, vAxis) };
+				uvSpace = glm::normalize(uvSpace);*/
+				std::cout << "ray direction "  << rayDir.x << " " << rayDir.y << " " << rayDir.z << std::endl;
+				// update vector of positions
+				//m_ClickPoints.push_back(uvSpace);
+				// update texture
+
+
+			}
+
 
 			vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
 			vk::SubmitInfo submitInfo = {};
@@ -1299,6 +1346,7 @@ namespace Voidstar
 			ZoneScopedN("Presenting");
 			present = m_Device->GetPresentQueue().presentKHR(presentInfo);
 		}
+
 		catch (vk::OutOfDateKHRError error) {
 			present = vk::Result::eErrorOutOfDateKHR;
 		}
@@ -1677,10 +1725,7 @@ namespace Voidstar
 	}
 
 
-	void Renderer::SubmitInstanceData(const InstanceData& instance)
-	{
-		m_InstanceData.emplace_back(instance);
-	}
+	
 
 	Renderer::~Renderer()
 	{

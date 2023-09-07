@@ -5,6 +5,15 @@
 layout(location = 0) in vec2 uv;
 layout(location = 0) out vec4 outColor;
 
+
+layout(set = 0, binding = 0) uniform UniformBufferObject {
+    mat4 view;
+    mat4 proj;
+    vec4 playerPos;
+    float time;
+    
+} ubo;
+
 layout(set = 1, binding = 0) uniform sampler2D u_Noise;
 layout(set = 1, binding = 1) uniform sampler2D u_Noise1;
 
@@ -176,7 +185,7 @@ void main()
                 vec2 point = random2(i_st + neighbor);
                 // Animate the offset
                 // offset = 0.5 + 0.5*sin(u_time + 6.2831*offset);
-
+                point =  0.5 + 0.5*sin(ubo.time*1000 + 6.2831*point);
                 // Position of the cell
                 vec2 pos = neighbor + point - f_st;
 
@@ -199,7 +208,8 @@ void main()
       float res = step(0.0425,m_dist);
      // res = bicubic(scaledUv);
       outColor =vec4(res,res,res,1);
-      outColor = fillColor*(1-noise);
+      outColor =vec4(uv,0,1);
+      //outColor = fillColor*(1-noise);
       outColor.a = 1;
 
 

@@ -7,6 +7,13 @@
 #include "gtc/quaternion.hpp"
 namespace Voidstar
 {
+
+    std::ostream& operator<<(std::ostream& os, const glm::vec3& vec)
+    {
+        os << vec.x << ", " << vec.y << ", " << vec.z << "\n";
+        return os;
+    }
+
 	void Camera::Update(float deltaTime)
 	{
         if (m_IsControlEnabled)
@@ -15,7 +22,7 @@ namespace Voidstar
             ProcessMouse();
             UpdateView();
         }
-      //  Log::GetLog()->info("camera pos: {0} {1} {2}\n", m_Position.x, m_Position.y, m_Position.z);
+      Log::GetLog()->info("camera pos: {0} {1} {2}\n", m_Position.x, m_Position.y, m_Position.z);
         if (Input::IsKeyTyped(VS_KEY_C))
         {
             m_IsControlEnabled = !m_IsControlEnabled;
@@ -58,11 +65,7 @@ namespace Voidstar
 
     }
 
-    std::ostream& operator<<(std::ostream& os, const glm::vec3& vec)
-    {
-        os << vec.x << ", " << vec.y << ", " << vec.z << "\n";
-        return os;
-    }
+  
 
     void Camera::ProcessInput(float deltaTime)
 	{

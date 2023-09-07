@@ -155,7 +155,6 @@ namespace Voidstar
 			return m_CommandPoolManager.get();
 		}
 
-		void SubmitInstanceData(const InstanceData& instance);
 		void RenderImGui(int frameIndex);
 		void CleanUpImGui();
 		~Renderer();
@@ -175,8 +174,6 @@ namespace Voidstar
 		void RecreateSwapchain();
 		void Shutdown();
 		void CreateComputePipeline();
-		void UpdateNoiseTexture();
-		void UpdateCloudTexture();
 	private:
 		Voidstar::Instance* m_Instance;
 		int m_ViewportWidth, m_ViewportHeight;
@@ -293,8 +290,7 @@ namespace Voidstar
 		vk::PolygonMode m_PolygoneMode = vk::PolygonMode::eFill;
 
 
-		//vk::BufferMemoryBarrier	m_InstanceBarrier;
-		std::vector<InstanceData> m_InstanceData;
+		std::vector<glm::vec2> m_ClickPoints;
 		std::vector<vk::DescriptorSet> m_InstanceDescriptorSets;
 		void* m_InstancedPtr;
 		Quadtree m_QuadTree;

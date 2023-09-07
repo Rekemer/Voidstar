@@ -14,6 +14,7 @@ namespace Voidstar
 		std::unique_ptr<Camera>& GetCamera() { return m_Camera; }
 		virtual void Execute() {};
 	private:
+		friend class Renderer;
 		size_t m_ScreenWidth, m_ScreenHeight;
 		
 		UPtr<Camera> m_Camera;
