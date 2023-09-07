@@ -53,8 +53,8 @@ namespace Voidstar
 	size_t currentFrame = 0;
 	static float exeTime = 24;
 	// noise
-	const float noiseTextureWidth = 450.f;
-	const float noiseTextureHeight = 450.f;
+	const float noiseTextureWidth = 256.f;
+	const float noiseTextureHeight = 256.f;
 	// Data
 	static VkAllocationCallbacks* g_Allocator = nullptr;
 	static VkInstance               g_Instance = VK_NULL_HANDLE;
@@ -516,9 +516,8 @@ namespace Voidstar
 			| vk::ShaderStageFlagBits::eTessellationEvaluation | vk::ShaderStageFlagBits::eFragment,1);
 		
 
-		vk::DescriptorSetLayoutBinding layoutBinding1 = DescriptorBindingDescription(1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment , 1);
 		
-		std::vector<vk::DescriptorSetLayoutBinding> layoutBindings{ layoutBinding,layoutBinding1 };
+		std::vector<vk::DescriptorSetLayoutBinding> layoutBindings{ layoutBinding};
 		m_DescriptorSetLayout = DescriptorSetLayout::Create(layoutBindings);
 
 	
@@ -539,7 +538,6 @@ namespace Voidstar
 		{
 			m_UniformBuffers[i] = new Buffer(inputBuffer);
 			uniformBuffersMapped[i] = m_Device->GetDevice().mapMemory(m_UniformBuffers[i]->GetMemory(), 0, bufferSize);
-	
 		}
 
 
@@ -565,19 +563,22 @@ namespace Voidstar
 		
 		m_DescriptorSets =  m_DescriptorPool->AllocateDescriptorSets(framesAmount, layouts.data());
 			
+		for (size_t i = 0; i < framesAmount; i++)
+		{
+			m_Device->UpdateDescriptorSet(m_DescriptorSets[i], 0, 1, *m_UniformBuffers[i], vk::DescriptorType::eUniformBuffer);
+		}
 
-
-		m_NoiseImage = Image::CreateImage(BASE_RES_PATH + "/dos_2_noise.png");
+		/*m_NoiseImage = Image::CreateImage(BASE_RES_PATH + "/dos_2_noise.png");
 		for (int i = 0; i < framesAmount; i++)
 		{
 		
 			
-			m_Device->UpdateDescriptorSet(m_DescriptorSets[i],0,1, *m_UniformBuffers[i], vk::DescriptorType::eUniformBuffer);
+			
 			vk::DescriptorImageInfo imageInfo = DescriptorImageInfo(vk::ImageLayout::eShaderReadOnlyOptimal, m_NoiseImage->m_ImageView, m_NoiseImage->m_Sampler);
 		
 			m_Device->UpdateDescriptorSet(m_DescriptorSets[i], 1, 1, imageInfo, vk::DescriptorType::eCombinedImageSampler);
 
-		}
+		}*/
 		
 
 		
@@ -650,8 +651,143 @@ namespace Voidstar
 
 		CreateMSAAFrame();
 
-	
+
+		{
+
+			vk::DescriptorPoolSize poolSize;
+			poolSize.type = vk::DescriptorType::eCombinedImageSampler;
+			poolSize.descriptorCount = 6;
+
+			std::vector<vk::DescriptorPoolSize> poolSizes{ poolSize };
+
+			m_DescriptorPoolTex = DescriptorPool::Create(poolSizes, 1);
+
+
+
+
+
+
+			
+
+
+
+
+			std::vector<vk::DescriptorSetLayoutBinding> layoutBindings{ 
+				DescriptorBindingDescription(0, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment, 1) ,
+				DescriptorBindingDescription(1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment, 1) };
+
+			m_DescriptorSetLayoutTex = DescriptorSetLayout::Create(layoutBindings);
+			std::vector<vk::DescriptorSetLayout> layouts;
+			layouts.resize(1);
+
+			layouts[0] = m_DescriptorSetLayoutTex->GetLayout();
+			m_DescriptorSetTex = m_DescriptorPoolTex->AllocateDescriptorSets(1, layouts.data())[0];
+		}
+
+
+		std::vector<vk::DescriptorPoolSize> poolSizes;
+		{
+			vk::DescriptorPoolSize poolSize;
+			poolSize.type = vk::DescriptorType::eStorageImage;
+			poolSize.descriptorCount = 1;
+			poolSizes.emplace_back(poolSize);
+		}
+
+		{
+			vk::DescriptorPoolSize poolSize;
+			poolSize.type = vk::DescriptorType::eUniformBuffer;
+			poolSize.descriptorCount = 1;
+			poolSizes.emplace_back(poolSize);
+			m_DescriptorPoolSelected = DescriptorPool::Create(poolSizes, 1);
+		}
+
+		layouts.resize(1);
+
+
+		{
+			vk::DescriptorSetLayoutBinding layoutBinding1;
+			layoutBinding1.binding = 0;
+			layoutBinding1.descriptorType = vk::DescriptorType::eStorageImage;
+			layoutBinding1.stageFlags = vk::ShaderStageFlagBits::eFragment |
+				vk::ShaderStageFlagBits::eCompute;
+			layoutBinding1.descriptorCount = 1;
+
+
+
+
+			std::vector<vk::DescriptorSetLayoutBinding> layoutBindings{ layoutBinding1 };
+
+			m_DescriptorSetLayoutSelected = DescriptorSetLayout::Create(layoutBindings);
+
+		}
 		
+
+		m_ImageSelected = Image::CreateEmptyImage(noiseTextureWidth, noiseTextureHeight, vk::Format::eR8G8B8A8Snorm);
+		m_Image = Image::CreateImage(BASE_RES_PATH + "dos_2_noise.png");
+
+		vk::DescriptorImageInfo imageDescriptor;
+		imageDescriptor.imageLayout = vk::ImageLayout::eGeneral;
+		imageDescriptor.imageView = m_ImageSelected->m_ImageView;
+		imageDescriptor.sampler = m_ImageSelected->m_Sampler;
+
+		m_DescriptorSetSelected = m_DescriptorPoolSelected->AllocateDescriptorSets(1, { &m_DescriptorSetLayoutSelected ->GetLayout()})[0];
+		
+		m_Device->UpdateDescriptorSet(m_DescriptorSetSelected, 0,1, imageDescriptor, vk::DescriptorType::eStorageImage);
+		m_Device->UpdateDescriptorSet(m_DescriptorSetTex, 0, 1, *m_ImageSelected, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
+		m_Device->UpdateDescriptorSet(m_DescriptorSetTex, 1, 1, *m_Image, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
+		
+		layouts = { m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutSelected->GetLayout() };
+		m_ComputePipeline = Pipeline::CreateComputePipeline(BASE_SPIRV_OUTPUT + "SelectedTex.spvCmp", layouts);
+		
+		auto device = m_Device->GetDevice();
+		if (m_ImageSelected->m_ImageLayout != vk::ImageLayout::eGeneral)
+		{
+			auto cmdBuffer = m_ComputeCommandBuffer[currentFrame].BeginTransfering();
+
+
+			m_ComputeCommandBuffer[currentFrame].ChangeImageLayout(m_ImageSelected.get(), vk::ImageLayout::eShaderReadOnlyOptimal, vk::ImageLayout::eGeneral);
+			m_ComputeCommandBuffer[currentFrame].EndTransfering();
+			m_ComputeCommandBuffer[currentFrame].SubmitSingle();
+
+		}
+		auto cmdBuffer = m_ComputeCommandBuffer[currentFrame].BeginTransfering();
+
+
+
+
+		vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_ComputePipeline->m_Pipeline);
+		cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_ComputePipeline->m_PipelineLayout, 0, 1, &m_DescriptorSets[currentFrame], 0, 0);
+		cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_ComputePipeline->m_PipelineLayout, 1, 1, &m_DescriptorSetSelected, 0, 0);
+		float invocations = 256;
+		int localSize = 8;
+
+
+		vkCmdDispatch(cmdBuffer, invocations / localSize, invocations / localSize,1);
+
+		m_ComputeCommandBuffer[currentFrame].ChangeImageLayout(m_ImageSelected.get(), vk::ImageLayout::eGeneral, vk::ImageLayout::eShaderReadOnlyOptimal);
+		m_ComputeCommandBuffer[currentFrame].EndTransfering();
+		m_ComputeCommandBuffer[currentFrame].SubmitSingle();
+
+
+		device.waitIdle();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 		CreatePipeline();
 		CreateFramebuffers();
 
@@ -1086,6 +1222,7 @@ namespace Voidstar
 				
 
 				commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_TerrainPipeline->m_PipelineLayout, 0, m_DescriptorSets[imageIndex], nullptr);
+				commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_TerrainPipeline->m_PipelineLayout, 1, m_DescriptorSetTex, nullptr);
 			
 
 				commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_TerrainPipeline->m_Pipeline);
@@ -1352,7 +1489,7 @@ namespace Voidstar
 
 			auto samples = RenderContext::GetDevice()->GetSamples();
 			specs.samples = samples;
-			auto pipelineLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout() };
+			auto pipelineLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutTex->GetLayout() };
 
 			specs.descriptorSetLayout = pipelineLayouts;
 
@@ -1581,11 +1718,16 @@ namespace Voidstar
 		}
 		
 		m_DescriptorPool.reset();
+		m_DescriptorPoolSelected.reset();
+		m_DescriptorPoolTex.reset();
 		m_Device->GetDevice().destroyDescriptorSetLayout(m_DescriptorSetLayout->GetLayout());
+		m_Device->GetDevice().destroyDescriptorSetLayout(m_DescriptorSetLayoutSelected->GetLayout());
+		m_Device->GetDevice().destroyDescriptorSetLayout(m_DescriptorSetLayoutTex->GetLayout());
 	
 
 	
-		m_NoiseImage.reset();
+		m_ImageSelected.reset();
+		m_Image.reset();
 	
 		
 		m_Device->GetDevice().destroySemaphore(m_ImageAvailableSemaphore);
@@ -1602,7 +1744,7 @@ namespace Voidstar
 		}
 		device.destroyRenderPass(m_RenderPass);
 		m_TerrainPipeline.reset();
-		
+		m_ComputePipeline.reset();
 		m_Swapchain.reset();
 
 

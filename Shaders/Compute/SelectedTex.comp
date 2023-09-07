@@ -1,0 +1,167 @@
+#version 450
+
+layout(set = 0, binding = 0) uniform UniformBufferObject {
+    mat4 view;
+    mat4 proj;
+    vec4 playerPos;
+    float time;
+    
+} ubo;
+// 1 - static noise for terrain,
+// 2 -  dynamic noise for water rendering
+// 3 -  worley noise for clouds
+layout(set = 1, binding = 0, rgba8) uniform writeonly image2D storageImage;
+
+layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+float scale = 100;
+
+float square(vec2 scaledUv,vec2 quadNumber,float offset)
+{
+    vec2 indexUv = floor(scaledUv);
+    //indexUv = vec2(0,0);
+    vec2 f = fract(scaledUv);
+    float res =length(quadNumber - indexUv + vec2(0.0, 0.0)) - offset; 
+    return clamp(res,0,1);
+}
+
+float catRom(float x, float a,float a1,float a2,float a3)
+{
+    return pow(x,3) * a3 +pow(x,2) * a2 +pow(x,1) * a1 +a;
+}
+
+vec2 random2( vec2 p ) {
+    return fract(sin(vec2(dot(p,vec2(127.1,311.7)),dot(p,vec2(269.5,183.3))))*43758.5453);
+}
+
+float random (vec2 st) {
+    return (fract(sin(dot(st.xy,
+                         vec2(12.9898,78.233)))*
+        43758.5453123) * 2 - 1 )*50;
+}
+
+float gradientNoise(vec2 st) {
+    vec2 i = floor(st);
+    vec2 f = fract(st);
+
+    vec2 u = f*f*(3.0-2.0*f);
+
+    return mix( mix( dot( random2(i + vec2(0.0,0.0) ), f - vec2(0.0,0.0) ),
+                     dot( random2(i + vec2(1.0,0.0) ), f - vec2(1.0,0.0) ), u.x),
+                mix( dot( random2(i + vec2(0.0,1.0) ), f - vec2(0.0,1.0) ),
+                     dot( random2(i + vec2(1.0,1.0) ), f - vec2(1.0,1.0) ), u.x), u.y);
+}
+
+//https://danceswithcode.net/engineeringnotes/interpolation/interpolation.html
+float bicubic(vec2 scaledUv, vec2 quadNumber,float offset)
+{
+    vec2 indexUv = floor(scaledUv);
+    offset += gradientNoise(scaledUv)*10.3;
+    vec2 f = fract(scaledUv);
+    f = vec2(1)-f;
+    float splineX[4][4];
+
+    for (int i =0; i< 4; i++)
+    {
+        for (int j =0; j< 4; j++)
+        {
+            splineX[i][j] = length(quadNumber - indexUv + vec2(i-1,j-1)) - offset;
+        }
+    }
+    
+    float splineY[4];
+    for (int i=0; i <4; i++)
+    {
+        float ya = splineX[0][i];
+        float yb = splineX[1][i];
+        float yc = splineX[2][i];
+        float yd = splineX[3][i];
+        float a0 = yb;
+        float a1 = 0.5 *(-ya+yc);
+        float a2 = 0.5 * (2*ya-5*yb+4*yc -yd);   
+        float a3 = 0.5 * (-ya+3*yb-3*yc +yd);   
+        splineY[i] = catRom(f.x,a0,a1,a2,a3);
+    }
+
+    float ya = splineY[0];
+    float yb = splineY[1];
+    float yc = splineY[2];
+    float yd = splineY[3];
+    float a0 = yb;
+    float a1 = 0.5 *(-ya+yc);
+    float a2 = 0.5 * (2*ya-5*yb+4*yc -yd);   
+    float a3 = 0.5 * (-ya+3*yb-3*yc +yd);   
+    float res = catRom(f.y,a0,a1,a2,a3);
+    return clamp(res,0,1);
+
+}
+
+
+
+float billinear(vec2 scaledUv,vec2 quadNumber)
+{
+    vec2 indexUv = floor(scaledUv);
+    //indexUv = vec2(0,0);
+    vec2 f = fract(scaledUv);
+    // I don't know why inverted is correct one >:-( and why is offset vec2 supposed to be with - 
+    //if we dont invert direction of interpolation
+
+    f = vec2(1)-f;
+    float offset = 1;
+        //float indexLeftLen = length(((quadNumber)-(indexUv))) - offset;
+        //float indexRightLen = length(((quadNumber+vec2(1,0))-(indexUv)))-offset;
+    float current = length(quadNumber - indexUv + vec2(0.0, 0.0)) - offset;
+    float bottomRight = length(quadNumber - indexUv + vec2(1.0, 0.0)) - offset;
+    float topLeft = length(quadNumber - indexUv +vec2(0.0, 1.0)) - offset;
+    float topRight = length(quadNumber - indexUv + vec2(1.0, 1.0)) - offset;
+
+
+    
+    vec2 u = f * f * (3.0 - 2.0 * f);
+
+    float interpolated;
+
+    //x×(1−a)+y×a
+    // x + a(y-x)
+   
+
+	float interpolatedX = mix(current, bottomRight,u.x);
+	float interpolatedY = mix(topLeft, topRight, u.x);
+	interpolated = mix(interpolatedX , interpolatedY , u.y);
+    return interpolated ;
+}
+
+
+
+
+void main() 
+{
+   // Get the image coordinates
+   const vec2 quadNumber= vec2(scale/4,scale/4);
+    ivec2 coords = ivec2(gl_GlobalInvocationID.xy);
+    vec2 imageSize = vec2(450,450);
+    vec2 uv = coords/imageSize;
+     vec2 scaledUv = uv*scale;
+    vec2 indexUv = floor(scaledUv);
+    vec2 fractedUv = fract(scaledUv );
+    const float circleAmount = 120.f/4;
+   vec2 points[int(circleAmount)];
+   float res = 1;
+   for( int i =0; i< circleAmount; i++)
+   {
+        float offset = random(vec2(i,i-1)) ;
+        float offset1 = random(vec2(i-2,i-1)) ;
+        vec2 dir = random2(vec2(offset,offset));
+        float size = random(vec2(i+1,i+1))/6;
+       // size = 10;
+        points[i] =quadNumber + floor(dir*vec2(offset,offset1));
+        float bbColor = bicubic(scaledUv,points[i],size);
+        res*=bbColor;
+   }
+    float a =  square(scaledUv,quadNumber,10);
+    float a1 =  square(scaledUv,quadNumber+vec2(10,10),10);
+   // res =(a)*(a1);
+    //res =1-a;
+    //res +=1-a1;
+    imageStore(storageImage, coords,   vec4(res,res,res,1));
+
+}

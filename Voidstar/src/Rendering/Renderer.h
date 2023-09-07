@@ -194,7 +194,7 @@ namespace Voidstar
 		UPtr<Buffer> m_InstancedDataBuffer;
 
 		SPtr<Image> m_Image;
-		SPtr<Image> m_NoiseImage;
+		SPtr<Image> m_ImageSelected;
 
 		SPtr<Image> m_AnimatedNoiseImage;
 		SPtr<Image> m_3DNoiseTexture;
@@ -272,9 +272,9 @@ namespace Voidstar
 
 		UPtr<Pipeline> m_ComputePipelineClouds;
 		UPtr<Pipeline> m_ComputePipeline;
-		vk::DescriptorSet m_DescriptorSetNoise;
-		SPtr<DescriptorPool> m_DescriptorPoolNoise;
-		DescriptorSetLayout* m_DescriptorSetLayoutNoise;
+		vk::DescriptorSet m_DescriptorSetSelected;
+		SPtr<DescriptorPool> m_DescriptorPoolSelected;
+		DescriptorSetLayout* m_DescriptorSetLayoutSelected;
 
 
 		UPtr<CommandPoolManager> m_CommandPoolManager;
