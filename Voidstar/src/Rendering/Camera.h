@@ -22,7 +22,7 @@ namespace Voidstar
 	private:
 		glm::vec3 m_Up {0.0f, 1.0f, 0.0f};
 		glm::vec3 m_Front{ 0.0f, 0.0f, 1.0f };
-		glm::vec3 m_Position{7,120,-10};
+		glm::vec3 m_Position{7,149,-10};
 		glm::mat4 m_Proj;
 		glm::mat4 m_View;
 		float m_Yaw = 90.0f;

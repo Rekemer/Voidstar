@@ -1273,36 +1273,69 @@ namespace Voidstar
 				glm::vec3 ndc;
 				glm::vec2 screenSize ={ m_App->m_ScreenWidth, m_App->m_ScreenHeight};
 				ndc.x = (2.0f * mouseScreenPos.x / screenSize.x) - 1.0f;
-				ndc.y = (1.0f - (2.0f * mouseScreenPos.y / screenSize.y));
-				auto vertPos = glm::vec4(0.5 * scale, 0, -0.5 * scale, 0);
-				ndc.z = 0.1;
+				ndc.y = -(1.0f - (2.0f * mouseScreenPos.y / screenSize.y));
+				
+				auto vertPos = glm::vec4(0.5 * scale, 0, -0.5 * scale, 1);
+
+				float planeDepthWorld = 0.934;
+				float ndcZNear = 10;
+				float ndcZFar = 10000;
+
+
+				ndc.z = (planeDepthWorld - ndcZNear) / (ndcZFar - ndcZNear);
 				auto inverseProj = glm::inverse(m_App->m_Camera->GetProj());
 				auto inverseView= glm::inverse(m_App->m_Camera->GetView());
-				auto rayEye = inverseProj * glm::vec4{ ndc.x,ndc.y,ndc.z,1 };
+				auto rayEye =(inverseProj * glm::vec4{ ndc.x,ndc.y,1,1 });
 				
 				rayEye.z = 1;
 				rayEye.w = 0;
 				glm::vec3 rayDir = glm::normalize(glm::vec3(inverseView * rayEye));
+			//	rayDir.z *= -1;
 				glm::vec3 cameraPos = glm::vec3(inverseView[3]);
+				std::cout << "ndc  " << ndc.x << " " << ndc.y << " " << ndc.z << std::endl;
 				glm::vec3 rayOrigin = cameraPos;
-				glm::vec3 rayEnd = cameraPos + rayDir * 50; // Define a maximum length for the ray if needed
-				glm::vec3 intersectionPoint;
-
-				auto RayIntersectObjects = [](glm::vec3 rayOrigin, glm::vec3 rayEnd, glm::vec3 intersectionPoint)
+				glm::vec3 intersectionPoint = {0,0,0};
+				std::cout << "ray dir " << rayDir.x << " " << rayDir.y << " " << rayDir.z << std::endl;
+				// works only  if camera doesn
+				auto RayIntersectObjects = [](glm::vec3 rayOrigin, glm::vec3 rayDirection, glm::vec3 planePoint, glm::vec3& intersectionPoint)
 				{
+					// Calculate the dot product of the ray direction and the plane's normal.
+					glm::vec3 planeNormal = {0,1,0};
+					float denominator = glm::dot(planeNormal, rayDirection);
+					// Check if the ray and the plane are not parallel (denominator is not close to zero).
+					if (glm::abs(denominator) > 1e-6) {
+						// Calculate the vector from the ray's origin to a point on the plane.
+						glm::vec3 rayToPlane = planePoint - rayOrigin;
+
+						// Calculate the distance along the ray where it intersects the plane.
+						float t = glm::dot(rayToPlane, planeNormal) / denominator;
+
+						// Check if the intersection point is in front of the ray's origin.
+						if (t >= 0.0f) {
+							// Calculate the intersection point using the ray's equation: rayOrigin + t * rayDirection.
+							intersectionPoint = rayOrigin + t * rayDirection;
+
+							std::cout << "intersection " << intersectionPoint.x  << " "  << intersectionPoint.y  << " " << intersectionPoint.z << std::endl;
+							return true; // Intersection occurred.
+						}
+					}
 					return false;
 				};
 
-				bool hit = RayIntersectObjects(rayOrigin, rayEnd, intersectionPoint);
+				bool hit = RayIntersectObjects(rayOrigin, rayDir, vertPos, intersectionPoint);
 				/*worldSpace = worldSpace / worldSpace.w;
 
-				auto positionOfPlane = vertPos;
-				auto localPosition = worldSpace - positionOfPlane;
+				*/
+				auto localPosition = (intersectionPoint- glm::vec3(vertPos));
 				glm::vec3 uAxis = glm::vec3(-1, 0, 0);
 				glm::vec3 vAxis = glm::vec3(0, 0, -1);
-				glm::vec2 uvSpace = glm::vec2{ glm::dot(glm::vec3{localPosition} , uAxis),glm::dot(glm::vec3{localPosition}, vAxis) };
-				uvSpace = glm::normalize(uvSpace);*/
-				std::cout << "ray direction "  << rayDir.x << " " << rayDir.y << " " << rayDir.z << std::endl;
+
+				glm::vec2 uvSpace = glm::vec2{ glm::dot(glm::vec3{localPosition} , uAxis),glm::dot(glm::vec3{localPosition}, vAxis) }/100.f;
+				uvSpace.y *= -1;
+				//uvSpace = glm::normalize(uvSpace);
+				std::cout << "uv space " << uvSpace.x << " " <<  uvSpace.y << std::endl;
+				//std::cout <<  "local pos " << localPosition.x << " " << localPosition.y << " " << localPosition.z << std::endl;
+				//std::cout << "ray direction "  << rayDir.x << " " << rayDir.y << " " << rayDir.z << std::endl;
 				// update vector of positions
 				//m_ClickPoints.push_back(uvSpace);
 				// update texture
