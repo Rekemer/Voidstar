@@ -22,7 +22,7 @@ namespace Voidstar
             ProcessMouse();
             UpdateView();
         }
-      Log::GetLog()->info("camera pos: {0} {1} {2}\n", m_Position.x, m_Position.y, m_Position.z);
+      //Log::GetLog()->info("camera pos: {0} {1} {2}\n", m_Position.x, m_Position.y, m_Position.z);
         if (Input::IsKeyTyped(VS_KEY_C))
         {
             m_IsControlEnabled = !m_IsControlEnabled;

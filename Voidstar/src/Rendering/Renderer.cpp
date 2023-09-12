@@ -42,7 +42,7 @@ namespace Voidstar
 
 	TracyVkCtx ctx;
 	vk::ShaderModule CreateModule(std::string filename, vk::Device device);
-	const uint32_t PARTICLE_COUNT = 8192;
+	const uint32_t MAX_POINTS = 20;
 	std::string BASE_SHADER_PATH = "../Shaders/";
 	std::string BASE_RES_PATH = "res";
 	//const std::string SPIRV_COMPILER_PATH = "C:/VulkanSDK/1.3.216.0/Bin/glslc.exe";
@@ -713,15 +713,33 @@ namespace Voidstar
 				vk::ShaderStageFlagBits::eCompute;
 			layoutBinding1.descriptorCount = 1;
 
+			vk::DescriptorSetLayoutBinding layoutBinding2;
+			layoutBinding2.binding = 1;
+			layoutBinding2.descriptorType = vk::DescriptorType::eStorageBuffer;
+			layoutBinding2.stageFlags = vk::ShaderStageFlagBits::eCompute;
+			layoutBinding2.descriptorCount = 1;
 
 
 
-			std::vector<vk::DescriptorSetLayoutBinding> layoutBindings{ layoutBinding1 };
+			std::vector<vk::DescriptorSetLayoutBinding> layoutBindings{ layoutBinding1, layoutBinding2 };
 
 			m_DescriptorSetLayoutSelected = DescriptorSetLayout::Create(layoutBindings);
 
 		}
 		
+		{
+			BufferInputChunk info;
+			info.size = sizeof(glm::vec2) * MAX_POINTS;
+			info.usage = vk::BufferUsageFlagBits::eStorageBuffer |
+				vk::BufferUsageFlagBits::eTransferDst;
+			info.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | 
+				vk::MemoryPropertyFlagBits::eHostCoherent;
+			m_ShaderStorageBuffer = CreateUPtr<Buffer>(info);
+		}
+		
+		
+
+
 
 		m_ImageSelected = Image::CreateEmptyImage(noiseTextureWidth, noiseTextureHeight, vk::Format::eR8G8B8A8Snorm);
 		m_Image = Image::CreateImage(BASE_RES_PATH + "dos_2_noise.png");
@@ -733,44 +751,20 @@ namespace Voidstar
 
 		m_DescriptorSetSelected = m_DescriptorPoolSelected->AllocateDescriptorSets(1, { &m_DescriptorSetLayoutSelected ->GetLayout()})[0];
 		
+
+
+		m_ClickPoints.resize(MAX_POINTS, glm::vec2(-1,-1));
+		//m_ClickPoints[0] = glm::vec2{ 0.5,0.5 };
+		//m_ClickPoints[1] = glm::vec2{ 0.5,0.2 };
+		UpdateBuffer();
+		
 		m_Device->UpdateDescriptorSet(m_DescriptorSetSelected, 0,1, imageDescriptor, vk::DescriptorType::eStorageImage);
 		m_Device->UpdateDescriptorSet(m_DescriptorSetTex, 0, 1, *m_ImageSelected, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
 		m_Device->UpdateDescriptorSet(m_DescriptorSetTex, 1, 1, *m_Image, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
 		
 		layouts = { m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutSelected->GetLayout() };
 		m_ComputePipeline = Pipeline::CreateComputePipeline(BASE_SPIRV_OUTPUT + "SelectedTex.spvCmp", layouts);
-		
-		auto device = m_Device->GetDevice();
-		if (m_ImageSelected->m_ImageLayout != vk::ImageLayout::eGeneral)
-		{
-			auto cmdBuffer = m_ComputeCommandBuffer[currentFrame].BeginTransfering();
-
-
-			m_ComputeCommandBuffer[currentFrame].ChangeImageLayout(m_ImageSelected.get(), vk::ImageLayout::eShaderReadOnlyOptimal, vk::ImageLayout::eGeneral);
-			m_ComputeCommandBuffer[currentFrame].EndTransfering();
-			m_ComputeCommandBuffer[currentFrame].SubmitSingle();
-
-		}
-		auto cmdBuffer = m_ComputeCommandBuffer[currentFrame].BeginTransfering();
-
-
-
-
-		vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_ComputePipeline->m_Pipeline);
-		cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_ComputePipeline->m_PipelineLayout, 0, 1, &m_DescriptorSets[currentFrame], 0, 0);
-		cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_ComputePipeline->m_PipelineLayout, 1, 1, &m_DescriptorSetSelected, 0, 0);
-		float invocations = 256;
-		int localSize = 8;
-
-
-		vkCmdDispatch(cmdBuffer, invocations / localSize, invocations / localSize,1);
-
-		m_ComputeCommandBuffer[currentFrame].ChangeImageLayout(m_ImageSelected.get(), vk::ImageLayout::eGeneral, vk::ImageLayout::eShaderReadOnlyOptimal);
-		m_ComputeCommandBuffer[currentFrame].EndTransfering();
-		m_ComputeCommandBuffer[currentFrame].SubmitSingle();
-
-
-		device.waitIdle();
+		UpdateTexture();
 
 
 
@@ -1147,8 +1141,59 @@ namespace Voidstar
 		static Renderer renderer ;
 		return &renderer;
 	}
+	void Renderer::UpdateTexture()
+	{
+
+		auto device = m_Device->GetDevice();
+		if (m_ImageSelected->m_ImageLayout != vk::ImageLayout::eGeneral)
+		{
+			auto cmdBuffer = m_ComputeCommandBuffer[currentFrame].BeginTransfering();
 
 
+			m_ComputeCommandBuffer[currentFrame].ChangeImageLayout(m_ImageSelected.get(), vk::ImageLayout::eShaderReadOnlyOptimal, vk::ImageLayout::eGeneral);
+			m_ComputeCommandBuffer[currentFrame].EndTransfering();
+			m_ComputeCommandBuffer[currentFrame].SubmitSingle();
+
+		}
+		auto cmdBuffer = m_ComputeCommandBuffer[currentFrame].BeginTransfering();
+
+
+
+
+		vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_ComputePipeline->m_Pipeline);
+		cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_ComputePipeline->m_PipelineLayout, 0, 1, &m_DescriptorSets[currentFrame], 0, 0);
+		cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_ComputePipeline->m_PipelineLayout, 1, 1, &m_DescriptorSetSelected, 0, 0);
+		float invocations = 256;
+		int localSize = 8;
+
+
+		vkCmdDispatch(cmdBuffer, invocations / localSize, invocations / localSize, 1);
+
+		m_ComputeCommandBuffer[currentFrame].ChangeImageLayout(m_ImageSelected.get(), vk::ImageLayout::eGeneral, vk::ImageLayout::eShaderReadOnlyOptimal);
+		m_ComputeCommandBuffer[currentFrame].EndTransfering();
+		m_ComputeCommandBuffer[currentFrame].SubmitSingle();
+
+
+		device.waitIdle();
+	}
+	void Renderer::UpdateBuffer()
+	{
+		auto bufferSize = MAX_POINTS * sizeof(glm::vec2);
+		{
+			SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(bufferSize);
+
+
+
+
+			m_TransferCommandBuffer[0].BeginTransfering();
+			m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_ShaderStorageBuffer.get(), (void*)m_ClickPoints.data(), bufferSize);
+			m_TransferCommandBuffer[0].EndTransfering();
+			m_TransferCommandBuffer[0].SubmitSingle();
+
+
+			m_Device->UpdateDescriptorSet(m_DescriptorSetSelected, 1, 1, *m_ShaderStorageBuffer, vk::DescriptorType::eStorageBuffer);
+		}
+	}
 	void Renderer::Render(float deltaTime)
 	{
 		exeTime += deltaTime;
@@ -1264,7 +1309,7 @@ namespace Voidstar
 			RenderImGui(imageIndex);
 
 #endif
-			if (Input::IsMousePressed(0))
+			if (Input::IsKeyTyped(VS_KEY_V))
 			{
 				// find mouse pos in world coordinates
 				float scale = 100;
@@ -1337,8 +1382,14 @@ namespace Voidstar
 				//std::cout <<  "local pos " << localPosition.x << " " << localPosition.y << " " << localPosition.z << std::endl;
 				//std::cout << "ray direction "  << rayDir.x << " " << rayDir.y << " " << rayDir.z << std::endl;
 				// update vector of positions
-				//m_ClickPoints.push_back(uvSpace);
+				m_ClickPoints[nextPoint++] = (uvSpace);
+				nextPoint %= MAX_POINTS;
 				// update texture
+
+
+				UpdateBuffer();
+				
+				UpdateTexture();
 
 
 			}
@@ -1790,10 +1841,8 @@ namespace Voidstar
 		for (size_t i = 0; i < m_Swapchain->m_SwapchainFrames.size(); i++) {
 			delete m_UniformBuffers[i];
 		}
-		for (auto& buffer : m_ShaderStorageBuffers)
-		{
-			buffer.reset();
-		}
+
+		m_ShaderStorageBuffer.reset();
 		
 		m_DescriptorPool.reset();
 		m_DescriptorPoolSelected.reset();

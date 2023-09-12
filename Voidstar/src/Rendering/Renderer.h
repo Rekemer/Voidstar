@@ -168,7 +168,8 @@ namespace Voidstar
 		void DestroySwapchain();
 		void CreateSyncObjects();
 		void CreateMSAAFrame();
-		
+		void UpdateBuffer();
+		void UpdateTexture();
 		void RecordCommandBuffer(uint32_t imageIndex, vk::RenderPass& renderPass, vk::Pipeline& pipeline, vk::PipelineLayout& pipelineLayout, int instances);
 		void UpdateUniformBuffer(uint32_t imageIndex);
 		void RecreateSwapchain();
@@ -235,7 +236,7 @@ namespace Voidstar
 
 		DescriptorSetLayout* m_DescriptorSetLayoutTex;
 		std::vector<vk::DescriptorSet> m_DescriptorSets;
-		std::vector<UPtr<Buffer>> m_ShaderStorageBuffers;
+		UPtr<Buffer> m_ShaderStorageBuffer;
 		vk::CommandPool m_TracyCommandPool;
 		std::vector<CommandBuffer> m_ComputeCommandBuffer;
 
@@ -270,6 +271,7 @@ namespace Voidstar
 		UPtr<Pipeline> m_ComputePipelineClouds;
 		UPtr<Pipeline> m_ComputePipeline;
 		vk::DescriptorSet m_DescriptorSetSelected;
+		size_t nextPoint = 0;
 		SPtr<DescriptorPool> m_DescriptorPoolSelected;
 		DescriptorSetLayout* m_DescriptorSetLayoutSelected;
 

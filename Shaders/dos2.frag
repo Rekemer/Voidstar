@@ -208,7 +208,7 @@ void main()
       float res = step(0.0425,m_dist);
      // res = bicubic(scaledUv);
       outColor =vec4(res,res,res,1);
-      outColor =vec4(uv,0,1);
+     // outColor =vec4(uv,0,1);
       //outColor = fillColor*(1-noise);
       outColor.a = 1;
 
