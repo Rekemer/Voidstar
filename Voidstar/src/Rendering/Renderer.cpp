@@ -50,7 +50,7 @@ namespace Voidstar
 	std::string BASE_SPIRV_OUTPUT = BASE_SHADER_PATH+"Binary/";
 	#define INSTANCE_COUNT 4096
 	#define ZEROPOS 1
-	#define	IMGUI_ENABLED 0
+	#define	IMGUI_ENABLED 1
 	size_t currentFrame = 0;
 	static float exeTime = 24;
 	// noise
@@ -1419,8 +1419,8 @@ namespace Voidstar
 			submitInfo.pWaitSemaphores = waitSemaphores;
 			submitInfo.pWaitDstStageMask = waitStages;
 
-			//const std::vector<vk::CommandBuffer> commandBuffers = { renderCommandBuffer.GetCommandBuffer(), g_MainWindowData.Frames[imageIndex].CommandBuffer };
-			 std::vector<vk::CommandBuffer> commandBuffers = { renderCommandBuffer.GetCommandBuffer() };
+			const std::vector<vk::CommandBuffer> commandBuffers = { renderCommandBuffer.GetCommandBuffer(), g_MainWindowData.Frames[imageIndex].CommandBuffer };
+			// std::vector<vk::CommandBuffer> commandBuffers = { renderCommandBuffer.GetCommandBuffer() };
 
 			submitInfo.commandBufferCount = commandBuffers.size();
 			submitInfo.pCommandBuffers = commandBuffers.data();
@@ -1513,7 +1513,10 @@ namespace Voidstar
 		depthAttachmentRef.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
 
 		//Define a general attachment, with its load/store operations
-		vk::AttachmentDescription colorAttachmentResolve = AttachmentDescription(swapchainImageFormat, vk::SampleCountFlagBits::e1, vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare, vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined, vk::ImageLayout::ePresentSrcKHR);
+		vk::AttachmentDescription colorAttachmentResolve =
+			AttachmentDescription(swapchainImageFormat, vk::SampleCountFlagBits::e1,
+				vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
+				vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal);
 	
 
 		//Declare that attachment to be color buffer 0 of the framebuffer
@@ -1675,49 +1678,19 @@ namespace Voidstar
 
 
 
-		ImGui::Begin("NoiseParametrs", &show_another_window);
-		ImGui::Text("Terrain");
-		m_IsNewParametrs |= ImGui::SliderFloat("Frequency", &noiseData.frequence, 0, 400);
-		m_IsNewParametrs |= ImGui::SliderFloat("Amplitude", &noiseData.amplitude, 0, 1);
-		m_IsNewParametrs |= ImGui::SliderFloat("Octaves", &noiseData.octaves, 0, 50);
-		m_IsNewParametrs |= ImGui::SliderFloat("Vertex amplitude", &noiseData.multipler, 0, 100);
-		m_IsNewParametrs |= ImGui::SliderFloat("exponent ", &noiseData.exponent, 0, 10);
-		m_IsNewParametrs |= ImGui::SliderFloat("uv scale ", &noiseData.scale, 0, 100);
-		ImGui::Text("Water");
-		m_IsNewParametrs |= ImGui::SliderFloat("normal strength", &noiseData.normalStrength, 0, 1);
-		m_IsNewParametrs |= ImGui::SliderFloat("water scale ", &noiseData.waterScale, 0, 5000);
-		m_IsNewParametrs |= ImGui::SliderFloat("water depth ", &noiseData.waterDepth, 0, 100);
-		m_IsNewParametrs |= ImGui::SliderFloat("water strength ", &noiseData.waterStrength, 0, 1);
-		m_IsNewParametrs |= ImGui::ColorEdit3("deep water color ", &noiseData.deepWaterColor[0]);
-		m_IsNewParametrs |= ImGui::ColorEdit3("shallow water color", &noiseData.shallowWaterColor[0]);
-		ImGui::Text("Clouds");
-		m_IsNewParametrs |= ImGui::SliderFloat("Cell amountA ",  &noiseData.cellAmountA, 0, 100);
-		m_IsNewParametrs |= ImGui::SliderFloat("Cell amountB ",  &noiseData.cellAmountB, 0, 100);
-		m_IsNewParametrs |= ImGui::SliderFloat("Cell amountC ",  &noiseData.cellAmountC, 0, 100);
-	//	m_IsNewParametrs |= ImGui::SliderFloat("Cloud minus scale ", &noiseData.cloudScaleMinus, -100, 100);
-	//	m_IsNewParametrs |= ImGui::SliderFloat("Cloud minus cell", &noiseData.cellAmountMinus, -100, 100);
-		m_IsNewParametrs |= ImGui::SliderFloat("Persistence", &noiseData.persistence, 0, 1);
+		ImGui::Begin("Surface paramentrs", &show_another_window);
+		if (ImGui::Button("clear points"))
+		{
+			for (int i = 0; i < m_ClickPoints.size(); i++)
+			{
+				m_ClickPoints[i] = { -1,-1 };
+			}
+			nextPoint = 0;
+			UpdateBuffer();
 
-		m_IsNewParametrs |= ImGui::SliderFloat("Cell amountA LowRes ", &noiseData.numCellsALowRes, 0, 100);
-		m_IsNewParametrs |= ImGui::SliderFloat("Cell amountB LowRes ", &noiseData.numCellsBLowRes, 0, 100);
-		m_IsNewParametrs |= ImGui::SliderFloat("Cell amountC LowRes ", &noiseData.numCellsCLowRes, 0, 100);
-		m_IsNewParametrs |= ImGui::SliderFloat("Persistence low res", &noiseData.persistenceLowRes, 0, 1);
+		}
 
-		m_IsNewParametrs |= ImGui::SliderFloat("Density Offset", &cloudParams.densityOffset, -100, 100);
-		m_IsNewParametrs |= ImGui::SliderFloat("Density Mult", &cloudParams.densityMult, 0, 10);
-		m_IsNewParametrs |= ImGui::SliderFloat("Cloud Scale", &noiseData.cloudScale, 0, 100);
-		m_IsNewParametrs |= ImGui::SliderFloat("Cloud Speed", &noiseData.cloudSpeed, -100, 100);
-		//m_IsNewParametrs |= ImGui::SliderFloat4("Weights", &cloudParams.weights[0], 0, 100);
-		m_IsNewParametrs |= ImGui::SliderFloat3("Sun direction", &cloudParams.lightDir[0], -200, 200);
-		//m_IsNewParametrs |= ImGui::SliderFloat3("Sun position", &cloudParams.lightPos[0], -200, 200);
-		m_IsNewParametrs |= ImGui::SliderFloat3("Cloud position", &cloudParams.cloudPos[0], -4500, 4500);
-		m_IsNewParametrs |= ImGui::SliderFloat3("Cloud box Scale", &cloudParams.boxScale[0], -5000, 5000);
-		cloudParams.boxScale[2] = cloudParams.boxScale[0];
-		//cloudParams.boxScale[1] =cloudParams.boxScale[0] / 2;
-		m_IsNewParametrs |= ImGui::SliderFloat("Light Absorption", &cloudParams.lightAbsorption, -10, 10);
-		m_IsNewParametrs |= ImGui::SliderFloat("A hg", &cloudParams.aHg, -10, 10);
-		m_IsNewParametrs |= ImGui::SliderFloat("A hg2", &cloudParams.aHg2, -10, 10);
-		m_IsPolygon = ImGui::Button("change mode");
+
 		
 	
 

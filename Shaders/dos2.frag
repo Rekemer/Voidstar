@@ -175,7 +175,7 @@ void main()
     vec2 i_st = indexUv;
     vec2 f_st = fractedUv;
 
-    float m_dist = 1.;  // minimum distance
+    vec3 m_dist = vec3(1);  // minimum distance
      const float circleAmount = 120.f;
     for (int j= -1; j <=1; j++ ) {
 
@@ -195,7 +195,7 @@ void main()
 
                 // Metaball it!
                 //m_dist = min(m_dist, m_dist*dist)*(1-selectedShape.x)*(1-noise_1.x);
-                m_dist = min(m_dist, m_dist*dist)* (1 - selectedShape.x) ;
+                m_dist = min(m_dist, m_dist*dist)* (1 - selectedShape.xyz) ;
             
         }
     }   
@@ -206,14 +206,14 @@ void main()
      //outColor = vec4(randomDispl ,randomDispl ,randomDispl ,1);
       //m_dist = m_dist+
       vec4 fillColor = vec4(0,0,1,1);
-      float res = step(0.0425,m_dist);
+      vec3 res = step(vec3(0.0425),m_dist);
      // res = bicubic(scaledUv);
-      outColor =vec4(res,res,res,1);
+      outColor =vec4(vec3(res),1);
      // outColor =vec4(uv,0,1);
       //outColor = fillColor*(1-selectedShape);
       //outColor= noise_1;
       outColor.a = 1;
-
+    outColor.xyz = 1- selectedShape.xyz;
 
 
 }

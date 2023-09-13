@@ -50,14 +50,16 @@ float gradientNoise(vec2 st) {
                 mix( dot( random2(i + vec2(0.0,1.0) ), f - vec2(0.0,1.0) ),
                      dot( random2(i + vec2(1.0,1.0) ), f - vec2(1.0,1.0) ), u.x), u.y);
 }
-
+vec4 finalColor = vec4(1,0,1,1);
 //https://danceswithcode.net/engineeringnotes/interpolation/interpolation.html
 float bicubic(vec2 scaledUv, vec2 quadNumber,float offset)
 {
+    float maxOffset = offset + gradientNoise(scaledUv)*(10.3);
     vec2 indexUv = floor(scaledUv);
     float noise = 1- texture(u_Noise1,scaledUv/scale ).x;
     offset += gradientNoise(scaledUv)*(10.3);
     offset*=noise;
+    finalColor = mix(vec4(1,0,0,1),vec4(0,0,1,1), vec4(offset/(maxOffset)));
     //offset += gradientNoise(scaledUv*2)*(90.3) ;
     //offset += gradientNoise(scaledUv/2)*(90.3) ;
     vec2 f = fract(scaledUv);
@@ -150,7 +152,7 @@ void main()
     const float circleAmount = 20;
    vec2 points[int(circleAmount)];
    float res = 1;
-   float size  = 10;
+   float size  = 8;
    float t = (sin(ubo.time*1000)+1)/2;
    // size  = mix(0,5,t);
    for( int i =0; i< circleAmount; i++)
@@ -176,6 +178,12 @@ void main()
    // res =(a)*(a1);
     //res =1-a;
     //res +=1-a1;
-    imageStore(storageImage, coords,   vec4(res,res,res,1));
+    vec3 result = vec3(res);
+    result = normalize(result);
+    result = 1- result;
+    //result*= finalColor.xyz;
+    result = 1- result;
+    imageStore(storageImage, coords,  vec4(step(vec3(0.0005),result),1));
+    //imageStore(storageImage, coords,  vec4(1,1,0,1));
 
 }
