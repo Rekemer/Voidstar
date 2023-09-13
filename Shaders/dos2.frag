@@ -14,7 +14,7 @@ layout(set = 0, binding = 0) uniform UniformBufferObject {
     
 } ubo;
 
-layout(set = 1, binding = 0) uniform sampler2D u_Noise;
+layout(set = 1, binding = 0) uniform sampler2D u_Selected;
 layout(set = 1, binding = 1) uniform sampler2D u_Noise1;
 
 float scale = 100;
@@ -95,7 +95,7 @@ float bicubic(vec2 scaledUv)
         for (int j =0; j< 4; j++)
         {
             
-            splineX[i][j] = texture(u_Noise,uv + vec2(i-1,j-1)/(scale/6)).x;
+            splineX[i][j] = texture(u_Selected,uv + vec2(i-1,j-1)/(scale/6)).x;
         }
     }
     
@@ -151,9 +151,10 @@ void main()
     vec2 fractedUv = fract(scaledUv );
 
     vec2 offset = random2(indexUv)*vec2(10.0, 0.0); // Offset one texel to the right
-    //vec4 noise = sampleNeighboringTexel(u_Noise,uv,offset);  
-    vec4 noise_1 =1-texture(u_Noise1,uv*0.225); 
-    vec4 noise =texture(u_Noise,uv); 
+    //vec4 selectedShape = sampleNeighboringTexel(u_Selected,uv,offset);
+    vec2 rand  = random2(uv);
+    vec4 noise_1 =1-texture(u_Noise1,uv*.0025); 
+    vec4 selectedShape =texture(u_Selected,uv); 
   
   
 //float maxLen = length(vec2(100,100));
@@ -193,12 +194,12 @@ void main()
                 float dist = length(pos);
 
                 // Metaball it!
-                //m_dist = min(m_dist, m_dist*dist)*(1-noise.x)*(1-noise_1.x);
-                m_dist = min(m_dist, m_dist*dist)* (1-noise.x);
+                //m_dist = min(m_dist, m_dist*dist)*(1-selectedShape.x)*(1-noise_1.x);
+                m_dist = min(m_dist, m_dist*dist)* (1 - selectedShape.x) ;
             
         }
     }   
-    vec4 shape = noise;
+    vec4 shape = selectedShape;
     float randomDispl =gradientNoise(uv*20); 
 
       outColor = shape;
@@ -209,7 +210,8 @@ void main()
      // res = bicubic(scaledUv);
       outColor =vec4(res,res,res,1);
      // outColor =vec4(uv,0,1);
-      //outColor = fillColor*(1-noise);
+      //outColor = fillColor*(1-selectedShape);
+      //outColor= noise_1;
       outColor.a = 1;
 
 

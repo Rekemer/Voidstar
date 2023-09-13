@@ -694,6 +694,14 @@ namespace Voidstar
 			poolSizes.emplace_back(poolSize);
 		}
 
+
+		{
+			vk::DescriptorPoolSize poolSize;
+			poolSize.type = vk::DescriptorType::eCombinedImageSampler;
+			poolSize.descriptorCount = 1;
+			poolSizes.emplace_back(poolSize);
+		}
+
 		{
 			vk::DescriptorPoolSize poolSize;
 			poolSize.type = vk::DescriptorType::eUniformBuffer;
@@ -720,8 +728,14 @@ namespace Voidstar
 			layoutBinding2.descriptorCount = 1;
 
 
+			vk::DescriptorSetLayoutBinding layoutBinding3;
+			layoutBinding3.binding = 2;
+			layoutBinding3.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+			layoutBinding3.stageFlags = vk::ShaderStageFlagBits::eCompute;
+			layoutBinding3.descriptorCount = 1;
 
-			std::vector<vk::DescriptorSetLayoutBinding> layoutBindings{ layoutBinding1, layoutBinding2 };
+
+			std::vector<vk::DescriptorSetLayoutBinding> layoutBindings{ layoutBinding1, layoutBinding2,layoutBinding3 };
 
 			m_DescriptorSetLayoutSelected = DescriptorSetLayout::Create(layoutBindings);
 
@@ -758,10 +772,14 @@ namespace Voidstar
 		//m_ClickPoints[1] = glm::vec2{ 0.5,0.2 };
 		UpdateBuffer();
 		
+		vk::DescriptorImageInfo imageDescriptor1;
+		imageDescriptor1.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+		imageDescriptor1.imageView = m_Image->m_ImageView;
+		imageDescriptor1.sampler = m_Image->m_Sampler;
 		m_Device->UpdateDescriptorSet(m_DescriptorSetSelected, 0,1, imageDescriptor, vk::DescriptorType::eStorageImage);
+		m_Device->UpdateDescriptorSet(m_DescriptorSetSelected, 2, 1, *m_Image, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
 		m_Device->UpdateDescriptorSet(m_DescriptorSetTex, 0, 1, *m_ImageSelected, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
-		m_Device->UpdateDescriptorSet(m_DescriptorSetTex, 1, 1, *m_Image, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
-		
+		m_Device->UpdateDescriptorSet(m_DescriptorSetTex, 1, 1, *m_Image, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);		
 		layouts = { m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutSelected->GetLayout() };
 		m_ComputePipeline = Pipeline::CreateComputePipeline(BASE_SPIRV_OUTPUT + "SelectedTex.spvCmp", layouts);
 		UpdateTexture();
@@ -1384,16 +1402,15 @@ namespace Voidstar
 				// update vector of positions
 				m_ClickPoints[nextPoint++] = (uvSpace);
 				nextPoint %= MAX_POINTS;
-				// update texture
 
 
 				UpdateBuffer();
 				
-				UpdateTexture();
 
 
 			}
 
+				UpdateTexture();
 
 			vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
 			vk::SubmitInfo submitInfo = {};

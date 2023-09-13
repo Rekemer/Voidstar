@@ -11,7 +11,7 @@ layout(set = 1, binding = 0, rgba8) uniform writeonly image2D storageImage;
 layout(set = 1, binding = 1) readonly buffer selectedPositions {
    vec2 positions[];
 };
-
+layout(set = 1, binding = 2) uniform sampler2D u_Noise1;
 layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 float scale = 100;
 
@@ -55,7 +55,11 @@ float gradientNoise(vec2 st) {
 float bicubic(vec2 scaledUv, vec2 quadNumber,float offset)
 {
     vec2 indexUv = floor(scaledUv);
-    offset += gradientNoise(scaledUv)*10.3;
+    float noise = 1- texture(u_Noise1,scaledUv/scale ).x;
+    offset += gradientNoise(scaledUv)*(10.3);
+    offset*=noise;
+    //offset += gradientNoise(scaledUv*2)*(90.3) ;
+    //offset += gradientNoise(scaledUv/2)*(90.3) ;
     vec2 f = fract(scaledUv);
     f = vec2(1)-f;
     float splineX[4][4];
@@ -146,6 +150,9 @@ void main()
     const float circleAmount = 20;
    vec2 points[int(circleAmount)];
    float res = 1;
+   float size  = 10;
+   float t = (sin(ubo.time*1000)+1)/2;
+   // size  = mix(0,5,t);
    for( int i =0; i< circleAmount; i++)
    {
         if (positions[i] == vec2(-1,-1))
@@ -155,8 +162,8 @@ void main()
         float offset = random(vec2(i,i-1)) ;
         float offset1 = random(vec2(i-2,i-1)) ;
         vec2 dir = random2(vec2(offset,offset));
-        float size = random(vec2(i+1,i+1))/6;
-        size = 10;
+      //  size = random(vec2(i+1,i+1))/6;
+       // size = 10;
         points[i] =quadNumber + floor(dir*vec2(offset,offset1));
         //points[i] = floor(vec2(0.5,0.5)*scale/2);
         points[i] = floor(positions[i]*scale/2);
