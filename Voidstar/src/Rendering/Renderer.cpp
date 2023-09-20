@@ -34,11 +34,27 @@
 #include <random>
 #include "Initializers.h"
 #include "input.h"
+#include <variant>
+
+
+
+namespace std
+{
+	template<>
+	struct hash<std::pair<int,int>>
+	{
+		size_t operator()(const std::pair<int, int>& key) const
+		{
+			std::string keyString = std::to_string(key.first) + std::to_string(key.second);
+			return std::hash<std::string>()(keyString);
+		}
+	};
+}
 
 namespace Voidstar
 {
 
-	
+
 
 	TracyVkCtx ctx;
 	vk::ShaderModule CreateModule(std::string filename, vk::Device device);
@@ -455,19 +471,70 @@ namespace Voidstar
 	}
 
 
-	
+
 
 	void Renderer::CreateComputePipeline()
 	{
 
-	
+
 
 	}
 
+	// int is number of set, int is a type of pipeline render or compute
+	std::unordered_map<std::pair<int,int>, std::vector < vk::DescriptorSetLayoutBinding>> m_Bindings;
+	std::unordered_map<std::pair<int,int>, DescriptorSetLayout*> m_Layout;
+	std::unordered_map<std::pair<int,int>, std::variant<vk::DescriptorSet, std::vector<vk::DescriptorSet>>> m_Sets;
+	std::unordered_map<std::pair<int,int>, int> m_SetsAmount;
 	
+	// amount of sets to duplicate sets
+	// desc amount how many descriptors are bind to the same number
+	// should use GUID instead of pair?
+	template<int pipeline,int amountOfSets = 1>
+	void Bind(int descSetNumber, int binding, int descAmount, vk::DescriptorType type,vk::ShaderStageFlags shaderAccess)
+	{
 
-
+		// create descriptor binding
+		auto descBinding = DescriptorBindingDescription(binding, type,shaderAccess,descAmount);
+		m_Bindings[{descSetNumber, pipeline}].emplace_back(descBinding);
+		m_SetsAmount[{descSetNumber, pipeline}] = amountOfSets;
+	}
 	
+	void CreateLayouts()
+	{
+		for (auto [key, value] : m_Bindings)
+		{
+			m_Layout[key] = DescriptorSetLayout::Create(value);
+		}
+	}
+	void Renderer::AllocateSets()
+	{
+		std::variant<vk::DescriptorSet, std::vector<vk::DescriptorSet>> a;
+		a = std::vector<vk::DescriptorSet>();
+		for (auto [key, value] : m_Layout)
+		{
+			std::vector<vk::DescriptorSetLayout> layouts(m_SetsAmount[key], value->GetLayout());
+			auto sets = m_UniversalPool->AllocateDescriptorSets(m_SetsAmount[key], layouts.data());
+			if (m_SetsAmount[key] == 1)
+			{
+				m_Sets[key] = sets[0];
+			}
+			else
+			{
+				m_Sets[key] = sets;
+			}
+			
+		}
+		
+
+	}
+	void CleanUp()
+	{
+		auto device = RenderContext::GetDevice();
+		for (auto [key, value] : m_Layout)
+		{
+			device->GetDevice().destroyDescriptorSetLayout(value->GetLayout());
+		}
+	}
 
 	void Renderer::Init(size_t screenWidth, size_t screenHeight, std::shared_ptr<Window> window, Application* app) 
 		
@@ -542,7 +609,16 @@ namespace Voidstar
 		}
 
 
-
+		std::vector<vk::DescriptorPoolSize> pool_sizes = 
+		{
+			{ vk::DescriptorType::eCombinedImageSampler, 10 },
+			{ vk::DescriptorType::eStorageImage, 10 },
+			{ vk::DescriptorType::eStorageBuffer, 10 },
+			{ vk::DescriptorType::eInputAttachment, 10 },
+			{ vk::DescriptorType::eUniformBuffer, 10 },
+		};
+		
+		m_UniversalPool = DescriptorPool::Create(pool_sizes,10);
 
 		{
 

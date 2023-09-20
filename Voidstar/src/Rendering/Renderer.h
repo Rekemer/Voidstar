@@ -175,6 +175,7 @@ namespace Voidstar
 		void RecreateSwapchain();
 		void Shutdown();
 		void CreateComputePipeline();
+		void AllocateSets();
 	private:
 		Voidstar::Instance* m_Instance;
 		int m_ViewportWidth, m_ViewportHeight;
@@ -209,7 +210,7 @@ namespace Voidstar
 		
 		SPtr<Model> m_Model;
 
-
+		SPtr<DescriptorPool> m_UniversalPool;
 		vk::Image m_MsaaImage;
 		vk::DeviceMemory m_MsaaImageMemory;
 		vk::ImageView m_MsaaImageView;
