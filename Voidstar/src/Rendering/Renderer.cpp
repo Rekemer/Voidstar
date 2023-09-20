@@ -63,10 +63,10 @@ namespace Voidstar
 	std::string BASE_RES_PATH = "res";
 	//const std::string SPIRV_COMPILER_PATH = "C:/VulkanSDK/1.3.216.0/Bin/glslc.exe";
 	const std::string SPIRV_COMPILER_PATH = "C:/VulkanSDK/1.3.216.0/Bin/glslangvalidator.exe";
-	std::string BASE_SPIRV_OUTPUT = BASE_SHADER_PATH+"Binary/";
-	#define INSTANCE_COUNT 4096
-	#define ZEROPOS 1
-	#define	IMGUI_ENABLED 1
+	std::string BASE_SPIRV_OUTPUT = BASE_SHADER_PATH + "Binary/";
+#define INSTANCE_COUNT 4096
+#define ZEROPOS 1
+#define	IMGUI_ENABLED 1
 	size_t currentFrame = 0;
 	static float exeTime = 24;
 	// noise
@@ -165,7 +165,7 @@ namespace Voidstar
 
 
 	template<typename T>
-	const uint64_t SizeOfBuffer(const uint64_t bufferSize,const T& bufferElement) 
+	const uint64_t SizeOfBuffer(const uint64_t bufferSize, const T& bufferElement)
 	{
 		return bufferSize * sizeof(bufferElement);
 	}
@@ -178,7 +178,7 @@ namespace Voidstar
 	std::string CreateCommand(std::string shader, const char* extension, std::string& shaderPath)
 	{
 		auto name = GetFileNameWithoutExtension(shader);
-		
+
 		std::string shaderOutput = BASE_SPIRV_OUTPUT + name.c_str() + extension;
 		std::string command = SPIRV_COMPILER_PATH + " -V " + shaderPath + " -o " + shaderOutput;
 		return command;
@@ -195,11 +195,11 @@ namespace Voidstar
 			// vertex and fragment shaders
 			if (!isDirectory)
 			{
-				auto extension= shader.path().extension().string();
+				auto extension = shader.path().extension().string();
 				auto shaderString = shader.path().filename().string();
-				std::string shaderPath =shader.path().string();
-			
-				std::string command="";
+				std::string shaderPath = shader.path().string();
+
+				std::string command = "";
 				if (extension == ".vert") {
 					// Handle vertex shader
 					const char* extension = ".spvV";
@@ -233,10 +233,10 @@ namespace Voidstar
 						command = CreateCommand(shaderString, extension, shaderPath);
 					}
 					else  if (extension == ".tese") {
-				
+
 						const char* extension = ".spvE";
 						command = CreateCommand(shaderString, extension, shaderPath);
-						}
+					}
 					if (command != "")
 					{
 						int result = std::system(command.c_str());
@@ -245,9 +245,9 @@ namespace Voidstar
 							Log::GetLog()->error("shader {0} is not compiled!", shaderString);
 						}
 					}
-				
+
 				}
-			
+
 			}
 			else if (isComputeFolder)
 			{
@@ -280,12 +280,12 @@ namespace Voidstar
 		//C:\VulkanSDK\1.3.216.0\Bin\glslc.exe shader.vert -o vertex.spv
 		//C:\VulkanSDK\1.3.216.0\Bin\glslc.exe shader.frag - o fragment.spv
 		//C : \VulkanSDK\1.3.216.0\Bin\glslc.exe - c shader.comp - o compute.spv
-		
+
 		auto& vertexShader = shaderFilenames[0];
 		const char* extension = ".spvV";
 		std::string shaderPath = BASE_SHADER_PATH + vertexShader;
 		auto command = CreateCommand(vertexShader, extension, shaderPath);
-		
+
 
 		// Execute the command
 		int result = std::system(command.c_str());
@@ -321,17 +321,17 @@ namespace Voidstar
 	}
 
 
-	void SetIndexForCorners(std::vector<Vertex>& plane, glm::vec2 uv )
+	void SetIndexForCorners(std::vector<Vertex>& plane, glm::vec2 uv)
 	{
 
 	}
-	std::vector<Vertex> GenerateSphere(float radius, int rings,int sectors, std::vector<IndexType>& indices)
+	std::vector<Vertex> GenerateSphere(float radius, int rings, int sectors, std::vector<IndexType>& indices)
 	{
 		std::vector<Vertex> vertices;
 		float const R = 1.0f / static_cast<float>(rings - 1);
 		float const S = 1.0f / static_cast<float>(sectors - 1);
 		{
-		
+
 			int r, s;
 			float pi = 3.14159;
 			for (r = 0; r < rings; ++r) {
@@ -370,7 +370,7 @@ namespace Voidstar
 				}
 			}
 		}
-		
+
 
 
 		return vertices;
@@ -378,7 +378,7 @@ namespace Voidstar
 	}
 	std::vector<Vertex> GeneratePlane(float detail, std::vector<IndexType>& indices)
 	{
-		std::vector<Vertex> vertices ={};
+		std::vector<Vertex> vertices = {};
 
 		int numDivisions = static_cast<int>(detail);
 		float stepSize = 1.0f / numDivisions;
@@ -420,24 +420,24 @@ namespace Voidstar
 				unsigned int bottomRight = bottomLeft + 1;
 				//unsigned int bottomRight = topRight + amountOfRowVerticies-1;
 				//unsigned int bottomLeft = topLeft + amountOfRowVerticies+1;
-				#define TRIANGLE 1
-				#if TRIANGLE
-					// Add the indices to the vector
-					indices.push_back(topLeft);
-					indices.push_back(bottomLeft);
-					indices.push_back(topRight);
-				
-					indices.push_back(topRight);
-					indices.push_back(bottomLeft);
-					indices.push_back(bottomRight);
-				#else
-				// patch
+#define TRIANGLE 1
+#if TRIANGLE
+	// Add the indices to the vector
+				indices.push_back(topLeft);
+				indices.push_back(bottomLeft);
+				indices.push_back(topRight);
+
+				indices.push_back(topRight);
+				indices.push_back(bottomLeft);
+				indices.push_back(bottomRight);
+#else
+// patch
 				indices.push_back(topLeft);
 				indices.push_back(topRight);
 				indices.push_back(bottomRight);
 				indices.push_back(bottomLeft);
-				#endif
-				
+#endif
+
 			}
 		}
 
@@ -580,13 +580,11 @@ namespace Voidstar
 		
 		auto framesAmount = m_Swapchain->m_SwapchainFrames.size();
 
-		vk::DescriptorSetLayoutBinding layoutBinding = DescriptorBindingDescription(0, vk::DescriptorType::eUniformBuffer, vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eTessellationControl
-			| vk::ShaderStageFlagBits::eTessellationEvaluation | vk::ShaderStageFlagBits::eFragment,1);
+		Bind<0,3>(0, 0, 1, vk::DescriptorType::eUniformBuffer ,vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eTessellationControl
+			| vk::ShaderStageFlagBits::eTessellationEvaluation | vk::ShaderStageFlagBits::eFragment);
 		
 
 		
-		std::vector<vk::DescriptorSetLayoutBinding> layoutBindings{ layoutBinding};
-		m_DescriptorSetLayout = DescriptorSetLayout::Create(layoutBindings);
 
 	
 		
@@ -635,27 +633,8 @@ namespace Voidstar
 		}
 		
 
-		std::vector<vk::DescriptorSetLayout> layouts(framesAmount, m_DescriptorSetLayout->GetLayout());
 
 		
-		m_DescriptorSets =  m_DescriptorPool->AllocateDescriptorSets(framesAmount, layouts.data());
-			
-		for (size_t i = 0; i < framesAmount; i++)
-		{
-			m_Device->UpdateDescriptorSet(m_DescriptorSets[i], 0, 1, *m_UniformBuffers[i], vk::DescriptorType::eUniformBuffer);
-		}
-
-		/*m_NoiseImage = Image::CreateImage(BASE_RES_PATH + "/dos_2_noise.png");
-		for (int i = 0; i < framesAmount; i++)
-		{
-		
-			
-			
-			vk::DescriptorImageInfo imageInfo = DescriptorImageInfo(vk::ImageLayout::eShaderReadOnlyOptimal, m_NoiseImage->m_ImageView, m_NoiseImage->m_Sampler);
-		
-			m_Device->UpdateDescriptorSet(m_DescriptorSets[i], 1, 1, imageInfo, vk::DescriptorType::eCombinedImageSampler);
-
-		}*/
 		
 
 		
@@ -746,19 +725,12 @@ namespace Voidstar
 
 			
 
+			Bind<0>(1,0,1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment);
+			Bind<0>(1,1,1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment);
 
 
-
-			std::vector<vk::DescriptorSetLayoutBinding> layoutBindings{ 
-				DescriptorBindingDescription(0, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment, 1) ,
-				DescriptorBindingDescription(1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment, 1) };
-
-			m_DescriptorSetLayoutTex = DescriptorSetLayout::Create(layoutBindings);
-			std::vector<vk::DescriptorSetLayout> layouts;
-			layouts.resize(1);
-
-			layouts[0] = m_DescriptorSetLayoutTex->GetLayout();
-			m_DescriptorSetTex = m_DescriptorPoolTex->AllocateDescriptorSets(1, layouts.data())[0];
+			
+			
 		}
 
 
@@ -786,36 +758,12 @@ namespace Voidstar
 			m_DescriptorPoolSelected = DescriptorPool::Create(poolSizes, 1);
 		}
 
-		layouts.resize(1);
 
-
-		{
-			vk::DescriptorSetLayoutBinding layoutBinding1;
-			layoutBinding1.binding = 0;
-			layoutBinding1.descriptorType = vk::DescriptorType::eStorageImage;
-			layoutBinding1.stageFlags = vk::ShaderStageFlagBits::eFragment |
-				vk::ShaderStageFlagBits::eCompute;
-			layoutBinding1.descriptorCount = 1;
-
-			vk::DescriptorSetLayoutBinding layoutBinding2;
-			layoutBinding2.binding = 1;
-			layoutBinding2.descriptorType = vk::DescriptorType::eStorageBuffer;
-			layoutBinding2.stageFlags = vk::ShaderStageFlagBits::eCompute;
-			layoutBinding2.descriptorCount = 1;
-
-
-			vk::DescriptorSetLayoutBinding layoutBinding3;
-			layoutBinding3.binding = 2;
-			layoutBinding3.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-			layoutBinding3.stageFlags = vk::ShaderStageFlagBits::eCompute;
-			layoutBinding3.descriptorCount = 1;
-
-
-			std::vector<vk::DescriptorSetLayoutBinding> layoutBindings{ layoutBinding1, layoutBinding2,layoutBinding3 };
-
-			m_DescriptorSetLayoutSelected = DescriptorSetLayout::Create(layoutBindings);
-
-		}
+		Bind<1>(1, 0, 1, vk::DescriptorType::eStorageImage, vk::ShaderStageFlagBits::eFragment |
+			vk::ShaderStageFlagBits::eCompute);
+		Bind<1>(1,	1, 1, vk::DescriptorType::eStorageBuffer, vk::ShaderStageFlagBits::eCompute);
+		Bind<1>(1,	2, 1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eCompute);
+		
 		
 		{
 			BufferInputChunk info;
@@ -839,24 +787,43 @@ namespace Voidstar
 		imageDescriptor.imageView = m_ImageSelected->m_ImageView;
 		imageDescriptor.sampler = m_ImageSelected->m_Sampler;
 
-		m_DescriptorSetSelected = m_DescriptorPoolSelected->AllocateDescriptorSets(1, { &m_DescriptorSetLayoutSelected ->GetLayout()})[0];
+		CreateLayouts();
+		AllocateSets();
+		m_DescriptorSetTex = std::get<vk::DescriptorSet>(m_Sets[{1, 0}]);
+
+		m_DescriptorSetSelected = std::get<vk::DescriptorSet>(m_Sets[{1, 1}]);
 		
 
 
 		m_ClickPoints.resize(MAX_POINTS, glm::vec2(-1,-1));
-		//m_ClickPoints[0] = glm::vec2{ 0.5,0.5 };
-		//m_ClickPoints[1] = glm::vec2{ 0.5,0.2 };
 		UpdateBuffer();
 		
+
+
+
+		auto bufferPerFrame = std::get<std::vector<vk::DescriptorSet>>(m_Sets[{0, 0}]);
+		m_DescriptorSets = bufferPerFrame;
+		for (size_t i = 0; i < framesAmount; i++)
+		{
+			m_Device->UpdateDescriptorSet(m_DescriptorSets[i], 0, 1, *m_UniformBuffers[i], vk::DescriptorType::eUniformBuffer);
+		}
+
 		vk::DescriptorImageInfo imageDescriptor1;
 		imageDescriptor1.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
 		imageDescriptor1.imageView = m_Image->m_ImageView;
 		imageDescriptor1.sampler = m_Image->m_Sampler;
-		m_Device->UpdateDescriptorSet(m_DescriptorSetSelected, 0,1, imageDescriptor, vk::DescriptorType::eStorageImage);
-		m_Device->UpdateDescriptorSet(m_DescriptorSetSelected, 2, 1, *m_Image, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
-		m_Device->UpdateDescriptorSet(m_DescriptorSetTex, 0, 1, *m_ImageSelected, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
-		m_Device->UpdateDescriptorSet(m_DescriptorSetTex, 1, 1, *m_Image, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);		
-		layouts = { m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutSelected->GetLayout() };
+		auto descriptorSetSelected = std::get<vk::DescriptorSet>(m_Sets[{1, 1}]);
+		auto descriptorSetTex = std::get<vk::DescriptorSet>(m_Sets[{1, 0}]);
+		m_Device->UpdateDescriptorSet(descriptorSetSelected, 0,1, imageDescriptor, vk::DescriptorType::eStorageImage);
+		m_Device->UpdateDescriptorSet(descriptorSetSelected, 2, 1, *m_Image, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
+		m_Device->UpdateDescriptorSet(descriptorSetTex, 0, 1, *m_ImageSelected, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
+		m_Device->UpdateDescriptorSet(descriptorSetTex, 1, 1, *m_Image, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
+		
+		
+		m_DescriptorSetLayout = m_Layout[{0, 0}];
+		m_DescriptorSetLayoutSelected = m_Layout[{1, 1}];
+		m_DescriptorSetLayoutTex = m_Layout[{1, 0}];
+		std::vector<vk::DescriptorSetLayout>layouts = { m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutSelected->GetLayout() };
 		m_ComputePipeline = Pipeline::CreateComputePipeline(BASE_SPIRV_OUTPUT + "SelectedTex.spvCmp", layouts);
 		UpdateTexture();
 
@@ -897,7 +864,7 @@ namespace Voidstar
 #if IMGUI_ENABLED
 		InitImGui();
 #endif	
-
+		
 	}
 
 	void Renderer::SetupVulkanWindow(ImGui_ImplVulkanH_Window* g_wd, VkSurfaceKHR surface, int width, int height)
@@ -1913,9 +1880,11 @@ namespace Voidstar
 		m_DescriptorPool.reset();
 		m_DescriptorPoolSelected.reset();
 		m_DescriptorPoolTex.reset();
-		m_Device->GetDevice().destroyDescriptorSetLayout(m_DescriptorSetLayout->GetLayout());
-		m_Device->GetDevice().destroyDescriptorSetLayout(m_DescriptorSetLayoutSelected->GetLayout());
-		m_Device->GetDevice().destroyDescriptorSetLayout(m_DescriptorSetLayoutTex->GetLayout());
+		m_UniversalPool.reset();
+		CleanUp();
+		//m_Device->GetDevice().destroyDescriptorSetLayout(m_DescriptorSetLayout->GetLayout());
+		//m_Device->GetDevice().destroyDescriptorSetLayout(m_DescriptorSetLayoutSelected->GetLayout());
+		//m_Device->GetDevice().destroyDescriptorSetLayout(m_DescriptorSetLayoutTex->GetLayout());
 	
 
 	

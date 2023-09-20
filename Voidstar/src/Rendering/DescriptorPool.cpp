@@ -52,6 +52,7 @@ namespace Voidstar
 
 		
 	}
+
 	DescriptorPool::~DescriptorPool()
 	{
 		auto device = RenderContext::GetDevice();
