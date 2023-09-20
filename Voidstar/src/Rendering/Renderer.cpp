@@ -389,7 +389,7 @@ namespace Voidstar
 			{
 				vk::DescriptorPoolSize poolSize;
 				poolSize.type = vk::DescriptorType::eStorageImage;
-				poolSize.descriptorCount = 1;
+				poolSize.descriptorCount = 5;
 				poolSizes.emplace_back(poolSize);
 			}
 
@@ -399,7 +399,13 @@ namespace Voidstar
 				poolSize.descriptorCount = 1;
 				poolSizes.emplace_back(poolSize);
 			}
-		
+
+			{
+				vk::DescriptorPoolSize poolSize;
+				poolSize.type = vk::DescriptorType::eCombinedImageSampler;
+				poolSize.descriptorCount = 2;
+				poolSizes.emplace_back(poolSize);
+			}
 			m_DescriptorPoolNoise = DescriptorPool::Create(poolSizes, 1);
 
 			std::vector<vk::DescriptorSetLayout> layouts;
@@ -765,8 +771,11 @@ namespace Voidstar
 
 			vk::DescriptorPoolSize poolSize;
 			poolSize.type = vk::DescriptorType::eCombinedImageSampler;
-			poolSize.descriptorCount = 1;
-			std::vector<vk::DescriptorPoolSize> poolSizes{ poolSize};
+			poolSize.descriptorCount = 2;
+			vk::DescriptorPoolSize poolSize1;
+			poolSize1.type = vk::DescriptorType::eUniformBuffer;
+			poolSize1.descriptorCount = 1;
+			std::vector<vk::DescriptorPoolSize> poolSizes{ poolSize,poolSize1 };
 
 			m_DescriptorPoolClouds = DescriptorPool::Create(poolSizes, 1);
 			m_DescriptorSetClouds = m_DescriptorPoolClouds->AllocateDescriptorSets(1,&m_DescriptorSetLayoutClouds->GetLayout())[0];
@@ -840,7 +849,7 @@ namespace Voidstar
 
 			vk::DescriptorPoolSize poolSize;
 			poolSize.type = vk::DescriptorType::eCombinedImageSampler;
-			poolSize.descriptorCount = 6;
+			poolSize.descriptorCount = 8;
 		
 			std::vector<vk::DescriptorPoolSize> poolSizes{poolSize};
 
