@@ -49,6 +49,7 @@ namespace std
 			return std::hash<std::string>()(keyString);
 		}
 	};
+
 }
 
 namespace Voidstar
@@ -559,9 +560,12 @@ namespace Voidstar
 	
 		
 		auto framesAmount = m_Swapchain->m_SwapchainFrames.size();
-
-		Bind<0,3>(0, 0, 1, vk::DescriptorType::eUniformBuffer ,vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eTessellationControl
+		auto binderRender = Binder<RENDER>();
+		m_BaseDesc = binderRender.BeginBind();
+		binderRender.Bind<3>( 0, 1, vk::DescriptorType::eUniformBuffer, vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eTessellationControl
 			| vk::ShaderStageFlagBits::eTessellationEvaluation | vk::ShaderStageFlagBits::eFragment);
+		//Bind<PipelineType::RENDER,3>(m_BaseDesc, 0, 1, vk::DescriptorType::eUniformBuffer ,vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eTessellationControl
+		//	| vk::ShaderStageFlagBits::eTessellationEvaluation | vk::ShaderStageFlagBits::eFragment);
 		
 
 		
@@ -598,20 +602,6 @@ namespace Voidstar
 		
 		m_UniversalPool = DescriptorPool::Create(pool_sizes,10);
 
-		{
-
-			vk::DescriptorPoolSize poolSize;
-			poolSize.type = vk::DescriptorType::eUniformBuffer;
-			poolSize.descriptorCount = static_cast<uint32_t>(framesAmount);
-			vk::DescriptorPoolSize poolSize1;
-			poolSize1.type = vk::DescriptorType::eCombinedImageSampler;
-			poolSize1.descriptorCount = static_cast<uint32_t>(framesAmount);
-
-			std::vector<vk::DescriptorPoolSize> poolSizes{ poolSize,poolSize1 };
-			
-			m_DescriptorPool = DescriptorPool::Create(poolSizes, framesAmount);
-		}
-		
 
 
 		
@@ -690,13 +680,7 @@ namespace Voidstar
 
 		{
 
-			vk::DescriptorPoolSize poolSize;
-			poolSize.type = vk::DescriptorType::eCombinedImageSampler;
-			poolSize.descriptorCount = 6;
-
-			std::vector<vk::DescriptorPoolSize> poolSizes{ poolSize };
-
-			m_DescriptorPoolTex = DescriptorPool::Create(poolSizes, 1);
+			
 
 
 
@@ -704,9 +688,9 @@ namespace Voidstar
 
 
 			
-
-			Bind<0>(1,0,1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment);
-			Bind<0>(1,1,1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment);
+			m_TexDesc = binderRender.BeginBind();
+			binderRender.Bind( 0, 1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment);
+			binderRender.Bind( 1, 1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment);
 
 
 			
@@ -714,35 +698,12 @@ namespace Voidstar
 		}
 
 
-		std::vector<vk::DescriptorPoolSize> poolSizes;
-		{
-			vk::DescriptorPoolSize poolSize;
-			poolSize.type = vk::DescriptorType::eStorageImage;
-			poolSize.descriptorCount = 1;
-			poolSizes.emplace_back(poolSize);
-		}
-
-
-		{
-			vk::DescriptorPoolSize poolSize;
-			poolSize.type = vk::DescriptorType::eCombinedImageSampler;
-			poolSize.descriptorCount = 1;
-			poolSizes.emplace_back(poolSize);
-		}
-
-		{
-			vk::DescriptorPoolSize poolSize;
-			poolSize.type = vk::DescriptorType::eUniformBuffer;
-			poolSize.descriptorCount = 1;
-			poolSizes.emplace_back(poolSize);
-			m_DescriptorPoolSelected = DescriptorPool::Create(poolSizes, 1);
-		}
-
-
-		Bind<1>(1, 0, 1, vk::DescriptorType::eStorageImage, vk::ShaderStageFlagBits::eFragment |
-			vk::ShaderStageFlagBits::eCompute);
-		Bind<1>(1,	1, 1, vk::DescriptorType::eStorageBuffer, vk::ShaderStageFlagBits::eCompute);
-		Bind<1>(1,	2, 1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eCompute);
+		
+		auto binderCompute = Binder<COMPUTE>();
+		m_Compute = binderCompute.BeginBind();
+		binderCompute.Bind( 0, 1, vk::DescriptorType::eStorageImage, vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute);
+		binderCompute.Bind( 1, 1, vk::DescriptorType::eStorageBuffer,  vk::ShaderStageFlagBits::eCompute);
+		binderCompute.Bind( 2, 1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eCompute);
 		
 		
 		{
@@ -769,19 +730,19 @@ namespace Voidstar
 
 		CreateLayouts();
 		AllocateSets();
-		m_DescriptorSetTex = std::get<vk::DescriptorSet>(m_Sets[{1, 0}]);
 
-		m_DescriptorSetSelected = std::get<vk::DescriptorSet>(m_Sets[{1, 1}]);
 		
 
 
 		m_ClickPoints.resize(MAX_POINTS, glm::vec2(-1,-1));
-		UpdateBuffer();
 		
 
 
 
-		auto bufferPerFrame = std::get<std::vector<vk::DescriptorSet>>(m_Sets[{0, 0}]);
+		m_DescriptorSetSelected = GetSet<vk::DescriptorSet>( m_Compute, PipelineType::COMPUTE );
+		m_DescriptorSetTex = GetSet<vk::DescriptorSet>(m_TexDesc, PipelineType::RENDER);
+		UpdateBuffer();
+		auto bufferPerFrame = GetSet<std::vector<vk::DescriptorSet>>(m_BaseDesc, PipelineType::RENDER);
 		m_DescriptorSets = bufferPerFrame;
 		for (size_t i = 0; i < framesAmount; i++)
 		{
@@ -792,17 +753,15 @@ namespace Voidstar
 		imageDescriptor1.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
 		imageDescriptor1.imageView = m_Image->m_ImageView;
 		imageDescriptor1.sampler = m_Image->m_Sampler;
-		auto descriptorSetSelected = std::get<vk::DescriptorSet>(m_Sets[{1, 1}]);
-		auto descriptorSetTex = std::get<vk::DescriptorSet>(m_Sets[{1, 0}]);
-		m_Device->UpdateDescriptorSet(descriptorSetSelected, 0,1, imageDescriptor, vk::DescriptorType::eStorageImage);
-		m_Device->UpdateDescriptorSet(descriptorSetSelected, 2, 1, *m_Image, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
-		m_Device->UpdateDescriptorSet(descriptorSetTex, 0, 1, *m_ImageSelected, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
-		m_Device->UpdateDescriptorSet(descriptorSetTex, 1, 1, *m_Image, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
+		m_Device->UpdateDescriptorSet(m_DescriptorSetSelected, 0,1, imageDescriptor, vk::DescriptorType::eStorageImage);
+		m_Device->UpdateDescriptorSet(m_DescriptorSetSelected, 2, 1, *m_Image, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
+		m_Device->UpdateDescriptorSet(m_DescriptorSetTex, 0, 1, *m_ImageSelected, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
+		m_Device->UpdateDescriptorSet(m_DescriptorSetTex, 1, 1, *m_Image, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
 		
 		
-		m_DescriptorSetLayout = m_Layout[{0, 0}];
-		m_DescriptorSetLayoutSelected = m_Layout[{1, 1}];
-		m_DescriptorSetLayoutTex = m_Layout[{1, 0}];
+		auto m_DescriptorSetLayout = GetSetLayout(0, PipelineType::RENDER);
+		auto m_DescriptorSetLayoutSelected = GetSetLayout(0, PipelineType::COMPUTE);
+		auto m_DescriptorSetLayoutTex = GetSetLayout(1, PipelineType::RENDER);
 		std::vector<vk::DescriptorSetLayout>layouts = { m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutSelected->GetLayout() };
 		m_ComputePipeline = Pipeline::CreateComputePipeline(BASE_SPIRV_OUTPUT + "SelectedTex.spvCmp", layouts);
 		UpdateTexture();
@@ -1664,6 +1623,8 @@ namespace Voidstar
 
 			auto samples = RenderContext::GetDevice()->GetSamples();
 			specs.samples = samples;
+			auto m_DescriptorSetLayout = m_Layout[{0, PipelineType::RENDER}];
+			auto m_DescriptorSetLayoutTex = m_Layout[{1, PipelineType::RENDER}];
 			auto pipelineLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutTex->GetLayout() };
 
 			specs.descriptorSetLayout = pipelineLayouts;

@@ -22,7 +22,6 @@ namespace Voidstar
 	class Model;
 	class Pipeline;
 
-
 	enum class RenderPrimitive
 	{
 		Plane,
@@ -232,20 +231,14 @@ namespace Voidstar
 		std::vector<void*> uniformBuffersMapped;
 		
 		vk::DescriptorSet m_DescriptorSetSky;
-		DescriptorSetLayout* m_DescriptorSetLayoutSky;
-		SPtr<DescriptorPool> m_DescriptorPoolSky;
 
-		DescriptorSetLayout* m_DescriptorSetLayout;
 
-		DescriptorSetLayout* m_DescriptorSetLayoutTex;
 		std::vector<vk::DescriptorSet> m_DescriptorSets;
 		UPtr<Buffer> m_ShaderStorageBuffer;
 		vk::CommandPool m_TracyCommandPool;
 		std::vector<CommandBuffer> m_ComputeCommandBuffer;
 
-		SPtr<DescriptorPool> m_DescriptorPoolTex;
 		vk::DescriptorSet m_DescriptorSetTex;
-		std::vector<vk::DescriptorSet> m_ComputeDescriptorSets;
 		//debug callback
 		vk::DebugUtilsMessengerEXT m_DebugMessenger;
 		//dynamic instance dispatcher
@@ -258,25 +251,12 @@ namespace Voidstar
 	
 
 		UPtr<Pipeline> m_TerrainPipeline;
-		UPtr<Pipeline> m_WaterPipeline;
-		UPtr<Pipeline> m_SkyPipeline;
-		UPtr<Pipeline> m_RayMarchPipeline;
-		// Z Prepass
-		UPtr<Pipeline> m_ZTerrainPipeline;
-		UPtr<Pipeline> m_ZWaterPipeline;
-
-		
-		vk::Pipeline m_DebugPipeline;
-		vk::PipelineLayout m_DebugPipelineLayout;
 		vk::RenderPass m_RenderPass;
 
 
-		UPtr<Pipeline> m_ComputePipelineClouds;
 		UPtr<Pipeline> m_ComputePipeline;
 		vk::DescriptorSet m_DescriptorSetSelected;
 		size_t nextPoint = 0;
-		SPtr<DescriptorPool> m_DescriptorPoolSelected;
-		DescriptorSetLayout* m_DescriptorSetLayoutSelected;
 
 
 		UPtr<CommandPoolManager> m_CommandPoolManager;
@@ -296,14 +276,11 @@ namespace Voidstar
 
 
 		std::vector<glm::vec2> m_ClickPoints;
-		std::vector<vk::DescriptorSet> m_InstanceDescriptorSets;
 		void* m_InstancedPtr;
-		Quadtree m_QuadTree;
 
 		ImGuiData imguiData;
 		NoiseData noiseData;
 		void* m_NoiseDataPtr;
-		Buffer* m_NoiseData;
 
 		bool m_IsResized, m_IsNewParametrs, m_IsPolygon;
 
