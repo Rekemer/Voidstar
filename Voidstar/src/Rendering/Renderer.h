@@ -6,6 +6,8 @@
 #include"CommandBuffer.h"
 #include"../Types.h"
 #include"QuadTree/QuadTree.h"
+#include"BinderHelp.h"
+#include<variant>
 struct ImGui_ImplVulkanH_Window;
 namespace Voidstar
 {
@@ -144,6 +146,10 @@ namespace Voidstar
 	class CommandPoolManager;
 	class Renderer
 	{
+		typedef std::unordered_map<std::pair<int, PipelineType>, std::vector < vk::DescriptorSetLayoutBinding>, EnumClassHash>
+			Bindings;
+		typedef std::unordered_map<std::pair<int, PipelineType>, int, EnumClassHash>
+			Sets;
 	public:
 		void Init(size_t screenWidth, size_t screenHeight, std::shared_ptr<Window> window, Application* app );
 		void InitImGui( );
@@ -158,6 +164,8 @@ namespace Voidstar
 		void RenderImGui(int frameIndex);
 		void CleanUpImGui();
 		~Renderer();
+		Sets& GetSets() { return m_SetsAmount; }
+		Bindings& GetBindings() { return m_Bindings; }
 	private:
 		void CreateInstance();
 		void CreateDebugMessenger();
@@ -165,7 +173,6 @@ namespace Voidstar
 		void CreateDevice();
 		void CreatePipeline();
 		void CreateFramebuffers();
-		void DestroySwapchain();
 		void CreateSyncObjects();
 		void CreateMSAAFrame();
 		void UpdateBuffer();
@@ -174,19 +181,26 @@ namespace Voidstar
 		void UpdateUniformBuffer(uint32_t imageIndex);
 		void RecreateSwapchain();
 		void Shutdown();
-		void CreateComputePipeline();
 		void AllocateSets();
+		void CreateLayouts();
+		void CleanUpLayouts();
+		template<typename T>
+		T GetSet(int handle, PipelineType type)
+		{
+			return std::get<T>(m_Sets[{handle, type}]);;
+		}
+
+		DescriptorSetLayout* GetSetLayout(int handle, PipelineType type)
+		{
+			return m_Layout[{handle, type}];
+		}
 	private:
 		Voidstar::Instance* m_Instance;
 		int m_ViewportWidth, m_ViewportHeight;
 		Device* m_Device;
 		UPtr<Swapchain> m_Swapchain;
 		UPtr<Buffer> m_ModelBuffer{nullptr};
-		UPtr<Buffer> m_CubeBuffer{nullptr};
 		UPtr<IndexBuffer> m_IndexBuffer;
-		UPtr<IndexBuffer> m_IndexCubeBuffer;
-		UPtr<Buffer> m_SphereBuffer;
-		UPtr<IndexBuffer> m_IndexSphereBuffer;
 		
 		Application* m_App;
 		
@@ -195,30 +209,18 @@ namespace Voidstar
 		SPtr<Image> m_Image;
 		SPtr<Image> m_ImageSelected;
 
-		SPtr<Image> m_AnimatedNoiseImage;
-		SPtr<Image> m_3DNoiseTexture;
-		SPtr<Image> m_3DNoiseTextureLowRes;
-		
-		SPtr<Image> m_WaterNormalImage;
-		SPtr<Image> m_WaterNormalImage2;
 
 
-		SPtr<Image> m_SnowTex;
-		SPtr<Image>	m_GrassTex;
-		SPtr<Image>	m_StoneTex;
-		SPtr<Image>	m_Cubemap;
 		
-		SPtr<Model> m_Model;
 
 		SPtr<DescriptorPool> m_UniversalPool;
 		vk::Image m_MsaaImage;
 		vk::DeviceMemory m_MsaaImageMemory;
 		vk::ImageView m_MsaaImageView;
 
-
-		SPtr<DescriptorPool> m_DescriptorPool;
-		SPtr<DescriptorPool> m_DescriptorPoolClouds;
-		DescriptorSetLayout* m_DescriptorSetLayoutClouds;
+		int m_BaseDesc = 0;
+		int m_TexDesc = 0;
+		int m_Compute = 0;
 		vk::DescriptorSet m_DescriptorSetClouds;
 
 		// can be in one buffer?
@@ -311,6 +313,13 @@ namespace Voidstar
 		CloudParams cloudParams;
 		void* m_CloudPtr;
 		UPtr<Buffer> m_CloudBuffer;
+
+		// int is number of set, int is a type of pipeline render or compute
+		Bindings m_Bindings;
+		std::unordered_map<std::pair<int, PipelineType>, DescriptorSetLayout*, EnumClassHash> m_Layout;
+		std::unordered_map<std::pair<int, PipelineType>, std::variant<vk::DescriptorSet, std::vector<vk::DescriptorSet> >, EnumClassHash> m_Sets;
+		Sets m_SetsAmount;
+
 	
 	};
 

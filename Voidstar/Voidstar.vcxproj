@@ -140,6 +140,7 @@
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="src\Rendering\Binder.h" />
     <ClInclude Include="src\Application.h" />
     <ClInclude Include="src\Input.h" />
     <ClInclude Include="src\Keys.h" />
@@ -148,6 +149,7 @@
     <ClInclude Include="src\MemoryTracker.h" />
     <ClInclude Include="src\Prereq.h" />
     <ClInclude Include="src\Quadtree\Quadtree.h" />
+    <ClInclude Include="src\Rendering\BinderHelp.h" />
     <ClInclude Include="src\Rendering\Buffer.h" />
     <ClInclude Include="src\Rendering\Camera.h" />
     <ClInclude Include="src\Rendering\CommandBuffer.h" />

@@ -34,7 +34,7 @@
 #include <random>
 #include "Initializers.h"
 #include "input.h"
-#include <variant>
+#include "Binder.h"
 
 
 
@@ -473,33 +473,13 @@ namespace Voidstar
 
 
 
-	void Renderer::CreateComputePipeline()
-	{
-
-
-
-	}
-
-	// int is number of set, int is a type of pipeline render or compute
-	std::unordered_map<std::pair<int,int>, std::vector < vk::DescriptorSetLayoutBinding>> m_Bindings;
-	std::unordered_map<std::pair<int,int>, DescriptorSetLayout*> m_Layout;
-	std::unordered_map<std::pair<int,int>, std::variant<vk::DescriptorSet, std::vector<vk::DescriptorSet>>> m_Sets;
-	std::unordered_map<std::pair<int,int>, int> m_SetsAmount;
 	
-	// amount of sets to duplicate sets
-	// desc amount how many descriptors are bind to the same number
-	// should use GUID instead of pair?
-	template<int pipeline,int amountOfSets = 1>
-	void Bind(int descSetNumber, int binding, int descAmount, vk::DescriptorType type,vk::ShaderStageFlags shaderAccess)
-	{
 
-		// create descriptor binding
-		auto descBinding = DescriptorBindingDescription(binding, type,shaderAccess,descAmount);
-		m_Bindings[{descSetNumber, pipeline}].emplace_back(descBinding);
-		m_SetsAmount[{descSetNumber, pipeline}] = amountOfSets;
-	}
 	
-	void CreateLayouts()
+
+	
+	
+	void Renderer::CreateLayouts()
 	{
 		for (auto [key, value] : m_Bindings)
 		{
@@ -527,7 +507,7 @@ namespace Voidstar
 		
 
 	}
-	void CleanUp()
+	void Renderer::CleanUpLayouts()
 	{
 		auto device = RenderContext::GetDevice();
 		for (auto [key, value] : m_Layout)
@@ -1877,14 +1857,8 @@ namespace Voidstar
 
 		m_ShaderStorageBuffer.reset();
 		
-		m_DescriptorPool.reset();
-		m_DescriptorPoolSelected.reset();
-		m_DescriptorPoolTex.reset();
 		m_UniversalPool.reset();
-		CleanUp();
-		//m_Device->GetDevice().destroyDescriptorSetLayout(m_DescriptorSetLayout->GetLayout());
-		//m_Device->GetDevice().destroyDescriptorSetLayout(m_DescriptorSetLayoutSelected->GetLayout());
-		//m_Device->GetDevice().destroyDescriptorSetLayout(m_DescriptorSetLayoutTex->GetLayout());
+		CleanUpLayouts();
 	
 
 	
