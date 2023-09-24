@@ -561,11 +561,9 @@ namespace Voidstar
 		
 		auto framesAmount = m_Swapchain->m_SwapchainFrames.size();
 		auto binderRender = Binder<RENDER>();
-		m_BaseDesc = binderRender.BeginBind();
-		binderRender.Bind<3>( 0, 1, vk::DescriptorType::eUniformBuffer, vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eTessellationControl
+		m_BaseDesc = binderRender.BeginBind(3);
+		binderRender.Bind( 0, 1, vk::DescriptorType::eUniformBuffer, vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eTessellationControl
 			| vk::ShaderStageFlagBits::eTessellationEvaluation | vk::ShaderStageFlagBits::eFragment);
-		//Bind<PipelineType::RENDER,3>(m_BaseDesc, 0, 1, vk::DescriptorType::eUniformBuffer ,vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eTessellationControl
-		//	| vk::ShaderStageFlagBits::eTessellationEvaluation | vk::ShaderStageFlagBits::eFragment);
 		
 
 		

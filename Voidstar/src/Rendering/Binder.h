@@ -22,19 +22,21 @@ namespace Voidstar
 	struct Binder
 	{
 		static int currentIndex;
-		int BeginBind()
+		int BeginBind(int amountOfSets = 1)
 		{
+			auto pipeline = T::value;
+			Renderer::Instance()->GetSets()[{currentIndex, pipeline}] = amountOfSets;
 			int retValue = currentIndex++;
 			return retValue;
 		}
-		template<int amountOfSets = 1>
+
 		void Bind(int binding, int descAmount, vk::DescriptorType type, vk::ShaderStageFlags shaderAccess)
 		{
 			auto pipeline = T::value;
 			// create descriptor binding
 			auto descBinding = DescriptorBindingDescription(binding, type, shaderAccess, descAmount);
 			Renderer::Instance()->GetBindings()[{currentIndex-1, pipeline}].emplace_back(descBinding);
-			Renderer::Instance()->GetSets()[{currentIndex-1, pipeline}] = amountOfSets;
+			
 		}
 	};
 	template<>
