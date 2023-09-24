@@ -107,6 +107,8 @@
     </ClInclude>
     <ClInclude Include="src\Rendering\Pipeline.h" />
     <ClInclude Include="src\Rendering\Initializers.h" />
+    <ClInclude Include="src\Rendering\Binder.h" />
+    <ClInclude Include="src\Rendering\BinderHelp.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Dependencies\Tracy\public\TracyClient.cpp">

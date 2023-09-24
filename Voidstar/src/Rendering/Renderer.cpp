@@ -33,6 +33,23 @@
 #include "Pipeline.h"
 #include <random>
 #include "Initializers.h"
+#include "input.h"
+#include "Binder.h"
+
+
+
+namespace std
+{
+	template<>
+	struct hash<std::pair<int,int>>
+	{
+		size_t operator()(const std::pair<int, int>& key) const
+		{
+			std::string keyString = std::to_string(key.first) + std::to_string(key.second);
+			return std::hash<std::string>()(keyString);
+		}
+	};
+}
 
 namespace Voidstar
 {
@@ -378,238 +395,202 @@ namespace Voidstar
 	}
 
 
-	
+	void Renderer::AllocateSets()
+	{
+		std::variant<vk::DescriptorSet, std::vector<vk::DescriptorSet>> a;
+		a = std::vector<vk::DescriptorSet>();
+		for (auto [key, value] : m_Layout)
+		{
+			std::vector<vk::DescriptorSetLayout> layouts(m_SetsAmount[key], value->GetLayout());
+			auto sets = m_UniversalPool->AllocateDescriptorSets(m_SetsAmount[key], layouts.data());
+			if (m_SetsAmount[key] == 1)
+			{
+				m_Sets[key] = sets[0];
+			}
+			else
+			{
+				m_Sets[key] = sets;
+			}
 
+		}
+
+
+	}
+	void Renderer::CreateLayouts()
+	{
+		for (auto [key, value] : m_Bindings)
+		{
+			m_Layout[key] = DescriptorSetLayout::Create(value);
+		}
+	}
 	void Renderer::CreateComputePipeline()
 	{
 
+		
+
 		{
 
-			std::vector<vk::DescriptorPoolSize> poolSizes;
-			{
-				vk::DescriptorPoolSize poolSize;
-				poolSize.type = vk::DescriptorType::eStorageImage;
-				poolSize.descriptorCount = 5;
-				poolSizes.emplace_back(poolSize);
-			}
-
-			{
-				vk::DescriptorPoolSize poolSize;
-				poolSize.type = vk::DescriptorType::eUniformBuffer;
-				poolSize.descriptorCount = 1;
-				poolSizes.emplace_back(poolSize);
-			}
-
-			{
-				vk::DescriptorPoolSize poolSize;
-				poolSize.type = vk::DescriptorType::eCombinedImageSampler;
-				poolSize.descriptorCount = 2;
-				poolSizes.emplace_back(poolSize);
-			}
-			m_DescriptorPoolNoise = DescriptorPool::Create(poolSizes, 1);
+			
 
 			std::vector<vk::DescriptorSetLayout> layouts;
-			layouts.resize(1);
 
-
-			vk::DescriptorSetLayoutBinding layoutBinding1;
-			layoutBinding1.binding = 0;
-			layoutBinding1.descriptorType = vk::DescriptorType::eStorageImage;
-			layoutBinding1.stageFlags = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eTessellationEvaluation |
-				vk::ShaderStageFlagBits::eCompute ;
-			layoutBinding1.descriptorCount = 2;
-
-			vk::DescriptorSetLayoutBinding layoutBinding2;
-			layoutBinding2.binding = 1;
-			layoutBinding2.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-			layoutBinding2.stageFlags = vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex |
-				vk::ShaderStageFlagBits::eTessellationEvaluation;
-			layoutBinding2.descriptorCount = 2;
-
-			vk::DescriptorSetLayoutBinding layoutBinding3;
-			layoutBinding3.binding = 2;
-			layoutBinding3.descriptorType = vk::DescriptorType::eUniformBuffer;
-			layoutBinding3.stageFlags = vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex |
-				vk::ShaderStageFlagBits::eTessellationEvaluation | vk::ShaderStageFlagBits::eFragment;
-			layoutBinding3.descriptorCount = 1;
-
-			vk::DescriptorSetLayoutBinding layoutBinding4;
-			layoutBinding4.binding = 3;
-			layoutBinding4.descriptorType = vk::DescriptorType::eStorageImage;
-			layoutBinding4.stageFlags = vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex |
-				vk::ShaderStageFlagBits::eTessellationEvaluation;
-			layoutBinding4.descriptorCount = 1;
-
-			vk::DescriptorSetLayoutBinding layoutBinding5;
-			layoutBinding5.binding = 4;
-			layoutBinding5.descriptorType = vk::DescriptorType::eStorageImage;
-			layoutBinding5.stageFlags = vk::ShaderStageFlagBits::eCompute;
-			layoutBinding5.descriptorCount = 1;
-
-			vk::DescriptorSetLayoutBinding layoutBinding6;
-			layoutBinding6.binding = 5;
-			layoutBinding6.descriptorType = vk::DescriptorType::eStorageImage;
-			layoutBinding6.stageFlags = vk::ShaderStageFlagBits::eCompute;
-			layoutBinding6.descriptorCount = 1;
+			
 
 
 
-			std::vector<vk::DescriptorSetLayoutBinding> layoutBindings{ layoutBinding1,layoutBinding2,layoutBinding3,layoutBinding4,layoutBinding5,layoutBinding6 };
-
-			m_DescriptorSetLayoutNoise = DescriptorSetLayout::Create(layoutBindings);
-
-			layouts[0] = m_DescriptorSetLayoutNoise->GetLayout();
-			m_DescriptorSetNoise = m_DescriptorPoolNoise->AllocateDescriptorSets(1, layouts.data())[0];
-		}
 
 
-		
-		m_NoiseImage = Image::CreateEmptyImage(noiseTextureWidth, noiseTextureHeight, vk::Format::eR8G8B8A8Snorm);
-		m_AnimatedNoiseImage = Image::CreateEmptyImage(noiseTextureWidth, noiseTextureHeight, vk::Format::eR8G8B8A8Snorm);
-		
-		int size = 128;
-		m_3DNoiseTexture = Image::CreateEmpty3DImage(size, size, size, vk::Format::eR8G8B8A8Snorm);
-		m_3DNoiseTextureLowRes = Image::CreateEmpty3DImage(32, 32, 32, vk::Format::eR8G8B8A8Snorm);
-	
 
-		
 
-		{
-			vk::DescriptorImageInfo imageDescriptor0;
-			imageDescriptor0.imageLayout = vk::ImageLayout::eGeneral;
-			imageDescriptor0.imageView = m_NoiseImage->m_ImageView;
-			imageDescriptor0.sampler = m_NoiseImage->m_Sampler;
-			vk::DescriptorImageInfo imageDescriptor1;
-			imageDescriptor1.imageLayout = vk::ImageLayout::eGeneral;
-			imageDescriptor1.imageView = m_AnimatedNoiseImage->m_ImageView;
-			imageDescriptor1.sampler = m_AnimatedNoiseImage->m_Sampler;
-			vk::DescriptorImageInfo imageDescriptor2;
-			imageDescriptor2.imageLayout = vk::ImageLayout::eGeneral;
-			imageDescriptor2.imageView = m_3DNoiseTexture->m_ImageView;
-			imageDescriptor2.sampler = m_3DNoiseTexture->m_Sampler;
 
-			vk::DescriptorImageInfo imageDescriptor3;
-			imageDescriptor3.imageLayout = vk::ImageLayout::eGeneral;
-			imageDescriptor3.imageView = m_3DNoiseTextureLowRes->m_ImageView;
-			imageDescriptor3.sampler = m_3DNoiseTextureLowRes->m_Sampler;
-		
 
-			std::vector<vk::DescriptorImageInfo> images{ imageDescriptor0 ,imageDescriptor1};
-			m_Device->UpdateDescriptorSet(m_DescriptorSetNoise, 0, images, vk::DescriptorType::eStorageImage);
-			m_Device->UpdateDescriptorSet(m_DescriptorSetNoise, 3,1, imageDescriptor2, vk::DescriptorType::eStorageImage);
-			m_Device->UpdateDescriptorSet(m_DescriptorSetNoise, 4,1, imageDescriptor3, vk::DescriptorType::eStorageImage);
-		
+
+			m_NoiseImage = Image::CreateEmptyImage(noiseTextureWidth, noiseTextureHeight, vk::Format::eR8G8B8A8Snorm);
+			m_AnimatedNoiseImage = Image::CreateEmptyImage(noiseTextureWidth, noiseTextureHeight, vk::Format::eR8G8B8A8Snorm);
+
+			int size = 128;
+			m_3DNoiseTexture = Image::CreateEmpty3DImage(size, size, size, vk::Format::eR8G8B8A8Snorm);
+			m_3DNoiseTextureLowRes = Image::CreateEmpty3DImage(32, 32, 32, vk::Format::eR8G8B8A8Snorm);
+
+
 
 
 			{
-				vk::DescriptorImageInfo imageDescriptor0 = DescriptorImageInfo(vk::ImageLayout::eShaderReadOnlyOptimal, m_NoiseImage->m_ImageView, m_NoiseImage->m_Sampler);
-				vk::DescriptorImageInfo imageDescriptor1 = DescriptorImageInfo(vk::ImageLayout::eShaderReadOnlyOptimal, m_AnimatedNoiseImage->m_ImageView, m_AnimatedNoiseImage->m_Sampler);;
+				vk::DescriptorImageInfo imageDescriptor0;
+				imageDescriptor0.imageLayout = vk::ImageLayout::eGeneral;
+				imageDescriptor0.imageView = m_NoiseImage->m_ImageView;
+				imageDescriptor0.sampler = m_NoiseImage->m_Sampler;
+				vk::DescriptorImageInfo imageDescriptor1;
+				imageDescriptor1.imageLayout = vk::ImageLayout::eGeneral;
+				imageDescriptor1.imageView = m_AnimatedNoiseImage->m_ImageView;
+				imageDescriptor1.sampler = m_AnimatedNoiseImage->m_Sampler;
+				vk::DescriptorImageInfo imageDescriptor2;
+				imageDescriptor2.imageLayout = vk::ImageLayout::eGeneral;
+				imageDescriptor2.imageView = m_3DNoiseTexture->m_ImageView;
+				imageDescriptor2.sampler = m_3DNoiseTexture->m_Sampler;
+
+				vk::DescriptorImageInfo imageDescriptor3;
+				imageDescriptor3.imageLayout = vk::ImageLayout::eGeneral;
+				imageDescriptor3.imageView = m_3DNoiseTextureLowRes->m_ImageView;
+				imageDescriptor3.sampler = m_3DNoiseTextureLowRes->m_Sampler;
+
+
 				std::vector<vk::DescriptorImageInfo> images{ imageDescriptor0 ,imageDescriptor1 };
-				m_Device->UpdateDescriptorSet(m_DescriptorSetTex, 0, images, vk::DescriptorType::eCombinedImageSampler);
-
-				vk::DescriptorImageInfo imageDescriptor2 = DescriptorImageInfo(vk::ImageLayout::eShaderReadOnlyOptimal, m_3DNoiseTexture->m_ImageView, m_3DNoiseTexture->m_Sampler);
-				
-				vk::DescriptorImageInfo imageDescriptor3 = DescriptorImageInfo(vk::ImageLayout::eShaderReadOnlyOptimal, m_3DNoiseTextureLowRes->m_ImageView, m_3DNoiseTextureLowRes->m_Sampler);
+				m_Device->UpdateDescriptorSet(m_DescriptorSetNoise, 0, images, vk::DescriptorType::eStorageImage);
+				m_Device->UpdateDescriptorSet(m_DescriptorSetNoise, 3, 1, imageDescriptor2, vk::DescriptorType::eStorageImage);
+				m_Device->UpdateDescriptorSet(m_DescriptorSetNoise, 4, 1, imageDescriptor3, vk::DescriptorType::eStorageImage);
 
 
-				m_Device->UpdateDescriptorSet(m_DescriptorSetClouds, 0,1, imageDescriptor2, vk::DescriptorType::eCombinedImageSampler);
-				m_Device->UpdateDescriptorSet(m_DescriptorSetClouds, 2,1, imageDescriptor3, vk::DescriptorType::eCombinedImageSampler);
+
+				{
+					vk::DescriptorImageInfo imageDescriptor0 = DescriptorImageInfo(vk::ImageLayout::eShaderReadOnlyOptimal, m_NoiseImage->m_ImageView, m_NoiseImage->m_Sampler);
+					vk::DescriptorImageInfo imageDescriptor1 = DescriptorImageInfo(vk::ImageLayout::eShaderReadOnlyOptimal, m_AnimatedNoiseImage->m_ImageView, m_AnimatedNoiseImage->m_Sampler);;
+					std::vector<vk::DescriptorImageInfo> images{ imageDescriptor0 ,imageDescriptor1 };
+					m_Device->UpdateDescriptorSet(m_DescriptorSetTex, 0, images, vk::DescriptorType::eCombinedImageSampler);
+
+					vk::DescriptorImageInfo imageDescriptor2 = DescriptorImageInfo(vk::ImageLayout::eShaderReadOnlyOptimal, m_3DNoiseTexture->m_ImageView, m_3DNoiseTexture->m_Sampler);
+
+					vk::DescriptorImageInfo imageDescriptor3 = DescriptorImageInfo(vk::ImageLayout::eShaderReadOnlyOptimal, m_3DNoiseTextureLowRes->m_ImageView, m_3DNoiseTextureLowRes->m_Sampler);
+
+
+					m_Device->UpdateDescriptorSet(m_DescriptorSetClouds, 0, 1, imageDescriptor2, vk::DescriptorType::eCombinedImageSampler);
+					m_Device->UpdateDescriptorSet(m_DescriptorSetClouds, 2, 1, imageDescriptor3, vk::DescriptorType::eCombinedImageSampler);
+				}
+
+
+
 			}
-			
 
+			std::string right = "sky/bluecloud_rt.jpg";
+			std::string left = "sky/bluecloud_lf.jpg";
+			std::string top = "sky/bluecloud_up.jpg";
+			std::string down = "sky/bluecloud_dn.jpg";
+			std::string forward = "sky/bluecloud_ft.jpg";
+			std::string back = "sky/bluecloud_bk.jpg";
+
+			right = "test/skybox/right.jpg";
+			left = "test/skybox/left.jpg";
+			top = "test/skybox/top.jpg";
+			down = "test/skybox/bottom.jpg";
+			forward = "test/skybox/front.jpg";
+			back = "test/skybox/back.jpg";
+
+			right = "sky2/Daylight Box_Right.bmp";
+			left = "sky2/Daylight Box_Left.bmp";
+			top = "sky2/Daylight Box_Top.bmp";
+			down = "sky2/Daylight Box_Bottom.bmp";
+			forward = "sky2/Daylight Box_Front.bmp";
+			back = "sky2/Daylight Box_Back.bmp";
+
+			// left x
+			//std::vector<std::string> cubemap = { BASE_RES_PATH+ left,
+			//BASE_RES_PATH + right,
+			//BASE_RES_PATH + down,
+			//BASE_RES_PATH + top,
+			//BASE_RES_PATH + back, // back -z
+			//BASE_RES_PATH + forward }; // forward +z
+
+			std::vector<std::string> cubemap = {
+			BASE_RES_PATH + right,    // Positive X
+			BASE_RES_PATH + left,     // Negative X
+			BASE_RES_PATH + down,     // Positive Y
+			BASE_RES_PATH + top,      // Negative Y
+			BASE_RES_PATH + forward,  // Positive Z
+			BASE_RES_PATH + back      // Negative Z
+			};
+			m_Cubemap = Image::CreateCubemap(cubemap);
+			m_Device->UpdateDescriptorSet(m_DescriptorSetSky, 0, 1, *m_Cubemap, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
+			m_SnowTex = Image::CreateImage(BASE_RES_PATH + "terrain/snow/Snow_003_COLOR.jpg");
+			m_Device->UpdateDescriptorSet(m_DescriptorSetTex, 1, 1, *m_SnowTex, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
+			m_GrassTex = Image::CreateImage(BASE_RES_PATH + "terrain/grass.jpg");
+			m_Device->UpdateDescriptorSet(m_DescriptorSetTex, 2, 1, *m_GrassTex, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
+			m_StoneTex = Image::CreateImage(BASE_RES_PATH + "terrain/GroundTex/rock_01_diffuse.jpg");
+			m_Device->UpdateDescriptorSet(m_DescriptorSetTex, 3, 1, *m_StoneTex, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
+
+			m_WaterNormalImage = Image::CreateImage(BASE_RES_PATH + "water/water-normal-1.jpg");
+			m_WaterNormalImage2 = Image::CreateImage(BASE_RES_PATH + "water/water-normal-2.jpg");
+			{
+				vk::DescriptorImageInfo imageDescriptor0;
+				imageDescriptor0.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+				imageDescriptor0.imageView = m_WaterNormalImage->m_ImageView;
+				imageDescriptor0.sampler = m_WaterNormalImage->m_Sampler;
+				vk::DescriptorImageInfo imageDescriptor1;
+				imageDescriptor1.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+				imageDescriptor1.imageView = m_WaterNormalImage2->m_ImageView;
+				imageDescriptor1.sampler = m_WaterNormalImage2->m_Sampler;
+				std::vector<vk::DescriptorImageInfo> images{ imageDescriptor0 ,imageDescriptor1 };
+				m_Device->UpdateDescriptorSet(m_DescriptorSetNoise, 1, images, vk::DescriptorType::eCombinedImageSampler);
+			}
+
+			{
+				BufferInputChunk inputBuffer;
+				inputBuffer.size = sizeof(NoiseData);
+				inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+				inputBuffer.usage = vk::BufferUsageFlagBits::eUniformBuffer;
+
+				m_NoiseData = new Buffer(inputBuffer);
+				m_NoiseDataPtr = m_Device->GetDevice().mapMemory(m_NoiseData->GetMemory(), 0, sizeof(NoiseData));
+				memcpy(m_NoiseDataPtr, &noiseData, sizeof(NoiseData));
+
+				m_Device->UpdateDescriptorSet(m_DescriptorSetNoise, 2, 1, *m_NoiseData, vk::DescriptorType::eUniformBuffer);
+
+			}
+
+
+			 layouts = { m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutNoise->GetLayout() };
+			m_ComputePipeline = Pipeline::CreateComputePipeline(BASE_SPIRV_OUTPUT + "NoiseTex.spvCmp", layouts);
+
+
+
+			{
+
+				std::vector<vk::DescriptorSetLayout> layouts = { m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutNoise->GetLayout() };
+				m_ComputePipelineClouds = Pipeline::CreateComputePipeline(BASE_SPIRV_OUTPUT + "NoiseClouds.spvCmp", layouts);
+
+			}
 
 		}
-
-		std::string right = "sky/bluecloud_rt.jpg";
-		std::string left = "sky/bluecloud_lf.jpg";
-		std::string top = "sky/bluecloud_up.jpg";
-		std::string down = "sky/bluecloud_dn.jpg";
-		std::string forward= "sky/bluecloud_ft.jpg";
-		std::string back= "sky/bluecloud_bk.jpg";
-
-		right = "test/skybox/right.jpg";
-		left = "test/skybox/left.jpg";
-		top = "test/skybox/top.jpg";
-		down = "test/skybox/bottom.jpg";
-		forward = "test/skybox/front.jpg";
-		back = "test/skybox/back.jpg";
-
-		right = "sky2/Daylight Box_Right.bmp";
-		left = "sky2/Daylight Box_Left.bmp";
-		top = "sky2/Daylight Box_Top.bmp";
-		down = "sky2/Daylight Box_Bottom.bmp";
-		forward = "sky2/Daylight Box_Front.bmp";
-		back = "sky2/Daylight Box_Back.bmp";
-
-		// left x
-		//std::vector<std::string> cubemap = { BASE_RES_PATH+ left,
-		//BASE_RES_PATH + right,
-		//BASE_RES_PATH + down,
-		//BASE_RES_PATH + top,
-		//BASE_RES_PATH + back, // back -z
-		//BASE_RES_PATH + forward }; // forward +z
-
-		 std::vector<std::string> cubemap = {
-		 BASE_RES_PATH + right,    // Positive X
-		 BASE_RES_PATH + left,     // Negative X
-		 BASE_RES_PATH + down,     // Positive Y
-		 BASE_RES_PATH + top,      // Negative Y
-		 BASE_RES_PATH + forward,  // Positive Z
-		 BASE_RES_PATH + back      // Negative Z
-		 };
-		m_Cubemap = Image::CreateCubemap(cubemap);
-		m_Device->UpdateDescriptorSet(m_DescriptorSetSky, 0, 1, *m_Cubemap, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
-		m_SnowTex = Image::CreateImage(BASE_RES_PATH + "terrain/snow/Snow_003_COLOR.jpg");
-		m_Device->UpdateDescriptorSet(m_DescriptorSetTex,1,1,*m_SnowTex,vk::ImageLayout::eShaderReadOnlyOptimal,vk::DescriptorType::eCombinedImageSampler);
-		m_GrassTex = Image::CreateImage(BASE_RES_PATH +"terrain/grass.jpg");
-		m_Device->UpdateDescriptorSet(m_DescriptorSetTex,2,1,*m_GrassTex, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
-		m_StoneTex = Image::CreateImage(BASE_RES_PATH + "terrain/GroundTex/rock_01_diffuse.jpg");
-		m_Device->UpdateDescriptorSet(m_DescriptorSetTex,3,1,*m_StoneTex, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
-
-		m_WaterNormalImage = Image::CreateImage(BASE_RES_PATH + "water/water-normal-1.jpg");
-		m_WaterNormalImage2 = Image::CreateImage(BASE_RES_PATH + "water/water-normal-2.jpg");
-		{
-			vk::DescriptorImageInfo imageDescriptor0;
-			imageDescriptor0.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-			imageDescriptor0.imageView = m_WaterNormalImage->m_ImageView;
-			imageDescriptor0.sampler = m_WaterNormalImage->m_Sampler;
-			vk::DescriptorImageInfo imageDescriptor1;
-			imageDescriptor1.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-			imageDescriptor1.imageView = m_WaterNormalImage2->m_ImageView;
-			imageDescriptor1.sampler = m_WaterNormalImage2->m_Sampler;
-			std::vector<vk::DescriptorImageInfo> images{ imageDescriptor0 ,imageDescriptor1 };
-			m_Device->UpdateDescriptorSet(m_DescriptorSetNoise, 1, images, vk::DescriptorType::eCombinedImageSampler);
-		}
-
-		{
-			BufferInputChunk inputBuffer;
-			inputBuffer.size = sizeof(NoiseData);
-			inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
-			inputBuffer.usage = vk::BufferUsageFlagBits::eUniformBuffer;
-
-			m_NoiseData = new Buffer(inputBuffer);
-			m_NoiseDataPtr= m_Device->GetDevice().mapMemory(m_NoiseData->GetMemory(), 0, sizeof(NoiseData));
-			memcpy(m_NoiseDataPtr, &noiseData, sizeof(NoiseData));
-
-			m_Device->UpdateDescriptorSet(m_DescriptorSetNoise,2,1, *m_NoiseData, vk::DescriptorType::eUniformBuffer);
-			
-		}
-		
-
-		std::vector<vk::DescriptorSetLayout> layouts = { m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutNoise->GetLayout() };
-		m_ComputePipeline = Pipeline::CreateComputePipeline(BASE_SPIRV_OUTPUT + "NoiseTex.spvCmp", layouts);
-		
-
-
-		{
-
-			std::vector<vk::DescriptorSetLayout> layouts = { m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutNoise->GetLayout() };
-			m_ComputePipelineClouds = Pipeline::CreateComputePipeline(BASE_SPIRV_OUTPUT + "NoiseClouds.spvCmp", layouts);
-	
-		}
-
 	}
-
 	void Renderer::UpdateCloudTexture()
 	{
 		auto device = m_Device->GetDevice();
@@ -684,19 +665,25 @@ namespace Voidstar
 
 	}
 
+	void Renderer::CleanUpLayouts()
+	{
+		auto device = RenderContext::GetDevice();
+		for (auto [key, value] : m_Layout)
+		{
+			device->GetDevice().destroyDescriptorSetLayout(value->GetLayout());
+		}
+	}
 	void Renderer::Init(size_t screenWidth, size_t screenHeight, std::shared_ptr<Window> window, Application* app) 
 		
 	{
 		
 		InitFilePath();
 		CompileAllShaders();
-		//CompileShader({ "shader.vert","shader.frag" });
 		m_Window=window; 
 		m_ViewportWidth = screenWidth;
 		m_ViewportHeight = screenHeight;
 		m_App = app;
 		m_CommandPoolManager = CreateUPtr<CommandPoolManager>();
-		// create instance
 		CreateInstance();
 
 		CreateDebugMessenger();
@@ -721,66 +708,79 @@ namespace Voidstar
 //
 		
 		 
-	
+		
 
-		// create uniform buffers for each frame
-	
+		std::vector<vk::DescriptorPoolSize> pool_sizes =
+		{
+			{ vk::DescriptorType::eCombinedImageSampler, 10 },
+			{ vk::DescriptorType::eStorageImage, 10 },
+			{ vk::DescriptorType::eStorageBuffer, 10 },
+			{ vk::DescriptorType::eInputAttachment, 10 },
+			{ vk::DescriptorType::eUniformBuffer, 10 },
+		};
+
+		m_UniversalPool = DescriptorPool::Create(pool_sizes, 10);
 		
 		auto framesAmount = m_Swapchain->m_SwapchainFrames.size();
+		auto binderRender= Binder<RENDER>();
 
-		vk::DescriptorSetLayoutBinding layoutBinding = DescriptorBindingDescription(0, vk::DescriptorType::eUniformBuffer, vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eTessellationControl
-			| vk::ShaderStageFlagBits::eTessellationEvaluation | vk::ShaderStageFlagBits::eFragment,1);
 		
-
-		vk::DescriptorSetLayoutBinding layoutBinding1 = DescriptorBindingDescription(1, vk::DescriptorType::eInputAttachment, vk::ShaderStageFlagBits::eFragment , 1);
-		
-		std::vector<vk::DescriptorSetLayoutBinding> layoutBindings{ layoutBinding,layoutBinding1 };
-		m_DescriptorSetLayout = DescriptorSetLayout::Create(layoutBindings);
 
 		{
+			m_BaseDesc = binderRender.BeginBind(3);
+			binderRender.Bind(0,1, vk::DescriptorType::eUniformBuffer, vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eTessellationControl
+				| vk::ShaderStageFlagBits::eTessellationEvaluation | vk::ShaderStageFlagBits::eFragment);
+			binderRender.Bind(1, 1, vk::DescriptorType::eInputAttachment, vk::ShaderStageFlagBits::eFragment);
+			m_DescSky = binderRender.BeginBind();
+			binderRender.Bind(0, 1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment);
 
-			vk::DescriptorSetLayoutBinding layoutBinding = DescriptorBindingDescription(0, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment, 1);
 		
-
-		
-			std::vector<vk::DescriptorSetLayoutBinding> layoutBindings1{ layoutBinding };
-			m_DescriptorSetLayoutSky = DescriptorSetLayout::Create(layoutBindings1);
-
-			vk::DescriptorPoolSize poolSize;
-			poolSize.type = vk::DescriptorType::eCombinedImageSampler;
-			poolSize.descriptorCount = 1;
-
-			std::vector<vk::DescriptorPoolSize> poolSizes{ poolSize };
-
-			m_DescriptorPoolSky = DescriptorPool::Create(poolSizes, 1);
-			std::vector<vk::DescriptorSetLayout> layouts = { m_DescriptorSetLayoutSky->GetLayout() };
-			m_DescriptorSetSky = m_DescriptorPoolSky->AllocateDescriptorSets(1, layouts.data())[0];
-		}
-		// clouds
-		{
-			vk::DescriptorSetLayoutBinding layoutBinding = DescriptorBindingDescription(0, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment, 1);
 			
-			vk::DescriptorSetLayoutBinding layoutBinding1 = DescriptorBindingDescription(1, vk::DescriptorType::eUniformBuffer, vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eVertex, 1);
+			m_DescCloud = binderRender.BeginBind();
 
-			vk::DescriptorSetLayoutBinding layoutBinding2 = DescriptorBindingDescription(2, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment , 1);
+			binderRender.Bind(0, 1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment);
+			binderRender.Bind(1, 1, vk::DescriptorType::eUniformBuffer, vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eVertex);
+			binderRender.Bind(2, 1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment);
 
-			std::vector<vk::DescriptorSetLayoutBinding> layoutBindings1{ layoutBinding,layoutBinding1,layoutBinding2 };
-			m_DescriptorSetLayoutClouds = DescriptorSetLayout::Create(layoutBindings1);
+			m_TexDesc = binderRender.BeginBind();
+			binderRender.Bind(0, 2, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eTessellationEvaluation | vk::ShaderStageFlagBits::eFragment);
+			binderRender.Bind(1, 1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment);
+			binderRender.Bind(2, 1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment);
+			binderRender.Bind(3, 1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment);
+			binderRender.Bind(4, 1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment);
+			binderRender.Bind(5, 1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment);
 
+			auto binderCompute = Binder<COMPUTE>();
+			m_Noise = binderCompute.BeginBind();
 
+			binderCompute.Bind(0, 2, vk::DescriptorType::eStorageImage, vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eTessellationEvaluation |
+				vk::ShaderStageFlagBits::eCompute);
+			binderCompute.Bind(1, 2, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eVertex
+				| vk::ShaderStageFlagBits::eTessellationEvaluation | vk::ShaderStageFlagBits::eCompute);
+			binderCompute.Bind(2, 1, vk::DescriptorType::eUniformBuffer, vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex |
+				vk::ShaderStageFlagBits::eTessellationEvaluation | vk::ShaderStageFlagBits::eFragment);
+			binderCompute.Bind(3, 1, vk::DescriptorType::eStorageImage, vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex |
+				vk::ShaderStageFlagBits::eTessellationEvaluation);
+			binderCompute.Bind(4, 1, vk::DescriptorType::eStorageImage, vk::ShaderStageFlagBits::eCompute);
+			binderCompute.Bind(5, 1, vk::DescriptorType::eStorageImage, vk::ShaderStageFlagBits::eCompute);
+			
+			CreateLayouts();
+			AllocateSets();
+			m_DescriptorSets = GetSet<std::vector<vk::DescriptorSet>>(m_BaseDesc, PipelineType::RENDER);
+			m_DescriptorSetClouds = GetSet<vk::DescriptorSet>(m_DescCloud, PipelineType::RENDER);
+			m_DescriptorSetTex = GetSet<vk::DescriptorSet>(m_TexDesc, PipelineType::RENDER);
+			m_DescriptorSetSky = GetSet<vk::DescriptorSet>(m_DescSky, PipelineType::RENDER);
+			m_DescriptorSetNoise = GetSet<vk::DescriptorSet>(m_Noise, PipelineType::COMPUTE);
 
-			vk::DescriptorPoolSize poolSize;
-			poolSize.type = vk::DescriptorType::eCombinedImageSampler;
-			poolSize.descriptorCount = 2;
-			vk::DescriptorPoolSize poolSize1;
-			poolSize1.type = vk::DescriptorType::eUniformBuffer;
-			poolSize1.descriptorCount = 1;
-			std::vector<vk::DescriptorPoolSize> poolSizes{ poolSize,poolSize1 };
+			m_DescriptorSetLayoutSky = GetSetLayout(m_DescSky, PipelineType::RENDER);
+			m_DescriptorSetLayoutClouds = GetSetLayout(m_DescCloud, PipelineType::RENDER);
+			m_DescriptorSetLayout = GetSetLayout(m_BaseDesc, PipelineType::RENDER);
+			m_DescriptorSetLayoutTex = GetSetLayout(m_TexDesc, PipelineType::RENDER);
+			m_DescriptorSetLayoutNoise = GetSetLayout(m_Noise, PipelineType::COMPUTE);
 
-			m_DescriptorPoolClouds = DescriptorPool::Create(poolSizes, 1);
-			m_DescriptorSetClouds = m_DescriptorPoolClouds->AllocateDescriptorSets(1,&m_DescriptorSetLayoutClouds->GetLayout())[0];
+		}
 
-
+		{
 			BufferInputChunk inputBuffer;
 			inputBuffer.size = sizeof(CloudParams);
 			inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
@@ -812,25 +812,12 @@ namespace Voidstar
 
 
 
-		{
-
-			vk::DescriptorPoolSize poolSize;
-			poolSize.type = vk::DescriptorType::eUniformBuffer;
-			poolSize.descriptorCount = static_cast<uint32_t>(framesAmount);
-			vk::DescriptorPoolSize poolSize1;
-			poolSize1.type = vk::DescriptorType::eInputAttachment;
-			poolSize1.descriptorCount = static_cast<uint32_t>(framesAmount);
-
-			std::vector<vk::DescriptorPoolSize> poolSizes{ poolSize,poolSize1 };
-			
-			m_DescriptorPool = DescriptorPool::Create(poolSizes, framesAmount);
-		}
+	
 		
 
 		std::vector<vk::DescriptorSetLayout> layouts(framesAmount, m_DescriptorSetLayout->GetLayout());
 
 		
-		m_DescriptorSets =  m_DescriptorPool->AllocateDescriptorSets(framesAmount, layouts.data());
 			
 
 		for (int i = 0; i < framesAmount; i++)
@@ -845,46 +832,6 @@ namespace Voidstar
 		}
 		
 
-		{
-
-			vk::DescriptorPoolSize poolSize;
-			poolSize.type = vk::DescriptorType::eCombinedImageSampler;
-			poolSize.descriptorCount = 8;
-		
-			std::vector<vk::DescriptorPoolSize> poolSizes{poolSize};
-
-			m_DescriptorPoolTex = DescriptorPool::Create(poolSizes,1);
-
-			
-		
-
-			vk::DescriptorSetLayoutBinding layoutBinding = DescriptorBindingDescription(0, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eTessellationEvaluation | vk::ShaderStageFlagBits::eFragment, 2);
-
-
-			vk::DescriptorSetLayoutBinding layoutBinding1 = DescriptorBindingDescription(1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment, 1);
-		
-
-			vk::DescriptorSetLayoutBinding layoutBinding2 = DescriptorBindingDescription(2, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment, 1);
-			
-
-			vk::DescriptorSetLayoutBinding layoutBinding3 = DescriptorBindingDescription(3, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment, 1);
-		
-
-			vk::DescriptorSetLayoutBinding layoutBinding4 = DescriptorBindingDescription(4, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment, 1);
-		
-			vk::DescriptorSetLayoutBinding layoutBinding5 = DescriptorBindingDescription(5, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment,1);
-		
-
-			std::vector<vk::DescriptorSetLayoutBinding> layoutBindings{ layoutBinding,layoutBinding1,layoutBinding2,layoutBinding3,layoutBinding4,layoutBinding5 };
-
-			m_DescriptorSetLayoutTex = DescriptorSetLayout::Create(layoutBindings);
-			std::vector<vk::DescriptorSetLayout> layouts;
-			layouts.resize(1);
-
-			layouts[0] = m_DescriptorSetLayoutTex->GetLayout();
-			m_DescriptorSetTex = m_DescriptorPoolTex->AllocateDescriptorSets(1, layouts.data())[0];
-		}
-
 
 
 
@@ -894,13 +841,6 @@ namespace Voidstar
 		m_ComputeCommandBuffer = CommandBuffer::CreateBuffers(m_FrameCommandPool, vk::CommandBufferLevel::ePrimary, 3);
 
 		CreateSyncObjects();
-
-
-
-
-
-
-
 
 		std::vector<IndexType> indices;
 		auto vertices = GeneratePlane(1, indices);
@@ -2375,16 +2315,10 @@ namespace Voidstar
 			buffer.reset();
 		}
 		
-		m_DescriptorPool.reset();
-		m_DescriptorPoolClouds.reset();
 		m_DescriptorPoolTex.reset();
 		m_DescriptorPoolNoise.reset();
-	    m_DescriptorPoolSky.reset();
-		m_Device->GetDevice().destroyDescriptorSetLayout(m_DescriptorSetLayoutSky->GetLayout());
-		m_Device->GetDevice().destroyDescriptorSetLayout(m_DescriptorSetLayoutTex->GetLayout());
-		m_Device->GetDevice().destroyDescriptorSetLayout(m_DescriptorSetLayoutNoise->GetLayout());
-		m_Device->GetDevice().destroyDescriptorSetLayout(m_DescriptorSetLayoutClouds->GetLayout());
-		m_Device->GetDevice().destroyDescriptorSetLayout(m_DescriptorSetLayout->GetLayout());
+		m_UniversalPool.reset();
+		CleanUpLayouts();
 	
 
 	
