@@ -8,9 +8,22 @@
 #include"QuadTree/QuadTree.h"
 #include"BinderHelp.h"
 #include<variant>
+
+
+
+
+
 struct ImGui_ImplVulkanH_Window;
 namespace Voidstar
 {
+
+
+	inline std::string BASE_SHADER_PATH = "../Shaders/";
+	inline std::string BASE_RES_PATH = "res";
+	//const std::string SPIRV_COMPILER_PATH = "C:/VulkanSDK/1.3.216.0/Bin/glslc.exe";
+	const std::string SPIRV_COMPILER_PATH = "C:/VulkanSDK/1.3.216.0/Bin/glslangvalidator.exe";
+	inline std::string BASE_SPIRV_OUTPUT = BASE_SHADER_PATH + "Binary/";
+
 	class Window;
 	class Surface;
 	class SwapChainSupportDetails;
@@ -22,11 +35,7 @@ namespace Voidstar
 	class Model;
 	class Pipeline;
 
-	enum class RenderPrimitive
-	{
-		Plane,
-		Cube,
-	};
+	
 	struct  InstanceData {
 		
 		alignas(16)float edges [4] = {1.f,1.f,1.f,1.f};
@@ -40,37 +49,6 @@ namespace Voidstar
 		glm::mat4 proj;
 		alignas(16)glm::vec4 playerPos;
 		alignas(4)float time;
-	};
-
-	struct Particle {
-		glm::vec2 position;
-		glm::vec2 velocity;
-		glm::vec4 color;
-
-		static vk::VertexInputBindingDescription GetBindingDescription() {
-			vk::VertexInputBindingDescription bindingDescription{};
-			bindingDescription.binding = 0;
-			bindingDescription.stride = sizeof(Particle);
-			bindingDescription.inputRate = vk::VertexInputRate::eVertex;
-			return bindingDescription;
-		}
-
-		static std::array<vk::VertexInputAttributeDescription, 2> GetAttributeDescriptions() {
-			std::array<vk::VertexInputAttributeDescription, 2> attributeDescriptions{};
-
-			attributeDescriptions[0].binding = 0;
-			attributeDescriptions[0].location = 0;
-			attributeDescriptions[0].format = vk::Format::eR32G32Sfloat;
-			attributeDescriptions[0].offset = offsetof(Particle, position);
-
-			attributeDescriptions[1].binding = 0;
-			attributeDescriptions[1].location = 1;
-			attributeDescriptions[1].format = vk::Format::eR32G32B32A32Sfloat;
-			attributeDescriptions[1].offset = offsetof(Particle, color);
-
-			return attributeDescriptions;
-		}
-
 	};
 
 
@@ -165,6 +143,18 @@ namespace Voidstar
 		~Renderer();
 		Sets& GetSets() { return m_SetsAmount; }
 		Bindings& GetBindings() { return m_Bindings; }
+		template<typename T>
+		const T GetSet(int handle, PipelineType type)
+		{
+			return std::get<T>(m_Sets[{handle, type}]);;
+		}
+		const Swapchain& GetSwapchain() { return *m_Swapchain; }
+		const DescriptorSetLayout* GetSetLayout(int handle, PipelineType type)
+		{
+			return m_Layout[{handle, type}];
+		}
+		std::pair<float, float> GetViewportSize() const { return { m_ViewportWidth,m_ViewportHeight }; }
+		vk::PolygonMode GetPolygonMode() const { return m_PolygoneMode; }
 	private:
 		void CreateInstance();
 		void CreateDebugMessenger();
@@ -174,8 +164,6 @@ namespace Voidstar
 		void CreateFramebuffers();
 		void CreateSyncObjects();
 		void CreateMSAAFrame();
-		void UpdateBuffer();
-		void UpdateTexture();
 		void RecordCommandBuffer(uint32_t imageIndex, vk::RenderPass& renderPass, vk::Pipeline& pipeline, vk::PipelineLayout& pipelineLayout, int instances);
 		void UpdateUniformBuffer(uint32_t imageIndex);
 		void RecreateSwapchain();
@@ -183,16 +171,9 @@ namespace Voidstar
 		void AllocateSets();
 		void CreateLayouts();
 		void CleanUpLayouts();
-		template<typename T>
-		T GetSet(int handle, PipelineType type)
-		{
-			return std::get<T>(m_Sets[{handle, type}]);;
-		}
+		
 
-		DescriptorSetLayout* GetSetLayout(int handle, PipelineType type)
-		{
-			return m_Layout[{handle, type}];
-		}
+		
 	private:
 		Voidstar::Instance* m_Instance;
 		int m_ViewportWidth, m_ViewportHeight;
@@ -221,24 +202,24 @@ namespace Voidstar
 		int m_TexDesc = 0;
 		int m_Compute = 0;
 		vk::DescriptorSet m_DescriptorSetClouds;
+		vk::DescriptorSet m_DescriptorSetSky;
+		std::vector<vk::DescriptorSet> m_DescriptorSets;
+		vk::DescriptorSet m_DescriptorSetTex;
+		vk::DescriptorSet m_DescriptorSetSelected;
 
 		// can be in one buffer?
 		std::vector<Buffer*> m_UniformBuffers;
-		std::vector<CommandBuffer> m_RenderCommandBuffer, m_TransferCommandBuffer;
+		std::vector<CommandBuffer> m_RenderCommandBuffer, m_TransferCommandBuffer, m_ComputeCommandBuffer;
 		CommandBuffer m_TracyCommandBuffer;
 		vk::CommandPool m_FrameCommandPool;
 
 		std::vector<void*> uniformBuffersMapped;
 		
-		vk::DescriptorSet m_DescriptorSetSky;
 
 
-		std::vector<vk::DescriptorSet> m_DescriptorSets;
 		UPtr<Buffer> m_ShaderStorageBuffer;
 		vk::CommandPool m_TracyCommandPool;
-		std::vector<CommandBuffer> m_ComputeCommandBuffer;
 
-		vk::DescriptorSet m_DescriptorSetTex;
 		//debug callback
 		vk::DebugUtilsMessengerEXT m_DebugMessenger;
 		//dynamic instance dispatcher
@@ -255,7 +236,6 @@ namespace Voidstar
 
 
 		UPtr<Pipeline> m_ComputePipeline;
-		vk::DescriptorSet m_DescriptorSetSelected;
 		size_t nextPoint = 0;
 
 
@@ -271,7 +251,6 @@ namespace Voidstar
 
 		SPtr<Window> m_Window;
 
-		RenderPrimitive m_RenderPrimitive = RenderPrimitive::Plane;
 		vk::PolygonMode m_PolygoneMode = vk::PolygonMode::eFill;
 
 

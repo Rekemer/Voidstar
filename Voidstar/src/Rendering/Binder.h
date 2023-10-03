@@ -2,7 +2,7 @@
 #include"../Prereq.h"
 #include"BinderHelp.h"
 #include"Renderer.h"
-
+#include "Initializers.h"
 namespace Voidstar
 {
 	template <PipelineType v>

@@ -3,6 +3,13 @@
 #include "../Prereq.h"
 namespace Voidstar
 {
+
+	template<typename T>
+	const uint64_t SizeOfBuffer(const uint64_t bufferSize, const T& bufferElement)
+	{
+		return bufferSize * sizeof(bufferElement);
+	}
+
 	class Device;
 	struct BufferInputChunk 
 	{

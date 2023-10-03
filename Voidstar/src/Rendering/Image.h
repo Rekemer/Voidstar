@@ -40,6 +40,9 @@ namespace Voidstar
 		{
 			return m_Format;
 		}
+
+		vk::ImageView& GetImageView() { return m_ImageView; }
+		vk::Sampler&  GetSampler() { return m_Sampler; }
 		void SetFormat(vk::Format format)
 		{
 			m_Format = format;

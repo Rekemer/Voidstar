@@ -9,7 +9,7 @@ namespace Voidstar
 	{
 	public:
 		Application(std::string appName,size_t screenWidth, size_t screenHeight);
-		~Application();
+		virtual ~Application();
 		void Run();
 		std::unique_ptr<Camera>& GetCamera() { return m_Camera; }
 		virtual void Execute() {};

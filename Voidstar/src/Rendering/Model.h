@@ -3,10 +3,11 @@
 #include "Vertex.h"
 #include "vulkan/vulkan.hpp"
 #include "../Prereq.h"
+#include "IndexBuffer.h"
 namespace Voidstar
 {
 	class Buffer;
-	typedef uint32_t IndexType;
+	
 	class Model
 	{
 	public:

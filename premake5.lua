@@ -19,8 +19,9 @@ workspace "Voidstar"
 	}
 
 	outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
-
-
+	VULKAN_HEADER = os.getenv("VULKAN_SDK") .. "/Include"
+	GLM_HEADERS = "%{wks.solution}/Dependencies/glm/glm"
+	TRACY_HEADERS =  "%{wks.solution}/Dependencies/Tracy/public"
 	
 	include "Voidstar"
 	

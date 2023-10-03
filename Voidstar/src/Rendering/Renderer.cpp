@@ -34,7 +34,9 @@
 #include <random>
 #include "Initializers.h"
 #include "input.h"
-#include "Binder.h"
+#include  "Binder.h"
+#include  "Generation.h"
+
 
 
 
@@ -59,12 +61,7 @@ namespace Voidstar
 
 	TracyVkCtx ctx;
 	vk::ShaderModule CreateModule(std::string filename, vk::Device device);
-	const uint32_t MAX_POINTS = 20;
-	std::string BASE_SHADER_PATH = "../Shaders/";
-	std::string BASE_RES_PATH = "res";
-	//const std::string SPIRV_COMPILER_PATH = "C:/VulkanSDK/1.3.216.0/Bin/glslc.exe";
-	const std::string SPIRV_COMPILER_PATH = "C:/VulkanSDK/1.3.216.0/Bin/glslangvalidator.exe";
-	std::string BASE_SPIRV_OUTPUT = BASE_SHADER_PATH + "Binary/";
+	
 #define INSTANCE_COUNT 4096
 #define ZEROPOS 1
 #define	IMGUI_ENABLED 1
@@ -165,11 +162,7 @@ namespace Voidstar
 	}
 
 
-	template<typename T>
-	const uint64_t SizeOfBuffer(const uint64_t bufferSize, const T& bufferElement)
-	{
-		return bufferSize * sizeof(bufferElement);
-	}
+	
 	std::string GetFileNameWithoutExtension(const std::string& filepath)
 	{
 		size_t extensionIndex = filepath.find_last_of('.');
@@ -322,128 +315,8 @@ namespace Voidstar
 	}
 
 
-	void SetIndexForCorners(std::vector<Vertex>& plane, glm::vec2 uv)
-	{
+	
 
-	}
-	std::vector<Vertex> GenerateSphere(float radius, int rings, int sectors, std::vector<IndexType>& indices)
-	{
-		std::vector<Vertex> vertices;
-		float const R = 1.0f / static_cast<float>(rings - 1);
-		float const S = 1.0f / static_cast<float>(sectors - 1);
-		{
-
-			int r, s;
-			float pi = 3.14159;
-			for (r = 0; r < rings; ++r) {
-				for (s = 0; s < sectors; ++s) {
-					float const y = glm::sin(-pi * 2 + pi * r * R);
-					float const x = glm::cos(2 * pi * s * S) * glm::sin(pi * r * R);
-					float const z = glm::sin(2 * pi * s * S) * glm::sin(pi * r * R);
-
-					Vertex vertex;
-					vertex.x = x * radius;
-					vertex.y = y * radius;
-					vertex.z = z * radius;
-
-					vertices.push_back(vertex);
-				}
-			}
-		}
-
-		{
-			int r, s;
-
-			for (r = 0; r < rings - 1; ++r) {
-				for (s = 0; s < sectors - 1; ++s) {
-					int first = r * sectors + s;
-					int second = (r + 1) * sectors + s;
-					int third = (r + 1) * sectors + (s + 1);
-					int fourth = r * sectors + (s + 1);
-
-					indices.push_back(first);
-					indices.push_back(second);
-					indices.push_back(third);
-
-					indices.push_back(first);
-					indices.push_back(third);
-					indices.push_back(fourth);
-				}
-			}
-		}
-
-
-
-		return vertices;
-
-	}
-	std::vector<Vertex> GeneratePlane(float detail, std::vector<IndexType>& indices)
-	{
-		std::vector<Vertex> vertices = {};
-
-		int numDivisions = static_cast<int>(detail);
-		float stepSize = 1.0f / numDivisions;
-
-		for (int i = 0; i <= numDivisions; ++i)
-		{
-			for (int j = 0; j <= numDivisions; ++j)
-			{
-				Vertex vertex;
-
-				// Calculate vertex position
-				vertex.x = i * stepSize - 0.5f;
-				vertex.y = 0.0;
-				vertex.z = j * stepSize - 0.5f;
-
-				//// Calculate vertex normal
-				//vertex.nx = 0.0f;
-				//vertex.ny = 1.0f;
-				//vertex.nz = 0.0f;
-
-				// Calculate texture coordinates
-				vertex.u = static_cast<float>(i) / numDivisions;
-				vertex.v = static_cast<float>(j) / numDivisions;
-
-				// Add the vertex to the vector
-				vertices.push_back(vertex);
-			}
-		}
-		// Generate indices for the plane
-		for (int i = 0; i < numDivisions; ++i)
-		{
-			for (int j = 0; j < numDivisions; ++j)
-			{
-				int amountOfRowVerticies = (numDivisions + 1);
-				// Calculate indices for the current quad
-				unsigned int topLeft = i * amountOfRowVerticies + j;
-				unsigned int topRight = topLeft + 1;
-				unsigned int bottomLeft = topLeft + amountOfRowVerticies;
-				unsigned int bottomRight = bottomLeft + 1;
-				//unsigned int bottomRight = topRight + amountOfRowVerticies-1;
-				//unsigned int bottomLeft = topLeft + amountOfRowVerticies+1;
-#define TRIANGLE 1
-#if TRIANGLE
-	// Add the indices to the vector
-				indices.push_back(topLeft);
-				indices.push_back(bottomLeft);
-				indices.push_back(topRight);
-
-				indices.push_back(topRight);
-				indices.push_back(bottomLeft);
-				indices.push_back(bottomRight);
-#else
-// patch
-				indices.push_back(topLeft);
-				indices.push_back(topRight);
-				indices.push_back(bottomRight);
-				indices.push_back(bottomLeft);
-#endif
-
-			}
-		}
-
-		return vertices;
-	}
 
 
 	std::string InitFilePath()
@@ -551,15 +424,25 @@ namespace Voidstar
 		m_Swapchain = Swapchain::Create(support);
 		
 
-//
+		std::vector<vk::DescriptorPoolSize> pool_sizes =
+		{
+			{ vk::DescriptorType::eCombinedImageSampler, 10 },
+			{ vk::DescriptorType::eStorageImage, 10 },
+			{ vk::DescriptorType::eStorageBuffer, 10 },
+			{ vk::DescriptorType::eInputAttachment, 10 },
+			{ vk::DescriptorType::eUniformBuffer, 10 },
+		};
+
+		m_UniversalPool = DescriptorPool::Create(pool_sizes, 10);
 		
 		 
 	
 
 		// create uniform buffers for each frame
 	
-		
-		auto framesAmount = m_Swapchain->m_SwapchainFrames.size();
+
+		/*
+		* auto framesAmount = m_Swapchain->m_SwapchainFrames.size();
 		auto binderRender = Binder<RENDER>();
 		m_BaseDesc = binderRender.BeginBind(3);
 		binderRender.Bind( 0, 1, vk::DescriptorType::eUniformBuffer, vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eTessellationControl
@@ -589,16 +472,7 @@ namespace Voidstar
 		}
 
 
-		std::vector<vk::DescriptorPoolSize> pool_sizes = 
-		{
-			{ vk::DescriptorType::eCombinedImageSampler, 10 },
-			{ vk::DescriptorType::eStorageImage, 10 },
-			{ vk::DescriptorType::eStorageBuffer, 10 },
-			{ vk::DescriptorType::eInputAttachment, 10 },
-			{ vk::DescriptorType::eUniformBuffer, 10 },
-		};
 		
-		m_UniversalPool = DescriptorPool::Create(pool_sizes,10);
 
 
 
@@ -614,6 +488,9 @@ namespace Voidstar
 		m_RenderCommandBuffer = CommandBuffer::CreateBuffers(m_FrameCommandPool, vk::CommandBufferLevel::ePrimary, 3);
 		m_TransferCommandBuffer = CommandBuffer::CreateBuffers(m_FrameCommandPool, vk::CommandBufferLevel::ePrimary, 3);
 		m_ComputeCommandBuffer = CommandBuffer::CreateBuffers(m_FrameCommandPool, vk::CommandBufferLevel::ePrimary, 3);
+		*/
+		
+		
 
 		CreateSyncObjects();
 
@@ -624,7 +501,8 @@ namespace Voidstar
 
 
 
-		std::vector<IndexType> indices;
+	
+		/*	std::vector<IndexType> indices;
 		auto vertices = GeneratePlane(1, indices);
 		auto indexSize = SizeOfBuffer(indices.size(),indices[0]);
 		{
@@ -665,7 +543,7 @@ namespace Voidstar
 		m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_ModelBuffer.get(), (void*)vertices.data(), vertexSize);
 		m_TransferCommandBuffer[0].EndTransfering();
 		m_TransferCommandBuffer[0].SubmitSingle();
-
+		*/
 
 			
 
@@ -675,44 +553,33 @@ namespace Voidstar
 
 		CreateMSAAFrame();
 
+/*
 
 		{
-
-			
-
-
-
-
-
-
-			
 			m_TexDesc = binderRender.BeginBind();
 			binderRender.Bind( 0, 1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment);
 			binderRender.Bind( 1, 1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment);
-
-
-			
-			
 		}
 
 
-		
+
 		auto binderCompute = Binder<COMPUTE>();
 		m_Compute = binderCompute.BeginBind();
 		binderCompute.Bind( 0, 1, vk::DescriptorType::eStorageImage, vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute);
 		binderCompute.Bind( 1, 1, vk::DescriptorType::eStorageBuffer,  vk::ShaderStageFlagBits::eCompute);
 		binderCompute.Bind( 2, 1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eCompute);
-		
-		
+
+
 		{
 			BufferInputChunk info;
 			info.size = sizeof(glm::vec2) * MAX_POINTS;
 			info.usage = vk::BufferUsageFlagBits::eStorageBuffer |
 				vk::BufferUsageFlagBits::eTransferDst;
-			info.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | 
+			info.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible |
 				vk::MemoryPropertyFlagBits::eHostCoherent;
 			m_ShaderStorageBuffer = CreateUPtr<Buffer>(info);
 		}
+*/
 		
 		
 
@@ -732,7 +599,7 @@ namespace Voidstar
 		
 
 
-		m_ClickPoints.resize(MAX_POINTS, glm::vec2(-1,-1));
+		/*m_ClickPoints.resize(MAX_POINTS, glm::vec2(-1,-1));
 		
 
 
@@ -745,9 +612,9 @@ namespace Voidstar
 		for (size_t i = 0; i < framesAmount; i++)
 		{
 			m_Device->UpdateDescriptorSet(m_DescriptorSets[i], 0, 1, *m_UniformBuffers[i], vk::DescriptorType::eUniformBuffer);
-		}
+		}*/
 
-		vk::DescriptorImageInfo imageDescriptor1;
+		/*vk::DescriptorImageInfo imageDescriptor1;
 		imageDescriptor1.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
 		imageDescriptor1.imageView = m_Image->m_ImageView;
 		imageDescriptor1.sampler = m_Image->m_Sampler;
@@ -758,11 +625,11 @@ namespace Voidstar
 		
 		
 		auto m_DescriptorSetLayout = GetSetLayout(0, PipelineType::RENDER);
-		auto m_DescriptorSetLayoutSelected = GetSetLayout(0, PipelineType::COMPUTE);
 		auto m_DescriptorSetLayoutTex = GetSetLayout(1, PipelineType::RENDER);
+		auto m_DescriptorSetLayoutSelected = GetSetLayout(0, PipelineType::COMPUTE);
 		std::vector<vk::DescriptorSetLayout>layouts = { m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutSelected->GetLayout() };
 		m_ComputePipeline = Pipeline::CreateComputePipeline(BASE_SPIRV_OUTPUT + "SelectedTex.spvCmp", layouts);
-		UpdateTexture();
+		UpdateTexture();*/
 
 
 
@@ -781,7 +648,7 @@ namespace Voidstar
 
 
 
-		CreatePipeline();
+		//CreatePipeline();
 		CreateFramebuffers();
 
 
@@ -1139,7 +1006,7 @@ namespace Voidstar
 		static Renderer renderer ;
 		return &renderer;
 	}
-	void Renderer::UpdateTexture()
+	/*void Renderer::UpdateTexture()
 	{
 
 		auto device = m_Device->GetDevice();
@@ -1173,8 +1040,8 @@ namespace Voidstar
 
 
 		device.waitIdle();
-	}
-	void Renderer::UpdateBuffer()
+	}*/
+	/*void Renderer::UpdateBuffer()
 	{
 		auto bufferSize = MAX_POINTS * sizeof(glm::vec2);
 		{
@@ -1191,7 +1058,7 @@ namespace Voidstar
 
 			m_Device->UpdateDescriptorSet(m_DescriptorSetSelected, 1, 1, *m_ShaderStorageBuffer, vk::DescriptorType::eStorageBuffer);
 		}
-	}
+	}*/
 	void Renderer::Render(float deltaTime)
 	{
 		exeTime += deltaTime;
@@ -1380,17 +1247,17 @@ namespace Voidstar
 				//std::cout <<  "local pos " << localPosition.x << " " << localPosition.y << " " << localPosition.z << std::endl;
 				//std::cout << "ray direction "  << rayDir.x << " " << rayDir.y << " " << rayDir.z << std::endl;
 				// update vector of positions
-				m_ClickPoints[nextPoint++] = (uvSpace);
-				nextPoint %= MAX_POINTS;
+				//m_ClickPoints[nextPoint++] = (uvSpace);
+				//nextPoint %= MAX_POINTS;
 
 
-				UpdateBuffer();
+				//UpdateBuffer();
 				
 
 
 			}
 
-				UpdateTexture();
+				//UpdateTexture();
 
 			vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
 			vk::SubmitInfo submitInfo = {};
@@ -1668,7 +1535,7 @@ namespace Voidstar
 				m_ClickPoints[i] = { -1,-1 };
 			}
 			nextPoint = 0;
-			UpdateBuffer();
+			//UpdateBuffer();
 
 		}
 

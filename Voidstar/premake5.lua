@@ -16,13 +16,13 @@ project "Voidstar"
 	pchsource "src/Prereq.cpp"
     includedirs
     {
-        os.getenv("VULKAN_SDK") .. "/Include",
+        VULKAN_HEADER,
         "%{wks.location}/Dependencies/spdlog/include",
         "%{wks.location}/Dependencies/GLFW/include",
-        "%{wks.location}/Dependencies/glm/glm",
+        "../"..GLM_HEADERS,
         "%{wks.location}/Dependencies/spdlog/include/spdlog",
         "%{wks.location}/Dependencies/",
-        "%{wks.location}/Dependencies/Tracy/public",
+        "../"..TRACY_HEADERS,
         "%{wks.location}/Dependencies/ImGui",
         "%{prj.location}/src"
         

@@ -12,9 +12,11 @@ project "Sandbox"
     includedirs
     {
         "src",
-        "%{wks.solution}/Dependencies/glm/glm",
+        "../"..GLM_HEADERS,
         "%{wks.solution}/Dependencies/ImGui",
         "../Voidstar/src",
+        VULKAN_HEADER,
+        "../" .. TRACY_HEADERS
     }
 
     links { "Voidstar",  }
