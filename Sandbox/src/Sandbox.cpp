@@ -58,7 +58,7 @@ public:
 
 			for (size_t i = 0; i < framesAmount; i++)
 			{
-				m_UniformBuffers[i] = new Buffer(inputBuffer);
+				m_UniformBuffers[i] = CreateUPtr<Buffer>(inputBuffer);
 				uniformBuffersMapped[i] = m_Device->GetDevice().mapMemory(m_UniformBuffers[i]->GetMemory(), 0, bufferSize);
 			}
 
@@ -124,7 +124,7 @@ public:
 
 		auto commandBufferInit = [this]()
 		{
-			auto m_FrameCommandPool = Renderer::Instance()->GetCommandPoolManager()->GetFreePool();
+			m_FrameCommandPool = Renderer::Instance()->GetCommandPoolManager()->GetFreePool();
 			m_RenderCommandBuffer = CommandBuffer::CreateBuffers(m_FrameCommandPool, vk::CommandBufferLevel::ePrimary, 3);
 			m_TransferCommandBuffer = CommandBuffer::CreateBuffers(m_FrameCommandPool, vk::CommandBufferLevel::ePrimary, 3);
 			m_ComputeCommandBuffer = CommandBuffer::CreateBuffers(m_FrameCommandPool, vk::CommandBufferLevel::ePrimary, 3);
@@ -295,11 +295,13 @@ public:
 				m_GraphicsPipeline = Pipeline::CreateGraphicsPipeline(specs, vk::PrimitiveTopology::eTriangleList, swapchain.GetDepthFormat(), m_RenderPass, 0, true, Renderer::Instance()->GetPolygonMode());
 
 			}
-
+			UpdateTexture(0);
 		};
 
-		auto submitRenderCommands = [this](size_t frameIndex)
+		auto submitRenderCommands = [this](size_t frameIndex,Camera& camera)
 		{
+
+			UpdateUniformBuffer(frameIndex, camera);
 			auto& renderCommandBuffer = m_RenderCommandBuffer[frameIndex];
 			{
 				ZoneScopedN("Sumbit render commands");
@@ -376,7 +378,7 @@ public:
 				TracyVkCollect(ctx, commandBuffer);
 				commandBuffer.end();
 				renderCommandBuffer.EndRendering();
-
+				return renderCommandBuffer;
 			}
 		};
 		auto postRenderCommands = [this](size_t frameIndex, Voidstar::Camera& camera)
@@ -467,10 +469,86 @@ public:
 
 			}
 
-			UpdateTexture();
+			UpdateTexture(frameIndex);
 		};
-		
 
+
+		// can be better
+		auto createFramebuffer = [this]()
+		{
+			auto& swapchain = Renderer::Instance()->GetSwapchain();
+			auto& frames = swapchain.GetFrames();
+			auto swapChainExtent = swapchain.GetExtent();
+			auto msaaImageView = swapchain.GetMSAAImageView();
+			auto device = RenderContext::GetDevice();
+			for (int i = 0; i < frames.size(); ++i) {
+
+				std::vector<vk::ImageView> attachments = {
+					msaaImageView,
+					frames[i].imageDepthView,
+					frames[i].imageView,
+				};
+
+				vk::FramebufferCreateInfo framebufferInfo;
+				framebufferInfo.flags = vk::FramebufferCreateFlags();
+				framebufferInfo.renderPass = m_RenderPass;
+				framebufferInfo.attachmentCount = attachments.size();
+				framebufferInfo.pAttachments = attachments.data();
+				framebufferInfo.width = swapChainExtent.width;
+				framebufferInfo.height = swapChainExtent.height;
+				framebufferInfo.layers = 1;
+
+				try
+				{
+					frames[i].framebuffer = device->GetDevice().createFramebuffer(framebufferInfo);
+
+				}
+				catch (vk::SystemError err)
+				{
+					
+					//Log::GetLog()->error("Failed to create framebuffer for frame{0} ", i);
+					assert(false);
+				}
+
+			}
+		};
+
+		auto cleanup = [this]()
+		{
+
+			for (int i = 0; i < m_ComputeCommandBuffer.size(); i++)
+			{
+				m_RenderCommandBuffer[i].Free();
+				m_ComputeCommandBuffer[i].Free();
+				m_TransferCommandBuffer[i].Free();
+			};
+
+			Renderer::Instance()->GetCommandPoolManager()->FreePool(m_FrameCommandPool);
+
+			auto device = RenderContext::GetDevice()->GetDevice();
+	
+
+			auto& swapchain = Renderer::Instance()->GetSwapchain();
+
+			device.destroyRenderPass(m_RenderPass);
+			
+			
+		};
+		Callables callables;
+		callables.bindingsInit = bindingsInit;
+		callables.bufferInit = bufferInit;
+		callables.commandBufferInit = commandBufferInit;
+		callables.loadTextures = loadTextures;
+		callables.bindResources = bindResources;
+		callables.createPipelines = createPipelines;
+		callables.createFramebuffer = createFramebuffer;
+		callables.submitRenderCommands = submitRenderCommands;
+		callables.postRenderCommands= postRenderCommands;
+		callables.cleanUp= cleanup;
+
+
+		Renderer::Instance()->SetCallables(callables);
+		Renderer::Instance()->UserInit();
 		
 	}
 
@@ -490,9 +568,71 @@ public:
 			device.UpdateDescriptorSet(m_DescriptorSetSelected, 1, 1, *m_ShaderStorageBuffer, vk::DescriptorType::eStorageBuffer);
 	}
 
-	void UpdateTexture()
+	void UpdateUniformBuffer(uint32_t imageIndex,Camera& camera)
 	{
+		UniformBufferObject ubo{};
 
+		auto cameraView = camera.GetView();
+		auto cameraProj = camera.GetProj();
+		//glm::vec3 eye = { 1.0f, 0.0f, 5.0f };
+		//glm::vec3 center = { 0.5f, -1.0f, 0.0f };
+		//glm::vec3 up = { 0.0f, 0.0f, 1.0f };
+		//cameraView = glm::lookAt(eye,center,up);
+		//ubo.model = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		//ubo.view = glm::lookAt(glm::vec3(-2.0f, 0.0f, 4.0f), glm::vec3(0.5f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f));
+		////ubo.proj = glm::perspective(glm::radians(45.0f), extent.width / (float)extent.height, 0.0001f, 10.0f);
+		ubo.playerPos = glm::vec4{ camera.GetPosition(),0};
+		ubo.view = cameraView;
+		ubo.proj = cameraProj;
+		ubo.time = GetExeTime();
+		//auto model = glm::mat4(1.f);
+		//glm::mat4 blenderToLH = glm::mat4(1.0f);
+		//blenderToLH[2][2] = -1.0f;  // Flip Z-axis
+		//blenderToLH[3][2] = 1.0f;
+		////model = blenderToLH * model;
+		//// blender: z  is up, y is forward
+		//model = glm::rotate(model,glm::radians(-90.f) , glm::vec3(1, 0, 0));
+		//model = glm::rotate(model,glm::radians(90.f) , glm::vec3(0, 0, 1));
+		//ubo.model = model;
+		//ubo.proj[1][1] *= -1,
+		memcpy(uniformBuffersMapped[imageIndex], &ubo, sizeof(ubo));
+
+	}
+
+	void UpdateTexture(size_t frameIndex)
+	{
+		auto device = RenderContext::GetDevice()->GetDevice();
+		auto currentFrame = frameIndex;
+		if (m_ImageSelected->GetLayout() != vk::ImageLayout::eGeneral)
+		{
+			auto cmdBuffer = m_ComputeCommandBuffer[currentFrame].BeginTransfering();
+
+
+			m_ComputeCommandBuffer[currentFrame].ChangeImageLayout(m_ImageSelected.get(), vk::ImageLayout::eShaderReadOnlyOptimal, vk::ImageLayout::eGeneral);
+			m_ComputeCommandBuffer[currentFrame].EndTransfering();
+			m_ComputeCommandBuffer[currentFrame].SubmitSingle();
+
+		}
+		auto cmdBuffer = m_ComputeCommandBuffer[currentFrame].BeginTransfering();
+
+
+
+
+		vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_ComputePipeline->GetPipeline());
+		cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_ComputePipeline->GetLayout(), 0, 1, &m_DescriptorSets[currentFrame], 0, 0);
+		cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_ComputePipeline->GetLayout(), 1, 1, &m_DescriptorSetSelected, 0, 0);
+		float invocations = 256;
+		int localSize = 8;
+
+
+		vkCmdDispatch(cmdBuffer, invocations / localSize, invocations / localSize, 1);
+
+		m_ComputeCommandBuffer[currentFrame].ChangeImageLayout(m_ImageSelected.get(), vk::ImageLayout::eGeneral, vk::ImageLayout::eShaderReadOnlyOptimal);
+		m_ComputeCommandBuffer[currentFrame].EndTransfering();
+		m_ComputeCommandBuffer[currentFrame].SubmitSingle();
+
+
+		device.waitIdle();
 	}
 private:
 
@@ -506,7 +646,7 @@ private:
 	vk::DescriptorSet m_DescriptorSetSelected;
 		
 
-	std::vector<Buffer*> m_UniformBuffers;
+	std::vector<UPtr<Buffer>> m_UniformBuffers;
 	std::vector<void*> uniformBuffersMapped;
 	UPtr<IndexBuffer> m_IndexBuffer;
 	UPtr<Buffer> m_ModelBuffer{ nullptr };
@@ -518,7 +658,7 @@ private:
 
 	std::vector<CommandBuffer> m_RenderCommandBuffer,
 		m_TransferCommandBuffer, m_ComputeCommandBuffer;
-
+	vk::CommandPool m_FrameCommandPool;
 
 	
 

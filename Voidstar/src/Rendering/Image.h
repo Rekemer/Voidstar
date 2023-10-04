@@ -21,6 +21,8 @@ namespace Voidstar
 	class Image
 	{
 	public:
+		Image() = default;
+		Image(const Image& image) = delete;
 		// create image
 		static VkImageView CreateImageView(vk::Image& image, vk::Format format, vk::ImageAspectFlags aspect, vk::ImageViewType viewType =  vk::ImageViewType::e2D, int mipmap = 1, int layers = 1);
 
@@ -41,8 +43,9 @@ namespace Voidstar
 			return m_Format;
 		}
 
-		vk::ImageView& GetImageView() { return m_ImageView; }
-		vk::Sampler&  GetSampler() { return m_Sampler; }
+		vk::ImageView GetImageView() { return m_ImageView; }
+		vk::Sampler  GetSampler() { return m_Sampler; }
+		vk::ImageLayout GetLayout() { return m_ImageLayout; }
 		void SetFormat(vk::Format format)
 		{
 			m_Format = format;

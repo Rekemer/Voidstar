@@ -31,10 +31,19 @@ namespace Voidstar
 		size_t GetFrameAmount() const { return m_SwapchainFrames.size(); }
 		vk::Framebuffer GetFrameBuffer(size_t frameIndex) const 
 		{
-			assert(frameIndex < (GetFrameAmount() - 1)); 
+			assert(frameIndex < (GetFrameAmount())); 
 			return m_SwapchainFrames[frameIndex].framebuffer;
 
 		}
+
+		 std::vector<SwapChainFrame>& GetFrames() 
+		{
+			return m_SwapchainFrames;
+		}
+
+		void CreateMSAAFrame();
+		vk::ImageView GetMSAAImageView() const { return m_MsaaImageView; }
+		void CleanUp();
 		~Swapchain();
 		
 	private:
@@ -44,5 +53,9 @@ namespace Voidstar
 		vk::Format m_SwapchainFormat;
 		vk::Extent2D m_SwapchainExtent;
 	
+		vk::Image m_MsaaImage;
+		vk::DeviceMemory m_MsaaImageMemory;
+		vk::ImageView m_MsaaImageView;
+
 	};
 }

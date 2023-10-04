@@ -101,10 +101,16 @@ namespace Voidstar
 		SPtr<Buffer> buffer =CreateSPtr<Buffer>(inputBuffer);
 		return buffer;
 	}
-	Buffer::~Buffer()
+
+	void Buffer::Free()
 	{
 		auto& device = RenderContext::GetDevice()->GetDevice();
 		device.destroyBuffer(m_Buffer);
 		device.freeMemory(m_BufferMemory);
+
+	}
+	Buffer::~Buffer()
+	{
+		Free();
 	}
 }

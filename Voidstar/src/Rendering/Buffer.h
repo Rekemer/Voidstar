@@ -22,12 +22,13 @@ namespace Voidstar
 	{
 	public:
 		Buffer(const BufferInputChunk& input);
+		Buffer(const Buffer& buffer) = delete;
 		static SPtr<Buffer> CreateStagingBuffer(size_t dataSize);
 		void AllocateBufferMemory(const BufferInputChunk& input, Device* device);
 		void SetData(void* data);
 		vk::Buffer& GetBuffer() { return m_Buffer; }
 		vk::DeviceMemory& GetMemory() { return m_BufferMemory; }
-		
+		void Free();
 		~Buffer();	
 	private:
 		friend class Renderer;

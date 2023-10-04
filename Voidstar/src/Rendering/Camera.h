@@ -11,7 +11,7 @@ namespace Voidstar
 		void Update(float deltaTime);
 		inline glm::mat4& GetView() { return m_View; }
 		inline glm::mat4& GetProj() { return m_Proj; }
-
+		glm::vec3 GetPosition() { return m_Position; }
 	private:
 		void UpdateView();
 		void UpdateProj(float width,float height);

@@ -23,7 +23,7 @@ namespace Voidstar
 	}
 	Application::~Application()
 	{
-		
+		Renderer::Instance()->Shutdown();
 		
 	}
 	void Application::Run()
@@ -38,8 +38,9 @@ namespace Voidstar
 			}
 			float deltaTime = 0;
 			m_Window->Update(deltaTime);
+			m_ExeTime += deltaTime;
 			m_Camera->Update(deltaTime);
-			Renderer::Instance()->Render(deltaTime);
+			Renderer::Instance()->Render(deltaTime,*m_Camera);
 		}
 	}
 }

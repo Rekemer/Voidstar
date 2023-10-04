@@ -66,7 +66,6 @@ namespace Voidstar
 #define ZEROPOS 1
 #define	IMGUI_ENABLED 1
 	size_t currentFrame = 0;
-	static float exeTime = 24;
 	// noise
 	const float noiseTextureWidth = 256.f;
 	const float noiseTextureHeight = 256.f;
@@ -390,6 +389,7 @@ namespace Voidstar
 		}
 	}
 
+
 	void Renderer::Init(size_t screenWidth, size_t screenHeight, std::shared_ptr<Window> window, Application* app) 
 		
 	{
@@ -434,222 +434,10 @@ namespace Voidstar
 		};
 
 		m_UniversalPool = DescriptorPool::Create(pool_sizes, 10);
-		
-		 
-	
-
-		// create uniform buffers for each frame
-	
-
-		/*
-		* auto framesAmount = m_Swapchain->m_SwapchainFrames.size();
-		auto binderRender = Binder<RENDER>();
-		m_BaseDesc = binderRender.BeginBind(3);
-		binderRender.Bind( 0, 1, vk::DescriptorType::eUniformBuffer, vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eTessellationControl
-			| vk::ShaderStageFlagBits::eTessellationEvaluation | vk::ShaderStageFlagBits::eFragment);
-		
-
-		
-
-	
-		
-
-
-		auto bufferSize = sizeof(UniformBufferObject);
-		m_UniformBuffers.resize(framesAmount);
-		uniformBuffersMapped.resize(framesAmount);
-
-
-		BufferInputChunk inputBuffer;
-		inputBuffer.size = bufferSize;
-		inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
-		inputBuffer.usage = vk::BufferUsageFlagBits::eUniformBuffer;
-
-		for (size_t i = 0; i < framesAmount; i++)
-		{
-			m_UniformBuffers[i] = new Buffer(inputBuffer);
-			uniformBuffersMapped[i] = m_Device->GetDevice().mapMemory(m_UniformBuffers[i]->GetMemory(), 0, bufferSize);
-		}
-
-
-		
-
-
-
-		
-		
-
-		
-
-
-
-
-		m_FrameCommandPool = m_CommandPoolManager->GetFreePool();
-		m_RenderCommandBuffer = CommandBuffer::CreateBuffers(m_FrameCommandPool, vk::CommandBufferLevel::ePrimary, 3);
-		m_TransferCommandBuffer = CommandBuffer::CreateBuffers(m_FrameCommandPool, vk::CommandBufferLevel::ePrimary, 3);
-		m_ComputeCommandBuffer = CommandBuffer::CreateBuffers(m_FrameCommandPool, vk::CommandBufferLevel::ePrimary, 3);
-		*/
-		
-		
 
 		CreateSyncObjects();
+		m_Swapchain->CreateMSAAFrame();
 
-
-
-
-
-
-
-
-	
-		/*	std::vector<IndexType> indices;
-		auto vertices = GeneratePlane(1, indices);
-		auto indexSize = SizeOfBuffer(indices.size(),indices[0]);
-		{
-			SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(indexSize);
-
-
-			{
-				BufferInputChunk inputBuffer;
-				inputBuffer.size = indexSize;
-				inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
-				inputBuffer.usage = vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst;
-				m_IndexBuffer = CreateUPtr<IndexBuffer>(inputBuffer, indices.size(), vk::IndexType::eUint32);
-
-			}
-
-			m_TransferCommandBuffer[0].BeginTransfering();
-			m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_IndexBuffer.get(), (void*)indices.data(), indexSize);
-			m_TransferCommandBuffer[0].EndTransfering();
-			m_TransferCommandBuffer[0].SubmitSingle();
-
-
-
-		}
-
-		auto vertexSize = SizeOfBuffer(vertices.size(), vertices[0]);
-		void* vertexData = const_cast<void*>(static_cast<const void*>(vertices.data()));
-		SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(vertexSize);
-		{
-			BufferInputChunk inputBuffer;
-			inputBuffer.size = vertexSize;
-			inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
-			inputBuffer.usage = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer;
-
-			m_ModelBuffer = CreateUPtr<Buffer>(inputBuffer);
-		}
-
-		m_TransferCommandBuffer[0].BeginTransfering();
-		m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_ModelBuffer.get(), (void*)vertices.data(), vertexSize);
-		m_TransferCommandBuffer[0].EndTransfering();
-		m_TransferCommandBuffer[0].SubmitSingle();
-		*/
-
-			
-
-
-			
-		
-
-		CreateMSAAFrame();
-
-/*
-
-		{
-			m_TexDesc = binderRender.BeginBind();
-			binderRender.Bind( 0, 1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment);
-			binderRender.Bind( 1, 1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment);
-		}
-
-
-
-		auto binderCompute = Binder<COMPUTE>();
-		m_Compute = binderCompute.BeginBind();
-		binderCompute.Bind( 0, 1, vk::DescriptorType::eStorageImage, vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute);
-		binderCompute.Bind( 1, 1, vk::DescriptorType::eStorageBuffer,  vk::ShaderStageFlagBits::eCompute);
-		binderCompute.Bind( 2, 1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eCompute);
-
-
-		{
-			BufferInputChunk info;
-			info.size = sizeof(glm::vec2) * MAX_POINTS;
-			info.usage = vk::BufferUsageFlagBits::eStorageBuffer |
-				vk::BufferUsageFlagBits::eTransferDst;
-			info.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible |
-				vk::MemoryPropertyFlagBits::eHostCoherent;
-			m_ShaderStorageBuffer = CreateUPtr<Buffer>(info);
-		}
-*/
-		
-		
-
-
-
-		m_ImageSelected = Image::CreateEmptyImage(noiseTextureWidth, noiseTextureHeight, vk::Format::eR8G8B8A8Snorm);
-		m_Image = Image::CreateImage(BASE_RES_PATH + "dos_2_noise.png");
-
-		vk::DescriptorImageInfo imageDescriptor;
-		imageDescriptor.imageLayout = vk::ImageLayout::eGeneral;
-		imageDescriptor.imageView = m_ImageSelected->m_ImageView;
-		imageDescriptor.sampler = m_ImageSelected->m_Sampler;
-
-		CreateLayouts();
-		AllocateSets();
-
-		
-
-
-		/*m_ClickPoints.resize(MAX_POINTS, glm::vec2(-1,-1));
-		
-
-
-
-		m_DescriptorSetSelected = GetSet<vk::DescriptorSet>( m_Compute, PipelineType::COMPUTE );
-		m_DescriptorSetTex = GetSet<vk::DescriptorSet>(m_TexDesc, PipelineType::RENDER);
-		UpdateBuffer();
-		auto bufferPerFrame = GetSet<std::vector<vk::DescriptorSet>>(m_BaseDesc, PipelineType::RENDER);
-		m_DescriptorSets = bufferPerFrame;
-		for (size_t i = 0; i < framesAmount; i++)
-		{
-			m_Device->UpdateDescriptorSet(m_DescriptorSets[i], 0, 1, *m_UniformBuffers[i], vk::DescriptorType::eUniformBuffer);
-		}*/
-
-		/*vk::DescriptorImageInfo imageDescriptor1;
-		imageDescriptor1.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-		imageDescriptor1.imageView = m_Image->m_ImageView;
-		imageDescriptor1.sampler = m_Image->m_Sampler;
-		m_Device->UpdateDescriptorSet(m_DescriptorSetSelected, 0,1, imageDescriptor, vk::DescriptorType::eStorageImage);
-		m_Device->UpdateDescriptorSet(m_DescriptorSetSelected, 2, 1, *m_Image, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
-		m_Device->UpdateDescriptorSet(m_DescriptorSetTex, 0, 1, *m_ImageSelected, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
-		m_Device->UpdateDescriptorSet(m_DescriptorSetTex, 1, 1, *m_Image, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
-		
-		
-		auto m_DescriptorSetLayout = GetSetLayout(0, PipelineType::RENDER);
-		auto m_DescriptorSetLayoutTex = GetSetLayout(1, PipelineType::RENDER);
-		auto m_DescriptorSetLayoutSelected = GetSetLayout(0, PipelineType::COMPUTE);
-		std::vector<vk::DescriptorSetLayout>layouts = { m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutSelected->GetLayout() };
-		m_ComputePipeline = Pipeline::CreateComputePipeline(BASE_SPIRV_OUTPUT + "SelectedTex.spvCmp", layouts);
-		UpdateTexture();*/
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-		//CreatePipeline();
-		CreateFramebuffers();
 
 
 		auto physDev = m_Device->GetDevicePhys();
@@ -849,6 +637,21 @@ namespace Voidstar
 
 
 	}
+
+
+	void Renderer::UserInit()
+	{
+		m_UserFunctions.bindingsInit();
+		CreateLayouts();
+		AllocateSets();
+		m_UserFunctions.commandBufferInit();
+		m_UserFunctions.bufferInit();
+		m_UserFunctions.loadTextures();
+		m_UserFunctions.bindResources();
+		m_UserFunctions.createPipelines();
+		m_UserFunctions.createFramebuffer();
+
+	}
 	void Renderer::CreateSyncObjects()
 	{	
 		vk::SemaphoreCreateInfo semaphoreInfo = {};
@@ -893,55 +696,8 @@ namespace Voidstar
 	
 	}
 
-	void Renderer::CreateMSAAFrame()
-	{
-		ImageSpecs specs;
-		auto extent = m_Swapchain->m_SwapchainExtent;
-		auto swapchainFormat = m_Swapchain-> m_SwapchainFormat;
-		specs.width = extent.width;
-		specs.height= extent.height;
-		specs.tiling = vk::ImageTiling::eOptimal;
-		specs.usage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransientAttachment;
-		specs.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
-		specs.format= swapchainFormat;
-		auto samples = RenderContext::GetDevice()->GetSamples();
-		m_MsaaImage = Image::CreateVKImage(specs,samples);
-		m_MsaaImageMemory = Image::CreateMemory(m_MsaaImage,specs);
-		m_MsaaImageView = Image::CreateImageView(m_MsaaImage,swapchainFormat,vk::ImageAspectFlagBits::eColor);
-	}
 
 
-	void Renderer::UpdateUniformBuffer(uint32_t imageIndex)
-	{
-		UniformBufferObject ubo{};
-		
-		auto cameraView = m_App->GetCamera()->GetView();
-		auto cameraProj = m_App->GetCamera()->GetProj();
-		//glm::vec3 eye = { 1.0f, 0.0f, 5.0f };
-		//glm::vec3 center = { 0.5f, -1.0f, 0.0f };
-		//glm::vec3 up = { 0.0f, 0.0f, 1.0f };
-		//cameraView = glm::lookAt(eye,center,up);
-		//ubo.model = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-		//ubo.view = glm::lookAt(glm::vec3(-2.0f, 0.0f, 4.0f), glm::vec3(0.5f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f));
-		////ubo.proj = glm::perspective(glm::radians(45.0f), extent.width / (float)extent.height, 0.0001f, 10.0f);
-		ubo.playerPos = glm::vec4{ m_App->GetCamera()->m_Position ,0};
-		ubo.view = cameraView;
-		ubo.proj = cameraProj;
-		ubo.time = exeTime;
-		//auto model = glm::mat4(1.f);
-		//glm::mat4 blenderToLH = glm::mat4(1.0f);
-		//blenderToLH[2][2] = -1.0f;  // Flip Z-axis
-		//blenderToLH[3][2] = 1.0f;
-		////model = blenderToLH * model;
-		//// blender: z  is up, y is forward
-		//model = glm::rotate(model,glm::radians(-90.f) , glm::vec3(1, 0, 0));
-		//model = glm::rotate(model,glm::radians(90.f) , glm::vec3(0, 0, 1));
-		//ubo.model = model;
-		auto extent = m_Swapchain->m_SwapchainExtent;
-		//ubo.proj[1][1] *= -1,
-		memcpy(uniformBuffersMapped[imageIndex], &ubo, sizeof(ubo));
-
-	}
 
 	void Renderer::RecreateSwapchain()
 	{
@@ -954,11 +710,8 @@ namespace Voidstar
 
 
 		m_Device->GetDevice().waitIdle();
-		m_Swapchain.reset();
+		m_Swapchain->CleanUp();
 
-		m_Device->GetDevice().freeMemory(m_MsaaImageMemory);
-		m_Device->GetDevice().destroyImage(m_MsaaImage);
-		m_Device->GetDevice().destroyImageView(m_MsaaImageView);
 
 		SwapChainSupportDetails support;
 		support.devcie = m_Device;
@@ -969,11 +722,6 @@ namespace Voidstar
 		support.viewportWidth = m_ViewportWidth;
 		support.viewportHeight = m_ViewportHeight;
 		m_Swapchain = Swapchain::Create(support);
-		CreateMSAAFrame();
-
-
-
-		CreateFramebuffers();
 		auto& camera = m_App->GetCamera();
 		camera->UpdateProj(m_ViewportWidth, m_ViewportHeight);
 	}
@@ -982,14 +730,54 @@ namespace Voidstar
 	{
 
 			
-			for (int i = 0; i < m_ComputeCommandBuffer.size();i++)
-			{
-				m_RenderCommandBuffer[i].Free();
-				m_ComputeCommandBuffer[i].Free();
-				m_TransferCommandBuffer[i].Free();
-			};
-			m_CommandPoolManager->FreePool(m_FrameCommandPool);
+			
+
+
+			auto device = m_Device->GetDevice();
+			device.waitIdle();
+
+			CleanUpImGui();
+
+
+			TracyVkDestroy(ctx)
+
 			m_CommandPoolManager->FreePool(m_TracyCommandPool);
+
+			m_UserFunctions.cleanUp();
+			m_Swapchain->CleanUp();
+
+
+			
+
+
+
+
+			m_UniversalPool.reset();
+			CleanUpLayouts();
+
+
+			m_Device->GetDevice().destroySemaphore(m_ImageAvailableSemaphore);
+			m_Device->GetDevice().destroySemaphore(m_RenderFinishedSemaphore);
+			m_Device->GetDevice().destroyFence(m_InFlightFence);
+
+			for (auto& semaphore : m_ComputeFinishedSemaphores)
+			{
+				m_Device->GetDevice().destroySemaphore(semaphore);
+			}
+			for (auto& fence : m_ComputeInFlightFences)
+			{
+				m_Device->GetDevice().destroyFence(fence);
+			}
+
+
+			m_CommandPoolManager->Release();
+			m_Device->GetDevice().destroy();
+
+			m_Instance->GetInstance().destroySurfaceKHR(m_Surface);
+			m_Instance->GetInstance().destroyDebugUtilsMessengerEXT(m_DebugMessenger, nullptr, m_Dldi);
+			m_Instance->GetInstance().destroy();
+
+
 		
 	}
 
@@ -1006,62 +794,10 @@ namespace Voidstar
 		static Renderer renderer ;
 		return &renderer;
 	}
-	/*void Renderer::UpdateTexture()
+	
+	void Renderer::Render(float deltaTime,Camera& camera)
 	{
-
-		auto device = m_Device->GetDevice();
-		if (m_ImageSelected->m_ImageLayout != vk::ImageLayout::eGeneral)
-		{
-			auto cmdBuffer = m_ComputeCommandBuffer[currentFrame].BeginTransfering();
-
-
-			m_ComputeCommandBuffer[currentFrame].ChangeImageLayout(m_ImageSelected.get(), vk::ImageLayout::eShaderReadOnlyOptimal, vk::ImageLayout::eGeneral);
-			m_ComputeCommandBuffer[currentFrame].EndTransfering();
-			m_ComputeCommandBuffer[currentFrame].SubmitSingle();
-
-		}
-		auto cmdBuffer = m_ComputeCommandBuffer[currentFrame].BeginTransfering();
-
-
-
-
-		vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_ComputePipeline->m_Pipeline);
-		cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_ComputePipeline->m_PipelineLayout, 0, 1, &m_DescriptorSets[currentFrame], 0, 0);
-		cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_ComputePipeline->m_PipelineLayout, 1, 1, &m_DescriptorSetSelected, 0, 0);
-		float invocations = 256;
-		int localSize = 8;
-
-
-		vkCmdDispatch(cmdBuffer, invocations / localSize, invocations / localSize, 1);
-
-		m_ComputeCommandBuffer[currentFrame].ChangeImageLayout(m_ImageSelected.get(), vk::ImageLayout::eGeneral, vk::ImageLayout::eShaderReadOnlyOptimal);
-		m_ComputeCommandBuffer[currentFrame].EndTransfering();
-		m_ComputeCommandBuffer[currentFrame].SubmitSingle();
-
-
-		device.waitIdle();
-	}*/
-	/*void Renderer::UpdateBuffer()
-	{
-		auto bufferSize = MAX_POINTS * sizeof(glm::vec2);
-		{
-			SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(bufferSize);
-
-
-
-
-			m_TransferCommandBuffer[0].BeginTransfering();
-			m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_ShaderStorageBuffer.get(), (void*)m_ClickPoints.data(), bufferSize);
-			m_TransferCommandBuffer[0].EndTransfering();
-			m_TransferCommandBuffer[0].SubmitSingle();
-
-
-			m_Device->UpdateDescriptorSet(m_DescriptorSetSelected, 1, 1, *m_ShaderStorageBuffer, vk::DescriptorType::eStorageBuffer);
-		}
-	}*/
-	void Renderer::Render(float deltaTime)
-	{
-		exeTime += deltaTime;
+		auto exeTime = m_App->GetExeTime();
 		
 		
 
@@ -1073,192 +809,26 @@ namespace Voidstar
 		m_Device->GetDevice().resetFences(m_InFlightFence);
 
 		uint32_t imageIndex;
+
 		auto swapchain = m_Swapchain->m_Swapchain;
 		{
 			ZoneScopedN("Acquiring new Image");
 			m_Device->GetDevice().acquireNextImageKHR(swapchain, UINT64_MAX, m_ImageAvailableSemaphore, nullptr, &imageIndex);
 		}
-		{
-			ZoneScopedN("Updating uniform buffer");
-
-			UpdateUniformBuffer(imageIndex);
-		}
+		
 	
 			vk::Semaphore waitSemaphores[] = { m_ImageAvailableSemaphore };
 			vk::Semaphore signalSemaphores[] = { m_RenderFinishedSemaphore };
-
-		auto& renderCommandBuffer = m_RenderCommandBuffer[imageIndex];
-		{
-			ZoneScopedN("Sumbit render commands");
-			renderCommandBuffer.BeginRendering();
-
-			
-
-			vk::CommandBufferBeginInfo beginInfo = {};
-
-			auto commandBuffer = m_RenderCommandBuffer[imageIndex].GetCommandBuffer();
-			auto amount = m_IndexBuffer->GetIndexAmount();
-
-
-
-
-
-
-
-			commandBuffer.begin(beginInfo);
-			{
-
-
-
-				TracyVkZone(ctx, commandBuffer, "Rendering ");
-
-
-
-				
-				m_RenderCommandBuffer[imageIndex].BeginRenderPass(&m_TerrainPipeline->m_RenderPass, &m_Swapchain->m_SwapchainFrames[imageIndex].framebuffer, &m_Swapchain->m_SwapchainExtent);
-				vk::Viewport viewport;
-				viewport.x = 0;
-				viewport.y = 0;
-				viewport.minDepth = 0;
-				viewport.maxDepth = 1;
-				viewport.height = m_ViewportHeight;
-				viewport.width = m_ViewportWidth;
-
-				vk::Rect2D scissors;
-				scissors.offset = vk::Offset2D{ (uint32_t)0,(uint32_t)0 };
-				scissors.extent = vk::Extent2D{ (uint32_t)m_ViewportWidth,(uint32_t)m_ViewportHeight };
-
-
-
-				
-
-				commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_TerrainPipeline->m_PipelineLayout, 0, m_DescriptorSets[imageIndex], nullptr);
-				commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_TerrainPipeline->m_PipelineLayout, 1, m_DescriptorSetTex, nullptr);
-			
-
-				commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_TerrainPipeline->m_Pipeline);
-				vk::DeviceSize offsets[] = { 0 };
-
-				{
-					vk::Buffer vertexBuffers[] = { m_ModelBuffer->GetBuffer() };
-					commandBuffer.bindVertexBuffers(0, 1, vertexBuffers, offsets);
-
-				}
-
-				
-
-
-				commandBuffer.setViewport(0, 1, &viewport);
-				commandBuffer.setScissor(0, 1, &scissors);
-
-				commandBuffer.bindIndexBuffer(m_IndexBuffer->GetBuffer(), 0, m_IndexBuffer->GetIndexType());
-				commandBuffer.drawIndexed(static_cast<uint32_t>(amount),1, 0, 0, 0);
-
-			
-			
-			}
-			m_RenderCommandBuffer[imageIndex].EndRenderPass();
-			TracyVkCollect(ctx, commandBuffer);
-			commandBuffer.end();
-			renderCommandBuffer.EndRendering();
-
-		}
-
-
-		
-
-		
+			auto renderCommandBuffer = m_UserFunctions.submitRenderCommands(imageIndex, camera);
+	
 			
 #if IMGUI_ENABLED
 		
 			RenderImGui(imageIndex);
 
 #endif
-			if (Input::IsKeyTyped(VS_KEY_V))
-			{
-				// find mouse pos in world coordinates
-				float scale = 100;
-				auto  mousePos = Input::GetMousePos();
-				auto mouseScreenPos = glm::vec2{ std::get<0>(mousePos),std::get<1>(mousePos) };
-				glm::vec3 ndc;
-				glm::vec2 screenSize ={ m_App->m_ScreenWidth, m_App->m_ScreenHeight};
-				ndc.x = (2.0f * mouseScreenPos.x / screenSize.x) - 1.0f;
-				ndc.y = -(1.0f - (2.0f * mouseScreenPos.y / screenSize.y));
-				
-				auto vertPos = glm::vec4(0.5 * scale, 0, -0.5 * scale, 1);
-
-				float planeDepthWorld = 0.934;
-				float ndcZNear = 10;
-				float ndcZFar = 10000;
-
-
-				ndc.z = (planeDepthWorld - ndcZNear) / (ndcZFar - ndcZNear);
-				auto inverseProj = glm::inverse(m_App->m_Camera->GetProj());
-				auto inverseView= glm::inverse(m_App->m_Camera->GetView());
-				auto rayEye =(inverseProj * glm::vec4{ ndc.x,ndc.y,1,1 });
-				
-				rayEye.z = 1;
-				rayEye.w = 0;
-				glm::vec3 rayDir = glm::normalize(glm::vec3(inverseView * rayEye));
-			//	rayDir.z *= -1;
-				glm::vec3 cameraPos = glm::vec3(inverseView[3]);
-				std::cout << "ndc  " << ndc.x << " " << ndc.y << " " << ndc.z << std::endl;
-				glm::vec3 rayOrigin = cameraPos;
-				glm::vec3 intersectionPoint = {0,0,0};
-				std::cout << "ray dir " << rayDir.x << " " << rayDir.y << " " << rayDir.z << std::endl;
-				// works only  if camera doesn
-				auto RayIntersectObjects = [](glm::vec3 rayOrigin, glm::vec3 rayDirection, glm::vec3 planePoint, glm::vec3& intersectionPoint)
-				{
-					// Calculate the dot product of the ray direction and the plane's normal.
-					glm::vec3 planeNormal = {0,1,0};
-					float denominator = glm::dot(planeNormal, rayDirection);
-					// Check if the ray and the plane are not parallel (denominator is not close to zero).
-					if (glm::abs(denominator) > 1e-6) {
-						// Calculate the vector from the ray's origin to a point on the plane.
-						glm::vec3 rayToPlane = planePoint - rayOrigin;
-
-						// Calculate the distance along the ray where it intersects the plane.
-						float t = glm::dot(rayToPlane, planeNormal) / denominator;
-
-						// Check if the intersection point is in front of the ray's origin.
-						if (t >= 0.0f) {
-							// Calculate the intersection point using the ray's equation: rayOrigin + t * rayDirection.
-							intersectionPoint = rayOrigin + t * rayDirection;
-
-							std::cout << "intersection " << intersectionPoint.x  << " "  << intersectionPoint.y  << " " << intersectionPoint.z << std::endl;
-							return true; // Intersection occurred.
-						}
-					}
-					return false;
-				};
-
-				bool hit = RayIntersectObjects(rayOrigin, rayDir, vertPos, intersectionPoint);
-				/*worldSpace = worldSpace / worldSpace.w;
-
-				*/
-				auto localPosition = (intersectionPoint- glm::vec3(vertPos));
-				glm::vec3 uAxis = glm::vec3(-1, 0, 0);
-				glm::vec3 vAxis = glm::vec3(0, 0, -1);
-
-				glm::vec2 uvSpace = glm::vec2{ glm::dot(glm::vec3{localPosition} , uAxis),glm::dot(glm::vec3{localPosition}, vAxis) }/100.f;
-				uvSpace.y *= -1;
-				//uvSpace = glm::normalize(uvSpace);
-				std::cout << "uv space " << uvSpace.x << " " <<  uvSpace.y << std::endl;
-				//std::cout <<  "local pos " << localPosition.x << " " << localPosition.y << " " << localPosition.z << std::endl;
-				//std::cout << "ray direction "  << rayDir.x << " " << rayDir.y << " " << rayDir.z << std::endl;
-				// update vector of positions
-				//m_ClickPoints[nextPoint++] = (uvSpace);
-				//nextPoint %= MAX_POINTS;
-
-
-				//UpdateBuffer();
-				
-
-
-			}
-
-				//UpdateTexture();
-
+			
+			m_UserFunctions.postRenderCommands(imageIndex, camera);
 			vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
 			vk::SubmitInfo submitInfo = {};
 
@@ -1411,101 +981,9 @@ namespace Voidstar
 			Log::GetLog()->error("Failed to create renderpass!");
 		}
 	}
-	void Renderer::CreateFramebuffers()
-	{
-		auto& frames = m_Swapchain->m_SwapchainFrames;
-		auto swapChainExtent = m_Swapchain->m_SwapchainExtent;
-		for (int i = 0; i < frames.size(); ++i) {
-
-			std::vector<vk::ImageView> attachments = {
-				m_MsaaImageView,
-				frames[i].imageDepthView,
-				frames[i].imageView,
-			};
-
-			vk::FramebufferCreateInfo framebufferInfo;
-			framebufferInfo.flags = vk::FramebufferCreateFlags();
-			framebufferInfo.renderPass = m_TerrainPipeline->m_RenderPass;
-			framebufferInfo.attachmentCount = attachments.size();
-			framebufferInfo.pAttachments = attachments.data();
-			framebufferInfo.width = swapChainExtent.width;
-			framebufferInfo.height = swapChainExtent.height;
-			framebufferInfo.layers = 1;
-
-			try
-			{
-				frames[i].framebuffer = m_Device->GetDevice().createFramebuffer(framebufferInfo);
-				
-			}
-			catch (vk::SystemError err)
-			{
-				Log::GetLog()->error("Failed to create framebuffer for frame{0} ",i);	
-			}
-
-		}
-	}
 
 
 	
-	void Renderer::CreatePipeline()
-	{
-		auto swapchainFormat = m_Swapchain->m_SwapchainFormat;
-		auto swapChainExtent = m_Swapchain->m_SwapchainExtent;
-
-
-		 m_RenderPass = MakeRenderPass(m_Device->GetDevice(), swapchainFormat, m_Swapchain->m_SwapchainFrames[0].depthFormat);
-
-
-		// terrain pipeline
-		{
-			GraphicsPipelineSpecification specs;
-
-			specs.device = m_Device->GetDevice();
-
-			specs.vertexFilepath = BASE_SPIRV_OUTPUT + "default.spvV";
-			specs.fragmentFilepath = BASE_SPIRV_OUTPUT + "dos2.spvF";
-			specs.swapchainExtent = swapChainExtent;
-			specs.swapchainImageFormat = swapchainFormat;
-
-
-			std::vector<vk::VertexInputBindingDescription> bindings{ VertexBindingDescription(0,sizeof(Vertex),vk::VertexInputRate::eVertex) };
-
-			std::vector<vk::VertexInputAttributeDescription> attributeDescriptions;
-
-			attributeDescriptions =
-			{
-				VertexInputAttributeDescription(0,0,vk::Format::eR32G32B32Sfloat,offsetof(Vertex, Position)),
-			   VertexInputAttributeDescription(0,1,vk::Format::eR32G32B32A32Sfloat,offsetof(Vertex, Color)),
-				VertexInputAttributeDescription(0,2,vk::Format::eR32G32Sfloat,offsetof(Vertex, UV)),
-
-			};
-
-			specs.bindingDescription = bindings;
-
-
-
-			specs.attributeDescription = attributeDescriptions;
-
-			auto samples = RenderContext::GetDevice()->GetSamples();
-			specs.samples = samples;
-			auto m_DescriptorSetLayout = m_Layout[{0, PipelineType::RENDER}];
-			auto m_DescriptorSetLayoutTex = m_Layout[{1, PipelineType::RENDER}];
-			auto pipelineLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutTex->GetLayout() };
-
-			specs.descriptorSetLayout = pipelineLayouts;
-
-			
-
-
-
-			
-			m_TerrainPipeline = Pipeline::CreateGraphicsPipeline(specs, vk::PrimitiveTopology::eTriangleList, m_Swapchain->m_SwapchainFrames[0].depthFormat, m_RenderPass,0,true,m_PolygoneMode);
-		
-		}
-		
-		
-		
-	}
 
 	
 
@@ -1528,21 +1006,6 @@ namespace Voidstar
 
 
 		ImGui::Begin("Surface paramentrs", &show_another_window);
-		if (ImGui::Button("clear points"))
-		{
-			for (int i = 0; i < m_ClickPoints.size(); i++)
-			{
-				m_ClickPoints[i] = { -1,-1 };
-			}
-			nextPoint = 0;
-			//UpdateBuffer();
-
-		}
-
-
-		
-	
-
 		ImGui::End();
 		m_IsNewParametrs |= m_IsResized;
 
@@ -1652,71 +1115,6 @@ namespace Voidstar
 
 	Renderer::~Renderer()
 	{
-
-
-		auto device = m_Device->GetDevice();
-		device.waitIdle();
-		
-		CleanUpImGui();
-
-		Shutdown();
-
-		TracyVkDestroy(ctx)
-		if (m_ModelBuffer != nullptr)
-		{
-			m_ModelBuffer.reset();
-			m_IndexBuffer.reset();
-
-		}
-
-		
-
-		m_Device->GetDevice().freeMemory(m_MsaaImageMemory);
-		m_Device->GetDevice().destroyImage(m_MsaaImage);
-		m_Device->GetDevice().destroyImageView(m_MsaaImageView);
-
-
-
-		for (size_t i = 0; i < m_Swapchain->m_SwapchainFrames.size(); i++) {
-			delete m_UniformBuffers[i];
-		}
-
-		m_ShaderStorageBuffer.reset();
-		
-		m_UniversalPool.reset();
-		CleanUpLayouts();
-	
-
-	
-		m_ImageSelected.reset();
-		m_Image.reset();
-	
-		
-		m_Device->GetDevice().destroySemaphore(m_ImageAvailableSemaphore);
-		m_Device->GetDevice().destroySemaphore(m_RenderFinishedSemaphore);
-		m_Device->GetDevice().destroyFence(m_InFlightFence);
-
-		for (auto& semaphore : m_ComputeFinishedSemaphores)
-		{
-			m_Device->GetDevice().destroySemaphore(semaphore);
-		}
-		for (auto& fence : m_ComputeInFlightFences)
-		{
-			m_Device->GetDevice().destroyFence(fence);
-		}
-		device.destroyRenderPass(m_RenderPass);
-		m_TerrainPipeline.reset();
-		m_ComputePipeline.reset();
-		m_Swapchain.reset();
-
-
-		m_CommandPoolManager->Release();
-		m_Device->GetDevice().destroy();
-
-		m_Instance->GetInstance().destroySurfaceKHR(m_Surface);
-		m_Instance->GetInstance().destroyDebugUtilsMessengerEXT(m_DebugMessenger, nullptr, m_Dldi);
-		m_Instance->GetInstance().destroy();
-
 
 	}
 	void Renderer::CreateDevice()

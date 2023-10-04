@@ -131,7 +131,24 @@ namespace Voidstar
 		return swapchain;
 		}
 
-		Swapchain::~Swapchain()
+		void Swapchain::CreateMSAAFrame()
+		{
+			ImageSpecs specs;
+			auto extent = m_SwapchainExtent;
+			auto swapchainFormat = m_SwapchainFormat;
+			specs.width = extent.width;
+			specs.height = extent.height;
+			specs.tiling = vk::ImageTiling::eOptimal;
+			specs.usage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransientAttachment;
+			specs.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+			specs.format = swapchainFormat;
+			auto samples = RenderContext::GetDevice()->GetSamples();
+			m_MsaaImage = Image::CreateVKImage(specs, samples);
+			m_MsaaImageMemory = Image::CreateMemory(m_MsaaImage, specs);
+			m_MsaaImageView = Image::CreateImageView(m_MsaaImage, swapchainFormat, vk::ImageAspectFlagBits::eColor);
+		}
+		
+		void Swapchain::CleanUp()
 		{
 			auto device = RenderContext::GetDevice()->GetDevice();
 			for (auto& frame : m_SwapchainFrames) {
@@ -143,8 +160,17 @@ namespace Voidstar
 				device.destroyImageView(frame.imageDepthView);
 
 			}
+
+			device.freeMemory(m_MsaaImageMemory);
+			device.destroyImage(m_MsaaImage);
+			device.destroyImageView(m_MsaaImageView);
+
 			// cannot not use detroy image on  presentable image
 			device.destroySwapchainKHR(m_Swapchain);
+		}
+		Swapchain::~Swapchain()
+		{
+			//CleanUp();
 		}
 		
 
@@ -173,6 +199,9 @@ namespace Voidstar
 		}
 
 		return vk::PresentModeKHR::eFifo;
+	}
+	void CleanUp()
+	{
 	}
 	vk::Extent2D GetSwapchainExtent(uint32_t width, uint32_t height, SwapChainSupportDetails& support) {
 

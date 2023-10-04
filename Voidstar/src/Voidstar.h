@@ -15,6 +15,7 @@
 #include "Rendering/Swapchain.h"
 #include "Rendering/RenderPass.h"
 #include "Input.h"
+#include "Types.h"
 #include "Rendering/Camera.h"
 #include "Application.h"
 

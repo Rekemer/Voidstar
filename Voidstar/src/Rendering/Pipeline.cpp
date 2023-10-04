@@ -323,6 +323,7 @@ namespace Voidstar
 	Pipeline::~Pipeline()
 	{
 		auto& device = RenderContext::GetDevice()->GetDevice();
+		device.waitIdle();
 		device.destroyPipeline(m_Pipeline);
 		device.destroyPipelineLayout(m_PipelineLayout);
 	

@@ -18,6 +18,9 @@ namespace Voidstar
 {
 
 
+	
+
+
 	inline std::string BASE_SHADER_PATH = "../Shaders/";
 	inline std::string BASE_RES_PATH = "res";
 	//const std::string SPIRV_COMPILER_PATH = "C:/VulkanSDK/1.3.216.0/Bin/glslc.exe";
@@ -34,6 +37,22 @@ namespace Voidstar
 	class DescriptorPool;
 	class Model;
 	class Pipeline;
+
+
+
+	struct Callables
+	{
+		std::function<void()> bindingsInit;
+		std::function<void()> bufferInit;
+		std::function<void()> commandBufferInit;
+		std::function<void()> loadTextures;
+		std::function<void()> bindResources;
+		std::function<void()> createPipelines;
+		std::function<void()> createFramebuffer;
+		std::function<CommandBuffer(size_t frameIndex, Camera& camera)> submitRenderCommands;
+		std::function<void(size_t frameIndex, Camera& camera)> postRenderCommands;
+		std::function<void()> cleanUp;
+	};
 
 	
 	struct  InstanceData {
@@ -132,7 +151,8 @@ namespace Voidstar
 		void InitImGui( );
 		void SetupVulkanWindow(ImGui_ImplVulkanH_Window* g_wd, VkSurfaceKHR surface, int width, int height);
 		static Renderer* Instance();
-		void Render(float deltaTime);
+		void Render(float deltaTime,Camera& camera);
+		void UserInit();
 		CommandPoolManager* GetCommandPoolManager()
 		{
 			return m_CommandPoolManager.get();
@@ -148,76 +168,54 @@ namespace Voidstar
 		{
 			return std::get<T>(m_Sets[{handle, type}]);;
 		}
-		const Swapchain& GetSwapchain() { return *m_Swapchain; }
+		 Swapchain& GetSwapchain() { return *m_Swapchain; }
 		const DescriptorSetLayout* GetSetLayout(int handle, PipelineType type)
 		{
 			return m_Layout[{handle, type}];
 		}
 		std::pair<float, float> GetViewportSize() const { return { m_ViewportWidth,m_ViewportHeight }; }
 		vk::PolygonMode GetPolygonMode() const { return m_PolygoneMode; }
+		void SetCallables(Callables functions) { m_UserFunctions = functions; };
+		void Shutdown();
 	private:
 		void CreateInstance();
 		void CreateDebugMessenger();
 		void CreateSurface();
 		void CreateDevice();
 		void CreatePipeline();
-		void CreateFramebuffers();
 		void CreateSyncObjects();
-		void CreateMSAAFrame();
 		void RecordCommandBuffer(uint32_t imageIndex, vk::RenderPass& renderPass, vk::Pipeline& pipeline, vk::PipelineLayout& pipelineLayout, int instances);
-		void UpdateUniformBuffer(uint32_t imageIndex);
 		void RecreateSwapchain();
-		void Shutdown();
 		void AllocateSets();
 		void CreateLayouts();
 		void CleanUpLayouts();
-		
+		void FreeBuffers();
 
 		
 	private:
+		std::vector <UPtr<Buffer>> m_Buffers;
 		Voidstar::Instance* m_Instance;
 		int m_ViewportWidth, m_ViewportHeight;
 		Device* m_Device;
 		UPtr<Swapchain> m_Swapchain;
-		UPtr<Buffer> m_ModelBuffer{nullptr};
-		UPtr<IndexBuffer> m_IndexBuffer;
 		
 		Application* m_App;
 		
-		UPtr<Buffer> m_InstancedDataBuffer;
 
-		SPtr<Image> m_Image;
-		SPtr<Image> m_ImageSelected;
 
 
 
 		
 
 		SPtr<DescriptorPool> m_UniversalPool;
-		vk::Image m_MsaaImage;
-		vk::DeviceMemory m_MsaaImageMemory;
-		vk::ImageView m_MsaaImageView;
 
-		int m_BaseDesc = 0;
-		int m_TexDesc = 0;
-		int m_Compute = 0;
-		vk::DescriptorSet m_DescriptorSetClouds;
-		vk::DescriptorSet m_DescriptorSetSky;
-		std::vector<vk::DescriptorSet> m_DescriptorSets;
-		vk::DescriptorSet m_DescriptorSetTex;
-		vk::DescriptorSet m_DescriptorSetSelected;
 
 		// can be in one buffer?
-		std::vector<Buffer*> m_UniformBuffers;
-		std::vector<CommandBuffer> m_RenderCommandBuffer, m_TransferCommandBuffer, m_ComputeCommandBuffer;
 		CommandBuffer m_TracyCommandBuffer;
-		vk::CommandPool m_FrameCommandPool;
 
-		std::vector<void*> uniformBuffersMapped;
 		
 
 
-		UPtr<Buffer> m_ShaderStorageBuffer;
 		vk::CommandPool m_TracyCommandPool;
 
 		//debug callback
@@ -231,12 +229,8 @@ namespace Voidstar
 		
 	
 
-		UPtr<Pipeline> m_TerrainPipeline;
-		vk::RenderPass m_RenderPass;
 
 
-		UPtr<Pipeline> m_ComputePipeline;
-		size_t nextPoint = 0;
 
 
 		UPtr<CommandPoolManager> m_CommandPoolManager;
@@ -254,28 +248,19 @@ namespace Voidstar
 		vk::PolygonMode m_PolygoneMode = vk::PolygonMode::eFill;
 
 
-		std::vector<glm::vec2> m_ClickPoints;
-		void* m_InstancedPtr;
 
 		ImGuiData imguiData;
-		NoiseData noiseData;
 		void* m_NoiseDataPtr;
 
 		bool m_IsResized, m_IsNewParametrs, m_IsPolygon;
 
-
-		vk::RenderPass m_ZPass;
-
-		CloudParams cloudParams;
-		void* m_CloudPtr;
-		UPtr<Buffer> m_CloudBuffer;
 
 		// int is number of set, int is a type of pipeline render or compute
 		Bindings m_Bindings;
 		std::unordered_map<std::pair<int, PipelineType>, DescriptorSetLayout*, EnumClassHash> m_Layout;
 		std::unordered_map<std::pair<int, PipelineType>, std::variant<vk::DescriptorSet, std::vector<vk::DescriptorSet> >, EnumClassHash> m_Sets;
 		Sets m_SetsAmount;
-
+		Callables m_UserFunctions;
 	
 	};
 
