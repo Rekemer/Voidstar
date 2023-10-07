@@ -11,6 +11,21 @@
 #include "Renderer.h"
 namespace Voidstar
 {
+	Image::Image(Image&& image)
+	{
+		m_Image = image.m_Image ;
+		m_ImageView = image.m_ImageView ;
+		m_Sampler = image.m_Sampler ;
+		m_ImageMemory = image.m_ImageMemory ;
+		m_CommandPool = image.m_CommandPool;
+
+		image.m_Image = VK_NULL_HANDLE;
+		image.m_ImageView = VK_NULL_HANDLE;
+		image.m_Sampler = VK_NULL_HANDLE;
+		image.m_ImageMemory = VK_NULL_HANDLE;
+		image.m_CommandPool = VK_NULL_HANDLE;
+
+	}
 	VkImageView Image::CreateImageView(vk::Image& image, vk::Format format, vk::ImageAspectFlags aspect, vk::ImageViewType viewType,int mipmap, int layers)
 	{
 		vk::ImageViewCreateInfo createInfo = {};
@@ -368,7 +383,6 @@ namespace Voidstar
 	SPtr<Image> Image::CreateEmptyImage(int width, int height, vk::Format format)
 	{
 		auto image = CreateUPtr<Image>();
-
 		image->m_CommandPool = Renderer::Instance()->GetCommandPoolManager()->GetFreePool();
 		image->m_Width = width;
 		image->m_Height = height;

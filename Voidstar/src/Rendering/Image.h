@@ -23,6 +23,7 @@ namespace Voidstar
 	public:
 		Image() = default;
 		Image(const Image& image) = delete;
+		Image(Image&& image);
 		// create image
 		static VkImageView CreateImageView(vk::Image& image, vk::Format format, vk::ImageAspectFlags aspect, vk::ImageViewType viewType =  vk::ImageViewType::e2D, int mipmap = 1, int layers = 1);
 
@@ -60,11 +61,11 @@ namespace Voidstar
 		int m_Width, m_Height,m_Depth = 0, m_Channels;
 		int m_MipMapLevels;
 		vk::Image m_Image;
-		vk::Format m_Format;
-		vk::DeviceMemory m_ImageMemory;
 		vk::ImageView m_ImageView;
 		vk::Sampler m_Sampler;
+		vk::DeviceMemory m_ImageMemory;
 		vk::CommandPool m_CommandPool;
+		vk::Format m_Format;
 		vk::ImageLayout m_ImageLayout = vk::ImageLayout::eUndefined;
 	};
 }

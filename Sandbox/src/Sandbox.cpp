@@ -5,7 +5,82 @@
 #include"Voidstar.h"
 #include"tracy/Tracy.hpp"
 #include"tracy/TracyVulkan.hpp"
+#include <ft2build.h>
+#include FT_FREETYPE_H  
+#include <map>
+#include <utility>
 using namespace Voidstar;
+
+struct Character {
+	std::shared_ptr<Image> image;  // ID handle of the glyph texture
+	glm::ivec2   Size;       // Size of glyph
+	glm::ivec2   Bearing;    // Offset from baseline to left/top of glyph
+	unsigned int Advance;    // Offset to advance to next glyph
+};
+
+std::map<unsigned char, Character> Characters;
+
+// should be in one texture!
+void LoadFont(std::string_view str)
+{
+	FT_Library ft;
+	if (FT_Init_FreeType(&ft))
+	{
+		std::cout << "ERROR::FREETYPE: Could not init FreeType Library" << std::endl;
+		//return -1;
+	}
+
+	FT_Face face;
+	if (FT_New_Face(ft, str.data(), 0, &face))
+	{
+		std::cout << "ERROR::FREETYPE: Failed to load font" << std::endl;
+		//return -1;
+	}
+	FT_Set_Pixel_Sizes(face, 0, 48);
+
+	for (unsigned char c = 0; c < 128; c++)
+	{
+		// load character glyph 
+		if (FT_Load_Char(face, c, FT_LOAD_RENDER))
+		{
+			std::cout << "ERROR::FREETYTPE: Failed to load Glyph" << std::endl;
+			continue;
+		}
+		// generate texture
+		auto image = Image::CreateEmptyImage(face->glyph->bitmap.width,
+			face->glyph->bitmap.rows, vk::Format::eR16Sfloat
+		);
+		//unsigned int texture;
+		//glGenTextures(1, &texture);
+		//glBindTexture(GL_TEXTURE_2D, texture);
+		//glTexImage2D(
+		//	GL_TEXTURE_2D,
+		//	0,
+		//	GL_RED,
+		//	face->glyph->bitmap.width,
+		//	face->glyph->bitmap.rows,
+		//	0,
+		//	GL_RED,
+		//	GL_UNSIGNED_BYTE,
+		//	face->glyph->bitmap.buffer
+		//);
+		// set texture options
+		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		// now store character for later use
+		Character character = {
+			image,
+			glm::ivec2(face->glyph->bitmap.width, face->glyph->bitmap.rows),
+			glm::ivec2(face->glyph->bitmap_left, face->glyph->bitmap_top),
+			face->glyph->advance.x
+		};
+		Characters.insert(std::make_pair(c, character));
+	}
+	FT_Done_Face(face);
+	FT_Done_FreeType(ft);
+}
 
 
 class ExampleApplication : public Voidstar::Application
@@ -14,6 +89,8 @@ public:
 	ExampleApplication(std::string appName, size_t screenWidth, size_t screenHeight) : Voidstar::Application(appName, screenWidth, screenHeight)
 	{
 		// init renderer
+
+		LoadFont(BASE_RES_PATH + "fonts/arial.ttf");
 		Settings params{3};
 		m_ClickPoints.resize(MAX_POINTS, glm::vec2(-1, -1));
 		auto renderInit = [&params]()

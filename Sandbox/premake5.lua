@@ -16,10 +16,11 @@ project "Sandbox"
         "%{wks.solution}/Dependencies/ImGui",
         "../Voidstar/src",
         VULKAN_HEADER,
-        "../" .. TRACY_HEADERS
+        "../" .. TRACY_HEADERS,
+        "../" .. FREE_TYPE_HEADERS
     }
 
-    links { "Voidstar",  }
+    links { "Voidstar","Freetype"  }
     filter "configurations:Debug"
         defines "VS_DEBUG"
         symbols "On"

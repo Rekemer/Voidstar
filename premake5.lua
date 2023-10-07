@@ -22,11 +22,12 @@ workspace "Voidstar"
 	VULKAN_HEADER = os.getenv("VULKAN_SDK") .. "/Include"
 	GLM_HEADERS = "%{wks.solution}/Dependencies/glm/glm"
 	TRACY_HEADERS =  "%{wks.solution}/Dependencies/Tracy/public"
-	
+	FREE_TYPE_HEADERS = "%{wks.solution}/Dependencies/freetype/include"
 	include "Voidstar"
 	
 	group "Dependencies"
 		include "Dependencies/ImGui"
+		include "Dependencies/freetype"
 	group ""
 	include "Sandbox"
 	
