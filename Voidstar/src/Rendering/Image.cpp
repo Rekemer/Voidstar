@@ -11,21 +11,21 @@
 #include "Renderer.h"
 namespace Voidstar
 {
-	Image::Image(Image&& image)
-	{
-		m_Image = image.m_Image ;
-		m_ImageView = image.m_ImageView ;
-		m_Sampler = image.m_Sampler ;
-		m_ImageMemory = image.m_ImageMemory ;
-		m_CommandPool = image.m_CommandPool;
-
-		image.m_Image = VK_NULL_HANDLE;
-		image.m_ImageView = VK_NULL_HANDLE;
-		image.m_Sampler = VK_NULL_HANDLE;
-		image.m_ImageMemory = VK_NULL_HANDLE;
-		image.m_CommandPool = VK_NULL_HANDLE;
-
-	}
+	//Image::Image(Image&& image)
+	//{
+	//	m_Image = image.m_Image ;
+	//	m_ImageView = image.m_ImageView ;
+	//	m_Sampler = image.m_Sampler ;
+	//	m_ImageMemory = image.m_ImageMemory ;
+	//	m_CommandPool = image.m_CommandPool;
+	//
+	//	image.m_Image = VK_NULL_HANDLE;
+	//	image.m_ImageView = VK_NULL_HANDLE;
+	//	image.m_Sampler = VK_NULL_HANDLE;
+	//	image.m_ImageMemory = VK_NULL_HANDLE;
+	//	image.m_CommandPool = VK_NULL_HANDLE;
+	//
+	//}
 	VkImageView Image::CreateImageView(vk::Image& image, vk::Format format, vk::ImageAspectFlags aspect, vk::ImageViewType viewType,int mipmap, int layers)
 	{
 		vk::ImageViewCreateInfo createInfo = {};
@@ -145,7 +145,7 @@ namespace Voidstar
 		commandBuffer.SubmitSingle();
 
 		commandBuffer.BeginTransfering();
-		commandBuffer.CopyBufferToImage(buffer.get(), &image->m_Image, image->m_Width, image->m_Height);
+		commandBuffer.CopyBufferToImage(*buffer.get(), image->m_Image, image->m_Width, image->m_Height);
 		commandBuffer.EndTransfering();
 		commandBuffer.SubmitSingle();
 		
@@ -298,7 +298,7 @@ namespace Voidstar
 		commandBuffer.SubmitSingle();
 
 		commandBuffer.BeginTransfering();
-		commandBuffer.CopyBufferToImage(buffer.get(), &image->m_Image, image->m_Width, image->m_Height,6);
+		commandBuffer.CopyBufferToImage(*buffer.get(), image->m_Image, image->m_Width, image->m_Height, 6);
 		commandBuffer.EndTransfering();
 		commandBuffer.SubmitSingle();
 
@@ -457,10 +457,10 @@ namespace Voidstar
 	*/
 		vk::SamplerCreateInfo samplerInfo;
 		samplerInfo.flags = vk::SamplerCreateFlags();
-		samplerInfo.minFilter = vk::Filter::eLinear;
-		samplerInfo.magFilter = vk::Filter::eLinear;
-		samplerInfo.addressModeU = vk::SamplerAddressMode::eRepeat;
-		samplerInfo.addressModeV = vk::SamplerAddressMode::eRepeat;
+		samplerInfo.minFilter = vk::Filter::eNearest;
+		samplerInfo.magFilter = vk::Filter::eNearest;
+		samplerInfo.addressModeU = vk::SamplerAddressMode::eClampToEdge;
+		samplerInfo.addressModeV = vk::SamplerAddressMode::eClampToEdge;
 		samplerInfo.addressModeW = vk::SamplerAddressMode::eRepeat;
 
 		samplerInfo.anisotropyEnable = false;

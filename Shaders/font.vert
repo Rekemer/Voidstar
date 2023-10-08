@@ -1,4 +1,4 @@
-#version 330 core
+#version 450
 
 
 layout(location = 0) in vec3 in_pos;
@@ -9,10 +9,10 @@ layout(set = 0,binding = 0) uniform UniformBufferObject {
     vec4 playerPos;
     float time;
 } ubo;
-out vec2 TexCoords;
+layout(location = 0) out vec2 TexCoords;
 
 void main()
 {
-    gl_Position = projection * vec4(vertex.xy, 0.0, 1.0);
+    gl_Position = ubo.proj * vec4(in_pos.xy, 0.0, 1.0);
     TexCoords = in_uv;
 }  

@@ -23,7 +23,7 @@ namespace Voidstar
 	public:
 		Image() = default;
 		Image(const Image& image) = delete;
-		Image(Image&& image);
+		//Image(Image&& image);
 		// create image
 		static VkImageView CreateImageView(vk::Image& image, vk::Format format, vk::ImageAspectFlags aspect, vk::ImageViewType viewType =  vk::ImageViewType::e2D, int mipmap = 1, int layers = 1);
 
@@ -50,6 +50,18 @@ namespace Voidstar
 		void SetFormat(vk::Format format)
 		{
 			m_Format = format;
+		}
+		int GetWidth()
+		{
+			return m_Width;
+		}
+		int GetHeight()
+		{
+			return m_Height;
+		}
+
+		vk::Image GetImage() {
+			return m_Image;
 		}
 	private:
 		void GenerateMipmaps(VkImage image,VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);

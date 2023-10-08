@@ -12,7 +12,6 @@
 using namespace Voidstar;
 
 struct Character {
-	std::shared_ptr<Image> image;  // ID handle of the glyph texture
 	glm::ivec2   Size;       // Size of glyph
 	glm::ivec2   Bearing;    // Offset from baseline to left/top of glyph
 	unsigned int Advance;    // Offset to advance to next glyph
@@ -21,66 +20,7 @@ struct Character {
 std::map<unsigned char, Character> Characters;
 
 // should be in one texture!
-void LoadFont(std::string_view str)
-{
-	FT_Library ft;
-	if (FT_Init_FreeType(&ft))
-	{
-		std::cout << "ERROR::FREETYPE: Could not init FreeType Library" << std::endl;
-		//return -1;
-	}
 
-	FT_Face face;
-	if (FT_New_Face(ft, str.data(), 0, &face))
-	{
-		std::cout << "ERROR::FREETYPE: Failed to load font" << std::endl;
-		//return -1;
-	}
-	FT_Set_Pixel_Sizes(face, 0, 48);
-
-	for (unsigned char c = 0; c < 128; c++)
-	{
-		// load character glyph 
-		if (FT_Load_Char(face, c, FT_LOAD_RENDER))
-		{
-			std::cout << "ERROR::FREETYTPE: Failed to load Glyph" << std::endl;
-			continue;
-		}
-		// generate texture
-		auto image = Image::CreateEmptyImage(face->glyph->bitmap.width,
-			face->glyph->bitmap.rows, vk::Format::eR16Sfloat
-		);
-		//unsigned int texture;
-		//glGenTextures(1, &texture);
-		//glBindTexture(GL_TEXTURE_2D, texture);
-		//glTexImage2D(
-		//	GL_TEXTURE_2D,
-		//	0,
-		//	GL_RED,
-		//	face->glyph->bitmap.width,
-		//	face->glyph->bitmap.rows,
-		//	0,
-		//	GL_RED,
-		//	GL_UNSIGNED_BYTE,
-		//	face->glyph->bitmap.buffer
-		//);
-		// set texture options
-		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		// now store character for later use
-		Character character = {
-			image,
-			glm::ivec2(face->glyph->bitmap.width, face->glyph->bitmap.rows),
-			glm::ivec2(face->glyph->bitmap_left, face->glyph->bitmap_top),
-			face->glyph->advance.x
-		};
-		Characters.insert(std::make_pair(c, character));
-	}
-	FT_Done_Face(face);
-	FT_Done_FreeType(ft);
-}
 
 
 class ExampleApplication : public Voidstar::Application
@@ -90,7 +30,7 @@ public:
 	{
 		// init renderer
 
-		LoadFont(BASE_RES_PATH + "fonts/arial.ttf");
+		
 		Settings params{3};
 		m_ClickPoints.resize(MAX_POINTS, glm::vec2(-1, -1));
 		auto renderInit = [&params]()
@@ -100,6 +40,8 @@ public:
 
 		auto bindingsInit = [this]()
 		{
+			
+
 			auto binderRender = Binder<RENDER>();
 			m_BaseDesc = binderRender.BeginBind(3);
 			binderRender.Bind(0, 1, vk::DescriptorType::eUniformBuffer, vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eTessellationControl
@@ -205,6 +147,7 @@ public:
 			m_RenderCommandBuffer = CommandBuffer::CreateBuffers(m_FrameCommandPool, vk::CommandBufferLevel::ePrimary, 3);
 			m_TransferCommandBuffer = CommandBuffer::CreateBuffers(m_FrameCommandPool, vk::CommandBufferLevel::ePrimary, 3);
 			m_ComputeCommandBuffer = CommandBuffer::CreateBuffers(m_FrameCommandPool, vk::CommandBufferLevel::ePrimary, 3);
+			LoadFont(BASE_RES_PATH + "fonts/arial.ttf");
 		};
 
 		auto loadTextures = [this]()
@@ -605,10 +548,9 @@ public:
 			auto device = RenderContext::GetDevice()->GetDevice();
 	
 
-			auto& swapchain = Renderer::Instance()->GetSwapchain();
 
 			device.destroyRenderPass(m_RenderPass);
-			
+			Renderer::Instance()->Shutdown();
 			
 		};
 		Callables callables;
@@ -711,6 +653,135 @@ public:
 
 		device.waitIdle();
 	}
+
+
+	void LoadFont(std::string_view str)
+	{
+		FT_Library ft;
+		if (FT_Init_FreeType(&ft) != 0)
+		{
+			std::cout << "ERROR::FREETYPE: Could not init FreeType Library" << std::endl;
+			//return -1;
+		}
+
+		FT_Face face;
+		if (FT_New_Face(ft, str.data(), 0, &face) != 0 )
+		{
+			std::cout << "ERROR::FREETYPE: Failed to load font" << std::endl;
+			//return -1;
+		}
+		auto error = FT_Set_Pixel_Sizes(face, 0, 48);
+
+
+
+		int width = 0;
+		int maxWidth = 0;
+		int maxGlyphHeight = 0;
+		int characterCount = 0;
+		int rowNumber = 0;
+		for (unsigned char c = 0; c < 128; c++)
+		{
+			// load character glyph 
+			if (FT_Load_Char(face, c, FT_LOAD_RENDER) != 0)
+			{
+				std::cout << "ERROR::FREETYTPE: Failed to load Glyph" << std::endl;
+				continue;
+			}
+			// generate texture
+
+			// calculate image size
+			width += face->glyph->bitmap.width;
+			maxGlyphHeight = std::max((unsigned)maxGlyphHeight, face->glyph->bitmap.rows);
+			characterCount++;
+			if (characterCount >= 10)
+			{
+				maxWidth = std::max(maxWidth, width);
+				rowNumber++;
+				characterCount = width = 0;
+			}
+
+
+
+
+			//unsigned int texture;
+			//glGenTextures(1, &texture);
+			//glBindTexture(GL_TEXTURE_2D, texture);
+			//glTexImage2D(
+			//	GL_TEXTURE_2D,
+			//	0,
+			//	GL_RED,
+			//	face->glyph->bitmap.width,
+			//	face->glyph->bitmap.rows,
+			//	0,
+			//	GL_RED,
+			//	GL_UNSIGNED_BYTE,
+			//	face->glyph->bitmap.buffer
+			//);
+			// set texture options
+			//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			// now store character for later use
+			Character character = {
+				glm::ivec2(face->glyph->bitmap.width, face->glyph->bitmap.rows),
+				glm::ivec2(face->glyph->bitmap_left, face->glyph->bitmap_top),
+				face->glyph->advance.x
+			};
+			Characters.insert(std::make_pair(c, character));
+		}
+
+		auto image = Image::CreateEmptyImage(maxWidth, maxGlyphHeight * rowNumber, vk::Format::eR8Unorm);
+		m_TransferCommandBuffer[0].BeginTransfering();
+		//void ChangeImageLayout(vk::Image & image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout, int mipMap = 1);
+		m_TransferCommandBuffer[0].ChangeImageLayout(image.get(), vk::ImageLayout::eGeneral, vk::ImageLayout::eTransferDstOptimal);
+		m_TransferCommandBuffer[0].EndTransfering();
+		m_TransferCommandBuffer[0].SubmitSingle();
+		
+		int character_count = 0;
+		int increment_x = 0;
+		int increment_y = 0;
+
+		
+
+		for (unsigned char c = 65; c < 128; c++)
+		{
+			// load character glyph 
+			auto error = FT_Load_Char(face, c, FT_LOAD_RENDER);
+			auto imageSize = face->glyph->bitmap.width * face->glyph->bitmap.rows;
+
+			BufferInputChunk inputBuffer;
+			inputBuffer.size = imageSize;
+			inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+			inputBuffer.usage = vk::BufferUsageFlagBits::eUniformBuffer;
+
+			//auto buffer = Buffer::CreateStagingBuffer(imageSize);
+			auto buffer = CreateUPtr<Buffer>(inputBuffer);
+			auto ptr = RenderContext::GetDevice()->GetDevice().mapMemory(buffer->GetMemory(), 0, imageSize);
+			memcpy(ptr, face->glyph->bitmap.buffer, imageSize);
+			RenderContext::GetDevice()->GetDevice().unmapMemory(buffer->GetMemory());
+			//glTexSubImage2D(GL_TEXTURE_2D, 0, increment_x, increment_y, glyph->bitmap.width, glyph->bitmap.rows, GL_RED, GL_UNSIGNED_BYTE, glyph->bitmap.buffer); 
+			m_TransferCommandBuffer[0].BeginTransfering();
+			m_TransferCommandBuffer[0].CopyBufferToImage(*buffer.get(), image->GetImage(), face->glyph->bitmap.width, face->glyph->bitmap.rows, {increment_x,increment_y,0});
+			m_TransferCommandBuffer[0].EndTransfering();
+			m_TransferCommandBuffer[0].SubmitSingle();
+			increment_x += face->glyph->bitmap.width;
+			character_count++;
+			if (character_count >= 10)
+			{
+				increment_y += maxGlyphHeight;
+				increment_x = character_count = width = 0;
+			}
+		}
+
+		FT_Done_Face(face);
+		FT_Done_FreeType(ft);
+
+
+
+	}
+
+
 private:
 
 	int m_BaseDesc = 0;
