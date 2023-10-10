@@ -380,7 +380,7 @@ namespace Voidstar
 
 		return image;
 	}
-	SPtr<Image> Image::CreateEmptyImage(int width, int height, vk::Format format)
+	SPtr<Image> Image::CreateEmptyImage(int width, int height, vk::Format format, vk::ImageUsageFlags usage)
 	{
 		auto image = CreateUPtr<Image>();
 		image->m_CommandPool = Renderer::Instance()->GetCommandPoolManager()->GetFreePool();
@@ -394,7 +394,8 @@ namespace Voidstar
 		specs.height = image->m_Height;
 		specs.format = format;
 		specs.tiling = vk::ImageTiling::eOptimal;
-		specs.usage = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled;
+		//specs.usage = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled;
+		specs.usage = usage;
 		specs.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
 		image->m_Format = specs.format;
 		try {

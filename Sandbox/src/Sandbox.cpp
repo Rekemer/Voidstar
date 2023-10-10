@@ -12,6 +12,8 @@
 using namespace Voidstar;
 
 struct Character {
+	glm::vec2 minUv;
+	glm::vec2 maxUv;
 	glm::ivec2   Size;       // Size of glyph
 	glm::ivec2   Bearing;    // Offset from baseline to left/top of glyph
 	unsigned int Advance;    // Offset to advance to next glyph
@@ -154,8 +156,8 @@ public:
 		{
 			const float noiseTextureWidth = 256.f;
 			const float noiseTextureHeight = 256.f;
-
-			m_ImageSelected = Image::CreateEmptyImage(noiseTextureWidth, noiseTextureHeight, vk::Format::eR8G8B8A8Snorm);
+			auto usage = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled;
+			m_ImageSelected = Image::CreateEmptyImage(noiseTextureWidth, noiseTextureHeight, vk::Format::eR8G8B8A8Snorm,usage);
 			m_Image = Image::CreateImage(BASE_RES_PATH + "dos_2_noise.png");
 		};
 
@@ -208,65 +210,125 @@ public:
 			auto swapChainDepthFormat = swapchain.GetDepthFormat();
 
 
+			auto device = RenderContext::GetDevice();
 
 			// render pass
 			auto samples = RenderContext::GetDevice()->GetSamples();
 			
-			RenderPassBuilder builder;
+			{
+				RenderPassBuilder builder;
 
-			//Define a general attachment, with its load/store operations
-			vk::AttachmentDescription msaaAttachment = AttachmentDescription(swapchainFormat, samples, vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare, vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal);
-			
-			vk::AttachmentReference refMSAA = { 0,vk::ImageLayout::eColorAttachmentOptimal };
-			builder.AddAttachment({ msaaAttachment ,refMSAA});
+				//Define a general attachment, with its load/store operations
+				vk::AttachmentDescription msaaAttachment = AttachmentDescription(swapchainFormat, samples, vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare, vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal);
 
-			vk::AttachmentDescription depthAttachment = AttachmentDescription(
-				swapChainDepthFormat, samples, vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
-				vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined, vk::ImageLayout::eDepthStencilAttachmentOptimal);
-			vk::AttachmentReference refDepth = { 1,vk::ImageLayout::eDepthStencilAttachmentOptimal };
-			builder.AddAttachment({ depthAttachment , refDepth });
+				vk::AttachmentReference refMSAA = { 0,vk::ImageLayout::eColorAttachmentOptimal };
+				builder.AddAttachment({ msaaAttachment ,refMSAA });
 
-			//Define a general attachment, with its load/store operations
-			vk::AttachmentDescription colorAttachmentResolve =
-				AttachmentDescription(swapchainFormat, vk::SampleCountFlagBits::e1,
-					vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
-					vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal);
+				vk::AttachmentDescription depthAttachment = AttachmentDescription(
+					swapChainDepthFormat, samples, vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
+					vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined, vk::ImageLayout::eDepthStencilAttachmentOptimal);
+				vk::AttachmentReference refDepth = { 1,vk::ImageLayout::eDepthStencilAttachmentOptimal };
+				builder.AddAttachment({ depthAttachment , refDepth });
 
-
-
-			vk::AttachmentReference refResolve = { 2,vk::ImageLayout::eColorAttachmentOptimal };
-			builder.AddAttachment({ colorAttachmentResolve ,refResolve});
+				//Define a general attachment, with its load/store operations
+				vk::AttachmentDescription colorAttachmentResolve =
+					AttachmentDescription(swapchainFormat, vk::SampleCountFlagBits::e1,
+						vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
+						vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal);
 
 
 
+				vk::AttachmentReference refResolve = { 2,vk::ImageLayout::eColorAttachmentOptimal };
+				builder.AddAttachment({ colorAttachmentResolve ,refResolve });
 
-			
+				//Renderpasses are broken down into subpasses, there's always at least one.
 
+				builder.AddSubpass(SubpassDescription(1, &refMSAA, &refResolve, &refDepth));
 
+				vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eNone, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
+				builder.AddSubpassDependency(dependency0);
 
-			
-
-
-			//Renderpasses are broken down into subpasses, there's always at least one.
-
-
-
-
-			builder.AddSubpass(SubpassDescription(1, &refMSAA, &refResolve, &refDepth));
-			
-			vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eNone, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
-			builder.AddSubpassDependency(dependency0);
-
-			auto device = RenderContext::GetDevice();
-			m_RenderPass = builder.Build(*device);
-
-
-
-
+				m_RenderPass = builder.Build(*device);
+			}
 			
 
+			{
+				RenderPassBuilder builder;
 
-			// render pass
+				//Define a general attachment, with its load/store operations
+				vk::AttachmentDescription colorAttachment = AttachmentDescription(swapchainFormat,vk::SampleCountFlagBits::e1,vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare, vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal);
+
+				vk::AttachmentReference refColor = { 0,vk::ImageLayout::eColorAttachmentOptimal };
+				builder.AddSubpass(SubpassDescription(1, &refColor));
+				builder.AddAttachment({ colorAttachment,refColor });
+				vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eNone, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
+				builder.AddSubpassDependency(dependency0);
+				m_PageRenderPass = builder.Build(*device);
+			}
+
+
+			
+
+			{
+
+				GraphicsPipelineSpecification specs;
+
+				specs.device = device->GetDevice();
+
+				specs.vertexFilepath = BASE_SPIRV_OUTPUT + "font.spvV";
+				specs.fragmentFilepath = BASE_SPIRV_OUTPUT + "font.spvF";
+				specs.swapchainExtent = swapChainExtent;
+				specs.swapchainImageFormat = swapchainFormat;
+
+
+				std::vector<vk::VertexInputBindingDescription> bindings{ VertexBindingDescription(0,sizeof(Vertex),vk::VertexInputRate::eVertex) };
+
+				std::vector<vk::VertexInputAttributeDescription> attributeDescriptions;
+
+				attributeDescriptions =
+				{
+					VertexInputAttributeDescription(0,0,vk::Format::eR32G32B32Sfloat,offsetof(Vertex, Position)),
+					VertexInputAttributeDescription(0,1,vk::Format::eR32G32Sfloat,offsetof(Vertex, UV)),
+
+				};
+
+				specs.bindingDescription = bindings;
+
+
+
+				specs.attributeDescription = attributeDescriptions;
+
+				auto samples = RenderContext::GetDevice()->GetSamples();
+				specs.samples = samples;
+				auto m_DescriptorSetLayout = Renderer::Instance()->GetSetLayout(0, PipelineType::RENDER);
+				auto m_DescriptorSetLayoutTex = Renderer::Instance()->GetSetLayout(1, PipelineType::RENDER);
+				auto pipelineLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutTex->GetLayout() };
+
+				specs.descriptorSetLayout = pipelineLayouts;
+
+
+				PipelineBuilder builder;
+				builder.SetDevice(device->GetDevice());
+				builder.SetSamples(vk::SampleCountFlagBits::e1);
+				builder.AddDescriptorLayouts(pipelineLayouts);
+				builder.AddAttributeDescription(attributeDescriptions);
+				builder.AddBindingDescription(bindings);
+				builder.SetPolygoneMode(Renderer::Instance()->GetPolygonMode());
+				builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
+				builder.AddShader(BASE_SPIRV_OUTPUT + "font.spvV", vk::ShaderStageFlagBits::eVertex);
+				builder.AddShader(BASE_SPIRV_OUTPUT + "font.spvF", vk::ShaderStageFlagBits::eFragment);
+				builder.SetSubpassAmount(0);
+				builder.AddExtent(vk::Extent2D{ 128 ,128 });
+				builder.AddImageFormat(vk::Format::eB8G8R8A8Unorm);
+				builder.SetRenderPass(m_PageRenderPass);
+
+
+
+				//m_PagePipeline = Pipeline::CreateGraphicsPipeline(specs, vk::PrimitiveTopology::eTriangleList, swapchain.GetDepthFormat(), m_PageRenderPass, 0, false, Renderer::Instance()->GetPolygonMode());
+				m_PagePipeline = builder.Build();
+
+			
+			}
 
 
 
@@ -310,9 +372,21 @@ public:
 
 
 
-
-
-				m_GraphicsPipeline = Pipeline::CreateGraphicsPipeline(specs, vk::PrimitiveTopology::eTriangleList, swapchain.GetDepthFormat(), m_RenderPass, 0, true, Renderer::Instance()->GetPolygonMode());
+				PipelineBuilder builder;
+				builder.SetDevice(device->GetDevice());
+				builder.SetSamples(samples);
+				builder.AddDescriptorLayouts(pipelineLayouts);
+				builder.AddAttributeDescription(attributeDescriptions);
+				builder.AddBindingDescription(bindings);
+				builder.SetPolygoneMode(Renderer::Instance()->GetPolygonMode());
+				builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
+				builder.AddShader(BASE_SPIRV_OUTPUT + "default.spvV", vk::ShaderStageFlagBits::eVertex);
+				builder.AddShader(BASE_SPIRV_OUTPUT + "dos2.spvF", vk::ShaderStageFlagBits::eFragment);
+				builder.SetSubpassAmount(0);
+				builder.AddExtent(swapChainExtent);
+				builder.AddImageFormat(swapchainFormat);
+				builder.SetRenderPass(m_RenderPass);
+				m_GraphicsPipeline = builder.Build();
 
 			}
 			UpdateTexture(0);
@@ -496,11 +570,34 @@ public:
 		// can be better
 		auto createFramebuffer = [this]()
 		{
+
+			m_PagesImages.resize(4);
+			for (int i = 0; i < m_PagesImages.size(); i++)
+			{
+				auto usage = vk::ImageUsageFlagBits::eColorAttachment  |vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled;
+				m_PagesImages[i] = Image::CreateEmptyImage(128,128,vk::Format::eB8G8R8A8Unorm, usage);
+			}
+
+			std::vector<vk::ImageView> attachments = {
+				
+					m_PagesImages[0]->GetImageView(),
+			};
+			vk::FramebufferCreateInfo framebufferInfo;
+			framebufferInfo.flags = vk::FramebufferCreateFlags();
+			framebufferInfo.renderPass = m_PageRenderPass;
+			framebufferInfo.attachmentCount = attachments.size();
+			framebufferInfo.pAttachments = attachments.data();
+			framebufferInfo.width = 128;
+			framebufferInfo.height = 128;
+			framebufferInfo.layers = 1;
+
+			auto device = RenderContext::GetDevice();
+			m_PageFramebuffer = device->GetDevice().createFramebuffer(framebufferInfo);
+
 			auto& swapchain = Renderer::Instance()->GetSwapchain();
 			auto& frames = swapchain.GetFrames();
 			auto swapChainExtent = swapchain.GetExtent();
 			auto msaaImageView = swapchain.GetMSAAImageView();
-			auto device = RenderContext::GetDevice();
 			for (int i = 0; i < frames.size(); ++i) {
 
 				std::vector<vk::ImageView> attachments = {
@@ -550,6 +647,12 @@ public:
 
 
 			device.destroyRenderPass(m_RenderPass);
+			device.destroyRenderPass(m_PageRenderPass);
+			device.destroyFramebuffer(m_PageFramebuffer);
+			for (int i = 0; i < m_PagesImages.size(); i++)
+			{
+				m_PagesImages[i].reset();
+			}
 			Renderer::Instance()->Shutdown();
 			
 		};
@@ -723,18 +826,19 @@ public:
 			//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 			//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 			// now store character for later use
-			Character character = {
-				glm::ivec2(face->glyph->bitmap.width, face->glyph->bitmap.rows),
-				glm::ivec2(face->glyph->bitmap_left, face->glyph->bitmap_top),
-				face->glyph->advance.x
-			};
-			Characters.insert(std::make_pair(c, character));
+			//Character character = {
+			//	glm::ivec2(face->glyph->bitmap.width, face->glyph->bitmap.rows),
+			//	glm::ivec2(face->glyph->bitmap_left, face->glyph->bitmap_top),
+			//	face->glyph->advance.x
+			//};
+			//Characters.insert(std::make_pair(c, character));
 		}
 
-		auto image = Image::CreateEmptyImage(maxWidth, maxGlyphHeight * rowNumber, vk::Format::eR8Unorm);
+		auto usage = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled;
+		m_FontAtlas = Image::CreateEmptyImage(maxWidth, maxGlyphHeight * rowNumber, vk::Format::eR8Unorm, usage);
 		m_TransferCommandBuffer[0].BeginTransfering();
 		//void ChangeImageLayout(vk::Image & image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout, int mipMap = 1);
-		m_TransferCommandBuffer[0].ChangeImageLayout(image.get(), vk::ImageLayout::eGeneral, vk::ImageLayout::eTransferDstOptimal);
+		m_TransferCommandBuffer[0].ChangeImageLayout(m_FontAtlas.get(), vk::ImageLayout::eGeneral, vk::ImageLayout::eTransferDstOptimal);
 		m_TransferCommandBuffer[0].EndTransfering();
 		m_TransferCommandBuffer[0].SubmitSingle();
 		
@@ -753,7 +857,7 @@ public:
 			BufferInputChunk inputBuffer;
 			inputBuffer.size = imageSize;
 			inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
-			inputBuffer.usage = vk::BufferUsageFlagBits::eUniformBuffer;
+			inputBuffer.usage = vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eTransferSrc;
 
 			//auto buffer = Buffer::CreateStagingBuffer(imageSize);
 			auto buffer = CreateUPtr<Buffer>(inputBuffer);
@@ -762,9 +866,22 @@ public:
 			RenderContext::GetDevice()->GetDevice().unmapMemory(buffer->GetMemory());
 			//glTexSubImage2D(GL_TEXTURE_2D, 0, increment_x, increment_y, glyph->bitmap.width, glyph->bitmap.rows, GL_RED, GL_UNSIGNED_BYTE, glyph->bitmap.buffer); 
 			m_TransferCommandBuffer[0].BeginTransfering();
-			m_TransferCommandBuffer[0].CopyBufferToImage(*buffer.get(), image->GetImage(), face->glyph->bitmap.width, face->glyph->bitmap.rows, {increment_x,increment_y,0});
+			m_TransferCommandBuffer[0].CopyBufferToImage(*buffer.get(), m_FontAtlas->GetImage(), face->glyph->bitmap.width, face->glyph->bitmap.rows, {increment_x,increment_y,0});
 			m_TransferCommandBuffer[0].EndTransfering();
 			m_TransferCommandBuffer[0].SubmitSingle();
+
+
+			int texCoordLeft = increment_x;
+			int texCoordRight = increment_x+ face->glyph->bitmap.width;
+			int texCoordTop = increment_y+ face->glyph->bitmap.rows;
+			int texCoordBottom = increment_y;
+
+			Character character;
+			character.minUv = {texCoordLeft/maxWidth,texCoordBottom/maxGlyphHeight };
+			character.maxUv = { texCoordRight / maxWidth,texCoordTop / maxGlyphHeight };
+
+			Characters.insert(std::make_pair(c, character));
+			
 			increment_x += face->glyph->bitmap.width;
 			character_count++;
 			if (character_count >= 10)
@@ -793,7 +910,7 @@ private:
 	vk::DescriptorSet m_DescriptorSetTex;
 	vk::DescriptorSet m_DescriptorSetSelected;
 		
-
+	std::vector<SPtr<Image>> m_PagesImages;
 	std::vector<UPtr<Buffer>> m_UniformBuffers;
 	std::vector<void*> uniformBuffersMapped;
 	UPtr<IndexBuffer> m_IndexBuffer;
@@ -801,6 +918,7 @@ private:
 	UPtr<Buffer> m_ShaderStorageBuffer;
 	SPtr<Image> m_Image;
 	SPtr<Image> m_ImageSelected;
+	SPtr<Image> m_FontAtlas;
 	std::vector<glm::vec2> m_ClickPoints;
 
 
@@ -812,7 +930,12 @@ private:
 
 	UPtr<Pipeline> m_ComputePipeline;
 	UPtr<Pipeline> m_GraphicsPipeline;
+	UPtr<Pipeline> m_PagePipeline;
+
 	vk::RenderPass m_RenderPass;
+
+	vk::Framebuffer m_PageFramebuffer;
+	vk::RenderPass m_PageRenderPass;
 };
 
 

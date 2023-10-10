@@ -3,6 +3,10 @@
 #include"../Types.h"
 namespace Voidstar
 {
+
+
+	
+
 	struct GraphicsPipelineSpecification
 	{
 
@@ -43,8 +47,46 @@ namespace Voidstar
 	private:
 
 		friend class Renderer;
+		friend class PipelineBuilder;
 		vk::Pipeline m_Pipeline;
-		vk::RenderPass m_RenderPass;
 		vk::PipelineLayout m_PipelineLayout;
+	};
+	class PipelineBuilder
+	{
+	public:
+		void SetDevice(vk::Device);
+		void AddShader(std::string_view path, vk::ShaderStageFlagBits type);
+		void AddBindingDescription(std::vector<vk::VertexInputBindingDescription>& bindings);
+		void AddAttributeDescription(std::vector<vk::VertexInputAttributeDescription>& attributes);
+		void AddDescriptorLayouts(std::vector<vk::DescriptorSetLayout>& layouts);
+		void AddExtent(vk::Extent2D);
+		void AddImageFormat(vk::Format);
+		void SetTopology(vk::PrimitiveTopology topology);
+		void SetPolygoneMode(vk::PolygonMode polygon);
+		void AddPipelineLayout(vk::PipelineLayout layout);
+		void SetControlPoints(int amountPoints);
+		void WriteToDepthBuffer(bool wrtite);
+		void SetSamples(vk::SampleCountFlagBits samples);
+		void SetRenderPass(vk::RenderPass renderPass);
+		void SetSubpassAmount(int amount);
+		UPtr<Pipeline> Build();
+	private:
+		std::vector<vk::ShaderModule> m_Modules;
+		vk::PrimitiveTopology m_Topology;
+		vk::PolygonMode m_PolygonMode;
+		vk::Device m_Device;
+		vk::PipelineLayout m_PipelineLayout;
+		std::vector<vk::PipelineShaderStageCreateInfo> m_ShaderStages;
+		std::vector<vk::VertexInputBindingDescription> m_Bindings;
+		std::vector<vk::VertexInputAttributeDescription> m_Attributes;
+		std::vector<vk::DescriptorSetLayout> m_DescriptorSetLayouts;
+		vk::Format m_SwapchainImageFormat;
+		vk::Extent2D m_Extent;
+		vk::SampleCountFlagBits m_Samples;
+		int m_PatchControlPoints = -1;
+		bool m_WriteToDepthBuffer = false;
+		vk::RenderPass m_RenderPass;
+		int m_SubpassNumber;
+
 	};
 }

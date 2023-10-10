@@ -32,7 +32,7 @@ namespace Voidstar
 		static SPtr<Image> CreateImage(std::string path);
 		static SPtr<Image> CreateCubemap(std::vector<std::string> pathes);
 
-		static SPtr<Image> CreateEmptyImage( int width, int height,vk::Format format);
+		static SPtr<Image> CreateEmptyImage( int width, int height,vk::Format format, vk::ImageUsageFlags usage);
 		static SPtr<Image> CreateEmpty3DImage(int width, int height, int depth, vk::Format format);
 		~Image();
 		void Bind();

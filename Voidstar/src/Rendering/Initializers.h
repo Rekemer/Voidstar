@@ -28,14 +28,14 @@ inline vk::DescriptorSetLayoutBinding DescriptorBindingDescription(
 
 
 //// define order of subpasses?
-		//// where srcAccess mask operations occurr
-		////list operatoins that must be completed before staring render pass
-		//dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests;
-		////dependency.srcAccessMask = vk::AccessFlagBits::eNone;
-		//dependency.srcAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
-		//// define rights of subpasses?
-		//dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests;
-		//dependency.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+//// where srcAccess mask operations occurr
+////list operatoins that must be completed before staring render pass
+//dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests;
+////dependency.srcAccessMask = vk::AccessFlagBits::eNone;
+//dependency.srcAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+//// define rights of subpasses?
+//dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests;
+//dependency.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
 
 inline vk::SubpassDependency SubpassDependency(uint32_t srcSubpass, uint32_t dstSubpass, vk::PipelineStageFlagBits srcStageMask, vk::AccessFlagBits srcAccessMask, vk::PipelineStageFlagBits dstStageMask, vk::AccessFlagBits dstcAccessMask)
 {
