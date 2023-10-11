@@ -44,7 +44,6 @@ namespace Voidstar
 	{
 		std::function<void()> bindingsInit;
 		std::function<void()> bufferInit;
-		std::function<void()> commandBufferInit;
 		std::function<void()> loadTextures;
 		std::function<void()> bindResources;
 		std::function<void()> createPipelines;
@@ -177,6 +176,11 @@ namespace Voidstar
 		vk::PolygonMode GetPolygonMode() const { return m_PolygoneMode; }
 		void SetCallables(Callables functions) { m_UserFunctions = functions; };
 		void Shutdown();
+		CommandBuffer& GetRenderCommandBuffer(size_t frameindex);
+		CommandBuffer& GetComputeCommandBuffer(size_t frameindex);
+		CommandBuffer& GetTransferCommandBuffer(size_t frameindex);
+		void DrawQuadScreen(vk::CommandBuffer commandBuffer);
+		void DrawQuadIndexed(vk::CommandBuffer commandBuffer);
 	private:
 		void CreateInstance();
 		void CreateDebugMessenger();
@@ -203,9 +207,15 @@ namespace Voidstar
 		
 
 
+		std::vector<CommandBuffer> m_RenderCommandBuffer,
+			m_TransferCommandBuffer, m_ComputeCommandBuffer;
+		vk::CommandPool m_FrameCommandPool;
 
 
 		
+
+		UPtr<IndexBuffer> m_QuadIndexBuffer;
+		UPtr<Buffer> m_QuadBuffer{ nullptr };
 
 		SPtr<DescriptorPool> m_UniversalPool;
 

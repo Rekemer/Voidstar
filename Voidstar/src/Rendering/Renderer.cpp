@@ -1,4 +1,4 @@
-
+﻿
 #include"Prereq.h"
 #include "Renderer.h"
 #include <set>
@@ -390,6 +390,51 @@ namespace Voidstar
 	}
 
 
+	CommandBuffer& Renderer::GetRenderCommandBuffer(size_t frameindex)
+	{
+		assert(frameindex < m_RenderCommandBuffer.size());
+		return m_RenderCommandBuffer[frameindex];
+		// TODO: �������� ����� �������� return
+	}
+
+	CommandBuffer& Renderer::GetComputeCommandBuffer(size_t frameindex)
+	{
+		assert(frameindex < m_ComputeCommandBuffer.size());
+		return m_ComputeCommandBuffer[frameindex];
+	}
+
+	CommandBuffer& Renderer::GetTransferCommandBuffer(size_t frameindex)
+	{
+		assert(frameindex < m_TransferCommandBuffer.size());
+		return m_TransferCommandBuffer[frameindex];
+	}
+
+	void Renderer::DrawQuadScreen(vk::CommandBuffer commandBuffer)
+	{
+		vk::DeviceSize offsets[] = { 0 };
+
+		{
+			vk::Buffer vertexBuffers[] = { m_QuadBuffer->GetBuffer() };
+			commandBuffer.bindVertexBuffers(0, 1, vertexBuffers, offsets);
+
+		}
+
+		commandBuffer.draw(6, 1, 0, 0);
+	}
+	void Renderer::DrawQuadIndexed(vk::CommandBuffer commandBuffer)
+	{
+		vk::DeviceSize offsets[] = { 0 };
+
+		{
+			vk::Buffer vertexBuffers[] = { m_QuadBuffer->GetBuffer() };
+			commandBuffer.bindVertexBuffers(0, 1, vertexBuffers, offsets);
+
+		}
+
+		commandBuffer.bindIndexBuffer(m_QuadIndexBuffer->GetBuffer(), 0, m_QuadIndexBuffer->GetIndexType());
+		commandBuffer.drawIndexed(6, 1, 0, 0,0);
+	}
+
 	void Renderer::Init(size_t screenWidth, size_t screenHeight, std::shared_ptr<Window> window, Application* app) 
 		
 	{
@@ -438,6 +483,63 @@ namespace Voidstar
 		CreateSyncObjects();
 		m_Swapchain->CreateMSAAFrame();
 
+
+
+		auto commandBufferInit = [this]()
+		{
+			m_FrameCommandPool = Renderer::Instance()->GetCommandPoolManager()->GetFreePool();
+			m_RenderCommandBuffer = CommandBuffer::CreateBuffers(m_FrameCommandPool, vk::CommandBufferLevel::ePrimary, 3);
+			m_TransferCommandBuffer = CommandBuffer::CreateBuffers(m_FrameCommandPool, vk::CommandBufferLevel::ePrimary, 3);
+			m_ComputeCommandBuffer = CommandBuffer::CreateBuffers(m_FrameCommandPool, vk::CommandBufferLevel::ePrimary, 3);
+		};
+		commandBufferInit();
+
+		std::vector<IndexType> indices;
+		auto vertices = GeneratePlane(1, indices);
+		auto indexSize = SizeOfBuffer(indices.size(), indices[0]);
+		{
+			SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(indexSize);
+
+
+			{
+				BufferInputChunk inputBuffer;
+				inputBuffer.size = indexSize;
+				inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+				inputBuffer.usage = vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst;
+				m_QuadIndexBuffer = CreateUPtr<IndexBuffer>(inputBuffer, indices.size(), vk::IndexType::eUint32);
+
+			}
+
+			m_TransferCommandBuffer[0].BeginTransfering();
+			m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_QuadIndexBuffer.get(), (void*)indices.data(), indexSize);
+			m_TransferCommandBuffer[0].EndTransfering();
+			m_TransferCommandBuffer[0].SubmitSingle();
+
+
+
+			{
+
+
+
+				auto vertexSize = SizeOfBuffer(vertices.size(), vertices[0]);
+				void* vertexData = const_cast<void*>(static_cast<const void*>(vertices.data()));
+				SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(vertexSize);
+				{
+					BufferInputChunk inputBuffer;
+					inputBuffer.size = vertexSize;
+					inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+					inputBuffer.usage = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer;
+
+					m_QuadBuffer = CreateUPtr<Buffer>(inputBuffer);
+				}
+
+				m_TransferCommandBuffer[0].BeginTransfering();
+				m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_QuadBuffer.get(), (void*)vertices.data(), vertexSize);
+				m_TransferCommandBuffer[0].EndTransfering();
+				m_TransferCommandBuffer[0].SubmitSingle();
+			}
+
+		}
 
 
 		auto physDev = m_Device->GetDevicePhys();
@@ -644,7 +746,6 @@ namespace Voidstar
 		m_UserFunctions.bindingsInit();
 		CreateLayouts();
 		AllocateSets();
-		m_UserFunctions.commandBufferInit();
 		m_UserFunctions.bufferInit();
 		m_UserFunctions.loadTextures();
 		m_UserFunctions.bindResources();
@@ -747,7 +848,14 @@ namespace Voidstar
 			m_Swapchain->CleanUp();
 
 
-			
+			for (int i = 0; i < m_ComputeCommandBuffer.size(); i++)
+			{
+				m_RenderCommandBuffer[i].Free();
+				m_ComputeCommandBuffer[i].Free();
+				m_TransferCommandBuffer[i].Free();
+			};
+
+			Renderer::Instance()->GetCommandPoolManager()->FreePool(m_FrameCommandPool);
 
 
 
@@ -885,7 +993,7 @@ namespace Voidstar
 
 	//On tile - based - renderer, which is pretty much anything on mobile,
 	//using input attachments is faster than the traditional multi - pass approach as pixel reads are fetched from tile memory instead of mainframebuffer, 
-	//so if you target the mobile market it�s always a good idea to use input attachments instead of multiple passes when possible.
+	//so if you target the mobile market it’s always a good idea to use input attachments instead of multiple passes when possible.
 
 
 

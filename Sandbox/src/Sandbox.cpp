@@ -85,48 +85,7 @@ public:
 
 
 
-			std::vector<IndexType> indices;
-			auto vertices = GeneratePlane(1, indices);
-			auto indexSize = SizeOfBuffer(indices.size(), indices[0]);
-			{
-				SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(indexSize);
-
-
-				{
-					BufferInputChunk inputBuffer;
-					inputBuffer.size = indexSize;
-					inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
-					inputBuffer.usage = vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst;
-					m_IndexBuffer = CreateUPtr<IndexBuffer>(inputBuffer, indices.size(), vk::IndexType::eUint32);
-
-				}
-
-				m_TransferCommandBuffer[0].BeginTransfering();
-				m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_IndexBuffer.get(), (void*)indices.data(), indexSize);
-				m_TransferCommandBuffer[0].EndTransfering();
-				m_TransferCommandBuffer[0].SubmitSingle();
-
-
-
-			}
-
-
-			auto vertexSize = SizeOfBuffer(vertices.size(), vertices[0]);
-			void* vertexData = const_cast<void*>(static_cast<const void*>(vertices.data()));
-			SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(vertexSize);
-			{
-				BufferInputChunk inputBuffer;
-				inputBuffer.size = vertexSize;
-				inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
-				inputBuffer.usage = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer;
-
-				m_ModelBuffer = CreateUPtr<Buffer>(inputBuffer);
-			}
-
-			m_TransferCommandBuffer[0].BeginTransfering();
-			m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_ModelBuffer.get(), (void*)vertices.data(), vertexSize);
-			m_TransferCommandBuffer[0].EndTransfering();
-			m_TransferCommandBuffer[0].SubmitSingle();
+			
 
 
 
@@ -143,14 +102,7 @@ public:
 
 
 
-		auto commandBufferInit = [this]()
-		{
-			m_FrameCommandPool = Renderer::Instance()->GetCommandPoolManager()->GetFreePool();
-			m_RenderCommandBuffer = CommandBuffer::CreateBuffers(m_FrameCommandPool, vk::CommandBufferLevel::ePrimary, 3);
-			m_TransferCommandBuffer = CommandBuffer::CreateBuffers(m_FrameCommandPool, vk::CommandBufferLevel::ePrimary, 3);
-			m_ComputeCommandBuffer = CommandBuffer::CreateBuffers(m_FrameCommandPool, vk::CommandBufferLevel::ePrimary, 3);
-			LoadFont(BASE_RES_PATH + "fonts/arial.ttf");
-		};
+		
 
 		auto loadTextures = [this]()
 		{
@@ -396,7 +348,7 @@ public:
 		{
 
 			UpdateUniformBuffer(frameIndex, camera);
-			auto& renderCommandBuffer = m_RenderCommandBuffer[frameIndex];
+			auto& renderCommandBuffer = Renderer::Instance()->GetRenderCommandBuffer(frameIndex);
 			{
 				ZoneScopedN("Sumbit render commands");
 				renderCommandBuffer.BeginRendering();
@@ -405,15 +357,9 @@ public:
 
 				vk::CommandBufferBeginInfo beginInfo = {};
 
-				auto commandBuffer = m_RenderCommandBuffer[frameIndex].GetCommandBuffer();
-				auto amount = m_IndexBuffer->GetIndexAmount();
+				auto commandBuffer = renderCommandBuffer.GetCommandBuffer();
 
-
-
-
-
-
-
+				//RenderContext::GetDevice()->GetDevice().waitIdle();
 				commandBuffer.begin(beginInfo);
 				{
 
@@ -423,8 +369,13 @@ public:
 
 
 
+					vk::ClearValue clearColor = { std::array<float, 4>{0.1f, .3f, 0.1f, 1.0f} };
 
-					m_RenderCommandBuffer[frameIndex].BeginRenderPass(&m_RenderPass, &swapchain.GetFrameBuffer(frameIndex), &swapchain.GetExtent());
+					vk::ClearValue depthClear;
+
+					depthClear.depthStencil = vk::ClearDepthStencilValue({ 1.0f, 0 });
+					std::vector<vk::ClearValue> clearValues = { {clearColor, depthClear,clearColor} };
+					renderCommandBuffer.BeginRenderPass(m_RenderPass, swapchain.GetFrameBuffer(frameIndex), swapchain.GetExtent(), clearValues);
 					
 					auto viewportSize = Renderer::Instance()->GetViewportSize();
 					vk::Viewport viewport;
@@ -448,27 +399,59 @@ public:
 
 
 					commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_GraphicsPipeline->GetPipeline());
-					vk::DeviceSize offsets[] = { 0 };
-
-					{
-						vk::Buffer vertexBuffers[] = { m_ModelBuffer->GetBuffer() };
-						commandBuffer.bindVertexBuffers(0, 1, vertexBuffers, offsets);
-
-					}
-
-
-
 
 					commandBuffer.setViewport(0, 1, &viewport);
 					commandBuffer.setScissor(0, 1, &scissors);
 
-					commandBuffer.bindIndexBuffer(m_IndexBuffer->GetBuffer(), 0, m_IndexBuffer->GetIndexType());
-					commandBuffer.drawIndexed(static_cast<uint32_t>(amount), 1, 0, 0, 0);
+					Renderer:: Instance()->DrawQuadIndexed(commandBuffer);
 
+					renderCommandBuffer.EndRenderPass();
+
+
+					
+					
 
 
 				}
-				m_RenderCommandBuffer[frameIndex].EndRenderPass();
+				{
+					vk::ClearValue clearColor = { std::array<float, 4>{0.1f, .3f, 0.1f, 1.0f} };
+					std::vector<vk::ClearValue> clearValues = { {clearColor} };
+					renderCommandBuffer.BeginRenderPass(m_PageRenderPass, m_PageFramebuffer, vk::Extent2D(128, 128), clearValues);
+
+					
+
+
+
+					auto viewportSize = Renderer::Instance()->GetViewportSize();
+					vk::Viewport viewport;
+					viewport.x = 0;
+					viewport.y = 0;
+					viewport.minDepth = 0;
+					viewport.maxDepth = 1;
+					viewport.height = 128;
+					viewport.width = 128;
+
+					vk::Rect2D scissors;
+					scissors.offset = vk::Offset2D{ (uint32_t)0,(uint32_t)0 };
+					scissors.extent = vk::Extent2D{ (uint32_t)viewportSize.first,(uint32_t)viewportSize.second };
+
+
+
+
+
+					commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PagePipeline->GetLayout(), 0, m_DescriptorSets[frameIndex], nullptr);
+					commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PagePipeline->GetLayout(), 1, m_DescriptorSetTex, nullptr);
+
+
+					commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_PagePipeline->GetPipeline());
+
+					commandBuffer.setViewport(0, 1, &viewport);
+					commandBuffer.setScissor(0, 1, &scissors);
+
+					Renderer::Instance()->DrawQuadScreen(commandBuffer);
+
+					renderCommandBuffer.EndRenderPass();
+				}
 				TracyVkCollect(ctx, commandBuffer);
 				commandBuffer.end();
 				renderCommandBuffer.EndRendering();
@@ -633,14 +616,7 @@ public:
 		auto cleanup = [this]()
 		{
 
-			for (int i = 0; i < m_ComputeCommandBuffer.size(); i++)
-			{
-				m_RenderCommandBuffer[i].Free();
-				m_ComputeCommandBuffer[i].Free();
-				m_TransferCommandBuffer[i].Free();
-			};
-
-			Renderer::Instance()->GetCommandPoolManager()->FreePool(m_FrameCommandPool);
+			
 
 			auto device = RenderContext::GetDevice()->GetDevice();
 	
@@ -659,7 +635,6 @@ public:
 		Callables callables;
 		callables.bindingsInit = bindingsInit;
 		callables.bufferInit = bufferInit;
-		callables.commandBufferInit = commandBufferInit;
 		callables.loadTextures = loadTextures;
 		callables.bindResources = bindResources;
 		callables.createPipelines = createPipelines;
@@ -679,12 +654,12 @@ public:
 			SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(size);
 
 
+			auto transferCommandBuffer = Renderer::Instance()->GetTransferCommandBuffer(0);
 
-
-			m_TransferCommandBuffer[0].BeginTransfering();
-			m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_ShaderStorageBuffer.get(), (void*)m_ClickPoints.data(), size);
-			m_TransferCommandBuffer[0].EndTransfering();
-			m_TransferCommandBuffer[0].SubmitSingle();
+			transferCommandBuffer.BeginTransfering();
+			transferCommandBuffer.Transfer(stagingBuffer.get(), m_ShaderStorageBuffer.get(), (void*)m_ClickPoints.data(), size);
+			transferCommandBuffer.EndTransfering();
+			transferCommandBuffer.SubmitSingle();
 
 
 			device.UpdateDescriptorSet(m_DescriptorSetSelected, 1, 1, *m_ShaderStorageBuffer, vk::DescriptorType::eStorageBuffer);
@@ -725,17 +700,18 @@ public:
 	{
 		auto device = RenderContext::GetDevice()->GetDevice();
 		auto currentFrame = frameIndex;
+		auto computeCommandBuffer = Renderer::Instance()->GetComputeCommandBuffer(frameIndex);
 		if (m_ImageSelected->GetLayout() != vk::ImageLayout::eGeneral)
 		{
-			auto cmdBuffer = m_ComputeCommandBuffer[currentFrame].BeginTransfering();
+			auto cmdBuffer = computeCommandBuffer.BeginTransfering();
 
 
-			m_ComputeCommandBuffer[currentFrame].ChangeImageLayout(m_ImageSelected.get(), vk::ImageLayout::eShaderReadOnlyOptimal, vk::ImageLayout::eGeneral);
-			m_ComputeCommandBuffer[currentFrame].EndTransfering();
-			m_ComputeCommandBuffer[currentFrame].SubmitSingle();
+			computeCommandBuffer.ChangeImageLayout(m_ImageSelected.get(), vk::ImageLayout::eShaderReadOnlyOptimal, vk::ImageLayout::eGeneral);
+			computeCommandBuffer.EndTransfering();
+			computeCommandBuffer.SubmitSingle();
 
 		}
-		auto cmdBuffer = m_ComputeCommandBuffer[currentFrame].BeginTransfering();
+		auto cmdBuffer = computeCommandBuffer.BeginTransfering();
 
 
 
@@ -749,9 +725,9 @@ public:
 
 		vkCmdDispatch(cmdBuffer, invocations / localSize, invocations / localSize, 1);
 
-		m_ComputeCommandBuffer[currentFrame].ChangeImageLayout(m_ImageSelected.get(), vk::ImageLayout::eGeneral, vk::ImageLayout::eShaderReadOnlyOptimal);
-		m_ComputeCommandBuffer[currentFrame].EndTransfering();
-		m_ComputeCommandBuffer[currentFrame].SubmitSingle();
+		computeCommandBuffer.ChangeImageLayout(m_ImageSelected.get(), vk::ImageLayout::eGeneral, vk::ImageLayout::eShaderReadOnlyOptimal);
+		computeCommandBuffer.EndTransfering();
+		computeCommandBuffer.SubmitSingle();
 
 
 		device.waitIdle();
@@ -836,11 +812,14 @@ public:
 
 		auto usage = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled;
 		m_FontAtlas = Image::CreateEmptyImage(maxWidth, maxGlyphHeight * rowNumber, vk::Format::eR8Unorm, usage);
-		m_TransferCommandBuffer[0].BeginTransfering();
+
+		auto computeCommandBuffer = Renderer::Instance()->GetComputeCommandBuffer(0);
+
+		computeCommandBuffer.BeginTransfering();
 		//void ChangeImageLayout(vk::Image & image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout, int mipMap = 1);
-		m_TransferCommandBuffer[0].ChangeImageLayout(m_FontAtlas.get(), vk::ImageLayout::eGeneral, vk::ImageLayout::eTransferDstOptimal);
-		m_TransferCommandBuffer[0].EndTransfering();
-		m_TransferCommandBuffer[0].SubmitSingle();
+		computeCommandBuffer.ChangeImageLayout(m_FontAtlas.get(), vk::ImageLayout::eGeneral, vk::ImageLayout::eTransferDstOptimal);
+		computeCommandBuffer.EndTransfering();
+		computeCommandBuffer.SubmitSingle();
 		
 		int character_count = 0;
 		int increment_x = 0;
@@ -865,10 +844,10 @@ public:
 			memcpy(ptr, face->glyph->bitmap.buffer, imageSize);
 			RenderContext::GetDevice()->GetDevice().unmapMemory(buffer->GetMemory());
 			//glTexSubImage2D(GL_TEXTURE_2D, 0, increment_x, increment_y, glyph->bitmap.width, glyph->bitmap.rows, GL_RED, GL_UNSIGNED_BYTE, glyph->bitmap.buffer); 
-			m_TransferCommandBuffer[0].BeginTransfering();
-			m_TransferCommandBuffer[0].CopyBufferToImage(*buffer.get(), m_FontAtlas->GetImage(), face->glyph->bitmap.width, face->glyph->bitmap.rows, {increment_x,increment_y,0});
-			m_TransferCommandBuffer[0].EndTransfering();
-			m_TransferCommandBuffer[0].SubmitSingle();
+			computeCommandBuffer.BeginTransfering();
+			computeCommandBuffer.CopyBufferToImage(*buffer.get(), m_FontAtlas->GetImage(), face->glyph->bitmap.width, face->glyph->bitmap.rows, { increment_x,increment_y,0 });
+			computeCommandBuffer.EndTransfering();
+			computeCommandBuffer.SubmitSingle();
 
 
 			int texCoordLeft = increment_x;
@@ -913,8 +892,7 @@ private:
 	std::vector<SPtr<Image>> m_PagesImages;
 	std::vector<UPtr<Buffer>> m_UniformBuffers;
 	std::vector<void*> uniformBuffersMapped;
-	UPtr<IndexBuffer> m_IndexBuffer;
-	UPtr<Buffer> m_ModelBuffer{ nullptr };
+	
 	UPtr<Buffer> m_ShaderStorageBuffer;
 	SPtr<Image> m_Image;
 	SPtr<Image> m_ImageSelected;
@@ -922,10 +900,7 @@ private:
 	std::vector<glm::vec2> m_ClickPoints;
 
 
-	std::vector<CommandBuffer> m_RenderCommandBuffer,
-		m_TransferCommandBuffer, m_ComputeCommandBuffer;
-	vk::CommandPool m_FrameCommandPool;
-
+	
 	
 
 	UPtr<Pipeline> m_ComputePipeline;

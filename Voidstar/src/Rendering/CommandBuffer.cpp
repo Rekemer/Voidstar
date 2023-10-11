@@ -16,25 +16,19 @@ namespace Voidstar
 		m_CommandBuffer.reset();
 	}
 
-	void CommandBuffer::BeginRenderPass(vk::RenderPass* renderPass, vk::Framebuffer* framebuffer, vk::Extent2D* extent)
+	void CommandBuffer::BeginRenderPass(vk::RenderPass& renderPass, vk::Framebuffer& framebuffer, vk::Extent2D& extent, std::vector<vk::ClearValue>& clearValues)
 	{
 		
 
 
 		vk::RenderPassBeginInfo renderPassInfo = {};
-		auto swapChainExtent = *extent;
-		renderPassInfo.renderPass = *renderPass;
-		renderPassInfo.framebuffer = *framebuffer;
+		renderPassInfo.renderPass = renderPass;
+		renderPassInfo.framebuffer = framebuffer;
 		renderPassInfo.renderArea.offset.x = 0;
 		renderPassInfo.renderArea.offset.y = 0;
-		renderPassInfo.renderArea.extent = swapChainExtent;
+		renderPassInfo.renderArea.extent = extent;
 
-		vk::ClearValue clearColor = { std::array<float, 4>{0.1f, .3f, 0.1f, 1.0f} };
-
-		vk::ClearValue depthClear;
-
-		depthClear.depthStencil = vk::ClearDepthStencilValue({ 1.0f, 0 });
-		std::vector<vk::ClearValue> clearValues = { {clearColor, depthClear,clearColor} };
+		
 
 		renderPassInfo.clearValueCount = clearValues.size();
 		renderPassInfo.pClearValues = clearValues.data();

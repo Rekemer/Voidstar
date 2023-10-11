@@ -42,7 +42,7 @@ namespace Voidstar
 		//rendering 
 		void BeginRendering();
 	
-		void BeginRenderPass(vk::RenderPass* renderPass, vk::Framebuffer* framebuffer, vk::Extent2D* extent);
+		void BeginRenderPass(vk::RenderPass& renderPass, vk::Framebuffer& framebuffer, vk::Extent2D& extent, std::vector<vk::ClearValue>& clearValues);
 	
 		void EndRenderPass();
 		void Submit(vk::Semaphore* waitSemaphores, vk::Semaphore* signalSemaphores, vk::Fence* fence);
