@@ -53,7 +53,9 @@ public:
 			binderRender.Bind(0, 1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment);
 			binderRender.Bind(1, 1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment);
 
-
+			m_TexAtlas = binderRender.BeginBind();
+			binderRender.Bind(0, 1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment);
+			
 			auto binderCompute = Binder<COMPUTE>();
 			m_Compute = binderCompute.BeginBind();
 			binderCompute.Bind(0, 1, vk::DescriptorType::eStorageImage, vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute);
@@ -123,6 +125,7 @@ public:
 
 			m_DescriptorSetSelected = Renderer::Instance()->GetSet<vk::DescriptorSet>(m_Compute, PipelineType::COMPUTE);
 			m_DescriptorSetTex = Renderer::Instance()->GetSet<vk::DescriptorSet>(m_TexDesc, PipelineType::RENDER);
+			m_DescriptorSetFont = Renderer::Instance()->GetSet<vk::DescriptorSet>(m_TexAtlas, PipelineType::RENDER);
 
 			auto device = RenderContext::GetDevice();
 
@@ -145,7 +148,8 @@ public:
 
 
 			UpdateBuffer(*device, m_DescriptorSetSelected, m_ClickPoints.data(), *m_ShaderStorageBuffer, MAX_POINTS * sizeof(glm::vec2));
-
+			LoadFont(BASE_RES_PATH + "fonts/arial.ttf");
+			device->UpdateDescriptorSet(m_DescriptorSetFont, 0, 1, *m_FontAtlas, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
 		};
 
 		auto createPipelines = [this]()
@@ -153,6 +157,10 @@ public:
 			auto m_DescriptorSetLayout = Renderer::Instance()->GetSetLayout(0, PipelineType::RENDER);
 			auto m_DescriptorSetLayoutTex = Renderer::Instance()->GetSetLayout(1, PipelineType::RENDER);
 			auto m_DescriptorSetLayoutSelected = Renderer::Instance()->GetSetLayout(0, PipelineType::COMPUTE);
+			auto m_DescriptorSetLayoutFont = Renderer::Instance()->GetSetLayout(m_TexAtlas, PipelineType::RENDER);
+			
+			
+			
 			std::vector< vk::DescriptorSetLayout>layouts = { m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutSelected->GetLayout() };
 			m_ComputePipeline = Pipeline::CreateComputePipeline(BASE_SPIRV_OUTPUT + "SelectedTex.spvCmp", layouts);
 
@@ -252,9 +260,9 @@ public:
 
 				auto samples = RenderContext::GetDevice()->GetSamples();
 				specs.samples = samples;
-				auto m_DescriptorSetLayout = Renderer::Instance()->GetSetLayout(0, PipelineType::RENDER);
-				auto m_DescriptorSetLayoutTex = Renderer::Instance()->GetSetLayout(1, PipelineType::RENDER);
-				auto pipelineLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutTex->GetLayout() };
+				
+				auto pipelineLayouts = std::vector<vk::DescriptorSetLayout>{
+					m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutFont->GetLayout() };
 
 				specs.descriptorSetLayout = pipelineLayouts;
 
@@ -302,8 +310,8 @@ public:
 				attributeDescriptions =
 				{
 					VertexInputAttributeDescription(0,0,vk::Format::eR32G32B32Sfloat,offsetof(Vertex, Position)),
-				   VertexInputAttributeDescription(0,1,vk::Format::eR32G32B32A32Sfloat,offsetof(Vertex, Color)),
-					VertexInputAttributeDescription(0,2,vk::Format::eR32G32Sfloat,offsetof(Vertex, UV)),
+					//VertexInputAttributeDescription(0,1,vk::Format::eR32G32B32A32Sfloat,offsetof(Vertex, Color)),
+					VertexInputAttributeDescription(0,1,vk::Format::eR32G32Sfloat,offsetof(Vertex, UV)),
 
 				};
 
@@ -315,9 +323,7 @@ public:
 
 				auto samples = RenderContext::GetDevice()->GetSamples();
 				specs.samples = samples;
-				auto m_DescriptorSetLayout = Renderer::Instance()->GetSetLayout(0, PipelineType::RENDER);
-				auto m_DescriptorSetLayoutTex = Renderer::Instance()->GetSetLayout(1, PipelineType::RENDER);
-				auto pipelineLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutTex->GetLayout() };
+				auto pipelineLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutFont->GetLayout() };
 
 				specs.descriptorSetLayout = pipelineLayouts;
 
@@ -332,8 +338,8 @@ public:
 				builder.AddBindingDescription(bindings);
 				builder.SetPolygoneMode(Renderer::Instance()->GetPolygonMode());
 				builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
-				builder.AddShader(BASE_SPIRV_OUTPUT + "default.spvV", vk::ShaderStageFlagBits::eVertex);
-				builder.AddShader(BASE_SPIRV_OUTPUT + "dos2.spvF", vk::ShaderStageFlagBits::eFragment);
+				builder.AddShader(BASE_SPIRV_OUTPUT + "font.spvV", vk::ShaderStageFlagBits::eVertex);
+				builder.AddShader(BASE_SPIRV_OUTPUT + "font.spvF", vk::ShaderStageFlagBits::eFragment);
 				builder.SetSubpassAmount(0);
 				builder.AddExtent(swapChainExtent);
 				builder.AddImageFormat(swapchainFormat);
@@ -361,7 +367,7 @@ public:
 
 				//RenderContext::GetDevice()->GetDevice().waitIdle();
 				commandBuffer.begin(beginInfo);
-				{
+		/*		{
 
 
 
@@ -412,14 +418,62 @@ public:
 					
 
 
-				}
+				}*/
 				{
 					vk::ClearValue clearColor = { std::array<float, 4>{0.1f, .3f, 0.1f, 1.0f} };
-					std::vector<vk::ClearValue> clearValues = { {clearColor} };
-					renderCommandBuffer.BeginRenderPass(m_PageRenderPass, m_PageFramebuffer, vk::Extent2D(128, 128), clearValues);
 
-					
+					vk::ClearValue depthClear;
 
+					depthClear.depthStencil = vk::ClearDepthStencilValue({ 1.0f, 0 });
+					std::vector<vk::ClearValue> clearValues = { {clearColor, depthClear,clearColor} };
+					renderCommandBuffer.BeginRenderPass(m_RenderPass, swapchain.GetFrameBuffer(frameIndex), swapchain.GetExtent(), clearValues);
+					glm::vec2 pos = { 50,50 };
+					std::string str = "Hello";
+					auto ptr = Renderer::Instance()->m_BatchQuad;
+					int indexCount = 0;
+					auto offset = pos;
+					for (auto e : str)
+					{
+						auto& characterData = Characters.at(e);
+
+
+
+						// left bottom
+						ptr->u = characterData.minUv.x;
+						ptr->v = characterData.minUv.y;
+						ptr->x = offset.x;
+						ptr->y = offset.y;
+						ptr->z = 0;
+
+						ptr++;
+						// right bottom
+						ptr->u = characterData.maxUv.x;
+						ptr->v = characterData.minUv.y;
+						ptr->x = offset.x + characterData.Size.x;
+						ptr->y = offset.y;
+						ptr->z = 0;
+						ptr++;
+						// right top
+						ptr->u = characterData.maxUv.x;
+						ptr->v = characterData.maxUv.y;
+						ptr->x = offset.x + characterData.Size.x;
+						ptr->y = offset.y + characterData.Size.y;
+						ptr->z = 0;
+						ptr++;
+						 
+						 
+						// left top
+						ptr->u = characterData.minUv.x;
+						ptr->v = characterData.maxUv.y;
+						ptr->x = offset.x;
+						ptr->y = offset.y + characterData.Size.y;
+						ptr->z = 0;
+						ptr++;
+
+
+						offset.x += characterData.Advance / 64.f;
+						indexCount += 6;
+					}
 
 
 					auto viewportSize = Renderer::Instance()->GetViewportSize();
@@ -428,8 +482,8 @@ public:
 					viewport.y = 0;
 					viewport.minDepth = 0;
 					viewport.maxDepth = 1;
-					viewport.height = 128;
-					viewport.width = 128;
+					viewport.height = viewportSize.second;
+					viewport.width = viewportSize.first;
 
 					vk::Rect2D scissors;
 					scissors.offset = vk::Offset2D{ (uint32_t)0,(uint32_t)0 };
@@ -439,11 +493,11 @@ public:
 
 
 
-					commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PagePipeline->GetLayout(), 0, m_DescriptorSets[frameIndex], nullptr);
-					commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PagePipeline->GetLayout(), 1, m_DescriptorSetTex, nullptr);
+					commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_GraphicsPipeline->GetLayout(), 0, m_DescriptorSets[frameIndex], nullptr);
+					commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_GraphicsPipeline->GetLayout(), 1, m_DescriptorSetFont, nullptr);
 
 
-					commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_PagePipeline->GetPipeline());
+					commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_GraphicsPipeline->GetPipeline());
 
 					commandBuffer.setViewport(0, 1, &viewport);
 					commandBuffer.setScissor(0, 1, &scissors);
@@ -736,6 +790,8 @@ public:
 
 	void LoadFont(std::string_view str)
 	{
+
+
 		FT_Library ft;
 		if (FT_Init_FreeType(&ft) != 0)
 		{
@@ -810,13 +866,13 @@ public:
 			//Characters.insert(std::make_pair(c, character));
 		}
 
+		auto maxHeight = maxGlyphHeight * rowNumber;
 		auto usage = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled;
-		m_FontAtlas = Image::CreateEmptyImage(maxWidth, maxGlyphHeight * rowNumber, vk::Format::eR8Unorm, usage);
+		m_FontAtlas = Image::CreateEmptyImage(maxWidth, maxHeight, vk::Format::eR8Unorm, usage);
 
 		auto computeCommandBuffer = Renderer::Instance()->GetComputeCommandBuffer(0);
 
 		computeCommandBuffer.BeginTransfering();
-		//void ChangeImageLayout(vk::Image & image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout, int mipMap = 1);
 		computeCommandBuffer.ChangeImageLayout(m_FontAtlas.get(), vk::ImageLayout::eGeneral, vk::ImageLayout::eTransferDstOptimal);
 		computeCommandBuffer.EndTransfering();
 		computeCommandBuffer.SubmitSingle();
@@ -827,7 +883,7 @@ public:
 
 		
 
-		for (unsigned char c = 65; c < 128; c++)
+		for (unsigned char c = 65+7; c < 128; c++)
 		{
 			// load character glyph 
 			auto error = FT_Load_Char(face, c, FT_LOAD_RENDER);
@@ -850,15 +906,16 @@ public:
 			computeCommandBuffer.SubmitSingle();
 
 
-			int texCoordLeft = increment_x;
-			int texCoordRight = increment_x+ face->glyph->bitmap.width;
-			int texCoordTop = increment_y+ face->glyph->bitmap.rows;
-			int texCoordBottom = increment_y;
+			float texCoordLeft = increment_x;
+			float texCoordRight = increment_x+ face->glyph->bitmap.width;
+			float texCoordTop = increment_y+ face->glyph->bitmap.rows;
+			float texCoordBottom = increment_y;
 
 			Character character;
-			character.minUv = {texCoordLeft/maxWidth,texCoordBottom/maxGlyphHeight };
-			character.maxUv = { texCoordRight / maxWidth,texCoordTop / maxGlyphHeight };
-
+			character.minUv = {texCoordLeft/maxWidth,texCoordBottom/ maxHeight };
+			character.maxUv = { texCoordRight / maxWidth,texCoordTop / maxHeight };
+			character.Advance = face->glyph->advance.x;
+			character.Size = { face->glyph->bitmap.width ,face->glyph->bitmap.rows };
 			Characters.insert(std::make_pair(c, character));
 			
 			increment_x += face->glyph->bitmap.width;
@@ -872,7 +929,10 @@ public:
 
 		FT_Done_Face(face);
 		FT_Done_FreeType(ft);
-
+		computeCommandBuffer.BeginTransfering();
+		computeCommandBuffer.ChangeImageLayout(m_FontAtlas.get(), vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal);
+		computeCommandBuffer.EndTransfering();
+		computeCommandBuffer.SubmitSingle();
 
 
 	}
@@ -883,11 +943,13 @@ private:
 	int m_BaseDesc = 0;
 	int m_TexDesc = 0;
 	int m_Compute = 0;
+	int m_TexAtlas = 0;
 	const uint32_t MAX_POINTS = 20;
 	int nextPoint = 0;
 	std::vector<vk::DescriptorSet> m_DescriptorSets;
 	vk::DescriptorSet m_DescriptorSetTex;
 	vk::DescriptorSet m_DescriptorSetSelected;
+	vk::DescriptorSet m_DescriptorSetFont;
 		
 	std::vector<SPtr<Image>> m_PagesImages;
 	std::vector<UPtr<Buffer>> m_UniformBuffers;

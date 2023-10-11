@@ -414,12 +414,12 @@ namespace Voidstar
 		vk::DeviceSize offsets[] = { 0 };
 
 		{
-			vk::Buffer vertexBuffers[] = { m_QuadBuffer->GetBuffer() };
+			vk::Buffer vertexBuffers[] = { m_QuadBufferBatch->GetBuffer() };
 			commandBuffer.bindVertexBuffers(0, 1, vertexBuffers, offsets);
 
 		}
-
-		commandBuffer.draw(6, 1, 0, 0);
+		commandBuffer.bindIndexBuffer(m_QuadBufferBatchIndex->GetBuffer(), 0, m_QuadBufferBatchIndex->GetIndexType());
+		commandBuffer.drawIndexed(5*6, 1, 0, 0,0);
 	}
 	void Renderer::DrawQuadIndexed(vk::CommandBuffer commandBuffer)
 	{
@@ -522,8 +522,6 @@ namespace Voidstar
 
 
 				auto vertexSize = SizeOfBuffer(vertices.size(), vertices[0]);
-				void* vertexData = const_cast<void*>(static_cast<const void*>(vertices.data()));
-				SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(vertexSize);
 				{
 					BufferInputChunk inputBuffer;
 					inputBuffer.size = vertexSize;
@@ -531,8 +529,53 @@ namespace Voidstar
 					inputBuffer.usage = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer;
 
 					m_QuadBuffer = CreateUPtr<Buffer>(inputBuffer);
-				}
 
+
+					const int QUAD_AMOUNT = 20;
+					{
+						BufferInputChunk inputBuffer;
+						inputBuffer.size = sizeof(Vertex) * 4 * QUAD_AMOUNT;
+						inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+						inputBuffer.usage = vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eVertexBuffer;
+						m_QuadBufferBatch = CreateUPtr<Buffer>(inputBuffer);
+						m_BatchQuad = reinterpret_cast<Vertex*>( m_Device->GetDevice().mapMemory(m_QuadBufferBatch->GetMemory(),0, inputBuffer.size));
+
+						indices.resize(QUAD_AMOUNT*3);
+						int offset = 0;
+						for (int i = 0; i < QUAD_AMOUNT*3; i+=6)
+						{
+							indices[i] = offset;
+							indices[i + 1] = offset + 1;
+							indices[i + 2] = offset + 2;
+
+							indices[i + 3] = offset + 2;
+							indices[i + 4] = offset + 3;
+							indices[i + 5] = offset;
+
+							offset += 4;
+						}
+						{
+							BufferInputChunk inputBuffer;
+							inputBuffer.size = SizeOfBuffer(indices.size(),indices[0]);
+							inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+							inputBuffer.usage = vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst;
+							m_QuadBufferBatchIndex = CreateUPtr<IndexBuffer>(inputBuffer, indices.size(), vk::IndexType::eUint32);
+
+
+							auto indexSize = SizeOfBuffer(indices.size(), indices[0]);
+							SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(indexSize);
+
+							m_TransferCommandBuffer[0].BeginTransfering();
+							m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_QuadBufferBatchIndex.get(), (void*)indices.data(), indexSize);
+							m_TransferCommandBuffer[0].EndTransfering();
+							m_TransferCommandBuffer[0].SubmitSingle();
+
+						}
+					}
+				}
+				
+				void* vertexData = const_cast<void*>(static_cast<const void*>(vertices.data()));
+				SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(vertexSize);
 				m_TransferCommandBuffer[0].BeginTransfering();
 				m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_QuadBuffer.get(), (void*)vertices.data(), vertexSize);
 				m_TransferCommandBuffer[0].EndTransfering();

@@ -37,6 +37,7 @@ namespace Voidstar
 	class DescriptorPool;
 	class Model;
 	class Pipeline;
+	class Vertex;
 
 
 
@@ -119,6 +120,13 @@ namespace Voidstar
 		float persistenceLowRes;
 	};
 
+
+	struct FontData
+	{
+		glm::vec2 pos;
+		glm::vec2 uv;
+	};
+
 	//2500
 	#define SIZE_CLOUDS  100
 	struct CloudParams
@@ -181,6 +189,13 @@ namespace Voidstar
 		CommandBuffer& GetTransferCommandBuffer(size_t frameindex);
 		void DrawQuadScreen(vk::CommandBuffer commandBuffer);
 		void DrawQuadIndexed(vk::CommandBuffer commandBuffer);
+		
+		
+		
+		UPtr<Buffer> m_QuadBufferBatch{ nullptr };
+		UPtr<IndexBuffer> m_QuadBufferBatchIndex{ nullptr };
+		Vertex * m_BatchQuad;
+
 	private:
 		void CreateInstance();
 		void CreateDebugMessenger();

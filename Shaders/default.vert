@@ -21,9 +21,10 @@ void main()
 {
     
     vec3 instanceScale = vec3(100);
-    vec3 instancePos = vec3(0);    
-	vec4 worldPos= ubo.proj*ubo.view* vec4((in_pos*instanceScale)+instancePos,1.0);
+    vec3 instancePos = vec3(0); 
+    vec3 localPos = vec3(in_pos.x,in_pos.z,0);   
+	vec4 clipSpace= ubo.proj*ubo.view* vec4((localPos*instanceScale)+instancePos,1.0);
 	out_uv = vec2(1-in_uv.x,in_uv.y);
-    gl_Position = worldPos;
+    gl_Position = clipSpace;
 
 }
