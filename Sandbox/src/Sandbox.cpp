@@ -12,7 +12,6 @@
 using namespace Voidstar;
 
 
-
 std::map<unsigned char, Character> Characters;
 
 
@@ -141,7 +140,7 @@ public:
 
 
 			UpdateBuffer(*device, m_DescriptorSetSelected, m_ClickPoints.data(), *m_ShaderStorageBuffer, MAX_POINTS * sizeof(glm::vec2));
-			LoadFont(BASE_RES_PATH + "fonts/arial.ttf");
+			LoadFont(BASE_RES_PATH + "fonts/CrimsonText-Regular.ttf");
 			device->UpdateDescriptorSet(m_DescriptorSetFont, 0, 1, *m_FontAtlas, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
 		};
 
@@ -420,10 +419,20 @@ public:
 					depthClear.depthStencil = vk::ClearDepthStencilValue({ 1.0f, 0 });
 					std::vector<vk::ClearValue> clearValues = { {clearColor, depthClear,clearColor} };
 					renderCommandBuffer.BeginRenderPass(m_RenderPass, swapchain.GetFrameBuffer(frameIndex), swapchain.GetExtent(), clearValues);
-					glm::vec2 pos = { 50,50 };
-					std::string str = "Hello\nsailor";
-					
+					glm::vec2 pos = { 100,500 };
+					std::string str = "Hello\n  sailor!";
+				//str = R"(Mauris in euismod neque.\n
+				//	Class aptent taciti sociosqu ad litora torquent per conubia nostra,\n
+				//	per inceptos himenaeos. Curabitur id pellentesque ligula, quis eleifend dolor.\n
+				//	Proin diam erat, vulputate eget rutrum cursus, placerat vitae massa. Fusce et sagittis odio. \n
+				//	Mauris et ante mi. Morbi nisl odio, fringilla sit amet tortor ac,\n 
+				//	fringilla maximus orci. Sed quis odio in enim egestas sollicitudin.\n 
+				//	Cras aliquam nisl odio, egestas aliquet est hendrerit sed)";
 
+					str = R"(Mauris in euismod neque. 
+	fringilla maximus orci.
+	Sed quis odio in enim egestas sollicitudin.
+	Cras aliquam nisl odio, egestas aliquet est hendrerit sed)";
 
 					auto viewportSize = Renderer::Instance()->GetViewportSize();
 					vk::Viewport viewport;
@@ -450,7 +459,9 @@ public:
 
 					commandBuffer.setViewport(0, 1, &viewport);
 					commandBuffer.setScissor(0, 1, &scissors);
-					Renderer::Instance()->Renderer::DrawTxt(commandBuffer,str,pos,Characters);
+					Renderer::Instance()->BeginBatch();
+					Renderer::Instance()->DrawTxt(commandBuffer,str,pos,Characters);
+				//	Renderer::Instance()->DrawTxt(commandBuffer,"I love you!" ,2.f*pos, Characters);
 
 					renderCommandBuffer.EndRenderPass();
 				}
@@ -743,43 +754,44 @@ public:
 		FT_Library ft;
 		if (FT_Init_FreeType(&ft) != 0)
 		{
-			std::cout << "ERROR::FREETYPE: Could not init FreeType Library" << std::endl;
-			//return -1;
+			Log::GetLog()->error("ERROR::FREETYPE: Could not init FreeType Library" );
 		}
 
 		FT_Face face;
 		if (FT_New_Face(ft, str.data(), 0, &face) != 0 )
 		{
-			std::cout << "ERROR::FREETYPE: Failed to load font" << std::endl;
-			//return -1;
+			Log::GetLog()->error("ERROR::FREETYPE: Failed to load font {0}", str );
 		}
 		auto error = FT_Set_Pixel_Sizes(face, 0, 48);
 
 
 
 		int width = 0;
-		int maxWidth = 0;
+		int maxWidthTexture = 0;
 		int maxGlyphHeight = 0;
+		int maxGlyphWidth = 0;
 		int characterCount = 0;
 		int rowNumber = 0;
+		const int charactersPerRow = 10;
+		const int padding = 15;
 		for (unsigned char c = 0; c < 128; c++)
 		{
 			// load character glyph 
 			if (FT_Load_Char(face, c, FT_LOAD_RENDER) != 0)
 			{
-				std::cout << "ERROR::FREETYTPE: Failed to load Glyph" << std::endl;
-				continue;
+				Log::GetLog()->error("RROR::FREETYTPE: Failed to load Glyph {}", c);
 			}
 			// generate texture
 
 			// calculate image size
 			width += face->glyph->bitmap.width;
 			maxGlyphHeight = std::max((unsigned)maxGlyphHeight, face->glyph->bitmap.rows);
+			//maxGlyphWidth = std::max((unsigned)maxGlyphWidth, face->glyph->bitmap.width);
 			characterCount++;
-			if (characterCount >= 10)
+			if (characterCount >= charactersPerRow )
 			{
-				maxWidth = std::max(maxWidth, width);
 				rowNumber++;
+				maxWidthTexture = std::max(maxWidthTexture, width);
 				characterCount = width = 0;
 			}
 
@@ -788,9 +800,11 @@ public:
 
 		}
 
-		auto maxHeight = maxGlyphHeight * rowNumber;
+		auto maxHeight = maxGlyphHeight * (rowNumber+1);
+		maxWidthTexture  = (maxWidthTexture + charactersPerRow * padding) + 10;
+		//maxHeight = 590;
 		auto usage = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled;
-		m_FontAtlas = Image::CreateEmptyImage(maxWidth, maxHeight, vk::Format::eR8Unorm, usage);
+		m_FontAtlas = Image::CreateEmptyImage(maxWidthTexture, maxHeight, vk::Format::eR8Unorm, usage);
 
 		auto computeCommandBuffer = Renderer::Instance()->GetComputeCommandBuffer(0);
 
@@ -800,7 +814,7 @@ public:
 		computeCommandBuffer.SubmitSingle();
 		
 		int character_count = 0;
-		int increment_x = 0;
+		int increment_x = padding;
 		int increment_y = 0;
 
 		
@@ -817,7 +831,7 @@ public:
 			auto imageSize = face->glyph->bitmap.width * face->glyph->bitmap.rows;
 		
 		// space character
-			if (c == 32)
+			if (imageSize == 0)
 			{
 				continue;
 			}
@@ -845,19 +859,21 @@ public:
 			float texCoordBottom = increment_y;
 
 			Character character;
-			character.minUv = {texCoordLeft/maxWidth,texCoordBottom/ maxHeight };
-			character.maxUv = { texCoordRight / maxWidth,texCoordTop / maxHeight };
+			character.minUv = {texCoordLeft/ maxWidthTexture,texCoordBottom/ maxHeight };
+			character.maxUv = { texCoordRight / maxWidthTexture,texCoordTop / maxHeight };
 			character.Advance = face->glyph->advance.x;
 			character.Size = { face->glyph->bitmap.width ,face->glyph->bitmap.rows };
+			character.Bearing = { face->glyph->bitmap_left,face->glyph->bitmap_top };
 			Character::lineSpacing = face->height;
 			Characters.insert(std::make_pair(c, character));
 			
-			increment_x += face->glyph->bitmap.width;
+			increment_x += face->glyph->bitmap.width+ padding;
 			character_count++;
-			if (character_count >= 10)
+			if (character_count >= charactersPerRow)
 			{
 				increment_y += maxGlyphHeight;
-				increment_x = character_count = width = 0;
+				increment_x = padding;
+				character_count = width = 0;
 			}
 		}
 

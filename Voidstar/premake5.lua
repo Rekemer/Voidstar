@@ -20,7 +20,7 @@ project "Voidstar"
         "%{wks.location}/Dependencies/spdlog/include",
         "%{wks.location}/Dependencies/GLFW/include",
         "../"..GLM_HEADERS,
-        "%{wks.location}/Dependencies/spdlog/include/spdlog",
+        "../"..SPDLOG_HEADERS,
         "%{wks.location}/Dependencies/",
         "../"..TRACY_HEADERS,
         "%{wks.location}/Dependencies/ImGui",

@@ -19,3 +19,4 @@
 #include "Rendering/Camera.h"
 #include "Rendering/Font.h"
 #include "Application.h"
+#include "Log.h"

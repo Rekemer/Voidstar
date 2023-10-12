@@ -61,7 +61,7 @@ namespace Voidstar
 
 	TracyVkCtx ctx;
 	vk::ShaderModule CreateModule(std::string filename, vk::Device device);
-const int QUAD_AMOUNT = 100;
+const int QUAD_AMOUNT = 700;
 #define	IMGUI_ENABLED 1
 	size_t currentFrame = 0;
 	// noise
@@ -407,11 +407,15 @@ const int QUAD_AMOUNT = 100;
 		return m_TransferCommandBuffer[frameindex];
 	}
 
-
+	void Renderer::BeginBatch()
+	{
+		m_QuadIndex = 0;
+		m_BatchQuad = m_BatchQuadStart;
+	}
 	void Renderer::DrawTxt(vk::CommandBuffer commandBuffer, std::string_view str, glm::vec2 pos, std::map< unsigned char, Character>& characters)
 	{
-		auto ptr = m_BatchQuad;
-		int indexCount = 0;
+		
+			float scale = 0.5;
 		auto offset = pos;
 		for (auto e : str)
 		{
@@ -419,46 +423,61 @@ const int QUAD_AMOUNT = 100;
 			if (e == '\n')
 			{
 				offset.x = pos.x;
-				offset.y -= Character::lineSpacing/64;
+				pos.y -= Character::lineSpacing/64;
 				continue;
 			}
+			else if (e == ' ')
+			{
+				offset.x += 15;
+				continue;
+
+			}
+			else if (e == '\t')
+			{
+				offset.x += 30;
+				continue;
+
+			}
+			if (characters.find(e) == characters.end()) continue;
 			auto& characterData = characters.at(e);
-
+			offset.x = offset.x + characterData.Bearing.x* scale;
+			// to account for letter like p and q
+			offset.y = pos.y - ( characterData.Size.y - characterData.Bearing.y)* scale;
 			// left bottom
-			ptr->u = characterData.minUv.x;
-			ptr->v = characterData.maxUv.y;
-			ptr->x = offset.x;
-			ptr->y = offset.y;
-			ptr->z = 0;
+			m_BatchQuad->u = characterData.minUv.x;
+			m_BatchQuad->v = characterData.maxUv.y;
+			m_BatchQuad->x = offset.x;
+			m_BatchQuad->y = offset.y;
+			m_BatchQuad->z = 0;
 
-			ptr++;
+			m_BatchQuad++;
 			// right bottom
-			ptr->u = characterData.maxUv.x;
-			ptr->v = characterData.maxUv.y;
-			ptr->x = offset.x + characterData.Size.x;
-			ptr->y = offset.y;
-			ptr->z = 0;
-			ptr++;
+			m_BatchQuad->u = characterData.maxUv.x;
+			m_BatchQuad->v = characterData.maxUv.y;
+			m_BatchQuad->x = offset.x + characterData.Size.x* scale;
+			m_BatchQuad->y = offset.y;
+			m_BatchQuad->z = 0;
+			m_BatchQuad++;
 			// right top
-			ptr->u = characterData.maxUv.x;
-			ptr->v = characterData.minUv.y;
-			ptr->x = offset.x + characterData.Size.x;
-			ptr->y = offset.y + characterData.Size.y;
-			ptr->z = 0;
-			ptr++;
+			m_BatchQuad->u = characterData.maxUv.x;
+			m_BatchQuad->v = characterData.minUv.y;
+			m_BatchQuad->x = offset.x + characterData.Size.x * scale;
+			m_BatchQuad->y = offset.y + characterData.Size.y * scale;
+			m_BatchQuad->z = 0;
+			m_BatchQuad++;
 
 
 			// left top
-			ptr->u = characterData.minUv.x;
-			ptr->v = characterData.minUv.y;
-			ptr->x = offset.x;
-			ptr->y = offset.y + characterData.Size.y;
-			ptr->z = 0;
-			ptr++;
+			m_BatchQuad->u = characterData.minUv.x;
+			m_BatchQuad->v = characterData.minUv.y;
+			m_BatchQuad->x = offset.x;
+			m_BatchQuad->y = offset.y + characterData.Size.y * scale;
+			m_BatchQuad->z = 0;
+			m_BatchQuad++;
 
 
-			offset.x += characterData.Advance / 64.f;
-			indexCount += 6;
+			offset.x += characterData.Advance / 64.f* scale;
+			m_QuadIndex += 6;
 		}
 		vk::DeviceSize offsets[] = { 0 };
 
@@ -468,7 +487,7 @@ const int QUAD_AMOUNT = 100;
 
 		}
 		commandBuffer.bindIndexBuffer(m_QuadBufferBatchIndex->GetBuffer(), 0, m_QuadBufferBatchIndex->GetIndexType());
-		commandBuffer.drawIndexed(indexCount, 1, 0, 0, 0);
+		commandBuffer.drawIndexed(m_QuadIndex, 1, 0, 0, 0);
 	}
 	void Renderer::DrawQuadScreen(vk::CommandBuffer commandBuffer)
 	{
@@ -600,7 +619,7 @@ const int QUAD_AMOUNT = 100;
 						inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
 						inputBuffer.usage = vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eVertexBuffer;
 						m_QuadBufferBatch = CreateUPtr<Buffer>(inputBuffer);
-						m_BatchQuad = reinterpret_cast<Vertex*>( m_Device->GetDevice().mapMemory(m_QuadBufferBatch->GetMemory(),0, inputBuffer.size));
+						m_BatchQuadStart = reinterpret_cast<Vertex*>( m_Device->GetDevice().mapMemory(m_QuadBufferBatch->GetMemory(),0, inputBuffer.size));
 
 						indices.resize(QUAD_AMOUNT*3);
 						int offset = 0;

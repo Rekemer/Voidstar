@@ -133,12 +133,13 @@ namespace Voidstar
 		void DrawQuadScreen(vk::CommandBuffer commandBuffer);
 		void DrawQuadIndexed(vk::CommandBuffer commandBuffer);
 		void DrawTxt(vk::CommandBuffer commandBuffer, std::string_view str,glm::vec2 pos, std::map<unsigned char, Character> &Characters);
-		
+		void BeginBatch();
 		
 		UPtr<Buffer> m_QuadBufferBatch{ nullptr };
 		UPtr<IndexBuffer> m_QuadBufferBatchIndex{ nullptr };
 		Vertex * m_BatchQuad;
-
+		Vertex * m_BatchQuadStart;
+		int m_QuadIndex= 0;
 	private:
 		void CreateInstance();
 		void CreateDebugMessenger();

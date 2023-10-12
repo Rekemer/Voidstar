@@ -76,7 +76,7 @@
       <PrecompiledHeaderFile>Prereq.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>VS_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.216.0\Include;..\Dependencies\spdlog\include;..\Dependencies\GLFW\include;..\Dependencies\glm\glm;..\Dependencies\spdlog\include\spdlog;..\Dependencies;..\Dependencies\Tracy\public;..\Dependencies\ImGui;src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.216.0\Include;..\Dependencies\GLFW\include;..\Dependencies\glm\glm;..\Dependencies\spdlog\include;..\Dependencies;..\Dependencies\Tracy\public;..\Dependencies\ImGui;src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
       <MinimalRebuild>false</MinimalRebuild>
@@ -99,7 +99,7 @@
       <PrecompiledHeaderFile>Prereq.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>TRACY_ENABLE;VS_RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.216.0\Include;..\Dependencies\spdlog\include;..\Dependencies\GLFW\include;..\Dependencies\glm\glm;..\Dependencies\spdlog\include\spdlog;..\Dependencies;..\Dependencies\Tracy\public;..\Dependencies\ImGui;src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.216.0\Include;..\Dependencies\GLFW\include;..\Dependencies\glm\glm;..\Dependencies\spdlog\include;..\Dependencies;..\Dependencies\Tracy\public;..\Dependencies\ImGui;src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -124,7 +124,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>Prereq.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
-      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.216.0\Include;..\Dependencies\spdlog\include;..\Dependencies\GLFW\include;..\Dependencies\glm\glm;..\Dependencies\spdlog\include\spdlog;..\Dependencies;..\Dependencies\Tracy\public;..\Dependencies\ImGui;src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\VulkanSDK\1.3.216.0\Include;..\Dependencies\GLFW\include;..\Dependencies\glm\glm;..\Dependencies\spdlog\include;..\Dependencies;..\Dependencies\Tracy\public;..\Dependencies\ImGui;src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Disabled</Optimization>
       <MinimalRebuild>false</MinimalRebuild>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>

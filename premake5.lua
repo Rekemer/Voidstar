@@ -23,7 +23,7 @@ workspace "Voidstar"
 	GLM_HEADERS = "%{wks.solution}/Dependencies/glm/glm"
 	TRACY_HEADERS =  "%{wks.solution}/Dependencies/Tracy/public"
 	FREE_TYPE_HEADERS = "%{wks.solution}/Dependencies/freetype/include"
-	LOG_HEADERS = "%{wks.location}/Dependencies/spdlog/include/spdlog"
+	SPDLOG_HEADERS = "%{wks.location}/Dependencies/spdlog/include"
 	include "Voidstar"
 	
 	group "Dependencies"
