@@ -72,6 +72,9 @@
     <ClInclude Include="src\Rendering\Device.h">
       <Filter>src\Rendering</Filter>
     </ClInclude>
+    <ClInclude Include="src\Rendering\Font.h">
+      <Filter>src\Rendering</Filter>
+    </ClInclude>
     <ClInclude Include="src\Rendering\Generation.h">
       <Filter>src\Rendering</Filter>
     </ClInclude>

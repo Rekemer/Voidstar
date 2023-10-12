@@ -11,17 +11,10 @@
 #include <utility>
 using namespace Voidstar;
 
-struct Character {
-	glm::vec2 minUv;
-	glm::vec2 maxUv;
-	glm::ivec2   Size;       // Size of glyph
-	glm::ivec2   Bearing;    // Offset from baseline to left/top of glyph
-	unsigned int Advance;    // Offset to advance to next glyph
-};
+
 
 std::map<unsigned char, Character> Characters;
 
-// should be in one texture!
 
 
 
@@ -428,52 +421,8 @@ public:
 					std::vector<vk::ClearValue> clearValues = { {clearColor, depthClear,clearColor} };
 					renderCommandBuffer.BeginRenderPass(m_RenderPass, swapchain.GetFrameBuffer(frameIndex), swapchain.GetExtent(), clearValues);
 					glm::vec2 pos = { 50,50 };
-					std::string str = "Hello";
-					auto ptr = Renderer::Instance()->m_BatchQuad;
-					int indexCount = 0;
-					auto offset = pos;
-					for (auto e : str)
-					{
-						auto& characterData = Characters.at(e);
-
-
-
-						// left bottom
-						ptr->u = characterData.minUv.x;
-						ptr->v = characterData.minUv.y;
-						ptr->x = offset.x;
-						ptr->y = offset.y;
-						ptr->z = 0;
-
-						ptr++;
-						// right bottom
-						ptr->u = characterData.maxUv.x;
-						ptr->v = characterData.minUv.y;
-						ptr->x = offset.x + characterData.Size.x;
-						ptr->y = offset.y;
-						ptr->z = 0;
-						ptr++;
-						// right top
-						ptr->u = characterData.maxUv.x;
-						ptr->v = characterData.maxUv.y;
-						ptr->x = offset.x + characterData.Size.x;
-						ptr->y = offset.y + characterData.Size.y;
-						ptr->z = 0;
-						ptr++;
-						 
-						 
-						// left top
-						ptr->u = characterData.minUv.x;
-						ptr->v = characterData.maxUv.y;
-						ptr->x = offset.x;
-						ptr->y = offset.y + characterData.Size.y;
-						ptr->z = 0;
-						ptr++;
-
-
-						offset.x += characterData.Advance / 64.f;
-						indexCount += 6;
-					}
+					std::string str = "Hello\nsailor";
+					
 
 
 					auto viewportSize = Renderer::Instance()->GetViewportSize();
@@ -501,8 +450,7 @@ public:
 
 					commandBuffer.setViewport(0, 1, &viewport);
 					commandBuffer.setScissor(0, 1, &scissors);
-
-					Renderer::Instance()->DrawQuadScreen(commandBuffer);
+					Renderer::Instance()->Renderer::DrawTxt(commandBuffer,str,pos,Characters);
 
 					renderCommandBuffer.EndRenderPass();
 				}
@@ -838,32 +786,6 @@ public:
 
 
 
-			//unsigned int texture;
-			//glGenTextures(1, &texture);
-			//glBindTexture(GL_TEXTURE_2D, texture);
-			//glTexImage2D(
-			//	GL_TEXTURE_2D,
-			//	0,
-			//	GL_RED,
-			//	face->glyph->bitmap.width,
-			//	face->glyph->bitmap.rows,
-			//	0,
-			//	GL_RED,
-			//	GL_UNSIGNED_BYTE,
-			//	face->glyph->bitmap.buffer
-			//);
-			// set texture options
-			//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-			//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-			//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			// now store character for later use
-			//Character character = {
-			//	glm::ivec2(face->glyph->bitmap.width, face->glyph->bitmap.rows),
-			//	glm::ivec2(face->glyph->bitmap_left, face->glyph->bitmap_top),
-			//	face->glyph->advance.x
-			//};
-			//Characters.insert(std::make_pair(c, character));
 		}
 
 		auto maxHeight = maxGlyphHeight * rowNumber;
@@ -883,11 +805,22 @@ public:
 
 		
 
-		for (unsigned char c = 65+7; c < 128; c++)
+		for (unsigned char c = 0; c < 128; c++)
 		{
 			// load character glyph 
 			auto error = FT_Load_Char(face, c, FT_LOAD_RENDER);
+			if (error)
+			{
+				std::cout << "ERROR: failed to load character" << c << "\n";
+				continue;
+			}
 			auto imageSize = face->glyph->bitmap.width * face->glyph->bitmap.rows;
+		
+		// space character
+			if (c == 32)
+			{
+				continue;
+			}
 
 			BufferInputChunk inputBuffer;
 			inputBuffer.size = imageSize;
@@ -916,6 +849,7 @@ public:
 			character.maxUv = { texCoordRight / maxWidth,texCoordTop / maxHeight };
 			character.Advance = face->glyph->advance.x;
 			character.Size = { face->glyph->bitmap.width ,face->glyph->bitmap.rows };
+			Character::lineSpacing = face->height;
 			Characters.insert(std::make_pair(c, character));
 			
 			increment_x += face->glyph->bitmap.width;

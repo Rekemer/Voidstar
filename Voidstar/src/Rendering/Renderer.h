@@ -8,6 +8,8 @@
 #include"QuadTree/QuadTree.h"
 #include"BinderHelp.h"
 #include<variant>
+#include<map>
+#include"Font.h"
 
 
 
@@ -55,14 +57,7 @@ namespace Voidstar
 	};
 
 	
-	struct  InstanceData {
-		
-		alignas(16)float edges [4] = {1.f,1.f,1.f,1.f};
-		alignas(16)glm::vec3 pos;
-		alignas(4)float scale;
-		InstanceData(const glm::vec3& position, float scaling, uint32_t textureIndex)
-			: pos(position), scale(scaling) {}
-	};
+
 	struct UniformBufferObject {
 		glm::mat4 view;
 		glm::mat4 proj;
@@ -87,61 +82,9 @@ namespace Voidstar
 		std::vector<CommandBuffer> g_CommandBuffers;
 		std::vector<vk::Framebuffer> g_FrameBuffers;
 	};
-	struct NoiseData
-	{
-		// terrain
-		float frequence = 5.f;
-		float amplitude = 0.3f;
-		float octaves = 3;
-		float multipler = 8.f;
-		float exponent = 4.f;
-		float scale = 3.f;
-		// water
-		float normalStrength =0.4f ;
-		float waterScale = 10.f;
-		float waterDepth = 0.3f;
-		float waterStrength=0.3f;
-		alignas(16)glm::vec3 deepWaterColor = {14/255.f,129/255.f,184/255.f};
-		alignas(16)glm::vec3 shallowWaterColor = { 118/255.f,196/255.f,216/255.f };
-		// clouds
-		alignas(4)float cellAmountA =1.f;
-		alignas(4)float cellAmountB = 2.f;
-		alignas(4)float cellAmountC = 5.f;
-		alignas(4)float persistence;
-
-		float cloudScale = 2;
-		float cloudSpeed = 5;
-		float cloudScaleMinus = 2.f;
-		float cellAmountMinus = 2.f; 
-
-		float numCellsALowRes = 1.f;
-		float numCellsBLowRes = 2.f;
-		float numCellsCLowRes = 5.f;
-		float persistenceLowRes;
-	};
+	
 
 
-	struct FontData
-	{
-		glm::vec2 pos;
-		glm::vec2 uv;
-	};
-
-	//2500
-	#define SIZE_CLOUDS  100
-	struct CloudParams
-	{
-		float densityOffset = 0.5;
-		float densityMult = 0.5;
-		alignas(16)glm::vec4 weights = {1,1,1,1};
-		alignas(16)glm::vec3 lightDir = glm::normalize(glm::vec3(0.5, -1, 0));
-		alignas(16)glm::vec3 lightPos = { 0, 124, 4 };
-		alignas(16)glm::vec3 cloudPos = { 0, 120, 4 };
-		alignas(16)glm::vec3 boxScale = { SIZE_CLOUDS, SIZE_CLOUDS /2.f,SIZE_CLOUDS };
-		float lightAbsorption = 1.f;
-		float aHg = 0.9f;
-		float aHg2 = 0.9f;
-	};
 	class Instance;
 	class Device;
 	class Swapchain;
@@ -189,7 +132,7 @@ namespace Voidstar
 		CommandBuffer& GetTransferCommandBuffer(size_t frameindex);
 		void DrawQuadScreen(vk::CommandBuffer commandBuffer);
 		void DrawQuadIndexed(vk::CommandBuffer commandBuffer);
-		
+		void DrawTxt(vk::CommandBuffer commandBuffer, std::string_view str,glm::vec2 pos, std::map<unsigned char, Character> &Characters);
 		
 		
 		UPtr<Buffer> m_QuadBufferBatch{ nullptr };

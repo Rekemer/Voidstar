@@ -17,5 +17,5 @@
 #include "Input.h"
 #include "Types.h"
 #include "Rendering/Camera.h"
+#include "Rendering/Font.h"
 #include "Application.h"
-

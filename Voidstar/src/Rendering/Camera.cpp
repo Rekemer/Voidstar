@@ -60,10 +60,9 @@ namespace Voidstar
                         0,0,farPlane/(farPlane - nearPlane),1,
                         0,0,(-nearPlane*farPlane)/(farPlane-nearPlane),0};
         m_Proj = glm::perspective(angle, aspect, nearPlane, farPlane);
-        m_Proj[1][1] *= -1;
         m_Proj = p;
         m_Proj = glm::ortho(-width / 16,width/16, -height / 16,height/16,0.f,1000.f);
-        m_Proj = glm::ortho(0.0f, 800.0f, 0.0f, 600.0f);
+        m_Proj = glm::ortho(0.0f, 800.0f,600.0f, 0.0f);
 
     }
 

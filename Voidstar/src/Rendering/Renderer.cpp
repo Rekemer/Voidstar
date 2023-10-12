@@ -61,9 +61,7 @@ namespace Voidstar
 
 	TracyVkCtx ctx;
 	vk::ShaderModule CreateModule(std::string filename, vk::Device device);
-	
-#define INSTANCE_COUNT 4096
-#define ZEROPOS 1
+const int QUAD_AMOUNT = 100;
 #define	IMGUI_ENABLED 1
 	size_t currentFrame = 0;
 	// noise
@@ -409,8 +407,72 @@ namespace Voidstar
 		return m_TransferCommandBuffer[frameindex];
 	}
 
+
+	void Renderer::DrawTxt(vk::CommandBuffer commandBuffer, std::string_view str, glm::vec2 pos, std::map< unsigned char, Character>& characters)
+	{
+		auto ptr = m_BatchQuad;
+		int indexCount = 0;
+		auto offset = pos;
+		for (auto e : str)
+		{
+
+			if (e == '\n')
+			{
+				offset.x = pos.x;
+				offset.y -= Character::lineSpacing/64;
+				continue;
+			}
+			auto& characterData = characters.at(e);
+
+			// left bottom
+			ptr->u = characterData.minUv.x;
+			ptr->v = characterData.maxUv.y;
+			ptr->x = offset.x;
+			ptr->y = offset.y;
+			ptr->z = 0;
+
+			ptr++;
+			// right bottom
+			ptr->u = characterData.maxUv.x;
+			ptr->v = characterData.maxUv.y;
+			ptr->x = offset.x + characterData.Size.x;
+			ptr->y = offset.y;
+			ptr->z = 0;
+			ptr++;
+			// right top
+			ptr->u = characterData.maxUv.x;
+			ptr->v = characterData.minUv.y;
+			ptr->x = offset.x + characterData.Size.x;
+			ptr->y = offset.y + characterData.Size.y;
+			ptr->z = 0;
+			ptr++;
+
+
+			// left top
+			ptr->u = characterData.minUv.x;
+			ptr->v = characterData.minUv.y;
+			ptr->x = offset.x;
+			ptr->y = offset.y + characterData.Size.y;
+			ptr->z = 0;
+			ptr++;
+
+
+			offset.x += characterData.Advance / 64.f;
+			indexCount += 6;
+		}
+		vk::DeviceSize offsets[] = { 0 };
+
+		{
+			vk::Buffer vertexBuffers[] = { m_QuadBufferBatch->GetBuffer() };
+			commandBuffer.bindVertexBuffers(0, 1, vertexBuffers, offsets);
+
+		}
+		commandBuffer.bindIndexBuffer(m_QuadBufferBatchIndex->GetBuffer(), 0, m_QuadBufferBatchIndex->GetIndexType());
+		commandBuffer.drawIndexed(indexCount, 1, 0, 0, 0);
+	}
 	void Renderer::DrawQuadScreen(vk::CommandBuffer commandBuffer)
 	{
+		assert(false);
 		vk::DeviceSize offsets[] = { 0 };
 
 		{
@@ -531,7 +593,7 @@ namespace Voidstar
 					m_QuadBuffer = CreateUPtr<Buffer>(inputBuffer);
 
 
-					const int QUAD_AMOUNT = 20;
+					
 					{
 						BufferInputChunk inputBuffer;
 						inputBuffer.size = sizeof(Vertex) * 4 * QUAD_AMOUNT;

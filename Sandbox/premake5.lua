@@ -17,7 +17,8 @@ project "Sandbox"
         "../Voidstar/src",
         VULKAN_HEADER,
         "../" .. TRACY_HEADERS,
-        "../" .. FREE_TYPE_HEADERS
+        "../" .. FREE_TYPE_HEADERS,
+        "../" .. LOG_HEADERS
     }
 
     links { "Voidstar","Freetype"  }
