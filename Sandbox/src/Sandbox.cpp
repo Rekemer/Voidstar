@@ -10,6 +10,7 @@
 #include FT_FREETYPE_H  
 #include <map>
 #include <utility>
+#include "gtx/compatibility.hpp"
 using namespace Voidstar;
 
 
@@ -390,7 +391,7 @@ public:
 					depthClear.depthStencil = vk::ClearDepthStencilValue({ 1.0f, 0 });
 					std::vector<vk::ClearValue> clearValues = { {clearColor, depthClear,clearColor} };
 					renderCommandBuffer.BeginRenderPass(m_RenderPass, swapchain.GetFrameBuffer(frameIndex), swapchain.GetExtent(), clearValues);
-					
+
 					auto viewportSize = Renderer::Instance()->GetViewportSize();
 					vk::Viewport viewport;
 					viewport.x = 0;
@@ -405,7 +406,7 @@ public:
 					scissors.extent = vk::Extent2D{ (uint32_t)viewportSize.first,(uint32_t)viewportSize.second };
 
 
-					auto vecPos = glm::vec4(0.5, -0.5, 0,1) * 10.f + glm::vec4(100,100,0,0);
+					auto vecPos = glm::vec4(0.5, -0.5, 0, 1) * 10.f + glm::vec4(100, 100, 0, 0);
 					vecPos.w = 1;
 					auto proj = camera.GetProj();
 					auto res = proj * vecPos;
@@ -424,11 +425,98 @@ public:
 					Renderer::Instance()->BeginBatch();
 					auto scale = glm::vec3(glm::vec3(250, 300, 0));
 					auto& world = glm::translate(glm::identity<glm::mat4>(), glm::vec3(500, 300, 0));
-					world = glm::scale(world,scale);
-					auto world2 = glm::translate(glm::identity<glm::mat4>(), glm::vec3(world[3]) + glm::vec3(scale.x,0,0));
-					world2 = glm::scale(world2,scale);
-					Renderer:: Instance()->DrawQuad(commandBuffer,world,glm::vec4(1,1,1,1));
-					Renderer:: Instance()->DrawQuad(commandBuffer, world2, glm::vec4(0, 0, 1, 1));
+					world = glm::scale(world, scale);
+					auto world2 = glm::translate(glm::identity<glm::mat4>(), glm::vec3(world[3]) + glm::vec3(scale.x, 0, 0));
+					world2 = glm::scale(world2, scale);
+					std::vector<Vertex> verticies1{ 4 };
+					glm::vec4 whiteColor = { 1,1,1,1 };
+					glm::vec4 redColor = { 1,0,0,1 };
+					glm::vec4 greyColor = { 0.7,0.7,0.7,1 };
+					float width = scale.x;
+					float height = scale.y;
+					float startPointX = 150;
+					float startPointY = 200;
+
+					glm::vec2 spineTop = { startPointX+width ,startPointY + height };
+					glm::vec2 spineBottom = { startPointX + width,startPointY };
+					glm::vec2 rightEdgeBottom = { width + startPointX + width,startPointY  };
+					auto  mousePos = Input::GetMousePos();
+					glm::vec2 screenSize = { Renderer::Instance()->GetViewportSize().first, 
+						Renderer::Instance()->GetViewportSize().second };
+					glm::vec3 ndc;
+					auto mouseScreenPos = glm::vec2{ std::get<0>(mousePos),std::get<1>(mousePos) };
+					ndc.x = (2.0f * mouseScreenPos.x / screenSize.x) - 1.0f;
+					ndc.y = -(1.0f - (2.0f * mouseScreenPos.y / screenSize.y));
+					auto inverseProj = glm::inverse(camera.GetProj());
+					auto clipSpace = (inverseProj * glm::vec4{ ndc.x,ndc.y,1,1 });
+
+					auto follow = glm::vec2(clipSpace);
+
+					glm::vec2 t0;
+					t0.x = follow.x + .5 * (rightEdgeBottom.x - follow.x);
+					t0.y = follow.y + .5 * (rightEdgeBottom.y - follow.y);
+					auto bisectorAngle = glm::atan2(rightEdgeBottom.y - t0.y, rightEdgeBottom.x - t0.x);
+					//t1
+					auto bisectorTangent = t0.x -glm::tan(bisectorAngle) * (rightEdgeBottom.y - t0.y);
+					bisectorTangent = glm::max(bisectorTangent, spineBottom.x);
+					glm::vec2 t1;
+					glm::vec2 t2;
+					t1.x = bisectorTangent;
+					t1.y = rightEdgeBottom.y;
+					t2.x = t0.x;
+					t2.y = t1.y;
+
+					auto pageAngle = glm::atan2(t1.y - follow.y, t1.x - follow.x);
+					auto clipAngle = glm::atan2(t1.y - t0.y, t1.x - t0.x);
+
+					std::cout << "mouse " << follow.x << " " << follow.y << "\n";
+					std::cout << "t0 " << t0.x << " " << t0.y << "\n";
+					std::cout << "t1 " << t1.x << " " << t1.y << "\n";
+
+					verticies1[0].Position = { startPointX,startPointY,0 };
+					verticies1[0].Color= whiteColor;
+					verticies1[1].Position = { startPointX,startPointY +height,0 };
+					verticies1[1].Color= whiteColor;
+					verticies1[2].Position = { startPointX +width,startPointY,0 };
+					verticies1[2].Color= whiteColor;
+					verticies1[3].Position = { startPointX +width,startPointY +height,0 };
+					verticies1[3].Color= whiteColor;
+					std::vector<Vertex> verticies2{ 4 };
+					verticies2[0].Position = { width+startPointX,startPointY,0 };
+					verticies2[0].Color = redColor;
+					verticies2[1].Position = { width+startPointX,startPointY + height,0 };
+					verticies2[1].Color = redColor;
+					verticies2[2].Position = { 2*width+startPointX ,startPointY,0 };
+					verticies2[2].Color = redColor;
+					verticies2[3].Position = { glm::vec2{2*width + startPointX,startPointY + height},0 };
+					verticies2[3].Color = redColor;
+
+					auto dir = glm::normalize(t1 - follow);
+					auto rightOffset = dir * width;
+
+					std::vector<Vertex> newPage{ 4 };
+					newPage[0].Position = { follow,0 };
+					newPage[0].Color = greyColor;
+					newPage[1].Position = { width + startPointX,startPointY + height,0 };
+					newPage[1].Color = greyColor;
+					newPage[2].Position = { follow+rightOffset,0 };
+					newPage[2].Color = greyColor;
+					newPage[3].Position = { glm::vec2{2 * width + startPointX,startPointY + height},0 };
+					newPage[3].Color = greyColor;
+
+					Renderer:: Instance()->DrawQuad(verticies1);
+					Renderer:: Instance()->DrawQuad(verticies2);
+					auto identity = glm::identity<glm::mat4>();
+					auto debug0 = glm::translate(identity, glm::vec3(t0, 0));
+					auto debug1 = glm::translate(identity, glm::vec3(t1, 0));
+					auto debug2 = glm::translate(identity, glm::vec3(t2, 0));
+					debug0 = glm::scale(debug0, glm::vec3(10, 10, 0));
+					debug1 = glm::scale(debug1, glm::vec3(10, 10, 0));
+					debug2 = glm::scale(debug2, glm::vec3(10, 10, 0));
+					Renderer:: Instance()->DrawQuad(debug0, glm::vec4(1, 0, 1, 1));
+					Renderer:: Instance()->DrawQuad(debug1, glm::vec4(0, 1, 1, 1));
+					Renderer:: Instance()->DrawQuad(debug2, glm::vec4(1, 1, 1, 1));
+					//Renderer:: Instance()->DrawQuad( world2, glm::vec4(0, 0, 1, 1));
 					Renderer:: Instance()->DrawBatch(commandBuffer);
 
 					renderCommandBuffer.EndRenderPass();
@@ -506,10 +594,10 @@ public:
 				// find mouse pos in world coordinates
 				float scale = 100;
 				auto  mousePos = Input::GetMousePos();
-				auto viewportSize = Renderer::Instance()->GetViewportSize();
 				auto mouseScreenPos = glm::vec2{ std::get<0>(mousePos),std::get<1>(mousePos) };
-				glm::vec3 ndc;
+				auto viewportSize = Renderer::Instance()->GetViewportSize();
 				glm::vec2 screenSize = { viewportSize.first, viewportSize.second };
+				glm::vec3 ndc;
 				ndc.x = (2.0f * mouseScreenPos.x / screenSize.x) - 1.0f;
 				ndc.y = -(1.0f - (2.0f * mouseScreenPos.y / screenSize.y));
 

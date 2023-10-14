@@ -429,13 +429,24 @@ const int QUAD_AMOUNT = 700;
 		commandBuffer.drawIndexed(m_QuadIndex, 1, 0, 0, 0);
 	}
 
-	void UpdateVertex(Vertex*& vertex, std::vector<Vertex>& verticies, glm::vec4& color, glm::mat4& world, int vertIndex)
+	void UpdateVertex(Vertex*& vertex, glm::vec3 position, glm::vec4& color, glm::mat4& world, int vertIndex)
 	{
-		vertex->Position = world * glm::vec4{ verticies[vertIndex].Position,1 };
-		vertex->UV = verticies[vertIndex].UV;
+		vertex->Position = world * glm::vec4{ position,1 };
+		vertex->UV = quad.verticies[vertIndex].UV;
 		vertex->Color = color;
 	};
+	void UpdateVerticies(Vertex*& vertex, std::vector<Vertex>& verticies)
+	{
+		UpdateVertex(vertex,verticies[0].Position, verticies[0].Color, glm::identity<glm::mat4>(),0);
+		vertex++;
+		UpdateVertex(vertex,verticies[2].Position, verticies[2].Color, glm::identity<glm::mat4>(),2);
+		vertex++;
+		UpdateVertex(vertex,verticies[3].Position, verticies[3].Color, glm::identity<glm::mat4>(),3);
+		vertex++;
+		UpdateVertex(vertex,verticies[1].Position, verticies[1].Color, glm::identity<glm::mat4>(),1);
+		vertex++;
 
+	};
 	void Renderer::DrawTxt(vk::CommandBuffer commandBuffer, std::string_view str, glm::vec2 pos, std::map< unsigned char, Character>& characters)
 	{
 		assert(false);
@@ -521,25 +532,33 @@ const int QUAD_AMOUNT = 700;
 		commandBuffer.bindIndexBuffer(m_QuadBufferBatchIndex->GetBuffer(), 0, m_QuadBufferBatchIndex->GetIndexType());
 		commandBuffer.drawIndexed(5*6, 1, 0, 0,0);
 	}
-	void Renderer::DrawQuad(vk::CommandBuffer commandBuffer, glm::mat4& world, glm::vec4 color)
+	void Renderer::DrawQuad(glm::mat4& world, glm::vec4 color)
 	{
 		auto& verticies = quad.verticies;
 		// left bottom
-		UpdateVertex(m_BatchQuad,verticies,color,world,0);
+		UpdateVertex(m_BatchQuad,verticies[0].Position,color,world,0);
 		m_BatchQuad++;
 		// right bottom
-		UpdateVertex(m_BatchQuad,verticies,color,world,2);
+		UpdateVertex(m_BatchQuad,verticies[2].Position,color,world,2);
 		m_BatchQuad++;
 		// right top
-		UpdateVertex(m_BatchQuad, verticies, color, world, 3);
+		UpdateVertex(m_BatchQuad, verticies[3].Position, color, world, 3);
 		m_BatchQuad++;
 
 
 		// left top
-		UpdateVertex(m_BatchQuad, verticies, color, world, 1);
+		UpdateVertex(m_BatchQuad, verticies[1].Position, color, world, 1);
 		m_BatchQuad++;
 
 		m_QuadIndex += 6;
+	}
+
+	void Renderer::DrawQuad(std::vector<Vertex>& verticies)
+	{
+
+		UpdateVerticies(m_BatchQuad, verticies);
+		m_QuadIndex += 6;
+
 	}
 	
 
