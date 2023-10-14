@@ -131,10 +131,10 @@ namespace Voidstar
 		CommandBuffer& GetComputeCommandBuffer(size_t frameindex);
 		CommandBuffer& GetTransferCommandBuffer(size_t frameindex);
 		void DrawQuadScreen(vk::CommandBuffer commandBuffer);
-		void DrawQuadIndexed(vk::CommandBuffer commandBuffer);
+		void DrawQuad(vk::CommandBuffer commandBuffer, glm::mat4& world, glm::vec4 color);
 		void DrawTxt(vk::CommandBuffer commandBuffer, std::string_view str,glm::vec2 pos, std::map<unsigned char, Character> &Characters);
 		void BeginBatch();
-		
+		void DrawBatch(vk::CommandBuffer& commandBuffer);
 		UPtr<Buffer> m_QuadBufferBatch{ nullptr };
 		UPtr<IndexBuffer> m_QuadBufferBatchIndex{ nullptr };
 		Vertex * m_BatchQuad;

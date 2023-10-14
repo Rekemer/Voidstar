@@ -4,6 +4,26 @@
 #include "Log.h"
 namespace Voidstar
 {
+	//On tile - based - renderer, which is pretty much anything on mobile,
+	//using input attachments is faster than the traditional multi - pass approach as pixel reads are fetched from tile memory instead of mainframebuffer, 
+	//so if you target the mobile market it’s always a good idea to use input attachments instead of multiple passes when possible.
+
+
+
+
+
+
+
+
+	/*No.The attachment reference layout tells Vulkan what layout to transition the image to at the beginning of the subpass for which this reference is defined.Or more to the point, it is the layout which the image will be in for the duration of the subpass.
+	*
+
+		The first transition for an attached image of a render pass will be from the initialLayout
+		for the render pass to the reference layout for the first subpass that uses the image.
+		The last transition for an attached image will be from reference layout of the final subpass
+		that uses the attachment to the finalLayout for the render pass.*/
+
+
 	void RenderPassBuilder::AddAttachment(std::pair<vk::AttachmentDescription, vk::AttachmentReference> attachment)
 	{
 		m_Attachments.push_back(attachment);

@@ -36,7 +36,7 @@
 #include "input.h"
 #include  "Binder.h"
 #include  "Generation.h"
-
+#include"Settings.h"
 
 
 
@@ -54,15 +54,18 @@ namespace std
 
 }
 
+
+
 namespace Voidstar
 {
 
-
+	
+	QuadData quad;
 
 	TracyVkCtx ctx;
 	vk::ShaderModule CreateModule(std::string filename, vk::Device device);
 const int QUAD_AMOUNT = 700;
-#define	IMGUI_ENABLED 1
+
 	size_t currentFrame = 0;
 	// noise
 	const float noiseTextureWidth = 256.f;
@@ -412,10 +415,31 @@ const int QUAD_AMOUNT = 700;
 		m_QuadIndex = 0;
 		m_BatchQuad = m_BatchQuadStart;
 	}
+
+	void Renderer::DrawBatch(vk::CommandBuffer& commandBuffer)
+	{
+		vk::DeviceSize offsets[] = { 0 };
+
+		{
+			vk::Buffer vertexBuffers[] = { m_QuadBufferBatch->GetBuffer() };
+			commandBuffer.bindVertexBuffers(0, 1, vertexBuffers, offsets);
+
+		}
+		commandBuffer.bindIndexBuffer(m_QuadBufferBatchIndex->GetBuffer(), 0, m_QuadBufferBatchIndex->GetIndexType());
+		commandBuffer.drawIndexed(m_QuadIndex, 1, 0, 0, 0);
+	}
+
+	void UpdateVertex(Vertex*& vertex, std::vector<Vertex>& verticies, glm::vec4& color, glm::mat4& world, int vertIndex)
+	{
+		vertex->Position = world * glm::vec4{ verticies[vertIndex].Position,1 };
+		vertex->UV = verticies[vertIndex].UV;
+		vertex->Color = color;
+	};
+
 	void Renderer::DrawTxt(vk::CommandBuffer commandBuffer, std::string_view str, glm::vec2 pos, std::map< unsigned char, Character>& characters)
 	{
-		
-			float scale = 0.5;
+		assert(false);
+		float scale = 0.5;
 		auto offset = pos;
 		for (auto e : str)
 		{
@@ -439,55 +463,50 @@ const int QUAD_AMOUNT = 700;
 
 			}
 			if (characters.find(e) == characters.end()) continue;
-			auto& characterData = characters.at(e);
-			offset.x = offset.x + characterData.Bearing.x* scale;
-			// to account for letter like p and q
-			offset.y = pos.y - ( characterData.Size.y - characterData.Bearing.y)* scale;
-			// left bottom
-			m_BatchQuad->u = characterData.minUv.x;
-			m_BatchQuad->v = characterData.maxUv.y;
-			m_BatchQuad->x = offset.x;
-			m_BatchQuad->y = offset.y;
-			m_BatchQuad->z = 0;
-
-			m_BatchQuad++;
-			// right bottom
-			m_BatchQuad->u = characterData.maxUv.x;
-			m_BatchQuad->v = characterData.maxUv.y;
-			m_BatchQuad->x = offset.x + characterData.Size.x* scale;
-			m_BatchQuad->y = offset.y;
-			m_BatchQuad->z = 0;
-			m_BatchQuad++;
-			// right top
-			m_BatchQuad->u = characterData.maxUv.x;
-			m_BatchQuad->v = characterData.minUv.y;
-			m_BatchQuad->x = offset.x + characterData.Size.x * scale;
-			m_BatchQuad->y = offset.y + characterData.Size.y * scale;
-			m_BatchQuad->z = 0;
-			m_BatchQuad++;
-
-
-			// left top
-			m_BatchQuad->u = characterData.minUv.x;
-			m_BatchQuad->v = characterData.minUv.y;
-			m_BatchQuad->x = offset.x;
-			m_BatchQuad->y = offset.y + characterData.Size.y * scale;
-			m_BatchQuad->z = 0;
-			m_BatchQuad++;
-
-
-			offset.x += characterData.Advance / 64.f* scale;
-			m_QuadIndex += 6;
+		//auto& characterData = characters.at(e);
+		//offset.x = offset.x + characterData.Bearing.x* scale;
+		//// to account for letter like p and q
+		//offset.y = pos.y - ( characterData.Size.y - characterData.Bearing.y)* scale;
+		//glm::vec4 color{ 1 };
+		//glm::mat4 world{ 1 };
+		//// left bottom
+		//UpdateVertex(m_BatchQuad, verticies, color, world, 0);
+		//m_BatchQuad->u = characterData.minUv.x;
+		//m_BatchQuad->v = characterData.maxUv.y;
+		//m_BatchQuad->x = offset.x;
+		//m_BatchQuad->y = offset.y;
+		//m_BatchQuad->z = 0;
+		//
+		//m_BatchQuad++;
+		//// right bottom
+		//m_BatchQuad->u = characterData.maxUv.x;
+		//m_BatchQuad->v = characterData.maxUv.y;
+		//m_BatchQuad->x = offset.x + characterData.Size.x* scale;
+		//m_BatchQuad->y = offset.y;
+		//m_BatchQuad->z = 0;
+		//m_BatchQuad++;
+		//// right top
+		//m_BatchQuad->u = characterData.maxUv.x;
+		//m_BatchQuad->v = characterData.minUv.y;
+		//m_BatchQuad->x = offset.x + characterData.Size.x * scale;
+		//m_BatchQuad->y = offset.y + characterData.Size.y * scale;
+		//m_BatchQuad->z = 0;
+		//m_BatchQuad++;
+		//
+		//
+		//// left top
+		//m_BatchQuad->u = characterData.minUv.x;
+		//m_BatchQuad->v = characterData.minUv.y;
+		//m_BatchQuad->x = offset.x;
+		//m_BatchQuad->y = offset.y + characterData.Size.y * scale;
+		//m_BatchQuad->z = 0;
+		//m_BatchQuad++;
+		//
+		//
+		//offset.x += characterData.Advance / 64.f* scale;
+		//m_QuadIndex += 6;
 		}
-		vk::DeviceSize offsets[] = { 0 };
-
-		{
-			vk::Buffer vertexBuffers[] = { m_QuadBufferBatch->GetBuffer() };
-			commandBuffer.bindVertexBuffers(0, 1, vertexBuffers, offsets);
-
-		}
-		commandBuffer.bindIndexBuffer(m_QuadBufferBatchIndex->GetBuffer(), 0, m_QuadBufferBatchIndex->GetIndexType());
-		commandBuffer.drawIndexed(m_QuadIndex, 1, 0, 0, 0);
+		DrawBatch(commandBuffer);
 	}
 	void Renderer::DrawQuadScreen(vk::CommandBuffer commandBuffer)
 	{
@@ -502,19 +521,27 @@ const int QUAD_AMOUNT = 700;
 		commandBuffer.bindIndexBuffer(m_QuadBufferBatchIndex->GetBuffer(), 0, m_QuadBufferBatchIndex->GetIndexType());
 		commandBuffer.drawIndexed(5*6, 1, 0, 0,0);
 	}
-	void Renderer::DrawQuadIndexed(vk::CommandBuffer commandBuffer)
+	void Renderer::DrawQuad(vk::CommandBuffer commandBuffer, glm::mat4& world, glm::vec4 color)
 	{
-		vk::DeviceSize offsets[] = { 0 };
+		auto& verticies = quad.verticies;
+		// left bottom
+		UpdateVertex(m_BatchQuad,verticies,color,world,0);
+		m_BatchQuad++;
+		// right bottom
+		UpdateVertex(m_BatchQuad,verticies,color,world,2);
+		m_BatchQuad++;
+		// right top
+		UpdateVertex(m_BatchQuad, verticies, color, world, 3);
+		m_BatchQuad++;
 
-		{
-			vk::Buffer vertexBuffers[] = { m_QuadBuffer->GetBuffer() };
-			commandBuffer.bindVertexBuffers(0, 1, vertexBuffers, offsets);
 
-		}
+		// left top
+		UpdateVertex(m_BatchQuad, verticies, color, world, 1);
+		m_BatchQuad++;
 
-		commandBuffer.bindIndexBuffer(m_QuadIndexBuffer->GetBuffer(), 0, m_QuadIndexBuffer->GetIndexType());
-		commandBuffer.drawIndexed(6, 1, 0, 0,0);
+		m_QuadIndex += 6;
 	}
+	
 
 	void Renderer::Init(size_t screenWidth, size_t screenHeight, std::shared_ptr<Window> window, Application* app) 
 		
@@ -546,7 +573,6 @@ const int QUAD_AMOUNT = 700;
 		support.presentModes = m_Device->GetDevicePhys().getSurfacePresentModesKHR(m_Surface);
 		support.viewportWidth = m_ViewportWidth;
 		support.viewportHeight = m_ViewportHeight;
-
 		m_Swapchain = Swapchain::Create(support);
 		
 
@@ -574,9 +600,10 @@ const int QUAD_AMOUNT = 700;
 			m_ComputeCommandBuffer = CommandBuffer::CreateBuffers(m_FrameCommandPool, vk::CommandBufferLevel::ePrimary, 3);
 		};
 		commandBufferInit();
-
-		std::vector<IndexType> indices;
-		auto vertices = GeneratePlane(1, indices);
+		quad = GeneratePlane(1);
+		auto& verticies = quad.verticies;
+		auto& indices = quad.indicies;
+		
 		auto indexSize = SizeOfBuffer(indices.size(), indices[0]);
 		{
 			SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(indexSize);
@@ -597,12 +624,12 @@ const int QUAD_AMOUNT = 700;
 			m_TransferCommandBuffer[0].SubmitSingle();
 
 
+			
 
 			{
 
 
-
-				auto vertexSize = SizeOfBuffer(vertices.size(), vertices[0]);
+				auto vertexSize = SizeOfBuffer(verticies.size(), verticies[0]);
 				{
 					BufferInputChunk inputBuffer;
 					inputBuffer.size = vertexSize;
@@ -655,10 +682,10 @@ const int QUAD_AMOUNT = 700;
 					}
 				}
 				
-				void* vertexData = const_cast<void*>(static_cast<const void*>(vertices.data()));
+				void* vertexData = const_cast<void*>(static_cast<const void*>(verticies.data()));
 				SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(vertexSize);
 				m_TransferCommandBuffer[0].BeginTransfering();
-				m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_QuadBuffer.get(), (void*)vertices.data(), vertexSize);
+				m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_QuadBuffer.get(), (void*)verticies.data(), vertexSize);
 				m_TransferCommandBuffer[0].EndTransfering();
 				m_TransferCommandBuffer[0].SubmitSingle();
 			}
@@ -1054,10 +1081,11 @@ const int QUAD_AMOUNT = 700;
 			auto renderCommandBuffer = m_UserFunctions.submitRenderCommands(imageIndex, camera);
 	
 			
+			 std::vector<vk::CommandBuffer> commandBuffers = { renderCommandBuffer.GetCommandBuffer() };
 #if IMGUI_ENABLED
 		
 			RenderImGui(imageIndex);
-
+			commandBuffers.push_back(g_MainWindowData.Frames[imageIndex].CommandBuffer);
 #endif
 			
 			m_UserFunctions.postRenderCommands(imageIndex, camera);
@@ -1068,8 +1096,6 @@ const int QUAD_AMOUNT = 700;
 			submitInfo.pWaitSemaphores = waitSemaphores;
 			submitInfo.pWaitDstStageMask = waitStages;
 
-			const std::vector<vk::CommandBuffer> commandBuffers = { renderCommandBuffer.GetCommandBuffer(), g_MainWindowData.Frames[imageIndex].CommandBuffer };
-			// std::vector<vk::CommandBuffer> commandBuffers = { renderCommandBuffer.GetCommandBuffer() };
 
 			submitInfo.commandBufferCount = commandBuffers.size();
 			submitInfo.pCommandBuffers = commandBuffers.data();
@@ -1115,104 +1141,9 @@ const int QUAD_AMOUNT = 700;
 	}
 
 
-	//On tile - based - renderer, which is pretty much anything on mobile,
-	//using input attachments is faster than the traditional multi - pass approach as pixel reads are fetched from tile memory instead of mainframebuffer, 
-	//so if you target the mobile market it’s always a good idea to use input attachments instead of multiple passes when possible.
-
-
-
-
-
-
-
-
-	/*No.The attachment reference layout tells Vulkan what layout to transition the image to at the beginning of the subpass for which this reference is defined.Or more to the point, it is the layout which the image will be in for the duration of the subpass.
-	* 
-
-		The first transition for an attached image of a render pass will be from the initialLayout 
-		for the render pass to the reference layout for the first subpass that uses the image.
-		The last transition for an attached image will be from reference layout of the final subpass 
-		that uses the attachment to the finalLayout for the render pass.*/
-
-
-
-	// create a builder for render pass
-	static vk::RenderPass MakeRenderPass(vk::Device device, vk::Format swapchainImageFormat, vk::Format depthFormat)
-	{
-
-		auto samples = RenderContext::GetDevice()->GetSamples();
-		//Define a general attachment, with its load/store operations
-		vk::AttachmentDescription msaaAttachment = AttachmentDescription( swapchainImageFormat,samples, vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare, vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal);
 	
 
-
-		vk::AttachmentReference msaaAttachmentRef = {};
-		msaaAttachmentRef.attachment = 0;
-		msaaAttachmentRef.layout = vk::ImageLayout::eColorAttachmentOptimal;
-
-
-
-		vk::AttachmentDescription depthAttachment = AttachmentDescription(depthFormat, samples, vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare, vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined, vk::ImageLayout::eDepthStencilAttachmentOptimal);
-
-
-		
-
-		vk::AttachmentReference depthAttachmentRef = {};
-		depthAttachmentRef.attachment = 1;
-		depthAttachmentRef.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
-
-		//Define a general attachment, with its load/store operations
-		vk::AttachmentDescription colorAttachmentResolve =
-			AttachmentDescription(swapchainImageFormat, vk::SampleCountFlagBits::e1,
-				vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
-				vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal);
 	
-
-		//Declare that attachment to be color buffer 0 of the framebuffer
-		vk::AttachmentReference colorAttachmentRef = {};
-		colorAttachmentRef.attachment = 2;
-		colorAttachmentRef.layout = vk::ImageLayout::eColorAttachmentOptimal;
-
-
-		//Renderpasses are broken down into subpasses, there's always at least one.
-
-
-
-		vk::SubpassDescription subpass = SubpassDescription(1, &msaaAttachmentRef, &colorAttachmentRef, &depthAttachmentRef);
-		
-
-
-		
-		std::vector<vk::SubpassDescription> subpasses = { subpass  };
-
-
-		vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL,0, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eNone, vk::PipelineStageFlagBits::eColorAttachmentOutput,vk::AccessFlagBits::eColorAttachmentWrite);
-
-
-		std::vector<vk::SubpassDependency> dependencies = { dependency0  };
-		
-
-		//Now create the renderpass
-		vk::RenderPassCreateInfo renderpassInfo = {};
-
-		std::vector<vk::AttachmentDescription> attachments = { msaaAttachment,depthAttachment,colorAttachmentResolve };
-		// to be able to map NDC to screen coordinates - Viewport ans Scissors Transform
-		renderpassInfo.flags = vk::RenderPassCreateFlags();
-		renderpassInfo.attachmentCount = attachments.size();
-		renderpassInfo.pAttachments = attachments.data();
-		renderpassInfo.subpassCount = subpasses.size();
-		renderpassInfo.pSubpasses = subpasses.data();
-		renderpassInfo.dependencyCount = dependencies.size();
-		renderpassInfo.pDependencies = dependencies.data();
-
-		try {
-			return device.createRenderPass(renderpassInfo);
-		}
-		catch (vk::SystemError err)
-		{
-			Log::GetLog()->error("Failed to create renderpass!");
-		}
-	}
 
 
 	

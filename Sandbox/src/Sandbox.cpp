@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <vector>
+
 #include"Voidstar.h"
 #include"tracy/Tracy.hpp"
 #include"tracy/TracyVulkan.hpp"
@@ -182,6 +183,10 @@ public:
 				vk::AttachmentReference refDepth = { 1,vk::ImageLayout::eDepthStencilAttachmentOptimal };
 				builder.AddAttachment({ depthAttachment , refDepth });
 
+
+
+#if IMGUI_ENABLED
+
 				//Define a general attachment, with its load/store operations
 				vk::AttachmentDescription colorAttachmentResolve =
 					AttachmentDescription(swapchainFormat, vk::SampleCountFlagBits::e1,
@@ -191,6 +196,17 @@ public:
 
 
 				vk::AttachmentReference refResolve = { 2,vk::ImageLayout::eColorAttachmentOptimal };
+#else
+				//Define a general attachment, with its load/store operations
+				vk::AttachmentDescription colorAttachmentResolve =
+					AttachmentDescription(swapchainFormat, vk::SampleCountFlagBits::e1,
+						vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
+						vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined, vk::ImageLayout::ePresentSrcKHR);
+
+
+
+				vk::AttachmentReference refResolve = { 2,vk::ImageLayout::eColorAttachmentOptimal };
+#endif
 				builder.AddAttachment({ colorAttachmentResolve ,refResolve });
 
 				//Renderpasses are broken down into subpasses, there's always at least one.
@@ -302,8 +318,8 @@ public:
 				attributeDescriptions =
 				{
 					VertexInputAttributeDescription(0,0,vk::Format::eR32G32B32Sfloat,offsetof(Vertex, Position)),
-					//VertexInputAttributeDescription(0,1,vk::Format::eR32G32B32A32Sfloat,offsetof(Vertex, Color)),
-					VertexInputAttributeDescription(0,1,vk::Format::eR32G32Sfloat,offsetof(Vertex, UV)),
+					VertexInputAttributeDescription(0,1,vk::Format::eR32G32B32A32Sfloat,offsetof(Vertex, Color)),
+					VertexInputAttributeDescription(0,2,vk::Format::eR32G32Sfloat,offsetof(Vertex, UV)),
 
 				};
 
@@ -315,7 +331,7 @@ public:
 
 				auto samples = RenderContext::GetDevice()->GetSamples();
 				specs.samples = samples;
-				auto pipelineLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutFont->GetLayout() };
+				auto pipelineLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutTex->GetLayout() };
 
 				specs.descriptorSetLayout = pipelineLayouts;
 
@@ -330,8 +346,8 @@ public:
 				builder.AddBindingDescription(bindings);
 				builder.SetPolygoneMode(Renderer::Instance()->GetPolygonMode());
 				builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
-				builder.AddShader(BASE_SPIRV_OUTPUT + "font.spvV", vk::ShaderStageFlagBits::eVertex);
-				builder.AddShader(BASE_SPIRV_OUTPUT + "font.spvF", vk::ShaderStageFlagBits::eFragment);
+				builder.AddShader(BASE_SPIRV_OUTPUT + "default.spvV", vk::ShaderStageFlagBits::eVertex);
+				builder.AddShader(BASE_SPIRV_OUTPUT + "dos2.spvF", vk::ShaderStageFlagBits::eFragment);
 				builder.SetSubpassAmount(0);
 				builder.AddExtent(swapChainExtent);
 				builder.AddImageFormat(swapchainFormat);
@@ -359,7 +375,7 @@ public:
 
 				//RenderContext::GetDevice()->GetDevice().waitIdle();
 				commandBuffer.begin(beginInfo);
-		/*		{
+				{
 
 
 
@@ -389,7 +405,10 @@ public:
 					scissors.extent = vk::Extent2D{ (uint32_t)viewportSize.first,(uint32_t)viewportSize.second };
 
 
-
+					auto vecPos = glm::vec4(0.5, -0.5, 0,1) * 10.f + glm::vec4(100,100,0,0);
+					vecPos.w = 1;
+					auto proj = camera.GetProj();
+					auto res = proj * vecPos;
 
 
 					commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_GraphicsPipeline->GetLayout(), 0, m_DescriptorSets[frameIndex], nullptr);
@@ -401,70 +420,79 @@ public:
 					commandBuffer.setViewport(0, 1, &viewport);
 					commandBuffer.setScissor(0, 1, &scissors);
 
-					Renderer:: Instance()->DrawQuadIndexed(commandBuffer);
 
-					renderCommandBuffer.EndRenderPass();
-
-
-					
-					
-
-
-				}*/
-				{
-					vk::ClearValue clearColor = { std::array<float, 4>{0.1f, .3f, 0.1f, 1.0f} };
-
-					vk::ClearValue depthClear;
-
-					depthClear.depthStencil = vk::ClearDepthStencilValue({ 1.0f, 0 });
-					std::vector<vk::ClearValue> clearValues = { {clearColor, depthClear,clearColor} };
-					renderCommandBuffer.BeginRenderPass(m_RenderPass, swapchain.GetFrameBuffer(frameIndex), swapchain.GetExtent(), clearValues);
-					glm::vec2 pos = { 100,500 };
-					std::string str = "Hello\n  sailor!";
-				//str = R"(Mauris in euismod neque.\n
-				//	Class aptent taciti sociosqu ad litora torquent per conubia nostra,\n
-				//	per inceptos himenaeos. Curabitur id pellentesque ligula, quis eleifend dolor.\n
-				//	Proin diam erat, vulputate eget rutrum cursus, placerat vitae massa. Fusce et sagittis odio. \n
-				//	Mauris et ante mi. Morbi nisl odio, fringilla sit amet tortor ac,\n 
-				//	fringilla maximus orci. Sed quis odio in enim egestas sollicitudin.\n 
-				//	Cras aliquam nisl odio, egestas aliquet est hendrerit sed)";
-
-					str = R"(Mauris in euismod neque. 
-	fringilla maximus orci.
-	Sed quis odio in enim egestas sollicitudin.
-	Cras aliquam nisl odio, egestas aliquet est hendrerit sed)";
-
-					auto viewportSize = Renderer::Instance()->GetViewportSize();
-					vk::Viewport viewport;
-					viewport.x = 0;
-					viewport.y = 0;
-					viewport.minDepth = 0;
-					viewport.maxDepth = 1;
-					viewport.height = viewportSize.second;
-					viewport.width = viewportSize.first;
-
-					vk::Rect2D scissors;
-					scissors.offset = vk::Offset2D{ (uint32_t)0,(uint32_t)0 };
-					scissors.extent = vk::Extent2D{ (uint32_t)viewportSize.first,(uint32_t)viewportSize.second };
-
-
-
-
-
-					commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_GraphicsPipeline->GetLayout(), 0, m_DescriptorSets[frameIndex], nullptr);
-					commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_GraphicsPipeline->GetLayout(), 1, m_DescriptorSetFont, nullptr);
-
-
-					commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_GraphicsPipeline->GetPipeline());
-
-					commandBuffer.setViewport(0, 1, &viewport);
-					commandBuffer.setScissor(0, 1, &scissors);
 					Renderer::Instance()->BeginBatch();
-					Renderer::Instance()->DrawTxt(commandBuffer,str,pos,Characters);
-				//	Renderer::Instance()->DrawTxt(commandBuffer,"I love you!" ,2.f*pos, Characters);
+					auto scale = glm::vec3(glm::vec3(250, 300, 0));
+					auto& world = glm::translate(glm::identity<glm::mat4>(), glm::vec3(500, 300, 0));
+					world = glm::scale(world,scale);
+					auto world2 = glm::translate(glm::identity<glm::mat4>(), glm::vec3(world[3]) + glm::vec3(scale.x,0,0));
+					world2 = glm::scale(world2,scale);
+					Renderer:: Instance()->DrawQuad(commandBuffer,world,glm::vec4(1,1,1,1));
+					Renderer:: Instance()->DrawQuad(commandBuffer, world2, glm::vec4(0, 0, 1, 1));
+					Renderer:: Instance()->DrawBatch(commandBuffer);
 
 					renderCommandBuffer.EndRenderPass();
+
+
+					
+					
+
+
 				}
+//				{
+//					vk::ClearValue clearColor = { std::array<float, 4>{0.1f, .3f, 0.1f, 1.0f} };
+//
+//					vk::ClearValue depthClear;
+//
+//					depthClear.depthStencil = vk::ClearDepthStencilValue({ 1.0f, 0 });
+//					std::vector<vk::ClearValue> clearValues = { {clearColor, depthClear,clearColor} };
+//					renderCommandBuffer.BeginRenderPass(m_PageRenderPass, m_PageFramebuffer, vk::Extent2D{128,128}, clearValues);
+//					glm::vec2 pos = { 100,500 };
+//					std::string str = "Hello\n  sailor!";
+//				//str = R"(Mauris in euismod neque.\n
+//				//	Class aptent taciti sociosqu ad litora torquent per conubia nostra,\n
+//				//	per inceptos himenaeos. Curabitur id pellentesque ligula, quis eleifend dolor.\n
+//				//	Proin diam erat, vulputate eget rutrum cursus, placerat vitae massa. Fusce et sagittis odio. \n
+//				//	Mauris et ante mi. Morbi nisl odio, fringilla sit amet tortor ac,\n 
+//				//	fringilla maximus orci. Sed quis odio in enim egestas sollicitudin.\n 
+//				//	Cras aliquam nisl odio, egestas aliquet est hendrerit sed)";
+//
+//					str = R"(Mauris in euismod neque. 
+//fringilla maximus orci.
+//Sed quis odio in enim egestas sollicitudin.
+//Cras aliquam nisl odio, egestas aliquet est hendrerit sed)";
+//
+//					auto viewportSize = Renderer::Instance()->GetViewportSize();
+//					vk::Viewport viewport;
+//					viewport.x = 0;
+//					viewport.y = 0;
+//					viewport.minDepth = 0;
+//					viewport.maxDepth = 1;
+//					viewport.height = viewportSize.second;
+//					viewport.width = viewportSize.first;
+//
+//					vk::Rect2D scissors;
+//					scissors.offset = vk::Offset2D{ (uint32_t)0,(uint32_t)0 };
+//					scissors.extent = vk::Extent2D{ (uint32_t)viewportSize.first,(uint32_t)viewportSize.second };
+//
+//
+//
+//
+//
+//					commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PagePipeline->GetLayout(), 0, m_DescriptorSets[frameIndex], nullptr);
+//					commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PagePipeline->GetLayout(), 1, m_DescriptorSetFont, nullptr);
+//
+//
+//					commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_PagePipeline->GetPipeline());
+//
+//					commandBuffer.setViewport(0, 1, &viewport);
+//					commandBuffer.setScissor(0, 1, &scissors);
+//					Renderer::Instance()->BeginBatch();
+//					Renderer::Instance()->DrawTxt(commandBuffer,str,pos,Characters);
+//				//	Renderer::Instance()->DrawTxt(commandBuffer,"I love you!" ,2.f*pos, Characters);
+//
+//					renderCommandBuffer.EndRenderPass();
+//				}
 				TracyVkCollect(ctx, commandBuffer);
 				commandBuffer.end();
 				renderCommandBuffer.EndRendering();

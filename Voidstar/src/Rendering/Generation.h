@@ -4,6 +4,12 @@
 #include "IndexBuffer.h"
 namespace Voidstar
 {
-	std::vector<Vertex> GeneratePlane(float detail, std::vector<IndexType>& indices);
+	struct QuadData
+	{
+		std::vector<Vertex> verticies;
+		std::vector<IndexType> indicies;
+	};
+
+	QuadData GeneratePlane(float detail);
 	std::vector<Vertex> GenerateSphere(float radius, int rings, int sectors, std::vector<IndexType>& indices);
 }

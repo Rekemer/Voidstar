@@ -4,10 +4,11 @@
 namespace Voidstar
 {
 
-std::vector<Vertex> GeneratePlane(float detail, std::vector<IndexType>& indices)
+#define YisUP 1;
+QuadData GeneratePlane(float detail)
 {
 		std::vector<Vertex> vertices = {};
-	
+		std::vector<IndexType> indices = {};
 		int numDivisions = static_cast<int>(detail);
 		float stepSize = 1.0f / numDivisions;
 	
@@ -18,9 +19,15 @@ std::vector<Vertex> GeneratePlane(float detail, std::vector<IndexType>& indices)
 				Vertex vertex;
 	
 				// Calculate vertex position
-				vertex.x = i * stepSize - 0.5f;
-				vertex.y = 0.0;
-				vertex.z = j * stepSize - 0.5f;
+				vertex.Position.x = i * stepSize - 0.5f;
+				#if YisUP
+				vertex.Position.y = j * stepSize - 0.5f;
+				vertex.Position.z = 0;
+				#else
+				vertex.Position.y = 0;
+				vertex.Position.z = j * stepSize - 0.5f;
+				
+				#endif // YisUP
 	
 				//// Calculate vertex normal
 				//vertex.nx = 0.0f;
@@ -28,8 +35,8 @@ std::vector<Vertex> GeneratePlane(float detail, std::vector<IndexType>& indices)
 				//vertex.nz = 0.0f;
 	
 				// Calculate texture coordinates
-				vertex.u = static_cast<float>(i) / numDivisions;
-				vertex.v = static_cast<float>(j) / numDivisions;
+				vertex.UV.x = static_cast<float>(i) / numDivisions;
+				vertex.UV.y = static_cast<float>(j) / numDivisions;
 	
 				// Add the vertex to the vector
 				vertices.push_back(vertex);
@@ -69,7 +76,7 @@ std::vector<Vertex> GeneratePlane(float detail, std::vector<IndexType>& indices)
 			}
 		}
 	
-		return vertices;
+		return {vertices,indices};
 	}
 
 std::vector<Vertex> GenerateSphere(float radius, int rings, int sectors, std::vector<IndexType>& indices)
@@ -88,9 +95,9 @@ std::vector<Vertex> GenerateSphere(float radius, int rings, int sectors, std::ve
 					float const z = glm::sin(2 * pi * s * S) * glm::sin(pi * r * R);
 	
 					Vertex vertex;
-					vertex.x = x * radius;
-					vertex.y = y * radius;
-					vertex.z = z * radius;
+					vertex.Position.x  = x * radius;
+					vertex.Position.y  = y * radius;
+					vertex.Position.z  = z * radius;
 	
 					vertices.push_back(vertex);
 				}

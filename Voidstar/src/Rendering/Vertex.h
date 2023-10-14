@@ -1,57 +1,14 @@
 #pragma once
 #include "vulkan/vulkan.hpp"
+#include "glm.hpp"
 namespace Voidstar
 {
 	struct Vertex
 	{
-		union
-		{
-			alignas(16)float Position[3];
-			struct
-			{
-				float x, y, z;
-			};
-		} ;
-		alignas(16)float Color[4];
-		union
-		{
-			alignas(8)float UV[2];
-			struct
-			{
-				float u, v;
-			};
-			
-		};
-		alignas(4)float noiseValue;
-
-		static vk::VertexInputBindingDescription GetBindingDescription() {
-			vk::VertexInputBindingDescription bindingDescription{};
-			bindingDescription.binding = 0;
-			bindingDescription.stride = sizeof(Vertex);
-			bindingDescription.inputRate = vk::VertexInputRate::eVertex;
-			return bindingDescription;
-		}
-
-
-		static std::array<vk::VertexInputAttributeDescription, 3> GetAttributeDescriptions() {
-			std::array<vk::VertexInputAttributeDescription, 3> attributeDescriptions{};
-			attributeDescriptions[0].binding = 0;
-			attributeDescriptions[0].location = 0;
-			attributeDescriptions[0].format = vk::Format::eR32G32B32Sfloat;
-			attributeDescriptions[0].offset = offsetof(Vertex, Position);
-
-			attributeDescriptions[1].binding = 0;
-			attributeDescriptions[1].location = 1;
-			attributeDescriptions[1].format = vk::Format::eR32G32B32A32Sfloat;
-			attributeDescriptions[1].offset = offsetof(Vertex, Color);
-
-			attributeDescriptions[2].binding = 0;
-			attributeDescriptions[2].location = 2;
-			attributeDescriptions[2].format = vk::Format::eR32G32Sfloat;
-			attributeDescriptions[2].offset = offsetof(Vertex, UV);
-
-			return attributeDescriptions;
-		}
+		glm::vec3 Position;
+		glm::vec4 Color;
+		glm::vec2 UV;
+		
 	};
 
 
