@@ -440,6 +440,7 @@ public:
 					glm::vec2 spineTop = { startPointX+width ,startPointY + height };
 					glm::vec2 spineBottom = { startPointX + width,startPointY };
 					glm::vec2 rightEdgeBottom = { width + startPointX + width,startPointY  };
+					glm::vec2 rightEdgeTop = { width + startPointX + width,startPointY +height };
 					auto  mousePos = Input::GetMousePos();
 					glm::vec2 screenSize = { Renderer::Instance()->GetViewportSize().first, 
 						Renderer::Instance()->GetViewportSize().second };
@@ -455,23 +456,38 @@ public:
 					glm::vec2 t0;
 					t0.x = follow.x + .5 * (rightEdgeBottom.x - follow.x);
 					t0.y = follow.y + .5 * (rightEdgeBottom.y - follow.y);
+					t0 =  glm::clamp(t0, spineBottom, rightEdgeTop);
 					auto bisectorAngle = glm::atan2(rightEdgeBottom.y - t0.y, rightEdgeBottom.x - t0.x);
 					//t1
 					auto bisectorTangent = t0.x -glm::tan(bisectorAngle) * (rightEdgeBottom.y - t0.y);
-					bisectorTangent = glm::max(bisectorTangent, spineBottom.x);
+					//bisectorTangent = glm::max(bisectorTangent, spineBottom.x);
+					if (bisectorTangent < spineBottom.x) bisectorTangent = spineBottom.x;
 					glm::vec2 t1;
 					glm::vec2 t2;
 					t1.x = bisectorTangent;
 					t1.y = rightEdgeBottom.y;
 					t2.x = t0.x;
 					t2.y = t1.y;
-
-					auto pageAngle = glm::atan2(t1.y - follow.y, t1.x - follow.x);
-					auto clipAngle = glm::atan2(t1.y - t0.y, t1.x - t0.x);
-
-					std::cout << "mouse " << follow.x << " " << follow.y << "\n";
-					std::cout << "t0 " << t0.x << " " << t0.y << "\n";
-					std::cout << "t1 " << t1.x << " " << t1.y << "\n";
+					float pageAngle = glm::atan2( t1.x - follow.x, -t1.y + follow.y);
+					const auto PI2 = 3.14f / 2.f;
+					const auto PI = 3.14f;
+					pageAngle = (PI2 + pageAngle);
+					t1 = glm::clamp(t1, spineBottom, rightEdgeBottom);
+					t2 = glm::clamp(t2, spineBottom, rightEdgeBottom);
+					pageAngle = glm::clamp(pageAngle, 0.f, PI);
+					//pageAngle = -(3.14);
+					std::cout << "dx " << t1.x - follow.x << std::endl;
+					std::cout << "dy " << -t1.y + follow.y << std::endl;
+					std::cout << "Page angle " << glm::degrees(pageAngle) << std::endl;
+					//pageAngle = glm::pi<float>() - pageAngle;
+					auto clipAngle = glm::atan2(t1.x - t0.x,t1.y - t0.y);
+					if (pageAngle > (3.14/2 ))
+					{
+						//pageAngle -= 3.14 ;
+					}
+					//std::cout << "mouse " << follow.x << " " << follow.y << "\n";
+					//std::cout << "t0 " << t0.x << " " << t0.y << "\n";
+					//std::cout << "t1 " << t1.x << " " << t1.y << "\n";
 
 					verticies1[0].Position = { startPointX,startPointY,0 };
 					verticies1[0].Color= whiteColor;
@@ -491,21 +507,74 @@ public:
 					verticies2[3].Position = { glm::vec2{2*width + startPointX,startPointY + height},0 };
 					verticies2[3].Color = redColor;
 
-					auto dir = glm::normalize(t1 - follow);
+					auto dir = glm::normalize(-t1 + follow);
+					auto dirLen = glm::length(-t1 + follow);
 					auto rightOffset = dir * width;
+					float theta = 1.f/glm::tan(dir.x/dir.y);
+					float phi = 1 / glm::cos(0.f/dirLen);
+
+					
 
 					std::vector<Vertex> newPage{ 4 };
+					auto trans = glm::translate(glm::mat4(.5f), glm::vec3(follow, 0));
+					auto rot = glm::rotate(trans, pageAngle, glm::vec3(0, 0, 1));
+					
+					newPage[0].Position = { 2*width + startPointX,startPointY,0 };
 					newPage[0].Position = { follow,0 };
 					newPage[0].Color = greyColor;
-					newPage[1].Position = { width + startPointX,startPointY + height,0 };
+					newPage[1].Position = { newPage[0].Position.x,newPage[0].Position.y - height,0 };
 					newPage[1].Color = greyColor;
-					newPage[2].Position = { follow+rightOffset,0 };
+					newPage[2].Position = { newPage[0].Position.x - width ,newPage[0].Position.y,0 };
 					newPage[2].Color = greyColor;
-					newPage[3].Position = { glm::vec2{2 * width + startPointX,startPointY + height},0 };
+					newPage[3].Position = { newPage[0].Position.x - width,newPage[0].Position.y -height ,0 };
 					newPage[3].Color = greyColor;
+					auto time = GetExeTime();
+					//pageAngle = 3*glm::sin(1000*time);
+					//pageAngle = clipAngle;
+					
+
+					auto rotateVector = [](glm::vec3 v, float radians,glm::vec2 pointOfRotation) {
+					double dx = v.x - pointOfRotation.x;
+					double dy = v.y - pointOfRotation.y;
+
+					double new_x = dx * cos(radians) - dy * sin(radians) + pointOfRotation.x;
+					double new_y = dx * sin(radians) + dy * cos(radians) + pointOfRotation.y;
+					v = glm::vec3{ new_x,new_y ,0 };
+					return v;
+					};
+					// calc center
+					double centerX = 0.0;
+					double centerY = 0.0;
+
+					for (int i = 0; i < 4; i++) {
+						centerX += newPage[i].Position.x;
+						centerY += newPage[i].Position.y;
+					}
+
+					centerX /= 4.0;
+					centerY /= 4.0;
+
+					
+
+					glm::vec2 pointOfRotation = newPage[0].Position;
+					//pointOfRotation = { centerX,centerY };
+					 trans = glm::translate(glm::mat4(1.f), glm::vec3(follow,0));
+					 rot = glm::rotate(trans, pageAngle, glm::vec3(0,0,1));
+
+					// pointOfRotation = {0,0};
+					 //pointOfRotation = spineBottom;
+					//pageAngle += 2* 3.14 / 2;
+					for (int i = 0; i < 4; i++) {
+						newPage[i].Position = rotateVector(newPage[i].Position, pageAngle, pointOfRotation);
+						//newPage[i].Position = rot* glm::vec4(newPage[i].Position,1.f);
+					}
+
+
+					
 
 					Renderer:: Instance()->DrawQuad(verticies1);
 					Renderer:: Instance()->DrawQuad(verticies2);
+					Renderer:: Instance()->DrawQuad(newPage);
 					auto identity = glm::identity<glm::mat4>();
 					auto debug0 = glm::translate(identity, glm::vec3(t0, 0));
 					auto debug1 = glm::translate(identity, glm::vec3(t1, 0));
