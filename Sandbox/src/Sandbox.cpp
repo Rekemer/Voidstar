@@ -432,10 +432,13 @@ public:
 					glm::vec4 whiteColor = { 1,1,1,1 };
 					glm::vec4 redColor = { 1,0,0,1 };
 					glm::vec4 greyColor = { 0.7,0.7,0.7,1 };
+					glm::vec4 blueColor = { 0.2,0.2,0.7,0.5 };
 					float width = scale.x;
 					float height = scale.y;
 					float startPointX = 150;
 					float startPointY = 200;
+
+					glm::vec2 leftEdgeBottom = { startPointX  ,startPointY  };
 
 					glm::vec2 spineTop = { startPointX+width ,startPointY + height };
 					glm::vec2 spineBottom = { startPointX + width,startPointY };
@@ -452,6 +455,7 @@ public:
 					auto clipSpace = (inverseProj * glm::vec4{ ndc.x,ndc.y,1,1 });
 
 					auto follow = glm::vec2(clipSpace);
+					follow = glm::clamp(follow, leftEdgeBottom, rightEdgeTop);
 
 					glm::vec2 t0;
 					t0.x = follow.x + .5 * (rightEdgeBottom.x - follow.x);
@@ -462,25 +466,54 @@ public:
 					auto bisectorTangent = t0.x -glm::tan(bisectorAngle) * (rightEdgeBottom.y - t0.y);
 					//bisectorTangent = glm::max(bisectorTangent, spineBottom.x);
 					if (bisectorTangent < spineBottom.x) bisectorTangent = spineBottom.x;
+					if (bisectorTangent > rightEdgeBottom.x) bisectorTangent = rightEdgeBottom.x;
 					glm::vec2 t1;
 					glm::vec2 t2;
 					t1.x = bisectorTangent;
 					t1.y = rightEdgeBottom.y;
 					t2.x = t0.x;
 					t2.y = t1.y;
-					float pageAngle = glm::atan2( t1.x - follow.x, -t1.y + follow.y);
 					const auto PI2 = 3.14f / 2.f;
 					const auto PI = 3.14f;
+					auto deltaXPage= t1.x - follow.x;
+					auto deltaYPage= -t1.y + follow.y;
+					float pageAngle = glm::atan2( deltaXPage,deltaYPage);
 					pageAngle = (PI2 + pageAngle);
+					if (t1.x > rightEdgeBottom.x)
+					{
+						std::cout << "as";
+					}
+					if (deltaXPage == 0)
+					{
+						pageAngle = 0;
+					}
 					t1 = glm::clamp(t1, spineBottom, rightEdgeBottom);
 					t2 = glm::clamp(t2, spineBottom, rightEdgeBottom);
 					pageAngle = glm::clamp(pageAngle, 0.f, PI);
+
+					//std::cout << "t1 " << t1.x << " " << t1.y << std::endl;
 					//pageAngle = -(3.14);
-					std::cout << "dx " << t1.x - follow.x << std::endl;
-					std::cout << "dy " << -t1.y + follow.y << std::endl;
-					std::cout << "Page angle " << glm::degrees(pageAngle) << std::endl;
+					//std::cout << "dx " << deltaXPage << std::endl;
+					//std::cout << "dy " << deltaYPage << std::endl;
+					//std::cout << "Page angle " << glm::degrees(pageAngle) << std::endl;
 					//pageAngle = glm::pi<float>() - pageAngle;
-					auto clipAngle = glm::atan2(t1.x - t0.x,t1.y - t0.y);
+					auto deltaXClip = (t1.x - t0.x);
+					auto deltaYClip = -t1.y + t0.y;
+					auto clipAngle = glm::atan2(deltaXClip, deltaYClip);
+					if (deltaXClip == 0)
+
+					{
+						//clipAngle = -PI2;
+					}
+					std::cout << "dx " << deltaXClip << std::endl;
+					std::cout << "dy " << deltaYClip  << std::endl;
+					/*if (clipAngle< -PI2)
+					{
+						clipAngle = -PI2;
+					}*/
+					clipAngle += PI2;
+					//clipAngle *= -1;
+					std::cout << "Clip angle " << glm::degrees(clipAngle) << std::endl;
 					if (pageAngle > (3.14/2 ))
 					{
 						//pageAngle -= 3.14 ;
@@ -518,6 +551,8 @@ public:
 					std::vector<Vertex> newPage{ 4 };
 					auto trans = glm::translate(glm::mat4(.5f), glm::vec3(follow, 0));
 					auto rot = glm::rotate(trans, pageAngle, glm::vec3(0, 0, 1));
+					
+
 					
 					newPage[0].Position = { 2*width + startPointX,startPointY,0 };
 					newPage[0].Position = { follow,0 };
@@ -569,12 +604,27 @@ public:
 						//newPage[i].Position = rot* glm::vec4(newPage[i].Position,1.f);
 					}
 
-
+					std::vector<Vertex> clipPage{ 4 };
 					
+					float clipHeight = 300;
+					float clipWidth  = 350;
+					clipPage[0].Position = { t1.x - clipWidth  ,t1.y + clipHeight ,0 };
+					clipPage[0].Color = blueColor;
+					clipPage[1].Position = { t1.x + clipWidth,t1.y + clipHeight ,0 };
+					clipPage[1].Color = blueColor;
+					clipPage[2].Position = { t1.x - clipWidth   ,t1.y ,0 };
+					clipPage[2].Color = blueColor;
+					clipPage[3].Position = { t1.x+ clipWidth,t1.y ,0 };
+					clipPage[3].Color = blueColor;
+
+					for (int i = 0; i < 4; i++) {
+						clipPage[i].Position = rotateVector(clipPage[i].Position, clipAngle, t1);
+					}
 
 					Renderer:: Instance()->DrawQuad(verticies1);
 					Renderer:: Instance()->DrawQuad(verticies2);
 					Renderer:: Instance()->DrawQuad(newPage);
+					Renderer:: Instance()->DrawQuad(clipPage);
 					auto identity = glm::identity<glm::mat4>();
 					auto debug0 = glm::translate(identity, glm::vec3(t0, 0));
 					auto debug1 = glm::translate(identity, glm::vec3(t1, 0));
@@ -582,9 +632,12 @@ public:
 					debug0 = glm::scale(debug0, glm::vec3(10, 10, 0));
 					debug1 = glm::scale(debug1, glm::vec3(10, 10, 0));
 					debug2 = glm::scale(debug2, glm::vec3(10, 10, 0));
+					auto debug3 = glm::translate(identity, glm::vec3(clipPage[0].Position));
+					debug3 = glm::scale(debug3, glm::vec3(10, 10, 0));
 					Renderer:: Instance()->DrawQuad(debug0, glm::vec4(1, 0, 1, 1));
 					Renderer:: Instance()->DrawQuad(debug1, glm::vec4(0, 1, 1, 1));
 					Renderer:: Instance()->DrawQuad(debug2, glm::vec4(1, 1, 1, 1));
+					Renderer:: Instance()->DrawQuad(debug3, glm::vec4(0.3, 0, 0, 1));
 					//Renderer:: Instance()->DrawQuad( world2, glm::vec4(0, 0, 1, 1));
 					Renderer:: Instance()->DrawBatch(commandBuffer);
 
