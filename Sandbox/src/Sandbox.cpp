@@ -486,7 +486,7 @@ public:
 				builder.SetDepthTest(true);
 				builder.WriteToDepthBuffer(true);
 				builder.SetRenderPass(m_RenderPass);
-				builder.SetStencilRefNumber(1);
+				builder.SetStencilRefNumber(2);
 				builder.StencilTestOp(vk::CompareOp::eAlways,vk::StencilOp::eReplace, vk::StencilOp::eReplace, vk::StencilOp::eReplace);
 				builder.SetMasks(0xff, 0xff);
 				m_GraphicsPipeline = builder.Build();
@@ -510,8 +510,8 @@ public:
 					builder.SetDepthTest(false);
 					builder.WriteToDepthBuffer(true);
 					builder.SetRenderPass(m_ClipRenderPass);
-					builder.SetStencilRefNumber(0);
-					builder.StencilTestOp(vk::CompareOp::eLess, vk::StencilOp::eKeep, vk::StencilOp::eReplace, vk::StencilOp::eKeep);
+					builder.SetStencilRefNumber(2);
+					builder.StencilTestOp(vk::CompareOp::eEqual, vk::StencilOp::eKeep, vk::StencilOp::eDecrementAndClamp, vk::StencilOp::eKeep);
 					builder.SetMasks(0xff, 0xff);
 					m_ClipPipeline = builder.Build();
 				}
@@ -535,11 +535,11 @@ public:
 						builder.SetDepthTest(false);
 						builder.WriteToDepthBuffer(true);
 						builder.SetRenderPass(m_RenderPass);
-						builder.SetStencilRefNumber(0);
+						builder.SetStencilRefNumber(1);
 						builder.StencilTestOp(vk::CompareOp::eEqual, vk::StencilOp::eKeep, vk::StencilOp::eReplace, vk::StencilOp::eKeep);
 						builder.SetMasks(0xff, 0xff);
 						m_NewPagePipeline = builder.Build();
-						builder.SetStencilRefNumber(1);
+						builder.SetStencilRefNumber(2);
 						m_NewPagePipelineRight = builder.Build();
 					}
 				}
@@ -629,9 +629,11 @@ public:
 						auto follow = glm::vec2(clipSpace);
 						return follow;
 					};
-
-					
-					auto follow = GetMousePosition(camera);
+					glm::vec2 follow = rightEdgeBottom;
+					if (Input::IsMousePressed(0))
+					{
+						follow = GetMousePosition(camera);
+					}
 					follow = glm::clamp(follow, leftEdgeBottom, rightEdgeTop);
 
 					glm::vec2 t0;
@@ -864,16 +866,16 @@ public:
 					vk::ClearValue clearColor = { std::array<float, 4>{0.1f, .3f, 0.1f, 1.0f} };
 
 					vk::ClearValue depthClear;
-					uint32_t stencil0 = 2;
+					uint32_t stencil0 = 3;
 					depthClear.depthStencil = vk::ClearDepthStencilValue({ 1.0f, stencil0 });
 					std::vector<vk::ClearValue> clearValues = { {clearColor, depthClear,clearColor} };
-					//std::vector<Vertex> pages =
-					//{
-					//	leftPage,
-					//	rightPage,
-					//	newLeftPage,
-					//	rightPage
-					//};
+					std::vector<std::vector<Vertex>> pages =
+					{
+						leftPage,
+						rightPage,
+						newLeftPage,
+						rightPage
+					};
 
 				
 					{
@@ -881,14 +883,14 @@ public:
 
 					
 					
-						render(renderCommandBuffer,  clearValues, { leftPage ,rightPage }, imageAvailable,m_RenderFinishedSemaphore1, m_RenderPass, m_GraphicsPipeline.get());
+						render(renderCommandBuffer,  clearValues, { pages[0] ,pages[1]}, imageAvailable, m_RenderFinishedSemaphore1, m_RenderPass, m_GraphicsPipeline.get());
 
 
 						render(renderCommandBuffer,  clearValues, { clipPage }, m_RenderFinishedSemaphore1, m_RenderFinishedSemaphore2, m_ClipRenderPass, m_ClipPipeline.get());
 					
-						render(renderCommandBuffer, clearValues, { newLeftPage }, m_RenderFinishedSemaphore2, m_RenderFinishedSemaphore3, m_NewPageRenderPass, m_NewPagePipeline.get());
+						render(renderCommandBuffer, clearValues, { pages[2]}, m_RenderFinishedSemaphore2, m_RenderFinishedSemaphore3, m_NewPageRenderPass, m_NewPagePipeline.get());
 					
-						render(renderCommandBuffer, clearValues, { rightPage }, m_RenderFinishedSemaphore3, m_RenderFinishedSemaphore4, m_NewPageRenderPassRight, m_NewPagePipelineRight.get());
+						render(renderCommandBuffer, clearValues, { pages[3]}, m_RenderFinishedSemaphore3, m_RenderFinishedSemaphore4, m_NewPageRenderPassRight, m_NewPagePipelineRight.get());
 					
 				
 
