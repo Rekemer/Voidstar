@@ -427,6 +427,7 @@ const int QUAD_AMOUNT = 700;
 		}
 		commandBuffer.bindIndexBuffer(m_QuadBufferBatchIndex->GetBuffer(), 0, m_QuadBufferBatchIndex->GetIndexType());
 		commandBuffer.drawIndexed(m_QuadIndex, 1, 0, 0, 0);
+	
 	}
 
 	void UpdateVertex(Vertex*& vertex, glm::vec3 position, glm::vec4& color, glm::mat4& world, int vertIndex)
@@ -1072,7 +1073,15 @@ const int QUAD_AMOUNT = 700;
 		static Renderer renderer ;
 		return &renderer;
 	}
-	
+	void Renderer::WaitFence()
+	{
+		{
+
+			ZoneScopedN("Waiting for fence");
+			m_Device->GetDevice().waitForFences(m_InFlightFence, VK_TRUE, std::numeric_limits<uint64_t>::max());
+		}
+		m_Device->GetDevice().resetFences(m_InFlightFence);
+	}
 	void Renderer::Render(float deltaTime,Camera& camera)
 	{
 		auto exeTime = m_App->GetExeTime();
@@ -1094,20 +1103,21 @@ const int QUAD_AMOUNT = 700;
 			m_Device->GetDevice().acquireNextImageKHR(swapchain, UINT64_MAX, m_ImageAvailableSemaphore, nullptr, &imageIndex);
 		}
 		
+			m_UserFunctions.postRenderCommands(imageIndex, camera);
 	
-			vk::Semaphore waitSemaphores[] = { m_ImageAvailableSemaphore };
-			vk::Semaphore signalSemaphores[] = { m_RenderFinishedSemaphore };
-			auto renderCommandBuffer = m_UserFunctions.submitRenderCommands(imageIndex, camera);
+			auto signalSemaphore = m_UserFunctions.submitRenderCommands(imageIndex, camera,m_ImageAvailableSemaphore, m_InFlightFence);
+			vk::Semaphore waitSemaphore[] = { signalSemaphore };
 	
 			
-			 std::vector<vk::CommandBuffer> commandBuffers = { renderCommandBuffer.GetCommandBuffer() };
 #if IMGUI_ENABLED
 		
 			RenderImGui(imageIndex);
 			commandBuffers.push_back(g_MainWindowData.Frames[imageIndex].CommandBuffer);
 #endif
-			
-			m_UserFunctions.postRenderCommands(imageIndex, camera);
+			/*
+			 std::vector<vk::CommandBuffer> commandBuffers = { renderCommandBuffer.GetCommandBuffer() };
+			vk::Semaphore waitSemaphores[] = { m_ImageAvailableSemaphore };
+
 			vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
 			vk::SubmitInfo submitInfo = {};
 
@@ -1122,14 +1132,14 @@ const int QUAD_AMOUNT = 700;
 			submitInfo.signalSemaphoreCount = 1;
 			submitInfo.pSignalSemaphores = signalSemaphores;
 			auto device = RenderContext::GetDevice();
-			device->GetGraphicsQueue().submit(submitInfo, m_InFlightFence);
-		
+			device->GetGraphicsQueue().submit(submitInfo, m_InFlightFence);*/
+			
 
 		
 
 		vk::PresentInfoKHR presentInfo = {};
 		presentInfo.waitSemaphoreCount = 1;
-		presentInfo.pWaitSemaphores = signalSemaphores;
+		presentInfo.pWaitSemaphores = waitSemaphore;
 
 		vk::SwapchainKHR swapChains[] = { swapchain };
 		presentInfo.swapchainCount = 1;
@@ -1172,6 +1182,13 @@ const int QUAD_AMOUNT = 700;
 
 
 	
+	void Renderer::Flush(std::vector<vk::CommandBuffer> commandBuffers)
+	{
+		assert(false);
+		
+
+	}
+
 	void Renderer::RenderImGui(int imageIndex)
 	{
 		ImGui_ImplVulkan_NewFrame();

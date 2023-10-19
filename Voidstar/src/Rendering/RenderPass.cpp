@@ -15,7 +15,9 @@ namespace Voidstar
 
 
 
-	/*No.The attachment reference layout tells Vulkan what layout to transition the image to at the beginning of the subpass for which this reference is defined.Or more to the point, it is the layout which the image will be in for the duration of the subpass.
+	/*No.The attachment reference layout tells Vulkan what layout to transition the image to at 
+	the beginning of the subpass for which this reference is defined.Or more to the point
+	, it is the layout which the image will be in for the duration of the subpass.
 	*
 
 		The first transition for an attached image of a render pass will be from the initialLayout

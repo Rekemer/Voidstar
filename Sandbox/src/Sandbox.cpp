@@ -171,19 +171,23 @@ public:
 			
 			{
 				RenderPassBuilder builder;
-
 				//Define a general attachment, with its load/store operations
-				vk::AttachmentDescription msaaAttachment = AttachmentDescription(swapchainFormat, samples, vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare, vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal);
+				vk::AttachmentDescription msaaAttachment = AttachmentDescription(swapchainFormat,
+					samples, vk::AttachmentLoadOp::eClear, 
+					vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare, 
+					vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined, 
+					vk::ImageLayout::eColorAttachmentOptimal);
 
 				vk::AttachmentReference refMSAA = { 0,vk::ImageLayout::eColorAttachmentOptimal };
 				builder.AddAttachment({ msaaAttachment ,refMSAA });
 
 				vk::AttachmentDescription depthAttachment = AttachmentDescription(
-					swapChainDepthFormat, samples, vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
-					vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined, vk::ImageLayout::eDepthStencilAttachmentOptimal);
+					swapChainDepthFormat, samples, vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore
+					, vk::AttachmentLoadOp::eDontCare,
+					vk::AttachmentStoreOp::eStore, vk::ImageLayout::eUndefined,
+					vk::ImageLayout::eDepthStencilAttachmentOptimal);
 				vk::AttachmentReference refDepth = { 1,vk::ImageLayout::eDepthStencilAttachmentOptimal };
 				builder.AddAttachment({ depthAttachment , refDepth });
-
 
 
 #if IMGUI_ENABLED
@@ -199,25 +203,82 @@ public:
 				vk::AttachmentReference refResolve = { 2,vk::ImageLayout::eColorAttachmentOptimal };
 #else
 				//Define a general attachment, with its load/store operations
+
+
 				vk::AttachmentDescription colorAttachmentResolve =
 					AttachmentDescription(swapchainFormat, vk::SampleCountFlagBits::e1,
 						vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
-						vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined, vk::ImageLayout::ePresentSrcKHR);
-
-
-
+						vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal);
 				vk::AttachmentReference refResolve = { 2,vk::ImageLayout::eColorAttachmentOptimal };
+
 #endif
-				builder.AddAttachment({ colorAttachmentResolve ,refResolve });
+
+
+				builder.AddAttachment({ colorAttachmentResolve , refResolve });
+				
 
 				//Renderpasses are broken down into subpasses, there's always at least one.
 
 				builder.AddSubpass(SubpassDescription(1, &refMSAA, &refResolve, &refDepth));
 
-				vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eNone, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
+				//vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0, 
+				//	vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eNone,
+				//	vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
+
+				vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0,
+					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite,
+					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
+
 				builder.AddSubpassDependency(dependency0);
 
 				m_RenderPass = builder.Build(*device);
+
+				
+				{
+
+
+
+
+					RenderPassBuilder builder;
+					//Define a general attachment, with its load/store operations
+					vk::AttachmentDescription msaaAttachment = AttachmentDescription(swapchainFormat,
+						samples, vk::AttachmentLoadOp::eLoad,
+						vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
+						vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eColorAttachmentOptimal,
+						vk::ImageLayout::eColorAttachmentOptimal);
+
+					vk::AttachmentReference refMSAA = { 0,vk::ImageLayout::eColorAttachmentOptimal };
+					builder.AddAttachment({ msaaAttachment ,refMSAA });
+
+					vk::AttachmentDescription depthAttachment = AttachmentDescription(
+						swapChainDepthFormat, samples, vk::AttachmentLoadOp::eLoad, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eLoad,
+						vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eDepthStencilAttachmentOptimal, vk::ImageLayout::eDepthStencilAttachmentOptimal);
+					vk::AttachmentReference refDepth = { 1,vk::ImageLayout::eDepthStencilAttachmentOptimal };
+					builder.AddAttachment({ depthAttachment , refDepth });
+
+
+
+					vk::AttachmentDescription colorAttachmentResolve =
+						AttachmentDescription(swapchainFormat, vk::SampleCountFlagBits::e1,
+							vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
+							vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::ePresentSrcKHR);
+					vk::AttachmentReference refResolve = { 2,vk::ImageLayout::eColorAttachmentOptimal };
+
+
+					builder.AddAttachment({ colorAttachmentResolve ,refResolve });
+
+					//Renderpasses are broken down into subpasses, there's always at least one.
+
+					builder.AddSubpass(SubpassDescription(1, &refMSAA, &refResolve, &refDepth));
+
+					vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0,
+						vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite,
+						vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
+					builder.AddSubpassDependency(dependency0);
+
+					m_ClipRenderPass= builder.Build(*device);
+				}
+
 			}
 			
 
@@ -240,40 +301,27 @@ public:
 
 			{
 
-				GraphicsPipelineSpecification specs;
-
-				specs.device = device->GetDevice();
-
-				specs.vertexFilepath = BASE_SPIRV_OUTPUT + "font.spvV";
-				specs.fragmentFilepath = BASE_SPIRV_OUTPUT + "font.spvF";
-				specs.swapchainExtent = swapChainExtent;
-				specs.swapchainImageFormat = swapchainFormat;
-
 
 				std::vector<vk::VertexInputBindingDescription> bindings{ VertexBindingDescription(0,sizeof(Vertex),vk::VertexInputRate::eVertex) };
 
-				std::vector<vk::VertexInputAttributeDescription> attributeDescriptions;
 
-				attributeDescriptions =
+				std::vector<vk::VertexInputAttributeDescription>
+					attributeDescriptions =
 				{
 					VertexInputAttributeDescription(0,0,vk::Format::eR32G32B32Sfloat,offsetof(Vertex, Position)),
 					VertexInputAttributeDescription(0,1,vk::Format::eR32G32Sfloat,offsetof(Vertex, UV)),
 
 				};
 
-				specs.bindingDescription = bindings;
 
 
 
-				specs.attributeDescription = attributeDescriptions;
 
 				auto samples = RenderContext::GetDevice()->GetSamples();
-				specs.samples = samples;
 				
 				auto pipelineLayouts = std::vector<vk::DescriptorSetLayout>{
 					m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutFont->GetLayout() };
 
-				specs.descriptorSetLayout = pipelineLayouts;
 
 
 				PipelineBuilder builder;
@@ -281,12 +329,13 @@ public:
 				builder.SetSamples(vk::SampleCountFlagBits::e1);
 				builder.AddDescriptorLayouts(pipelineLayouts);
 				builder.AddAttributeDescription(attributeDescriptions);
-				builder.AddBindingDescription(bindings);
+					builder.AddBindingDescription(bindings);
 				builder.SetPolygoneMode(Renderer::Instance()->GetPolygonMode());
 				builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
 				builder.AddShader(BASE_SPIRV_OUTPUT + "font.spvV", vk::ShaderStageFlagBits::eVertex);
 				builder.AddShader(BASE_SPIRV_OUTPUT + "font.spvF", vk::ShaderStageFlagBits::eFragment);
 				builder.SetSubpassAmount(0);
+				
 				builder.AddExtent(vk::Extent2D{ 128 ,128 });
 				builder.AddImageFormat(vk::Format::eB8G8R8A8Unorm);
 				builder.SetRenderPass(m_PageRenderPass);
@@ -352,14 +401,53 @@ public:
 				builder.SetSubpassAmount(0);
 				builder.AddExtent(swapChainExtent);
 				builder.AddImageFormat(swapchainFormat);
+				builder.EnableStencilTest(true);
 				builder.SetRenderPass(m_RenderPass);
+				builder.SetStencilRefNumber(1);
 				m_GraphicsPipeline = builder.Build();
+
+
+				{
+					PipelineBuilder builder;
+					builder.SetDevice(device->GetDevice());
+					builder.SetSamples(samples);
+					builder.AddDescriptorLayouts(pipelineLayouts);
+					builder.AddAttributeDescription(attributeDescriptions);
+					builder.AddBindingDescription(bindings);
+					builder.SetPolygoneMode(Renderer::Instance()->GetPolygonMode());
+					builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
+					builder.AddShader(BASE_SPIRV_OUTPUT + "default.spvV", vk::ShaderStageFlagBits::eVertex);
+					builder.AddShader(BASE_SPIRV_OUTPUT + "dos2.spvF", vk::ShaderStageFlagBits::eFragment);
+					builder.SetSubpassAmount(0);
+					builder.AddExtent(swapChainExtent);
+					builder.AddImageFormat(swapchainFormat);
+					builder.EnableStencilTest(true);
+					builder.SetRenderPass(m_RenderPass);
+					builder.SetStencilRefNumber(2);
+					m_ClipPipeline = builder.Build();
+				}
+				
 
 			}
 			UpdateTexture(0);
+
+
+			vk::SemaphoreCreateInfo semaphoreInfo = {};
+			semaphoreInfo.flags = vk::SemaphoreCreateFlags();
+
+			try
+			{
+				m_RenderFinishedSemaphore1 = RenderContext::GetDevice()->GetDevice().createSemaphore(semaphoreInfo);
+				m_RenderFinishedSemaphore2 = RenderContext::GetDevice()->GetDevice().createSemaphore(semaphoreInfo);
+			}
+			catch (vk::SystemError err) {
+
+				Log::GetLog()->error("failed to create semaphore");
+			}
+
 		};
 
-		auto submitRenderCommands = [this](size_t frameIndex,Camera& camera)
+		auto submitRenderCommands = [this](size_t frameIndex,Camera& camera, vk::Semaphore& imageAvailable, vk::Fence& fence)
 		{
 
 			UpdateUniformBuffer(frameIndex, camera);
@@ -375,6 +463,8 @@ public:
 				auto commandBuffer = renderCommandBuffer.GetCommandBuffer();
 
 				//RenderContext::GetDevice()->GetDevice().waitIdle();
+				uint32_t stencil0 = 1;
+				uint32_t stencil1 = 0;
 				commandBuffer.begin(beginInfo);
 				{
 
@@ -388,7 +478,7 @@ public:
 
 					vk::ClearValue depthClear;
 
-					depthClear.depthStencil = vk::ClearDepthStencilValue({ 1.0f, 0 });
+					depthClear.depthStencil = vk::ClearDepthStencilValue({ 1.0f, stencil0 });
 					std::vector<vk::ClearValue> clearValues = { {clearColor, depthClear,clearColor} };
 					renderCommandBuffer.BeginRenderPass(m_RenderPass, swapchain.GetFrameBuffer(frameIndex), swapchain.GetExtent(), clearValues);
 
@@ -481,7 +571,7 @@ public:
 					pageAngle = (PI2 + pageAngle);
 					if (t1.x > rightEdgeBottom.x)
 					{
-						std::cout << "as";
+						//std::cout << "as";
 					}
 					if (deltaXPage == 0)
 					{
@@ -505,15 +595,15 @@ public:
 					{
 						//clipAngle = -PI2;
 					}
-					std::cout << "dx " << deltaXClip << std::endl;
-					std::cout << "dy " << deltaYClip  << std::endl;
 					/*if (clipAngle< -PI2)
 					{
 						clipAngle = -PI2;
 					}*/
 					clipAngle += PI2;
 					//clipAngle *= -1;
-					std::cout << "Clip angle " << glm::degrees(clipAngle) << std::endl;
+					//std::cout << "dx " << deltaXClip << std::endl;
+					//std::cout << "dy " << deltaYClip  << std::endl;
+					//std::cout << "Clip angle " << glm::degrees(clipAngle) << std::endl;
 					if (pageAngle > (3.14/2 ))
 					{
 						//pageAngle -= 3.14 ;
@@ -624,7 +714,7 @@ public:
 					Renderer:: Instance()->DrawQuad(verticies1);
 					Renderer:: Instance()->DrawQuad(verticies2);
 					Renderer:: Instance()->DrawQuad(newPage);
-					Renderer:: Instance()->DrawQuad(clipPage);
+					//Renderer:: Instance()->DrawQuad(clipPage);
 					auto identity = glm::identity<glm::mat4>();
 					auto debug0 = glm::translate(identity, glm::vec3(t0, 0));
 					auto debug1 = glm::translate(identity, glm::vec3(t1, 0));
@@ -640,13 +730,76 @@ public:
 					Renderer:: Instance()->DrawQuad(debug3, glm::vec4(0.3, 0, 0, 1));
 					//Renderer:: Instance()->DrawQuad( world2, glm::vec4(0, 0, 1, 1));
 					Renderer:: Instance()->DrawBatch(commandBuffer);
-
 					renderCommandBuffer.EndRenderPass();
 
 
+					commandBuffer.end();
 					
-					
+					auto device = RenderContext::GetDevice();
+					{
+						std::vector<vk::CommandBuffer> commandBuffers = { renderCommandBuffer.GetCommandBuffer() };
+						vk::Semaphore waitSemaphores[] = { imageAvailable };
+						vk::Semaphore signalSemaphores[] = { m_RenderFinishedSemaphore1 };
 
+						vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
+						vk::SubmitInfo submitInfo = {};
+
+						submitInfo.waitSemaphoreCount = 1;
+						submitInfo.pWaitSemaphores = waitSemaphores;
+						submitInfo.pWaitDstStageMask = waitStages;
+
+
+						submitInfo.commandBufferCount = commandBuffers.size();
+						submitInfo.pCommandBuffers = commandBuffers.data();
+
+						submitInfo.signalSemaphoreCount = 1;
+						submitInfo.pSignalSemaphores = signalSemaphores;
+						
+						device->GetGraphicsQueue().submit(submitInfo, fence);
+					}
+					device->GetDevice().waitForFences(fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
+					device->GetDevice().resetFences(fence);
+
+						Renderer::Instance()->BeginBatch();
+						commandBuffer.begin(beginInfo);
+						renderCommandBuffer.BeginRenderPass(m_ClipRenderPass, swapchain.GetFrameBuffer(frameIndex), swapchain.GetExtent(), clearValues);
+
+						commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_ClipPipeline->GetLayout(), 0, m_DescriptorSets[frameIndex], nullptr);
+						commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_ClipPipeline->GetLayout(), 1, m_DescriptorSetTex, nullptr);
+						commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_ClipPipeline->GetPipeline());
+
+						commandBuffer.setViewport(0, 1, &viewport);
+						commandBuffer.setScissor(0, 1, &scissors);
+
+						Renderer::Instance()->DrawQuad(clipPage);
+						Renderer::Instance()->DrawBatch(commandBuffer);
+						renderCommandBuffer.EndRenderPass();
+						commandBuffer.end();
+					{
+							std::vector<vk::CommandBuffer> commandBuffers = { renderCommandBuffer.GetCommandBuffer() };
+							vk::Semaphore waitSemaphores[] = { m_RenderFinishedSemaphore1 };
+							vk::Semaphore signalSemaphores[] = { m_RenderFinishedSemaphore2 };
+
+							vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
+							vk::SubmitInfo submitInfo = {};
+
+							submitInfo.waitSemaphoreCount = 1;
+							submitInfo.pWaitSemaphores = waitSemaphores;
+							submitInfo.pWaitDstStageMask = waitStages;
+
+
+							submitInfo.commandBufferCount = commandBuffers.size();
+							submitInfo.pCommandBuffers = commandBuffers.data();
+
+							submitInfo.signalSemaphoreCount = 1;
+							submitInfo.pSignalSemaphores = signalSemaphores;
+							auto device = RenderContext::GetDevice();
+							device->GetGraphicsQueue().submit(submitInfo, fence);
+					}
+
+
+					
+				
 
 				}
 //				{
@@ -704,9 +857,8 @@ public:
 //					renderCommandBuffer.EndRenderPass();
 //				}
 				TracyVkCollect(ctx, commandBuffer);
-				commandBuffer.end();
-				renderCommandBuffer.EndRendering();
-				return renderCommandBuffer;
+				
+				return m_RenderFinishedSemaphore2;
 			}
 		};
 		auto postRenderCommands = [this](size_t frameIndex, Voidstar::Camera& camera)
@@ -1155,12 +1307,17 @@ private:
 
 	UPtr<Pipeline> m_ComputePipeline;
 	UPtr<Pipeline> m_GraphicsPipeline;
+	UPtr<Pipeline> m_ClipPipeline;
 	UPtr<Pipeline> m_PagePipeline;
 
 	vk::RenderPass m_RenderPass;
+	vk::RenderPass m_ClipRenderPass;
 
 	vk::Framebuffer m_PageFramebuffer;
 	vk::RenderPass m_PageRenderPass;
+	vk::Semaphore m_RenderFinishedSemaphore1;
+	vk::Semaphore m_RenderFinishedSemaphore2;
+
 };
 
 

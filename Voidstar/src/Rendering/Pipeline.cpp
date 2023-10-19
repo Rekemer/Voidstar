@@ -459,6 +459,16 @@ namespace Voidstar
 		m_WriteToDepthBuffer = write;
 	}
 
+	void PipelineBuilder::EnableStencilTest(bool test)
+	{
+		m_StencilTest = test;
+	}
+
+	void PipelineBuilder::StencilTestOp(vk::CompareOp op)
+	{
+		m_StencilOp = op;
+	}
+
 	void PipelineBuilder::SetSamples(vk::SampleCountFlagBits samples)
 	{
 		m_Samples = samples;
@@ -566,79 +576,6 @@ namespace Voidstar
 
 
 
-		/*vk::ShaderModule vertexShader = CreateModule(
-			spec.vertexFilepath, spec.device
-		);
-		{
-			vk::PipelineShaderStageCreateInfo vertexShaderInfo = {};
-			vertexShaderInfo.flags = vk::PipelineShaderStageCreateFlags();
-			vertexShaderInfo.stage = vk::ShaderStageFlagBits::eVertex;
-			vertexShaderInfo.module = vertexShader;
-			vertexShaderInfo.pName = "main";
-			shaderStages.push_back(vertexShaderInfo);
-		}
-
-
-
-		vk::ShaderModule fragmentShader = CreateModule(
-			spec.fragmentFilepath, spec.device
-		);
-		{
-			vk::PipelineShaderStageCreateInfo fragmentShaderInfo = {};
-			fragmentShaderInfo.flags = vk::PipelineShaderStageCreateFlags();
-			fragmentShaderInfo.stage = vk::ShaderStageFlagBits::eFragment;
-			fragmentShaderInfo.module = fragmentShader;
-			fragmentShaderInfo.pName = "main";
-			shaderStages.push_back(fragmentShaderInfo);
-		}
-
-		vk::ShaderModule tessControl, tessEvaulation;
-		if (spec.tessCFilepath != "")
-		{
-
-			tessControl = CreateModule(
-				spec.tessCFilepath, spec.device
-			);
-			{
-				vk::PipelineShaderStageCreateInfo tessShaderInfo = {};
-				tessShaderInfo.flags = vk::PipelineShaderStageCreateFlags();
-				tessShaderInfo.stage = vk::ShaderStageFlagBits::eTessellationControl;
-				tessShaderInfo.module = tessControl;
-				tessShaderInfo.pName = "main";
-				shaderStages.push_back(tessShaderInfo);
-			}
-			tessEvaulation = CreateModule(
-				spec.tessEFilepath, spec.device
-			);
-			{
-				vk::PipelineShaderStageCreateInfo tessShaderInfo = {};
-				tessShaderInfo.flags = vk::PipelineShaderStageCreateFlags();
-				tessShaderInfo.stage = vk::ShaderStageFlagBits::eTessellationEvaluation;
-				tessShaderInfo.module = tessEvaulation;
-				tessShaderInfo.pName = "main";
-				shaderStages.push_back(tessShaderInfo);
-			}
-		}
-		vk::ShaderModule computeModule;
-		if (spec.computeFilepath != "")
-		{
-
-			computeModule = CreateModule(
-				spec.computeFilepath, spec.device
-			);
-			{
-				vk::PipelineShaderStageCreateInfo computeShaderInfo = {};
-				computeShaderInfo.flags = vk::PipelineShaderStageCreateFlags();
-				computeShaderInfo.stage = vk::ShaderStageFlagBits::eCompute;
-				computeShaderInfo.module = computeModule;
-				computeShaderInfo.pName = "main";
-				shaderStages.push_back(computeShaderInfo);
-			}
-
-
-		}*/
-
-
 
 
 
@@ -654,7 +591,13 @@ namespace Voidstar
 		depthState.depthWriteEnable = m_WriteToDepthBuffer;
 		depthState.depthCompareOp = vk::CompareOp::eLess;
 		depthState.depthBoundsTestEnable = false;
-		depthState.stencilTestEnable = false;
+		depthState.stencilTestEnable = m_StencilTest;
+		depthState.back.compareOp = m_StencilOp;
+		depthState.back.compareMask = 0xff;
+		depthState.back.writeMask= 0xff;
+		depthState.back.reference = m_StencilRefNumber;
+		depthState.front = depthState.back;
+
 		pipelineInfo.pDepthStencilState = &depthState;
 
 		//Multisampling

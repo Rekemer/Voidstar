@@ -51,7 +51,7 @@ namespace Voidstar
 		std::function<void()> bindResources;
 		std::function<void()> createPipelines;
 		std::function<void()> createFramebuffer;
-		std::function<CommandBuffer(size_t frameIndex, Camera& camera)> submitRenderCommands;
+		std::function<vk::Semaphore(size_t frameIndex, Camera& camera, vk::Semaphore& imageAvailable, vk::Fence& fence)> submitRenderCommands;
 		std::function<void(size_t frameIndex, Camera& camera)> postRenderCommands;
 		std::function<void()> cleanUp;
 	};
@@ -107,7 +107,8 @@ namespace Voidstar
 		{
 			return m_CommandPoolManager.get();
 		}
-
+		void Flush(std::vector< vk:: CommandBuffer > commandBuffers);
+		void WaitFence();
 		void RenderImGui(int frameIndex);
 		void CleanUpImGui();
 		~Renderer();

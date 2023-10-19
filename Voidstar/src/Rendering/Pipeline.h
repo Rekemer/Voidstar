@@ -66,9 +66,15 @@ namespace Voidstar
 		void AddPipelineLayout(vk::PipelineLayout layout);
 		void SetControlPoints(int amountPoints);
 		void WriteToDepthBuffer(bool wrtite);
+		void EnableStencilTest(bool test);
+		void StencilTestOp(vk::CompareOp op);
 		void SetSamples(vk::SampleCountFlagBits samples);
 		void SetRenderPass(vk::RenderPass renderPass);
 		void SetSubpassAmount(int amount);
+		void SetStencilRefNumber(uint32_t number)
+		{
+			m_StencilRefNumber = number;
+		}
 		UPtr<Pipeline> Build();
 	private:
 		std::vector<vk::ShaderModule> m_Modules;
@@ -85,6 +91,9 @@ namespace Voidstar
 		vk::SampleCountFlagBits m_Samples;
 		int m_PatchControlPoints = -1;
 		bool m_WriteToDepthBuffer = false;
+		bool m_StencilTest = false;
+		vk::CompareOp  m_StencilOp = vk::CompareOp::eLess;
+		 uint32_t m_StencilRefNumber = 0;
 		vk::RenderPass m_RenderPass;
 		int m_SubpassNumber;
 

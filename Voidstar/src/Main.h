@@ -3,8 +3,10 @@
 
 extern Voidstar::Application* Voidstar::CreateApplication();
 
+
 int Main()
 {
+
 	auto app = Voidstar::CreateApplication();
 	app->Run();
 	delete app;
