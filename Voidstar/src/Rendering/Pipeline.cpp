@@ -471,7 +471,13 @@ namespace Voidstar
 		m_StencilPassOp = pass;
 		m_DepthFailOp = depthFailOp;
 	}
-
+	PipelineBuilder::~PipelineBuilder()
+	{
+		for (auto mod : m_Modules)
+		{
+			m_Device.destroyShaderModule(mod);
+		}
+	}
 	void PipelineBuilder::SetSamples(vk::SampleCountFlagBits samples)
 	{
 		m_Samples = samples;
@@ -668,10 +674,7 @@ namespace Voidstar
 		pipeline->m_Pipeline = graphicsPipeline;
 
 
-		for (auto mod : m_Modules)
-		{
-			m_Device.destroyShaderModule(mod);
-		}
+		
 
 		Log::GetLog()->info("Pipeline is Created!");
 		return pipeline;

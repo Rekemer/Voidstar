@@ -85,6 +85,7 @@ namespace Voidstar
 			m_CompareMask = compare;
 		}
 		UPtr<Pipeline> Build();
+		~PipelineBuilder();
 	private:
 		std::vector<vk::ShaderModule> m_Modules;
 		vk::PrimitiveTopology m_Topology;

@@ -1090,10 +1090,10 @@ const int QUAD_AMOUNT = 700;
 
 		{
 
-			ZoneScopedN("Waiting for fence");
-			m_Device->GetDevice().waitForFences(m_InFlightFence, VK_TRUE, std::numeric_limits<uint64_t>::max());
+		//	ZoneScopedN("Waiting for fence");
+		//	m_Device->GetDevice().waitForFences(m_InFlightFence, VK_TRUE, std::numeric_limits<uint64_t>::max());
+		//m_Device->GetDevice().resetFences(m_InFlightFence);
 		}
-		m_Device->GetDevice().resetFences(m_InFlightFence);
 
 		uint32_t imageIndex;
 

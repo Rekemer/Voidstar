@@ -319,7 +319,7 @@ public:
 				vk::AttachmentDescription colorAttachmentResolve =
 					AttachmentDescription(swapchainFormat, vk::SampleCountFlagBits::e1,
 						vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
-						vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::ePresentSrcKHR);
+						vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::eColorAttachmentOptimal);
 				vk::AttachmentReference refResolve = { 2,vk::ImageLayout::eColorAttachmentOptimal };
 
 
@@ -335,9 +335,49 @@ public:
 				builder.AddSubpassDependency(dependency0);
 
 				m_NewPageRenderPass = builder.Build(*device);
+				
 			}
 
+			{
+				RenderPassBuilder builder;
+				//Define a general attachment, with its load/store operations
+				vk::AttachmentDescription msaaAttachment = AttachmentDescription(swapchainFormat,
+					samples, vk::AttachmentLoadOp::eLoad,
+					vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
+					vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eColorAttachmentOptimal,
+					vk::ImageLayout::eColorAttachmentOptimal);
 
+				vk::AttachmentReference refMSAA = { 0,vk::ImageLayout::eColorAttachmentOptimal };
+				builder.AddAttachment({ msaaAttachment ,refMSAA });
+
+				vk::AttachmentDescription depthAttachment = AttachmentDescription(
+					swapChainDepthFormat, samples, vk::AttachmentLoadOp::eLoad, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eLoad,
+					vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eDepthStencilAttachmentOptimal, vk::ImageLayout::eDepthStencilAttachmentOptimal);
+				vk::AttachmentReference refDepth = { 1,vk::ImageLayout::eDepthStencilAttachmentOptimal };
+				builder.AddAttachment({ depthAttachment , refDepth });
+
+
+
+				vk::AttachmentDescription colorAttachmentResolve =
+					AttachmentDescription(swapchainFormat, vk::SampleCountFlagBits::e1,
+						vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
+						vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::ePresentSrcKHR);
+				vk::AttachmentReference refResolve = { 2,vk::ImageLayout::eColorAttachmentOptimal };
+
+
+				builder.AddAttachment({ colorAttachmentResolve ,refResolve });
+
+				//Renderpasses are broken down into subpasses, there's always at least one.
+
+				builder.AddSubpass(SubpassDescription(1, &refMSAA, &refResolve, &refDepth));
+
+				vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0,
+					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite,
+					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
+				builder.AddSubpassDependency(dependency0);
+				m_NewPageRenderPassRight = builder.Build(*device);
+			}
+			
 			
 
 			{
@@ -499,6 +539,8 @@ public:
 						builder.StencilTestOp(vk::CompareOp::eEqual, vk::StencilOp::eKeep, vk::StencilOp::eReplace, vk::StencilOp::eKeep);
 						builder.SetMasks(0xff, 0xff);
 						m_NewPagePipeline = builder.Build();
+						builder.SetStencilRefNumber(1);
+						m_NewPagePipelineRight = builder.Build();
 					}
 				}
 				
@@ -515,6 +557,7 @@ public:
 				m_RenderFinishedSemaphore1 = RenderContext::GetDevice()->GetDevice().createSemaphore(semaphoreInfo);
 				m_RenderFinishedSemaphore2 = RenderContext::GetDevice()->GetDevice().createSemaphore(semaphoreInfo);
 				m_RenderFinishedSemaphore3 = RenderContext::GetDevice()->GetDevice().createSemaphore(semaphoreInfo);
+				m_RenderFinishedSemaphore4 = RenderContext::GetDevice()->GetDevice().createSemaphore(semaphoreInfo);
 			}
 			catch (vk::SystemError err) {
 
@@ -542,7 +585,7 @@ public:
 			const float height = scale.y;
 			const float startPointX = 150;
 			const float startPointY = 200;
-
+			
 			const glm::vec2 leftEdgeBottom = { startPointX  ,startPointY };
 			const glm::vec2 spineTop = { startPointX + width ,startPointY + height };
 			const glm::vec2 spineBottom = { startPointX + width,startPointY };
@@ -753,120 +796,52 @@ public:
 
 					vk::CommandBufferBeginInfo beginInfo = {};
 
-					auto commandBuffer = renderCommandBuffer.GetCommandBuffer();
-
-					//RenderContext::GetDevice()->GetDevice().waitIdle();
-					{
-
-						commandBuffer.begin(beginInfo);
-
-
-						TracyVkZone(ctx, commandBuffer, "Rendering ");
-
-
-
-						vk::ClearValue clearColor = { std::array<float, 4>{0.1f, .3f, 0.1f, 1.0f} };
-
-						vk::ClearValue depthClear;
-
-						uint32_t stencil0 = 2;
-						depthClear.depthStencil = vk::ClearDepthStencilValue({ 1.0f, stencil0 });
-						std::vector<vk::ClearValue> clearValues = { {clearColor, depthClear,clearColor} };
-						renderCommandBuffer.BeginRenderPass(m_RenderPass, swapchain.GetFrameBuffer(frameIndex), swapchain.GetExtent(), clearValues);
-
-						auto viewportSize = Renderer::Instance()->GetViewportSize();
-						vk::Viewport viewport;
-						viewport.x = 0;
-						viewport.y = 0;
-						viewport.minDepth = 0;
-						viewport.maxDepth = 1;
-						viewport.height = viewportSize.second;
-						viewport.width = viewportSize.first;
-
-						vk::Rect2D scissors;
-						scissors.offset = vk::Offset2D{ (uint32_t)0,(uint32_t)0 };
-						scissors.extent = vk::Extent2D{ (uint32_t)viewportSize.first,(uint32_t)viewportSize.second };
-
-						commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_GraphicsPipeline->GetLayout(), 0, m_DescriptorSets[frameIndex], nullptr);
-						commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_GraphicsPipeline->GetLayout(), 1, m_DescriptorSetTex, nullptr);
-
-
-						commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_GraphicsPipeline->GetPipeline());
-
-						commandBuffer.setViewport(0, 1, &viewport);
-						commandBuffer.setScissor(0, 1, &scissors);
-
-
-						Renderer::Instance()->BeginBatch();
-					Renderer:: Instance()->DrawQuad(leftPage);
-					Renderer:: Instance()->DrawQuad(rightPage);
-					
-					//Renderer:: Instance()->DrawQuad(clipPage);
-					auto identity = glm::identity<glm::mat4>();
-					auto debug0 = glm::translate(identity, glm::vec3(t0, 0));
-					auto debug1 = glm::translate(identity, glm::vec3(t1, 0));
-					auto debug2 = glm::translate(identity, glm::vec3(t2, 0));
-					debug0 = glm::scale(debug0, glm::vec3(10, 10, 0));
-					debug1 = glm::scale(debug1, glm::vec3(10, 10, 0));
-					debug2 = glm::scale(debug2, glm::vec3(10, 10, 0));
-					auto debug3 = glm::translate(identity, glm::vec3(clipPage[0].Position));
-					debug3 = glm::scale(debug3, glm::vec3(10, 10, 0));
-					Renderer:: Instance()->DrawQuad(debug0, glm::vec4(1, 0, 1, 1));
-					Renderer:: Instance()->DrawQuad(debug1, glm::vec4(0, 1, 1, 1));
-					Renderer:: Instance()->DrawQuad(debug2, glm::vec4(1, 1, 1, 1));
-					Renderer:: Instance()->DrawQuad(debug3, glm::vec4(0.3, 0, 0, 1));
-					//Renderer:: Instance()->DrawQuad( world2, glm::vec4(0, 0, 1, 1));
-					Renderer:: Instance()->DrawBatch(commandBuffer);
-					renderCommandBuffer.EndRenderPass();
-
-
-					commandBuffer.end();
-					
 					auto device = RenderContext::GetDevice();
+					auto viewportSize = Renderer::Instance()->GetViewportSize();
+					vk::Viewport viewport;
+					viewport.x = 0;
+					viewport.y = 0;
+					viewport.minDepth = 0;
+					viewport.maxDepth = 1;
+					viewport.height = viewportSize.second;
+					viewport.width = viewportSize.first;
+
+					vk::Rect2D scissors;
+					scissors.offset = vk::Offset2D{ (uint32_t)0,(uint32_t)0 };
+					scissors.extent = vk::Extent2D{ (uint32_t)viewportSize.first,(uint32_t)viewportSize.second };
+
+					auto render = [this,frameIndex,device,fence, viewport,scissors, swapchain,beginInfo](CommandBuffer& commandBuffer,
+						std::vector<vk::ClearValue> clearValues, std::initializer_list<std::vector<Vertex>> list,
+						vk::Semaphore renderFiniished, vk::Semaphore renderFiniishedSecond, vk::RenderPass& renderPass, Pipeline* pipeline)
 					{
-						std::vector<vk::CommandBuffer> commandBuffers = { renderCommandBuffer.GetCommandBuffer() };
-						vk::Semaphore waitSemaphores[] = { imageAvailable };
-						vk::Semaphore signalSemaphores[] = { m_RenderFinishedSemaphore1 };
-
-						vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
-						vk::SubmitInfo submitInfo = {};
-
-						submitInfo.waitSemaphoreCount = 1;
-						submitInfo.pWaitSemaphores = waitSemaphores;
-						submitInfo.pWaitDstStageMask = waitStages;
-
-
-						submitInfo.commandBufferCount = commandBuffers.size();
-						submitInfo.pCommandBuffers = commandBuffers.data();
-
-						submitInfo.signalSemaphoreCount = 1;
-						submitInfo.pSignalSemaphores = signalSemaphores;
-						
-						device->GetGraphicsQueue().submit(submitInfo, fence);
-					}
-					device->GetDevice().waitForFences(fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
-					device->GetDevice().resetFences(fence);
-
+						device->GetDevice().waitForFences(fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
+						device->GetDevice().resetFences(fence);
 						Renderer::Instance()->BeginBatch();
-						commandBuffer.begin(beginInfo);
-						renderCommandBuffer.BeginRenderPass(m_ClipRenderPass, swapchain.GetFrameBuffer(frameIndex), swapchain.GetExtent(), clearValues);
+						auto vkCommandBuffer = commandBuffer.GetCommandBuffer();
+						vkCommandBuffer.begin(beginInfo);
+						commandBuffer.BeginRenderPass(renderPass, swapchain.GetFrameBuffer(frameIndex), swapchain.GetExtent(), clearValues);
 
-						commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_ClipPipeline->GetLayout(), 0, m_DescriptorSets[frameIndex], nullptr);
-						commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_ClipPipeline->GetLayout(), 1, m_DescriptorSetTex, nullptr);
-						commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_ClipPipeline->GetPipeline());
+						vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 0, m_DescriptorSets[frameIndex], nullptr);
+						vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 1, m_DescriptorSetTex, nullptr);
+						vkCommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline->GetPipeline());
 
-						commandBuffer.setViewport(0, 1, &viewport);
-						commandBuffer.setScissor(0, 1, &scissors);
+						vkCommandBuffer.setViewport(0, 1, &viewport);
+						vkCommandBuffer.setScissor(0, 1, &scissors);
 
-						Renderer::Instance()->DrawQuad(clipPage);
-						Renderer::Instance()->DrawBatch(commandBuffer);
+						for (auto quad : list)
+						{
+							Renderer::Instance()->DrawQuad(quad);
+						}
+
+						Renderer::Instance()->DrawBatch(vkCommandBuffer);
 						
-					renderCommandBuffer.EndRenderPass();
-						commandBuffer.end();
-					{
-							std::vector<vk::CommandBuffer> commandBuffers = { renderCommandBuffer.GetCommandBuffer() };
-							vk::Semaphore waitSemaphores[] = { m_RenderFinishedSemaphore1 };
-							vk::Semaphore signalSemaphores[] = { m_RenderFinishedSemaphore2 };
+
+						commandBuffer.EndRenderPass();
+						vkCommandBuffer.end();
+						{
+							std::vector<vk::CommandBuffer> commandBuffers = { commandBuffer.GetCommandBuffer() };
+							vk::Semaphore waitSemaphores[] = { renderFiniished };
+							vk::Semaphore signalSemaphores[] = { renderFiniishedSecond };
 
 							vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
 							vk::SubmitInfo submitInfo = {};
@@ -883,45 +858,37 @@ public:
 							submitInfo.pSignalSemaphores = signalSemaphores;
 							auto device = RenderContext::GetDevice();
 							device->GetGraphicsQueue().submit(submitInfo, fence);
-					}
-					device->GetDevice().waitForFences(fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
-					device->GetDevice().resetFences(fence);
-					Renderer::Instance()->BeginBatch();
-					commandBuffer.begin(beginInfo);
+						}
+						
+					};
+					vk::ClearValue clearColor = { std::array<float, 4>{0.1f, .3f, 0.1f, 1.0f} };
 
-					renderCommandBuffer.BeginRenderPass(m_NewPageRenderPass, swapchain.GetFrameBuffer(frameIndex), swapchain.GetExtent(), clearValues);
-					commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_NewPagePipeline->GetLayout(), 0, m_DescriptorSets[frameIndex], nullptr);
-					commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_NewPagePipeline->GetLayout(), 1, m_DescriptorSetTex, nullptr);
-					commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_NewPagePipeline->GetPipeline());
+					vk::ClearValue depthClear;
+					uint32_t stencil0 = 2;
+					depthClear.depthStencil = vk::ClearDepthStencilValue({ 1.0f, stencil0 });
+					std::vector<vk::ClearValue> clearValues = { {clearColor, depthClear,clearColor} };
+					//std::vector<Vertex> pages =
+					//{
+					//	leftPage,
+					//	rightPage,
+					//	newLeftPage,
+					//	rightPage
+					//};
 
-					commandBuffer.setViewport(0, 1, &viewport);
-					commandBuffer.setScissor(0, 1, &scissors);
-
-					Renderer::Instance()->DrawQuad(newLeftPage);
-					Renderer::Instance()->DrawBatch(commandBuffer);
-					renderCommandBuffer.EndRenderPass();
-					commandBuffer.end();
+				
 					{
-						std::vector<vk::CommandBuffer> commandBuffers = { renderCommandBuffer.GetCommandBuffer() };
-						vk::Semaphore waitSemaphores[] = { m_RenderFinishedSemaphore2 };
-						vk::Semaphore signalSemaphores[] = { m_RenderFinishedSemaphore3 };
+						
 
-						vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
-						vk::SubmitInfo submitInfo = {};
-
-						submitInfo.waitSemaphoreCount = 1;
-						submitInfo.pWaitSemaphores = waitSemaphores;
-						submitInfo.pWaitDstStageMask = waitStages;
+					
+					
+						render(renderCommandBuffer,  clearValues, { leftPage ,rightPage }, imageAvailable,m_RenderFinishedSemaphore1, m_RenderPass, m_GraphicsPipeline.get());
 
 
-						submitInfo.commandBufferCount = commandBuffers.size();
-						submitInfo.pCommandBuffers = commandBuffers.data();
-
-						submitInfo.signalSemaphoreCount = 1;
-						submitInfo.pSignalSemaphores = signalSemaphores;
-						auto device = RenderContext::GetDevice();
-						device->GetGraphicsQueue().submit(submitInfo, fence);
-					}
+						render(renderCommandBuffer,  clearValues, { clipPage }, m_RenderFinishedSemaphore1, m_RenderFinishedSemaphore2, m_ClipRenderPass, m_ClipPipeline.get());
+					
+						render(renderCommandBuffer, clearValues, { newLeftPage }, m_RenderFinishedSemaphore2, m_RenderFinishedSemaphore3, m_NewPageRenderPass, m_NewPagePipeline.get());
+					
+						render(renderCommandBuffer, clearValues, { rightPage }, m_RenderFinishedSemaphore3, m_RenderFinishedSemaphore4, m_NewPageRenderPassRight, m_NewPagePipelineRight.get());
 					
 				
 
@@ -982,7 +949,7 @@ public:
 //				}
 				TracyVkCollect(ctx, commandBuffer);
 				
-				return m_RenderFinishedSemaphore3;
+				return m_RenderFinishedSemaphore4;
 			}
 		};
 		auto postRenderCommands = [this](size_t frameIndex, Voidstar::Camera& camera)
@@ -1434,16 +1401,19 @@ private:
 	UPtr<Pipeline> m_ClipPipeline;
 	UPtr<Pipeline> m_PagePipeline;
 	UPtr<Pipeline> m_NewPagePipeline;
+	UPtr<Pipeline> m_NewPagePipelineRight;
 
 	vk::RenderPass m_RenderPass;
 	vk::RenderPass m_ClipRenderPass;
 	vk::RenderPass m_PageRenderPass;
 	vk::RenderPass m_NewPageRenderPass;
+	vk::RenderPass m_NewPageRenderPassRight;
 
 	vk::Framebuffer m_PageFramebuffer;
 	vk::Semaphore m_RenderFinishedSemaphore1;
 	vk::Semaphore m_RenderFinishedSemaphore2;
 	vk::Semaphore m_RenderFinishedSemaphore3;
+	vk::Semaphore m_RenderFinishedSemaphore4;
 
 };
 
