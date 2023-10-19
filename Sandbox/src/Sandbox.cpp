@@ -574,13 +574,14 @@ public:
 		};
 
 		
-		auto submitRenderCommands = [this](size_t frameIndex,Camera& camera, vk::Semaphore& imageAvailable, vk::Fence& fence)
+		auto submitRenderCommands = [&](size_t frameIndex,Camera& camera, vk::Semaphore& imageAvailable, vk::Fence& fence)
 		{
 			const auto scale = glm::vec3(glm::vec3(250, 300, 0));
-			const glm::vec4 whiteColor = { 1,1,1,1 };
-			const glm::vec4 redColor = { 1,0,0,1 };
-			const glm::vec4 greyColor = { 0.7,0.7,0.7,1 };
-			const glm::vec4 blueColor = { 0.2,0.2,0.7,0.5 };
+			
+#define LEFT_PAGE_COLOR whiteColor
+#define RIGHT_PAGE_COLOR redColor
+#define RIGHT_NEW_PAGE_COLOR blueColor
+#define LEFT_NEW_PAGE_COLOR greyColor
 			const float width = scale.x;
 			const float height = scale.y;
 			const float startPointX = 150;
@@ -591,10 +592,7 @@ public:
 			const glm::vec2 spineBottom = { startPointX + width,startPointY };
 			const glm::vec2 rightEdgeBottom = { width + startPointX + width,startPointY };
 			const glm::vec2 rightEdgeTop = { width + startPointX + width,startPointY + height };
-			if (Input::IsMousePressed(0))
-			{
-
-			}
+			
 
 			UpdateUniformBuffer(frameIndex, camera);
 			auto& renderCommandBuffer = Renderer::Instance()->GetRenderCommandBuffer(frameIndex);
@@ -629,10 +627,26 @@ public:
 						auto follow = glm::vec2(clipSpace);
 						return follow;
 					};
-					glm::vec2 follow = rightEdgeBottom;
+					
 					if (Input::IsMousePressed(0))
 					{
+						if (!isClicked)
+						{
+							isClicked = true;
+							isDragged = true;
+						}
 						follow = GetMousePosition(camera);
+					}
+					else
+					{
+						if (isDragged && glm::length(GetMousePosition(camera) - leftEdgeBottom) < 15)
+						{
+							std::swap(LEFT_PAGE_COLOR, LEFT_NEW_PAGE_COLOR);
+							std::swap(RIGHT_PAGE_COLOR, RIGHT_NEW_PAGE_COLOR);
+						}
+						isClicked = false;
+						isDragged = false;
+						follow = rightEdgeBottom;
 					}
 					follow = glm::clamp(follow, leftEdgeBottom, rightEdgeTop);
 
@@ -702,35 +716,43 @@ public:
 					//std::cout << "t1 " << t1.x << " " << t1.y << "\n";
 					std::vector<Vertex> leftPage{ 4 };
 					leftPage[0].Position = { startPointX,startPointY,0 };
-					leftPage[0].Color= whiteColor;
+					leftPage[0].Color= LEFT_PAGE_COLOR;
 					leftPage[1].Position = { startPointX,startPointY +height,0 };
-					leftPage[1].Color= whiteColor;
+					leftPage[1].Color= LEFT_PAGE_COLOR;
 					leftPage[2].Position = { startPointX +width,startPointY,0 };
-					leftPage[2].Color= whiteColor;
+					leftPage[2].Color= LEFT_PAGE_COLOR;
 					leftPage[3].Position = { startPointX +width,startPointY +height,0 };
-					leftPage[3].Color= whiteColor;
+					leftPage[3].Color= LEFT_PAGE_COLOR;
 					std::vector<Vertex> rightPage{ 4 };
 					rightPage[0].Position = { width+startPointX,startPointY,0 };
-					rightPage[0].Color = redColor;
+					rightPage[0].Color = RIGHT_PAGE_COLOR;
 					rightPage[1].Position = { width+startPointX,startPointY + height,0 };
-					rightPage[1].Color = redColor;
+					rightPage[1].Color = RIGHT_PAGE_COLOR;
 					rightPage[2].Position = { 2*width+startPointX ,startPointY,0 };
-					rightPage[2].Color = redColor;
+					rightPage[2].Color = RIGHT_PAGE_COLOR;
 					rightPage[3].Position = { glm::vec2{2*width + startPointX,startPointY + height},0 };
-					rightPage[3].Color = redColor;
+					rightPage[3].Color = RIGHT_PAGE_COLOR;
 
 					std::vector<Vertex> newLeftPage{ 4 };
 					//newLeftPage[0].Position = { 2 * width + startPointX,startPointY,0 };
 					newLeftPage[0].Position = { follow,0 };
-					newLeftPage[0].Color = greyColor;
+					newLeftPage[0].Color = LEFT_NEW_PAGE_COLOR;
 					newLeftPage[1].Position = { newLeftPage[0].Position.x,newLeftPage[0].Position.y - height,0 };
-					newLeftPage[1].Color = greyColor;
+					newLeftPage[1].Color = LEFT_NEW_PAGE_COLOR;
 					newLeftPage[2].Position = { newLeftPage[0].Position.x - width ,newLeftPage[0].Position.y,0 };
-					newLeftPage[2].Color = greyColor;
+					newLeftPage[2].Color = LEFT_NEW_PAGE_COLOR;
 					newLeftPage[3].Position = { newLeftPage[0].Position.x - width,newLeftPage[0].Position.y - height ,0 };
-					newLeftPage[3].Color = greyColor;
+					newLeftPage[3].Color = LEFT_NEW_PAGE_COLOR;
 
-
+					std::vector<Vertex> newRightPage{ 4 };
+					newRightPage[0].Position = { width + startPointX,startPointY,0 };
+					newRightPage[0].Color = RIGHT_NEW_PAGE_COLOR;
+					newRightPage[1].Position = { width + startPointX,startPointY + height,0 };
+					newRightPage[1].Color = RIGHT_NEW_PAGE_COLOR;
+					newRightPage[2].Position = { 2 * width + startPointX ,startPointY,0 };
+					newRightPage[2].Color = RIGHT_NEW_PAGE_COLOR;
+					newRightPage[3].Position = { glm::vec2{2 * width + startPointX,startPointY + height},0 };
+					newRightPage[3].Color = RIGHT_NEW_PAGE_COLOR;
 					
 
 					
@@ -780,14 +802,16 @@ public:
 					
 					float clipHeight = 300;
 					float clipWidth  = 350;
+					auto modifiedBlueColor = blueColor;
+					modifiedBlueColor.a = 0;
 					clipPage[0].Position = { t1.x - clipWidth  ,t1.y + clipHeight ,0 };
-					clipPage[0].Color = blueColor;
+					clipPage[0].Color = modifiedBlueColor;
 					clipPage[1].Position = { t1.x + clipWidth,t1.y + clipHeight ,0 };
-					clipPage[1].Color = blueColor;
+					clipPage[1].Color = modifiedBlueColor;
 					clipPage[2].Position = { t1.x - clipWidth   ,t1.y ,0 };
-					clipPage[2].Color = blueColor;
+					clipPage[2].Color = modifiedBlueColor;
 					clipPage[3].Position = { t1.x+ clipWidth,t1.y ,0 };
-					clipPage[3].Color = blueColor;
+					clipPage[3].Color = modifiedBlueColor;
 
 					for (int i = 0; i < 4; i++) {
 						clipPage[i].Position = rotateVector(clipPage[i].Position, clipAngle, t1);
@@ -1416,6 +1440,14 @@ private:
 	vk::Semaphore m_RenderFinishedSemaphore2;
 	vk::Semaphore m_RenderFinishedSemaphore3;
 	vk::Semaphore m_RenderFinishedSemaphore4;
+
+	bool isClicked = false;
+	bool isDragged = false;
+	glm::vec4 whiteColor = { 1,1,1,1 }; // left
+	glm::vec4 redColor = { 1,0,0,1 }; // right
+	glm::vec4 greyColor = { 0.7,0.7,0.7,1 }; // new left
+	glm::vec4 blueColor = { 0.2,0.2,0.7,0.5 }; // new right
+	glm::vec2 follow ;
 
 };
 
