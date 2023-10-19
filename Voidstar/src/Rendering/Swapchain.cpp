@@ -98,9 +98,20 @@ namespace Voidstar
 			swapchain->m_SwapchainFrames[i].image = images[i];
 			swapchain->m_SwapchainFrames[i].imageView = Image::CreateImageView(images[i], format.format, vk::ImageAspectFlagBits::eColor);
 
+
+			// just for depth
+			auto defCandidates = { vk::Format::eD32Sfloat, vk::Format::eD24UnormS8Uint };
+			// for stencil
+			std::vector<vk::Format> candidates = 
+			{
+				vk::Format::eD32SfloatS8Uint,
+				vk::Format::eD24UnormS8Uint,
+				vk::Format::eD16UnormS8Uint
+
+			};
 			auto depthFormat = Image::GetFormat(
 				device->GetDevicePhys(),
-				{ vk::Format::eD32Sfloat, vk::Format::eD24UnormS8Uint },
+				candidates,
 				vk::ImageTiling::eOptimal,
 				vk::FormatFeatureFlagBits::eDepthStencilAttachment
 			);

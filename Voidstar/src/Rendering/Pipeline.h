@@ -67,13 +67,22 @@ namespace Voidstar
 		void SetControlPoints(int amountPoints);
 		void WriteToDepthBuffer(bool wrtite);
 		void EnableStencilTest(bool test);
-		void StencilTestOp(vk::CompareOp op);
+		void StencilTestOp(vk::CompareOp op, vk::StencilOp fail, vk::StencilOp pass, vk::StencilOp depthFailOp);
 		void SetSamples(vk::SampleCountFlagBits samples);
 		void SetRenderPass(vk::RenderPass renderPass);
 		void SetSubpassAmount(int amount);
 		void SetStencilRefNumber(uint32_t number)
 		{
 			m_StencilRefNumber = number;
+		}
+		void SetDepthTest(bool test)
+		{
+			m_DepthTest = test;
+		}
+		void SetMasks(uint32_t compare, uint32_t write )
+		{
+			m_WriteMask = write;
+			m_CompareMask = compare;
 		}
 		UPtr<Pipeline> Build();
 	private:
@@ -91,9 +100,15 @@ namespace Voidstar
 		vk::SampleCountFlagBits m_Samples;
 		int m_PatchControlPoints = -1;
 		bool m_WriteToDepthBuffer = false;
-		bool m_StencilTest = false;
+		bool m_StencilTest = false; 
+		bool m_DepthTest = false; 
+		uint32_t m_WriteMask = 0xff;
+		uint32_t m_CompareMask = 0xff;
 		vk::CompareOp  m_StencilOp = vk::CompareOp::eLess;
-		 uint32_t m_StencilRefNumber = 0;
+		vk::StencilOp m_StencilFailOp = vk::StencilOp::eReplace;
+		vk::StencilOp m_StencilPassOp = vk::StencilOp::eReplace;
+		vk::StencilOp m_DepthFailOp = vk::StencilOp::eReplace;
+		uint32_t m_StencilRefNumber = 0;
 		vk::RenderPass m_RenderPass;
 		int m_SubpassNumber;
 

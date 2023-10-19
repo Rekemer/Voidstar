@@ -464,9 +464,12 @@ namespace Voidstar
 		m_StencilTest = test;
 	}
 
-	void PipelineBuilder::StencilTestOp(vk::CompareOp op)
+	void PipelineBuilder::StencilTestOp(vk::CompareOp op, vk::StencilOp fail, vk::StencilOp pass,vk::StencilOp depthFailOp)
 	{
 		m_StencilOp = op;
+		m_StencilFailOp = fail;
+		m_StencilPassOp = pass;
+		m_DepthFailOp = depthFailOp;
 	}
 
 	void PipelineBuilder::SetSamples(vk::SampleCountFlagBits samples)
@@ -587,14 +590,16 @@ namespace Voidstar
 
 		vk::PipelineDepthStencilStateCreateInfo depthState;
 		depthState.flags = vk::PipelineDepthStencilStateCreateFlags();
-		depthState.depthTestEnable = true;
+		depthState.depthTestEnable = m_DepthTest;
 		depthState.depthWriteEnable = m_WriteToDepthBuffer;
 		depthState.depthCompareOp = vk::CompareOp::eLess;
 		depthState.depthBoundsTestEnable = false;
 		depthState.stencilTestEnable = m_StencilTest;
 		depthState.back.compareOp = m_StencilOp;
-		depthState.back.compareMask = 0xff;
-		depthState.back.writeMask= 0xff;
+		depthState.back.failOp= m_StencilFailOp;
+		depthState.back.passOp= m_StencilPassOp;
+		depthState.back.compareMask = m_CompareMask;
+		depthState.back.writeMask= m_WriteMask;
 		depthState.back.reference = m_StencilRefNumber;
 		depthState.front = depthState.back;
 

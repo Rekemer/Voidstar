@@ -183,8 +183,8 @@ public:
 
 				vk::AttachmentDescription depthAttachment = AttachmentDescription(
 					swapChainDepthFormat, samples, vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore
-					, vk::AttachmentLoadOp::eDontCare,
-					vk::AttachmentStoreOp::eStore, vk::ImageLayout::eUndefined,
+					, vk::AttachmentLoadOp::eClear,
+					vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined,
 					vk::ImageLayout::eDepthStencilAttachmentOptimal);
 				vk::AttachmentReference refDepth = { 1,vk::ImageLayout::eDepthStencilAttachmentOptimal };
 				builder.AddAttachment({ depthAttachment , refDepth });
@@ -402,8 +402,12 @@ public:
 				builder.AddExtent(swapChainExtent);
 				builder.AddImageFormat(swapchainFormat);
 				builder.EnableStencilTest(true);
+				builder.SetDepthTest(true);
+				builder.WriteToDepthBuffer(true);
 				builder.SetRenderPass(m_RenderPass);
 				builder.SetStencilRefNumber(1);
+				builder.StencilTestOp(vk::CompareOp::eAlways,vk::StencilOp::eReplace, vk::StencilOp::eReplace, vk::StencilOp::eReplace);
+				builder.SetMasks(0xff, 0xff);
 				m_GraphicsPipeline = builder.Build();
 
 
@@ -422,8 +426,12 @@ public:
 					builder.AddExtent(swapChainExtent);
 					builder.AddImageFormat(swapchainFormat);
 					builder.EnableStencilTest(true);
+					builder.SetDepthTest(false);
+					builder.WriteToDepthBuffer(true);
 					builder.SetRenderPass(m_RenderPass);
-					builder.SetStencilRefNumber(2);
+					builder.SetStencilRefNumber(1);
+					builder.StencilTestOp(vk::CompareOp::eNotEqual, vk::StencilOp::eKeep, vk::StencilOp::eReplace, vk::StencilOp::eKeep);
+					builder.SetMasks(0xff, 0xff);
 					m_ClipPipeline = builder.Build();
 				}
 				
@@ -463,8 +471,7 @@ public:
 				auto commandBuffer = renderCommandBuffer.GetCommandBuffer();
 
 				//RenderContext::GetDevice()->GetDevice().waitIdle();
-				uint32_t stencil0 = 1;
-				uint32_t stencil1 = 0;
+				uint32_t stencil0 = 0;
 				commandBuffer.begin(beginInfo);
 				{
 
@@ -713,7 +720,7 @@ public:
 
 					Renderer:: Instance()->DrawQuad(verticies1);
 					Renderer:: Instance()->DrawQuad(verticies2);
-					Renderer:: Instance()->DrawQuad(newPage);
+					//Renderer:: Instance()->DrawQuad(newPage);
 					//Renderer:: Instance()->DrawQuad(clipPage);
 					auto identity = glm::identity<glm::mat4>();
 					auto debug0 = glm::translate(identity, glm::vec3(t0, 0));
