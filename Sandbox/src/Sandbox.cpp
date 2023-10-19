@@ -184,7 +184,7 @@ public:
 				vk::AttachmentDescription depthAttachment = AttachmentDescription(
 					swapChainDepthFormat, samples, vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore
 					, vk::AttachmentLoadOp::eClear,
-					vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined,
+					vk::AttachmentStoreOp::eStore, vk::ImageLayout::eUndefined,
 					vk::ImageLayout::eDepthStencilAttachmentOptimal);
 				vk::AttachmentReference refDepth = { 1,vk::ImageLayout::eDepthStencilAttachmentOptimal };
 				builder.AddAttachment({ depthAttachment , refDepth });
@@ -252,7 +252,7 @@ public:
 
 					vk::AttachmentDescription depthAttachment = AttachmentDescription(
 						swapChainDepthFormat, samples, vk::AttachmentLoadOp::eLoad, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eLoad,
-						vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eDepthStencilAttachmentOptimal, vk::ImageLayout::eDepthStencilAttachmentOptimal);
+						vk::AttachmentStoreOp::eStore, vk::ImageLayout::eDepthStencilAttachmentOptimal, vk::ImageLayout::eDepthStencilAttachmentOptimal);
 					vk::AttachmentReference refDepth = { 1,vk::ImageLayout::eDepthStencilAttachmentOptimal };
 					builder.AddAttachment({ depthAttachment , refDepth });
 
@@ -261,7 +261,7 @@ public:
 					vk::AttachmentDescription colorAttachmentResolve =
 						AttachmentDescription(swapchainFormat, vk::SampleCountFlagBits::e1,
 							vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
-							vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::ePresentSrcKHR);
+							vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::eColorAttachmentOptimal);
 					vk::AttachmentReference refResolve = { 2,vk::ImageLayout::eColorAttachmentOptimal };
 
 
@@ -279,6 +279,7 @@ public:
 					m_ClipRenderPass= builder.Build(*device);
 				}
 
+
 			}
 			
 
@@ -294,6 +295,46 @@ public:
 				vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eNone, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
 				builder.AddSubpassDependency(dependency0);
 				m_PageRenderPass = builder.Build(*device);
+			}
+			{
+				RenderPassBuilder builder;
+				//Define a general attachment, with its load/store operations
+				vk::AttachmentDescription msaaAttachment = AttachmentDescription(swapchainFormat,
+					samples, vk::AttachmentLoadOp::eLoad,
+					vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
+					vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eColorAttachmentOptimal,
+					vk::ImageLayout::eColorAttachmentOptimal);
+
+				vk::AttachmentReference refMSAA = { 0,vk::ImageLayout::eColorAttachmentOptimal };
+				builder.AddAttachment({ msaaAttachment ,refMSAA });
+
+				vk::AttachmentDescription depthAttachment = AttachmentDescription(
+					swapChainDepthFormat, samples, vk::AttachmentLoadOp::eLoad, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eLoad,
+					vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eDepthStencilAttachmentOptimal, vk::ImageLayout::eDepthStencilAttachmentOptimal);
+				vk::AttachmentReference refDepth = { 1,vk::ImageLayout::eDepthStencilAttachmentOptimal };
+				builder.AddAttachment({ depthAttachment , refDepth });
+
+
+
+				vk::AttachmentDescription colorAttachmentResolve =
+					AttachmentDescription(swapchainFormat, vk::SampleCountFlagBits::e1,
+						vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
+						vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::ePresentSrcKHR);
+				vk::AttachmentReference refResolve = { 2,vk::ImageLayout::eColorAttachmentOptimal };
+
+
+				builder.AddAttachment({ colorAttachmentResolve ,refResolve });
+
+				//Renderpasses are broken down into subpasses, there's always at least one.
+
+				builder.AddSubpass(SubpassDescription(1, &refMSAA, &refResolve, &refDepth));
+
+				vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0,
+					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite,
+					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
+				builder.AddSubpassDependency(dependency0);
+
+				m_NewPageRenderPass = builder.Build(*device);
 			}
 
 
@@ -428,11 +469,37 @@ public:
 					builder.EnableStencilTest(true);
 					builder.SetDepthTest(false);
 					builder.WriteToDepthBuffer(true);
-					builder.SetRenderPass(m_RenderPass);
-					builder.SetStencilRefNumber(1);
-					builder.StencilTestOp(vk::CompareOp::eNotEqual, vk::StencilOp::eKeep, vk::StencilOp::eReplace, vk::StencilOp::eKeep);
+					builder.SetRenderPass(m_ClipRenderPass);
+					builder.SetStencilRefNumber(0);
+					builder.StencilTestOp(vk::CompareOp::eLess, vk::StencilOp::eKeep, vk::StencilOp::eReplace, vk::StencilOp::eKeep);
 					builder.SetMasks(0xff, 0xff);
 					m_ClipPipeline = builder.Build();
+				}
+
+				{
+					{
+						PipelineBuilder builder;
+						builder.SetDevice(device->GetDevice());
+						builder.SetSamples(samples);
+						builder.AddDescriptorLayouts(pipelineLayouts);
+						builder.AddAttributeDescription(attributeDescriptions);
+						builder.AddBindingDescription(bindings);
+						builder.SetPolygoneMode(Renderer::Instance()->GetPolygonMode());
+						builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
+						builder.AddShader(BASE_SPIRV_OUTPUT + "default.spvV", vk::ShaderStageFlagBits::eVertex);
+						builder.AddShader(BASE_SPIRV_OUTPUT + "dos2.spvF", vk::ShaderStageFlagBits::eFragment);
+						builder.SetSubpassAmount(0);
+						builder.AddExtent(swapChainExtent);
+						builder.AddImageFormat(swapchainFormat);
+						builder.EnableStencilTest(true);
+						builder.SetDepthTest(false);
+						builder.WriteToDepthBuffer(true);
+						builder.SetRenderPass(m_RenderPass);
+						builder.SetStencilRefNumber(0);
+						builder.StencilTestOp(vk::CompareOp::eEqual, vk::StencilOp::eKeep, vk::StencilOp::eReplace, vk::StencilOp::eKeep);
+						builder.SetMasks(0xff, 0xff);
+						m_NewPagePipeline = builder.Build();
+					}
 				}
 				
 
@@ -447,6 +514,7 @@ public:
 			{
 				m_RenderFinishedSemaphore1 = RenderContext::GetDevice()->GetDevice().createSemaphore(semaphoreInfo);
 				m_RenderFinishedSemaphore2 = RenderContext::GetDevice()->GetDevice().createSemaphore(semaphoreInfo);
+				m_RenderFinishedSemaphore3 = RenderContext::GetDevice()->GetDevice().createSemaphore(semaphoreInfo);
 			}
 			catch (vk::SystemError err) {
 
@@ -455,53 +523,41 @@ public:
 
 		};
 
+
+		enum class SideTurning
+		{
+			LEFT,
+			RIGHT
+		};
+
+		
 		auto submitRenderCommands = [this](size_t frameIndex,Camera& camera, vk::Semaphore& imageAvailable, vk::Fence& fence)
 		{
+			const auto scale = glm::vec3(glm::vec3(250, 300, 0));
+			const glm::vec4 whiteColor = { 1,1,1,1 };
+			const glm::vec4 redColor = { 1,0,0,1 };
+			const glm::vec4 greyColor = { 0.7,0.7,0.7,1 };
+			const glm::vec4 blueColor = { 0.2,0.2,0.7,0.5 };
+			const float width = scale.x;
+			const float height = scale.y;
+			const float startPointX = 150;
+			const float startPointY = 200;
+
+			const glm::vec2 leftEdgeBottom = { startPointX  ,startPointY };
+			const glm::vec2 spineTop = { startPointX + width ,startPointY + height };
+			const glm::vec2 spineBottom = { startPointX + width,startPointY };
+			const glm::vec2 rightEdgeBottom = { width + startPointX + width,startPointY };
+			const glm::vec2 rightEdgeTop = { width + startPointX + width,startPointY + height };
+			if (Input::IsMousePressed(0))
+			{
+
+			}
 
 			UpdateUniformBuffer(frameIndex, camera);
 			auto& renderCommandBuffer = Renderer::Instance()->GetRenderCommandBuffer(frameIndex);
 			{
 				ZoneScopedN("Sumbit render commands");
-				renderCommandBuffer.BeginRendering();
-
-				auto swapchain = Renderer::Instance()->GetSwapchain();
-
-				vk::CommandBufferBeginInfo beginInfo = {};
-
-				auto commandBuffer = renderCommandBuffer.GetCommandBuffer();
-
-				//RenderContext::GetDevice()->GetDevice().waitIdle();
-				uint32_t stencil0 = 0;
-				commandBuffer.begin(beginInfo);
-				{
-
-
-
-					TracyVkZone(ctx, commandBuffer, "Rendering ");
-
-
-
-					vk::ClearValue clearColor = { std::array<float, 4>{0.1f, .3f, 0.1f, 1.0f} };
-
-					vk::ClearValue depthClear;
-
-					depthClear.depthStencil = vk::ClearDepthStencilValue({ 1.0f, stencil0 });
-					std::vector<vk::ClearValue> clearValues = { {clearColor, depthClear,clearColor} };
-					renderCommandBuffer.BeginRenderPass(m_RenderPass, swapchain.GetFrameBuffer(frameIndex), swapchain.GetExtent(), clearValues);
-
-					auto viewportSize = Renderer::Instance()->GetViewportSize();
-					vk::Viewport viewport;
-					viewport.x = 0;
-					viewport.y = 0;
-					viewport.minDepth = 0;
-					viewport.maxDepth = 1;
-					viewport.height = viewportSize.second;
-					viewport.width = viewportSize.first;
-
-					vk::Rect2D scissors;
-					scissors.offset = vk::Offset2D{ (uint32_t)0,(uint32_t)0 };
-					scissors.extent = vk::Extent2D{ (uint32_t)viewportSize.first,(uint32_t)viewportSize.second };
-
+				
 
 					auto vecPos = glm::vec4(0.5, -0.5, 0, 1) * 10.f + glm::vec4(100, 100, 0, 0);
 					vecPos.w = 1;
@@ -509,49 +565,30 @@ public:
 					auto res = proj * vecPos;
 
 
-					commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_GraphicsPipeline->GetLayout(), 0, m_DescriptorSets[frameIndex], nullptr);
-					commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_GraphicsPipeline->GetLayout(), 1, m_DescriptorSetTex, nullptr);
-
-
-					commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_GraphicsPipeline->GetPipeline());
-
-					commandBuffer.setViewport(0, 1, &viewport);
-					commandBuffer.setScissor(0, 1, &scissors);
-
-
-					Renderer::Instance()->BeginBatch();
-					auto scale = glm::vec3(glm::vec3(250, 300, 0));
+					
 					auto& world = glm::translate(glm::identity<glm::mat4>(), glm::vec3(500, 300, 0));
 					world = glm::scale(world, scale);
 					auto world2 = glm::translate(glm::identity<glm::mat4>(), glm::vec3(world[3]) + glm::vec3(scale.x, 0, 0));
 					world2 = glm::scale(world2, scale);
-					std::vector<Vertex> verticies1{ 4 };
-					glm::vec4 whiteColor = { 1,1,1,1 };
-					glm::vec4 redColor = { 1,0,0,1 };
-					glm::vec4 greyColor = { 0.7,0.7,0.7,1 };
-					glm::vec4 blueColor = { 0.2,0.2,0.7,0.5 };
-					float width = scale.x;
-					float height = scale.y;
-					float startPointX = 150;
-					float startPointY = 200;
+					
+					auto  GetMousePosition = [](Camera& camera)
+					{
+						auto  mousePos = Input::GetMousePos();
+						glm::vec2 screenSize = { Renderer::Instance()->GetViewportSize().first,
+							Renderer::Instance()->GetViewportSize().second };
+						glm::vec3 ndc;
+						auto mouseScreenPos = glm::vec2{ std::get<0>(mousePos),std::get<1>(mousePos) };
+						ndc.x = (2.0f * mouseScreenPos.x / screenSize.x) - 1.0f;
+						ndc.y = -(1.0f - (2.0f * mouseScreenPos.y / screenSize.y));
+						auto inverseProj = glm::inverse(camera.GetProj());
+						auto clipSpace = (inverseProj * glm::vec4{ ndc.x,ndc.y,1,1 });
 
-					glm::vec2 leftEdgeBottom = { startPointX  ,startPointY  };
+						auto follow = glm::vec2(clipSpace);
+						return follow;
+					};
 
-					glm::vec2 spineTop = { startPointX+width ,startPointY + height };
-					glm::vec2 spineBottom = { startPointX + width,startPointY };
-					glm::vec2 rightEdgeBottom = { width + startPointX + width,startPointY  };
-					glm::vec2 rightEdgeTop = { width + startPointX + width,startPointY +height };
-					auto  mousePos = Input::GetMousePos();
-					glm::vec2 screenSize = { Renderer::Instance()->GetViewportSize().first, 
-						Renderer::Instance()->GetViewportSize().second };
-					glm::vec3 ndc;
-					auto mouseScreenPos = glm::vec2{ std::get<0>(mousePos),std::get<1>(mousePos) };
-					ndc.x = (2.0f * mouseScreenPos.x / screenSize.x) - 1.0f;
-					ndc.y = -(1.0f - (2.0f * mouseScreenPos.y / screenSize.y));
-					auto inverseProj = glm::inverse(camera.GetProj());
-					auto clipSpace = (inverseProj * glm::vec4{ ndc.x,ndc.y,1,1 });
-
-					auto follow = glm::vec2(clipSpace);
+					
+					auto follow = GetMousePosition(camera);
 					follow = glm::clamp(follow, leftEdgeBottom, rightEdgeTop);
 
 					glm::vec2 t0;
@@ -618,51 +655,44 @@ public:
 					//std::cout << "mouse " << follow.x << " " << follow.y << "\n";
 					//std::cout << "t0 " << t0.x << " " << t0.y << "\n";
 					//std::cout << "t1 " << t1.x << " " << t1.y << "\n";
+					std::vector<Vertex> leftPage{ 4 };
+					leftPage[0].Position = { startPointX,startPointY,0 };
+					leftPage[0].Color= whiteColor;
+					leftPage[1].Position = { startPointX,startPointY +height,0 };
+					leftPage[1].Color= whiteColor;
+					leftPage[2].Position = { startPointX +width,startPointY,0 };
+					leftPage[2].Color= whiteColor;
+					leftPage[3].Position = { startPointX +width,startPointY +height,0 };
+					leftPage[3].Color= whiteColor;
+					std::vector<Vertex> rightPage{ 4 };
+					rightPage[0].Position = { width+startPointX,startPointY,0 };
+					rightPage[0].Color = redColor;
+					rightPage[1].Position = { width+startPointX,startPointY + height,0 };
+					rightPage[1].Color = redColor;
+					rightPage[2].Position = { 2*width+startPointX ,startPointY,0 };
+					rightPage[2].Color = redColor;
+					rightPage[3].Position = { glm::vec2{2*width + startPointX,startPointY + height},0 };
+					rightPage[3].Color = redColor;
 
-					verticies1[0].Position = { startPointX,startPointY,0 };
-					verticies1[0].Color= whiteColor;
-					verticies1[1].Position = { startPointX,startPointY +height,0 };
-					verticies1[1].Color= whiteColor;
-					verticies1[2].Position = { startPointX +width,startPointY,0 };
-					verticies1[2].Color= whiteColor;
-					verticies1[3].Position = { startPointX +width,startPointY +height,0 };
-					verticies1[3].Color= whiteColor;
-					std::vector<Vertex> verticies2{ 4 };
-					verticies2[0].Position = { width+startPointX,startPointY,0 };
-					verticies2[0].Color = redColor;
-					verticies2[1].Position = { width+startPointX,startPointY + height,0 };
-					verticies2[1].Color = redColor;
-					verticies2[2].Position = { 2*width+startPointX ,startPointY,0 };
-					verticies2[2].Color = redColor;
-					verticies2[3].Position = { glm::vec2{2*width + startPointX,startPointY + height},0 };
-					verticies2[3].Color = redColor;
+					std::vector<Vertex> newLeftPage{ 4 };
+					//newLeftPage[0].Position = { 2 * width + startPointX,startPointY,0 };
+					newLeftPage[0].Position = { follow,0 };
+					newLeftPage[0].Color = greyColor;
+					newLeftPage[1].Position = { newLeftPage[0].Position.x,newLeftPage[0].Position.y - height,0 };
+					newLeftPage[1].Color = greyColor;
+					newLeftPage[2].Position = { newLeftPage[0].Position.x - width ,newLeftPage[0].Position.y,0 };
+					newLeftPage[2].Color = greyColor;
+					newLeftPage[3].Position = { newLeftPage[0].Position.x - width,newLeftPage[0].Position.y - height ,0 };
+					newLeftPage[3].Color = greyColor;
 
-					auto dir = glm::normalize(-t1 + follow);
-					auto dirLen = glm::length(-t1 + follow);
-					auto rightOffset = dir * width;
-					float theta = 1.f/glm::tan(dir.x/dir.y);
-					float phi = 1 / glm::cos(0.f/dirLen);
 
 					
 
-					std::vector<Vertex> newPage{ 4 };
-					auto trans = glm::translate(glm::mat4(.5f), glm::vec3(follow, 0));
-					auto rot = glm::rotate(trans, pageAngle, glm::vec3(0, 0, 1));
+					
 					
 
 					
-					newPage[0].Position = { 2*width + startPointX,startPointY,0 };
-					newPage[0].Position = { follow,0 };
-					newPage[0].Color = greyColor;
-					newPage[1].Position = { newPage[0].Position.x,newPage[0].Position.y - height,0 };
-					newPage[1].Color = greyColor;
-					newPage[2].Position = { newPage[0].Position.x - width ,newPage[0].Position.y,0 };
-					newPage[2].Color = greyColor;
-					newPage[3].Position = { newPage[0].Position.x - width,newPage[0].Position.y -height ,0 };
-					newPage[3].Color = greyColor;
-					auto time = GetExeTime();
-					//pageAngle = 3*glm::sin(1000*time);
-					//pageAngle = clipAngle;
+					
 					
 
 					auto rotateVector = [](glm::vec3 v, float radians,glm::vec2 pointOfRotation) {
@@ -674,31 +704,31 @@ public:
 					v = glm::vec3{ new_x,new_y ,0 };
 					return v;
 					};
-					// calc center
+					auto getCenter = [](std::vector<Vertex>& verticies, double& centerX, double& centerY)
+					{
+						for (int i = 0; i < 4; i++) {
+							centerX += verticies[i].Position.x;
+							centerY += verticies[i].Position.y;
+						}
+
+						centerX /= 4.0;
+						centerY /= 4.0;
+					};
 					double centerX = 0.0;
 					double centerY = 0.0;
+					getCenter(newLeftPage, centerX, centerY);
 
-					for (int i = 0; i < 4; i++) {
-						centerX += newPage[i].Position.x;
-						centerY += newPage[i].Position.y;
-					}
-
-					centerX /= 4.0;
-					centerY /= 4.0;
 
 					
 
-					glm::vec2 pointOfRotation = newPage[0].Position;
+					glm::vec2 pointOfRotation = newLeftPage[0].Position;
 					//pointOfRotation = { centerX,centerY };
-					 trans = glm::translate(glm::mat4(1.f), glm::vec3(follow,0));
-					 rot = glm::rotate(trans, pageAngle, glm::vec3(0,0,1));
 
 					// pointOfRotation = {0,0};
 					 //pointOfRotation = spineBottom;
 					//pageAngle += 2* 3.14 / 2;
 					for (int i = 0; i < 4; i++) {
-						newPage[i].Position = rotateVector(newPage[i].Position, pageAngle, pointOfRotation);
-						//newPage[i].Position = rot* glm::vec4(newPage[i].Position,1.f);
+						newLeftPage[i].Position = rotateVector(newLeftPage[i].Position, pageAngle, pointOfRotation);
 					}
 
 					std::vector<Vertex> clipPage{ 4 };
@@ -717,10 +747,60 @@ public:
 					for (int i = 0; i < 4; i++) {
 						clipPage[i].Position = rotateVector(clipPage[i].Position, clipAngle, t1);
 					}
+					renderCommandBuffer.BeginRendering();
 
-					Renderer:: Instance()->DrawQuad(verticies1);
-					Renderer:: Instance()->DrawQuad(verticies2);
-					//Renderer:: Instance()->DrawQuad(newPage);
+					auto swapchain = Renderer::Instance()->GetSwapchain();
+
+					vk::CommandBufferBeginInfo beginInfo = {};
+
+					auto commandBuffer = renderCommandBuffer.GetCommandBuffer();
+
+					//RenderContext::GetDevice()->GetDevice().waitIdle();
+					{
+
+						commandBuffer.begin(beginInfo);
+
+
+						TracyVkZone(ctx, commandBuffer, "Rendering ");
+
+
+
+						vk::ClearValue clearColor = { std::array<float, 4>{0.1f, .3f, 0.1f, 1.0f} };
+
+						vk::ClearValue depthClear;
+
+						uint32_t stencil0 = 2;
+						depthClear.depthStencil = vk::ClearDepthStencilValue({ 1.0f, stencil0 });
+						std::vector<vk::ClearValue> clearValues = { {clearColor, depthClear,clearColor} };
+						renderCommandBuffer.BeginRenderPass(m_RenderPass, swapchain.GetFrameBuffer(frameIndex), swapchain.GetExtent(), clearValues);
+
+						auto viewportSize = Renderer::Instance()->GetViewportSize();
+						vk::Viewport viewport;
+						viewport.x = 0;
+						viewport.y = 0;
+						viewport.minDepth = 0;
+						viewport.maxDepth = 1;
+						viewport.height = viewportSize.second;
+						viewport.width = viewportSize.first;
+
+						vk::Rect2D scissors;
+						scissors.offset = vk::Offset2D{ (uint32_t)0,(uint32_t)0 };
+						scissors.extent = vk::Extent2D{ (uint32_t)viewportSize.first,(uint32_t)viewportSize.second };
+
+						commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_GraphicsPipeline->GetLayout(), 0, m_DescriptorSets[frameIndex], nullptr);
+						commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_GraphicsPipeline->GetLayout(), 1, m_DescriptorSetTex, nullptr);
+
+
+						commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_GraphicsPipeline->GetPipeline());
+
+						commandBuffer.setViewport(0, 1, &viewport);
+						commandBuffer.setScissor(0, 1, &scissors);
+
+
+						Renderer::Instance()->BeginBatch();
+					Renderer:: Instance()->DrawQuad(leftPage);
+					Renderer:: Instance()->DrawQuad(rightPage);
+					
 					//Renderer:: Instance()->DrawQuad(clipPage);
 					auto identity = glm::identity<glm::mat4>();
 					auto debug0 = glm::translate(identity, glm::vec3(t0, 0));
@@ -780,7 +860,8 @@ public:
 
 						Renderer::Instance()->DrawQuad(clipPage);
 						Renderer::Instance()->DrawBatch(commandBuffer);
-						renderCommandBuffer.EndRenderPass();
+						
+					renderCommandBuffer.EndRenderPass();
 						commandBuffer.end();
 					{
 							std::vector<vk::CommandBuffer> commandBuffers = { renderCommandBuffer.GetCommandBuffer() };
@@ -803,8 +884,44 @@ public:
 							auto device = RenderContext::GetDevice();
 							device->GetGraphicsQueue().submit(submitInfo, fence);
 					}
+					device->GetDevice().waitForFences(fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
+					device->GetDevice().resetFences(fence);
+					Renderer::Instance()->BeginBatch();
+					commandBuffer.begin(beginInfo);
+
+					renderCommandBuffer.BeginRenderPass(m_NewPageRenderPass, swapchain.GetFrameBuffer(frameIndex), swapchain.GetExtent(), clearValues);
+					commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_NewPagePipeline->GetLayout(), 0, m_DescriptorSets[frameIndex], nullptr);
+					commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_NewPagePipeline->GetLayout(), 1, m_DescriptorSetTex, nullptr);
+					commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_NewPagePipeline->GetPipeline());
+
+					commandBuffer.setViewport(0, 1, &viewport);
+					commandBuffer.setScissor(0, 1, &scissors);
+
+					Renderer::Instance()->DrawQuad(newLeftPage);
+					Renderer::Instance()->DrawBatch(commandBuffer);
+					renderCommandBuffer.EndRenderPass();
+					commandBuffer.end();
+					{
+						std::vector<vk::CommandBuffer> commandBuffers = { renderCommandBuffer.GetCommandBuffer() };
+						vk::Semaphore waitSemaphores[] = { m_RenderFinishedSemaphore2 };
+						vk::Semaphore signalSemaphores[] = { m_RenderFinishedSemaphore3 };
+
+						vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
+						vk::SubmitInfo submitInfo = {};
+
+						submitInfo.waitSemaphoreCount = 1;
+						submitInfo.pWaitSemaphores = waitSemaphores;
+						submitInfo.pWaitDstStageMask = waitStages;
 
 
+						submitInfo.commandBufferCount = commandBuffers.size();
+						submitInfo.pCommandBuffers = commandBuffers.data();
+
+						submitInfo.signalSemaphoreCount = 1;
+						submitInfo.pSignalSemaphores = signalSemaphores;
+						auto device = RenderContext::GetDevice();
+						device->GetGraphicsQueue().submit(submitInfo, fence);
+					}
 					
 				
 
@@ -865,7 +982,7 @@ public:
 //				}
 				TracyVkCollect(ctx, commandBuffer);
 				
-				return m_RenderFinishedSemaphore2;
+				return m_RenderFinishedSemaphore3;
 			}
 		};
 		auto postRenderCommands = [this](size_t frameIndex, Voidstar::Camera& camera)
@@ -1316,14 +1433,17 @@ private:
 	UPtr<Pipeline> m_GraphicsPipeline;
 	UPtr<Pipeline> m_ClipPipeline;
 	UPtr<Pipeline> m_PagePipeline;
+	UPtr<Pipeline> m_NewPagePipeline;
 
 	vk::RenderPass m_RenderPass;
 	vk::RenderPass m_ClipRenderPass;
+	vk::RenderPass m_PageRenderPass;
+	vk::RenderPass m_NewPageRenderPass;
 
 	vk::Framebuffer m_PageFramebuffer;
-	vk::RenderPass m_PageRenderPass;
 	vk::Semaphore m_RenderFinishedSemaphore1;
 	vk::Semaphore m_RenderFinishedSemaphore2;
+	vk::Semaphore m_RenderFinishedSemaphore3;
 
 };
 
