@@ -23,10 +23,8 @@ void main()
     
     vec3 instanceScale = vec3(100,100,1);
     vec3 instancePos = vec3(100,500,0); 
-    vec3 localPos = vec3(in_pos.x,in_pos.z,0);
     vec3 worldPos = in_pos;
-    vec4 clipSpace = ubo.proj * vec4(localPos* instanceScale+instancePos    ,1);
-    clipSpace = ubo.proj * vec4(worldPos,1);
+    vec4 clipSpace = ubo.proj * vec4(worldPos,1);
 	out_uv = vec2(1-in_uv.x,in_uv.y);
     gl_Position = clipSpace;
     out_color = in_color;

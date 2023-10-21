@@ -37,7 +37,6 @@ namespace Voidstar
 	class Pipeline
 	{
 	public:
-		static UPtr<Pipeline> CreateGraphicsPipeline(GraphicsPipelineSpecification& spec, vk::PrimitiveTopology topology, vk::Format depthFormat, vk::RenderPass renderpass, int subpass, bool writeToDepthBuffer, vk::PolygonMode polygonMode = vk::PolygonMode::eFill);
 		static UPtr<Pipeline> CreateComputePipeline(std::string computeShader, std::vector<vk::DescriptorSetLayout>& layouts);
 		vk::PipelineLayout GetLayout() const  { return m_PipelineLayout; }
 		vk::Pipeline GetPipeline() const  { return m_Pipeline; }
@@ -71,6 +70,7 @@ namespace Voidstar
 		void SetSamples(vk::SampleCountFlagBits samples);
 		void SetRenderPass(vk::RenderPass renderPass);
 		void SetSubpassAmount(int amount);
+		void SetBlendOp();
 		void SetStencilRefNumber(uint32_t number)
 		{
 			m_StencilRefNumber = number;
@@ -83,6 +83,12 @@ namespace Voidstar
 		{
 			m_WriteMask = write;
 			m_CompareMask = compare;
+		}
+		void SetBlendOp(vk::BlendOp op, vk::BlendFactor src, vk::BlendFactor dst)
+		{
+			m_BlendOp = op;
+			m_BlendSrc = src;
+			m_BlendDst = dst;
 		}
 		UPtr<Pipeline> Build();
 		~PipelineBuilder();
@@ -112,6 +118,11 @@ namespace Voidstar
 		uint32_t m_StencilRefNumber = 0;
 		vk::RenderPass m_RenderPass;
 		int m_SubpassNumber;
+
+		vk::Bool32 m_BlendEnable = VK_TRUE;
+		vk::BlendOp m_BlendOp = vk::BlendOp::eAdd;
+		vk::BlendFactor m_BlendSrc = vk::BlendFactor::eSrcAlpha;
+		vk::BlendFactor m_BlendDst = vk::BlendFactor::eOneMinusSrcAlpha;
 
 	};
 }

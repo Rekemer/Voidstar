@@ -540,6 +540,8 @@ public:
 						builder.SetMasks(0xff, 0xff);
 						m_NewPagePipeline = builder.Build();
 						builder.SetStencilRefNumber(2);
+						builder.StencilTestOp(vk::CompareOp::eEqual, vk::StencilOp::eKeep, vk::StencilOp::eReplace, vk::StencilOp::eKeep);
+						builder.SetBlendOp(vk::BlendOp::eAdd, vk::BlendFactor::eOne,vk::BlendFactor::eZero);
 						m_NewPagePipelineRight = builder.Build();
 					}
 				}
@@ -745,13 +747,13 @@ public:
 					newLeftPage[3].Color = LEFT_NEW_PAGE_COLOR;
 
 					std::vector<Vertex> newRightPage{ 4 };
-					newRightPage[0].Position = { width + startPointX,startPointY,0 };
+					newRightPage[0].Position = { width + startPointX,startPointY,-0.5 };
 					newRightPage[0].Color = RIGHT_NEW_PAGE_COLOR;
-					newRightPage[1].Position = { width + startPointX,startPointY + height,0 };
+					newRightPage[1].Position = { width + startPointX,startPointY + height,-0.5 };
 					newRightPage[1].Color = RIGHT_NEW_PAGE_COLOR;
-					newRightPage[2].Position = { 2 * width + startPointX ,startPointY,0 };
+					newRightPage[2].Position = { 2 * width + startPointX ,startPointY,-0.5 };
 					newRightPage[2].Color = RIGHT_NEW_PAGE_COLOR;
-					newRightPage[3].Position = { glm::vec2{2 * width + startPointX,startPointY + height},0 };
+					newRightPage[3].Position = { glm::vec2{2 * width + startPointX,startPointY + height},-0.5 };
 					newRightPage[3].Color = RIGHT_NEW_PAGE_COLOR;
 					
 
@@ -800,7 +802,7 @@ public:
 
 					std::vector<Vertex> clipPage{ 4 };
 					
-					float clipHeight = 300;
+					float clipHeight = 380;
 					float clipWidth  = 350;
 					auto modifiedBlueColor = blueColor;
 					modifiedBlueColor.a = 0;
@@ -898,7 +900,7 @@ public:
 						leftPage,
 						rightPage,
 						newLeftPage,
-						rightPage
+						newRightPage
 					};
 
 				
@@ -911,9 +913,7 @@ public:
 
 
 						render(renderCommandBuffer,  clearValues, { clipPage }, m_RenderFinishedSemaphore1, m_RenderFinishedSemaphore2, m_ClipRenderPass, m_ClipPipeline.get());
-					
 						render(renderCommandBuffer, clearValues, { pages[2]}, m_RenderFinishedSemaphore2, m_RenderFinishedSemaphore3, m_NewPageRenderPass, m_NewPagePipeline.get());
-					
 						render(renderCommandBuffer, clearValues, { pages[3]}, m_RenderFinishedSemaphore3, m_RenderFinishedSemaphore4, m_NewPageRenderPassRight, m_NewPagePipelineRight.get());
 					
 				
@@ -1446,7 +1446,7 @@ private:
 	glm::vec4 whiteColor = { 1,1,1,1 }; // left
 	glm::vec4 redColor = { 1,0,0,1 }; // right
 	glm::vec4 greyColor = { 0.7,0.7,0.7,1 }; // new left
-	glm::vec4 blueColor = { 0.2,0.2,0.7,0.5 }; // new right
+	glm::vec4 blueColor = { 0.2,0.2,0.7,1 }; // new right
 	glm::vec2 follow ;
 
 };
