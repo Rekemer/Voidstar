@@ -90,6 +90,7 @@ namespace Voidstar
 			m_BlendSrc = src;
 			m_BlendDst = dst;
 		}
+		void DestroyShaderModules();
 		UPtr<Pipeline> Build();
 		~PipelineBuilder();
 	private:

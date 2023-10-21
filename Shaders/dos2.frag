@@ -4,6 +4,7 @@
 
 layout(location = 0) in vec2 uv;
 layout(location = 1) in vec4 color;
+layout(location = 2) in vec2 fragPos;
 layout(location = 0) out vec4 outColor;
 
 

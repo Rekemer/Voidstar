@@ -489,6 +489,7 @@ public:
 				builder.SetStencilRefNumber(2);
 				builder.StencilTestOp(vk::CompareOp::eAlways,vk::StencilOp::eReplace, vk::StencilOp::eReplace, vk::StencilOp::eReplace);
 				builder.SetMasks(0xff, 0xff);
+
 				m_GraphicsPipeline = builder.Build();
 
 
@@ -539,6 +540,9 @@ public:
 						builder.StencilTestOp(vk::CompareOp::eEqual, vk::StencilOp::eKeep, vk::StencilOp::eReplace, vk::StencilOp::eKeep);
 						builder.SetMasks(0xff, 0xff);
 						m_NewPagePipeline = builder.Build();
+						builder.DestroyShaderModules();
+						builder.AddShader(BASE_SPIRV_OUTPUT + "default.spvV", vk::ShaderStageFlagBits::eVertex);
+						builder.AddShader(BASE_SPIRV_OUTPUT + "bookShadow.spvF", vk::ShaderStageFlagBits::eFragment);
 						builder.SetStencilRefNumber(2);
 						builder.StencilTestOp(vk::CompareOp::eEqual, vk::StencilOp::eKeep, vk::StencilOp::eReplace, vk::StencilOp::eKeep);
 						builder.SetBlendOp(vk::BlendOp::eAdd, vk::BlendFactor::eOne,vk::BlendFactor::eZero);
@@ -637,7 +641,7 @@ public:
 							isClicked = true;
 							isDragged = true;
 						}
-						follow = GetMousePosition(camera);
+						m_Follow = GetMousePosition(camera);
 					}
 					else
 					{
@@ -648,13 +652,13 @@ public:
 						}
 						isClicked = false;
 						isDragged = false;
-						follow = rightEdgeBottom;
+						m_Follow = rightEdgeBottom;
 					}
-					follow = glm::clamp(follow, leftEdgeBottom, rightEdgeTop);
+					m_Follow = glm::clamp(m_Follow, leftEdgeBottom, rightEdgeTop);
 
 					glm::vec2 t0;
-					t0.x = follow.x + .5 * (rightEdgeBottom.x - follow.x);
-					t0.y = follow.y + .5 * (rightEdgeBottom.y - follow.y);
+					t0.x = m_Follow.x + .5 * (rightEdgeBottom.x - m_Follow.x);
+					t0.y = m_Follow.y + .5 * (rightEdgeBottom.y - m_Follow.y);
 					t0 =  glm::clamp(t0, spineBottom, rightEdgeTop);
 					auto bisectorAngle = glm::atan2(rightEdgeBottom.y - t0.y, rightEdgeBottom.x - t0.x);
 					//t1
@@ -670,8 +674,8 @@ public:
 					t2.y = t1.y;
 					const auto PI2 = 3.14f / 2.f;
 					const auto PI = 3.14f;
-					auto deltaXPage= t1.x - follow.x;
-					auto deltaYPage= -t1.y + follow.y;
+					auto deltaXPage= t1.x - m_Follow.x;
+					auto deltaYPage= -t1.y + m_Follow.y;
 					float pageAngle = glm::atan2( deltaXPage,deltaYPage);
 					pageAngle = (PI2 + pageAngle);
 					if (t1.x > rightEdgeBottom.x)
@@ -737,7 +741,7 @@ public:
 
 					std::vector<Vertex> newLeftPage{ 4 };
 					//newLeftPage[0].Position = { 2 * width + startPointX,startPointY,0 };
-					newLeftPage[0].Position = { follow,0 };
+					newLeftPage[0].Position = { m_Follow,0 };
 					newLeftPage[0].Color = LEFT_NEW_PAGE_COLOR;
 					newLeftPage[1].Position = { newLeftPage[0].Position.x,newLeftPage[0].Position.y - height,0 };
 					newLeftPage[1].Color = LEFT_NEW_PAGE_COLOR;
@@ -1191,27 +1195,11 @@ public:
 
 		auto cameraView = camera.GetView();
 		auto cameraProj = camera.GetProj();
-		//glm::vec3 eye = { 1.0f, 0.0f, 5.0f };
-		//glm::vec3 center = { 0.5f, -1.0f, 0.0f };
-		//glm::vec3 up = { 0.0f, 0.0f, 1.0f };
-		//cameraView = glm::lookAt(eye,center,up);
-		//ubo.model = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-		//ubo.view = glm::lookAt(glm::vec3(-2.0f, 0.0f, 4.0f), glm::vec3(0.5f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f));
-		////ubo.proj = glm::perspective(glm::radians(45.0f), extent.width / (float)extent.height, 0.0001f, 10.0f);
 		ubo.playerPos = glm::vec4{ camera.GetPosition(),0};
+		ubo.playerPos = glm::vec4{ m_Follow,0,0};
 		ubo.view = cameraView;
 		ubo.proj = cameraProj;
 		ubo.time = GetExeTime();
-		//auto model = glm::mat4(1.f);
-		//glm::mat4 blenderToLH = glm::mat4(1.0f);
-		//blenderToLH[2][2] = -1.0f;  // Flip Z-axis
-		//blenderToLH[3][2] = 1.0f;
-		////model = blenderToLH * model;
-		//// blender: z  is up, y is forward
-		//model = glm::rotate(model,glm::radians(-90.f) , glm::vec3(1, 0, 0));
-		//model = glm::rotate(model,glm::radians(90.f) , glm::vec3(0, 0, 1));
-		//ubo.model = model;
-		//ubo.proj[1][1] *= -1,
 		memcpy(uniformBuffersMapped[imageIndex], &ubo, sizeof(ubo));
 
 	}
@@ -1447,7 +1435,7 @@ private:
 	glm::vec4 redColor = { 1,0,0,1 }; // right
 	glm::vec4 greyColor = { 0.7,0.7,0.7,1 }; // new left
 	glm::vec4 blueColor = { 0.2,0.2,0.7,1 }; // new right
-	glm::vec2 follow ;
+	glm::vec2 m_Follow ;
 
 };
 

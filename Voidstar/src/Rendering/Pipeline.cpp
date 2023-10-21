@@ -200,12 +200,20 @@ namespace Voidstar
 		m_StencilPassOp = pass;
 		m_DepthFailOp = depthFailOp;
 	}
-	PipelineBuilder::~PipelineBuilder()
+	void PipelineBuilder::DestroyShaderModules()
 	{
 		for (auto mod : m_Modules)
 		{
 			m_Device.destroyShaderModule(mod);
+
 		}
+		m_Modules.clear();
+		m_ShaderStages.clear();
+	}
+	
+	PipelineBuilder::~PipelineBuilder()
+	{
+		DestroyShaderModules();
 	}
 	void PipelineBuilder::SetSamples(vk::SampleCountFlagBits samples)
 	{
