@@ -596,6 +596,7 @@ public:
 			const glm::vec2 leftEdgeBottom = { startPointX  ,startPointY };
 			const glm::vec2 spineTop = { startPointX + width ,startPointY + height };
 			const glm::vec2 spineBottom = { startPointX + width,startPointY };
+			const glm::vec2 center= { startPointX + width/2,startPointY + height /2};
 			const glm::vec2 rightEdgeBottom = { width + startPointX + width,startPointY };
 			const glm::vec2 rightEdgeTop = { width + startPointX + width,startPointY + height };
 			
@@ -645,7 +646,7 @@ public:
 					}
 					else
 					{
-						if (isDragged && glm::length(GetMousePosition(camera) - leftEdgeBottom) < 15)
+						if (isDragged && glm::length(GetMousePosition(camera) - leftEdgeBottom) < 15*2)
 						{
 							std::swap(LEFT_PAGE_COLOR, LEFT_NEW_PAGE_COLOR);
 							std::swap(RIGHT_PAGE_COLOR, RIGHT_NEW_PAGE_COLOR);
@@ -654,7 +655,7 @@ public:
 						isDragged = false;
 						m_Follow = rightEdgeBottom;
 					}
-					m_Follow = glm::clamp(m_Follow, leftEdgeBottom, rightEdgeTop);
+					m_Follow = glm::clamp(m_Follow, leftEdgeBottom, glm::vec2{ rightEdgeBottom.x-0,center.y-40});
 
 					glm::vec2 t0;
 					t0.x = m_Follow.x + .5 * (rightEdgeBottom.x - m_Follow.x);
