@@ -380,21 +380,22 @@ public:
 			}
 			
 			
+			std::vector<vk::VertexInputBindingDescription> bindings{ VertexBindingDescription(0,sizeof(Vertex),vk::VertexInputRate::eVertex) };
 
+			std::vector<vk::VertexInputAttributeDescription> attributeDescriptions;
+
+			attributeDescriptions =
+			{
+				VertexInputAttributeDescription(0,0,vk::Format::eR32G32B32Sfloat,offsetof(Vertex, Position)),
+				VertexInputAttributeDescription(0,1,vk::Format::eR32G32Sfloat,offsetof(Vertex, UV)),
+				VertexInputAttributeDescription(0,2,vk::Format::eR32G32B32A32Sfloat,offsetof(Vertex, Color)),
+				VertexInputAttributeDescription(0,3,vk::Format::eR32Sfloat,offsetof(Vertex, textureID)),
+
+			};
 			{
 
 
-				std::vector<vk::VertexInputBindingDescription> bindings{ VertexBindingDescription(0,sizeof(Vertex),vk::VertexInputRate::eVertex) };
-
-
-				std::vector<vk::VertexInputAttributeDescription>
-					attributeDescriptions =
-				{
-					VertexInputAttributeDescription(0,0,vk::Format::eR32G32B32Sfloat,offsetof(Vertex, Position)),
-					VertexInputAttributeDescription(0,1,vk::Format::eR32G32Sfloat,offsetof(Vertex, UV)),
-
-				};
-
+				
 
 
 
@@ -424,7 +425,6 @@ public:
 
 
 
-				//m_PagePipeline = Pipeline::CreateGraphicsPipeline(specs, vk::PrimitiveTopology::eTriangleList, swapchain.GetDepthFormat(), m_PageRenderPass, 0, false, Renderer::Instance()->GetPolygonMode());
 				m_PagePipeline = builder.Build();
 
 			
@@ -433,39 +433,10 @@ public:
 
 
 			{
-				GraphicsPipelineSpecification specs;
-
-				specs.device = device->GetDevice();
-
-				specs.vertexFilepath = BASE_SPIRV_OUTPUT + "default.spvV";
-				specs.fragmentFilepath = BASE_SPIRV_OUTPUT + "page.spvF";
-				specs.swapchainExtent = swapChainExtent;
-				specs.swapchainImageFormat = swapchainFormat;
-
-
-				std::vector<vk::VertexInputBindingDescription> bindings{ VertexBindingDescription(0,sizeof(Vertex),vk::VertexInputRate::eVertex) };
-
-				std::vector<vk::VertexInputAttributeDescription> attributeDescriptions;
-
-				attributeDescriptions =
-				{
-					VertexInputAttributeDescription(0,0,vk::Format::eR32G32B32Sfloat,offsetof(Vertex, Position)),
-					VertexInputAttributeDescription(0,1,vk::Format::eR32G32B32A32Sfloat,offsetof(Vertex, Color)),
-					VertexInputAttributeDescription(0,2,vk::Format::eR32G32Sfloat,offsetof(Vertex, UV)),
-
-				};
-
-				specs.bindingDescription = bindings;
-
-
-
-				specs.attributeDescription = attributeDescriptions;
-
-				auto samples = RenderContext::GetDevice()->GetSamples();
-				specs.samples = samples;
+				
 				auto pipelineLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutTex->GetLayout() };
 
-				specs.descriptorSetLayout = pipelineLayouts;
+				
 
 
 
@@ -728,6 +699,7 @@ public:
 					leftPage[2].Color= LEFT_PAGE_COLOR;
 					leftPage[3].Position = { startPointX +width,startPointY +height,0 };
 					leftPage[3].Color= LEFT_PAGE_COLOR;
+					leftPage[0].textureID= leftPage[1].textureID= leftPage[2].textureID = leftPage[3].textureID =0;
 					std::vector<Vertex> rightPage{ 4 };
 					rightPage[0].Position = { width+startPointX,startPointY,0 };
 					rightPage[0].Color = RIGHT_PAGE_COLOR;
@@ -737,6 +709,7 @@ public:
 					rightPage[2].Color = RIGHT_PAGE_COLOR;
 					rightPage[3].Position = { glm::vec2{2*width + startPointX,startPointY + height},0 };
 					rightPage[3].Color = RIGHT_PAGE_COLOR;
+					rightPage[0].textureID= rightPage[1].textureID= rightPage[2].textureID = rightPage[3].textureID =1;
 
 					std::vector<Vertex> newLeftPage{ 4 };
 					//newLeftPage[0].Position = { 2 * width + startPointX,startPointY,0 };
@@ -748,6 +721,7 @@ public:
 					newLeftPage[2].Color = LEFT_NEW_PAGE_COLOR;
 					newLeftPage[3].Position = { newLeftPage[0].Position.x - width,newLeftPage[0].Position.y - height ,0 };
 					newLeftPage[3].Color = LEFT_NEW_PAGE_COLOR;
+					newLeftPage[0].textureID= newLeftPage[1].textureID= newLeftPage[2].textureID = newLeftPage[3].textureID =2;
 
 					std::vector<Vertex> newRightPage{ 4 };
 					newRightPage[0].Position = { width + startPointX,startPointY,-0.5 };
@@ -758,6 +732,7 @@ public:
 					newRightPage[2].Color = RIGHT_NEW_PAGE_COLOR;
 					newRightPage[3].Position = { glm::vec2{2 * width + startPointX,startPointY + height},-0.5 };
 					newRightPage[3].Color = RIGHT_NEW_PAGE_COLOR;
+					newRightPage[0].textureID= newRightPage[1].textureID= newRightPage[2].textureID = newRightPage[3].textureID =3;
 					
 
 					
@@ -922,60 +897,7 @@ public:
 				
 
 				}
-//				{
-//					vk::ClearValue clearColor = { std::array<float, 4>{0.1f, .3f, 0.1f, 1.0f} };
-//
-//					vk::ClearValue depthClear;
-//
-//					depthClear.depthStencil = vk::ClearDepthStencilValue({ 1.0f, 0 });
-//					std::vector<vk::ClearValue> clearValues = { {clearColor, depthClear,clearColor} };
-//					renderCommandBuffer.BeginRenderPass(m_PageRenderPass, m_PageFramebuffer, vk::Extent2D{128,128}, clearValues);
-//					glm::vec2 pos = { 100,500 };
-//					std::string str = "Hello\n  sailor!";
-//				//str = R"(Mauris in euismod neque.\n
-//				//	Class aptent taciti sociosqu ad litora torquent per conubia nostra,\n
-//				//	per inceptos himenaeos. Curabitur id pellentesque ligula, quis eleifend dolor.\n
-//				//	Proin diam erat, vulputate eget rutrum cursus, placerat vitae massa. Fusce et sagittis odio. \n
-//				//	Mauris et ante mi. Morbi nisl odio, fringilla sit amet tortor ac,\n 
-//				//	fringilla maximus orci. Sed quis odio in enim egestas sollicitudin.\n 
-//				//	Cras aliquam nisl odio, egestas aliquet est hendrerit sed)";
-//
-//					str = R"(Mauris in euismod neque. 
-//fringilla maximus orci.
-//Sed quis odio in enim egestas sollicitudin.
-//Cras aliquam nisl odio, egestas aliquet est hendrerit sed)";
-//
-//					auto viewportSize = Renderer::Instance()->GetViewportSize();
-//					vk::Viewport viewport;
-//					viewport.x = 0;
-//					viewport.y = 0;
-//					viewport.minDepth = 0;
-//					viewport.maxDepth = 1;
-//					viewport.height = viewportSize.second;
-//					viewport.width = viewportSize.first;
-//
-//					vk::Rect2D scissors;
-//					scissors.offset = vk::Offset2D{ (uint32_t)0,(uint32_t)0 };
-//					scissors.extent = vk::Extent2D{ (uint32_t)viewportSize.first,(uint32_t)viewportSize.second };
-//
-//
-//
-//
-//
-//					commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PagePipeline->GetLayout(), 0, m_DescriptorSets[frameIndex], nullptr);
-//					commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PagePipeline->GetLayout(), 1, m_DescriptorSetFont, nullptr);
-//
-//
-//					commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_PagePipeline->GetPipeline());
-//
-//					commandBuffer.setViewport(0, 1, &viewport);
-//					commandBuffer.setScissor(0, 1, &scissors);
-//					Renderer::Instance()->BeginBatch();
-//					Renderer::Instance()->DrawTxt(commandBuffer,str,pos,Characters);
-//				//	Renderer::Instance()->DrawTxt(commandBuffer,"I love you!" ,2.f*pos, Characters);
-//
-//					renderCommandBuffer.EndRenderPass();
-//				}
+
 				TracyVkCollect(ctx, commandBuffer);
 				
 				return m_RenderFinishedSemaphore4;
@@ -1141,7 +1063,7 @@ public:
 				auto camera = *GetCamera();
 				auto cameraView = camera.GetView();
 				auto cameraProj1 = camera.GetProj();
-				auto orth = glm::ortho(0.f,800.f,600.f,0.f);
+				auto orth = glm::ortho(0.f,600.f,600.f,0.f);
 				auto cameraProj = orth;
 				ubo.playerPos = glm::vec4{ camera.GetPosition(),0 };
 				ubo.playerPos = glm::vec4{ m_Follow,0,0 };
@@ -1154,13 +1076,15 @@ public:
 				auto& vkCommandBuffer = renderCommandBuffer.GetCommandBuffer();
 				vk::CommandBufferBeginInfo beginInfo = {};
 				vkCommandBuffer.begin(beginInfo);
-				vk::ClearValue clearColor = { std::array<float, 4>{0.1f, .3f, 0.1f, 1.0f} };
+				vk::ClearValue clearColor = { std::array<float, 4>{0.f, 0.f, 0.f, 1.0f} };
 
 
 				std::vector<vk::ClearValue> clearValues = { {clearColor} };
 
 				//glm::vec2 pos = { 20,20 };
-				std::string str = "Hello\n  sailor!";
+				std::string str = "Hello  sailor!\n how is it going?";
+				std::string str1 = "Here is page curl rendering\n with vulkan!\n the text is rendered with vulkan too!";
+				std::vector<std::string> txt = { str,str1 };
 				//str = R"(Mauris in euismod neque.\n
 				//	Class aptent taciti sociosqu ad litora torquent per conubia nostra,\n
 				//	per inceptos himenaeos. Curabitur id pellentesque ligula, quis eleifend dolor.\n
@@ -1168,11 +1092,11 @@ public:
 				//	Mauris et ante mi. Morbi nisl odio, fringilla sit amet tortor ac,\n 
 				//	fringilla maximus orci. Sed quis odio in enim egestas sollicitudin.\n 
 				//	Cras aliquam nisl odio, egestas aliquet est hendrerit sed)";
-
-				str = R"(Mauris in euismod neque. 
-fringilla maximus orci.
-Sed quis odio in enim egestas sollicitudin.
-Cras aliquam nisl odio, egestas aliquet est hendrerit sed)";
+//
+//				str = R"(Mauris in euismod neque. 
+//fringilla maximus orci.
+//Sed quis odio in enim egestas sollicitudin.
+//Cras aliquam nisl odio, egestas aliquet est hendrerit sed)";
 				auto viewportSize = std::make_pair(PageRenderWidth, PageRenderHeight);
 				vk::Viewport viewport;
 				viewport.x = 0;
@@ -1185,9 +1109,9 @@ Cras aliquam nisl odio, egestas aliquet est hendrerit sed)";
 				vk::Rect2D scissors;
 				scissors.offset = vk::Offset2D{ (uint32_t)0,(uint32_t)0 };
 				scissors.extent = vk::Extent2D{ (uint32_t)viewportSize.first,(uint32_t)viewportSize.second };
-				for (auto frame : m_PageFramebuffer)
+				for (int i = 0; i <  m_PageFramebuffer.size(); i++)
 				{
-					renderCommandBuffer.BeginRenderPass(m_PageRenderPass, frame, vk::Extent2D{ static_cast<uint32_t>(PageRenderWidth),
+					renderCommandBuffer.BeginRenderPass(m_PageRenderPass, m_PageFramebuffer[i], vk::Extent2D{static_cast<uint32_t>(PageRenderWidth),
 					 static_cast<uint32_t>(PageRenderHeight)}, clearValues);
 					glm::vec2 pos = { 100,500 };
 
@@ -1201,7 +1125,7 @@ Cras aliquam nisl odio, egestas aliquet est hendrerit sed)";
 					vkCommandBuffer.setViewport(0, 1, &viewport);
 					vkCommandBuffer.setScissor(0, 1, &scissors);
 					Renderer::Instance()->BeginBatch();
-					Renderer::Instance()->DrawTxt(vkCommandBuffer, str, pos, Characters);
+					Renderer::Instance()->DrawTxt(vkCommandBuffer, txt[i% txt.size()], pos, Characters);
 					//	Renderer::Instance()->DrawTxt(commandBuffer,"I love you!" ,2.f*pos, Characters);
 
 					renderCommandBuffer.EndRenderPass();
@@ -1245,7 +1169,7 @@ Cras aliquam nisl odio, egestas aliquet est hendrerit sed)";
 					infos[i].imageLayout= vk::ImageLayout::eShaderReadOnlyOptimal;
 
 				}
-				//device->UpdateDescriptorSet(m_DescriptorSetTex, PageAmount, infos, vk::DescriptorType::eCombinedImageSampler);
+				device->UpdateDescriptorSet(m_DescriptorSetTex, 0, infos, vk::DescriptorType::eCombinedImageSampler);
 
 			}
 		};
@@ -1373,7 +1297,7 @@ Cras aliquam nisl odio, egestas aliquet est hendrerit sed)";
 		{
 			Log::GetLog()->error("ERROR::FREETYPE: Failed to load font {0}", str );
 		}
-		auto error = FT_Set_Pixel_Sizes(face, 0, 48);
+		auto error = FT_Set_Pixel_Sizes(face, 0, 48*2.5);
 
 
 
@@ -1547,9 +1471,9 @@ private:
 
 	bool isClicked = false;
 	bool isDragged = false;
-	glm::vec4 whiteColor = { 1,1,1,1 }; // left
-	glm::vec4 redColor = { 1,0,0,1 }; // right
-	glm::vec4 greyColor = { 0.7,0.7,0.7,1 }; // new left
+	glm::vec4 whiteColor = { 0.7,0.7,0.7,1 }; // left
+	glm::vec4 redColor = { 0.6,0,0,1 }; // right
+	glm::vec4 greyColor = { 0.5,0.5,0.5,1 }; // new left
 	glm::vec4 blueColor = { 0.2,0.2,0.7,1 }; // new right
 	glm::vec2 m_Follow ;
 

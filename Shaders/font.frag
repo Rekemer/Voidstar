@@ -6,7 +6,8 @@ layout(set = 1, binding = 0) uniform sampler2D u_TextAtlas;
 
 void main()
 {    
-    vec4 textColor = vec4(1.0, 1.0, 1.0, texture(u_TextAtlas, TexCoords).r);
+    vec3 fontColor = vec3(1,1,1);
+    vec4 textColor = vec4(fontColor, texture(u_TextAtlas, TexCoords).r);
     outColor = vec4(1,0,1,1);
     outColor = vec4(textColor);
     //outColor = vec4( TexCoords,0,1);

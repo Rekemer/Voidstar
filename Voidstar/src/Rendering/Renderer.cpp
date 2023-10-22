@@ -430,21 +430,22 @@ const int QUAD_AMOUNT = 700;
 	
 	}
 
-	void UpdateVertex(Vertex*& vertex, glm::vec3 position, glm::vec4& color, glm::mat4& world, int vertIndex)
+	void UpdateVertex(Vertex*& vertex, glm::vec3 position, glm::vec4& color, glm::mat4& world,  int vertIndex, size_t texID =0)
 	{
 		vertex->Position = world * glm::vec4{ position,1 };
 		vertex->UV = quad.verticies[vertIndex].UV;
 		vertex->Color = color;
+		vertex->textureID = texID;
 	};
 	void UpdateVerticies(Vertex*& vertex, std::vector<Vertex>& verticies)
 	{
-		UpdateVertex(vertex,verticies[0].Position, verticies[0].Color, glm::identity<glm::mat4>(),0);
-		vertex++;
-		UpdateVertex(vertex,verticies[2].Position, verticies[2].Color, glm::identity<glm::mat4>(),2);
-		vertex++;
-		UpdateVertex(vertex,verticies[3].Position, verticies[3].Color, glm::identity<glm::mat4>(),3);
-		vertex++;
-		UpdateVertex(vertex,verticies[1].Position, verticies[1].Color, glm::identity<glm::mat4>(),1);
+		UpdateVertex(vertex,verticies[0].Position, verticies[0].Color, glm::identity<glm::mat4>(),0,verticies[0].textureID);
+		vertex++;																				   
+		UpdateVertex(vertex,verticies[2].Position, verticies[2].Color, glm::identity<glm::mat4>(),2,verticies[0].textureID);
+		vertex++;																				   
+		UpdateVertex(vertex,verticies[3].Position, verticies[3].Color, glm::identity<glm::mat4>(),3,verticies[0].textureID);
+		vertex++;																				   
+		UpdateVertex(vertex,verticies[1].Position, verticies[1].Color, glm::identity<glm::mat4>(),1,verticies[0].textureID);
 		vertex++;
 
 	};
@@ -458,7 +459,7 @@ const int QUAD_AMOUNT = 700;
 			if (e == '\n')
 			{
 				offset.x = pos.x;
-				pos.y -= Character::lineSpacing/64;
+				pos.y -= 2*Character::lineSpacing/64.f;
 				continue;
 			}
 			else if (e == ' ')
