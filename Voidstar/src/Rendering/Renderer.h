@@ -137,6 +137,14 @@ namespace Voidstar
 		void DrawTxt(vk::CommandBuffer commandBuffer, std::string_view str,glm::vec2 pos, std::map<unsigned char, Character> &Characters);
 		void BeginBatch();
 		void DrawBatch(vk::CommandBuffer& commandBuffer);
+		vk::Semaphore GetImageAvailable()
+		{
+			return m_ImageAvailableSemaphore;
+		}
+		vk::Fence GetFence()
+		{
+			return m_InFlightFence;
+		}
 		UPtr<Buffer> m_QuadBufferBatch{ nullptr };
 		UPtr<IndexBuffer> m_QuadBufferBatchIndex{ nullptr };
 		Vertex * m_BatchQuad;

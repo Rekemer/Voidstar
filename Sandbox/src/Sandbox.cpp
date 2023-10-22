@@ -15,8 +15,9 @@ using namespace Voidstar;
 
 
 std::map<unsigned char, Character> Characters;
-
-
+const float PageRenderWidth = 256.f;
+const float PageRenderHeight = 512.f;
+const int PageAmount = 4;
 
 
 class ExampleApplication : public Voidstar::Application
@@ -44,8 +45,7 @@ public:
 				| vk::ShaderStageFlagBits::eTessellationEvaluation | vk::ShaderStageFlagBits::eFragment);
 
 			m_TexDesc = binderRender.BeginBind();
-			binderRender.Bind(0, 1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment);
-			binderRender.Bind(1, 1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment);
+			binderRender.Bind(0, PageAmount, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment);
 
 			m_TexAtlas = binderRender.BeginBind();
 			binderRender.Bind(0, 1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment);
@@ -137,8 +137,6 @@ public:
 			imageDescriptor1.sampler = m_Image->GetSampler();
 			device->UpdateDescriptorSet(m_DescriptorSetSelected, 0, 1, imageDescriptor, vk::DescriptorType::eStorageImage);
 			device->UpdateDescriptorSet(m_DescriptorSetSelected, 2, 1, *m_Image, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
-			device->UpdateDescriptorSet(m_DescriptorSetTex, 0, 1, *m_ImageSelected, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
-			device->UpdateDescriptorSet(m_DescriptorSetTex, 1, 1, *m_Image, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
 
 
 			UpdateBuffer(*device, m_DescriptorSetSelected, m_ClickPoints.data(), *m_ShaderStorageBuffer, MAX_POINTS * sizeof(glm::vec2));
@@ -287,7 +285,10 @@ public:
 				RenderPassBuilder builder;
 
 				//Define a general attachment, with its load/store operations
-				vk::AttachmentDescription colorAttachment = AttachmentDescription(swapchainFormat,vk::SampleCountFlagBits::e1,vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare, vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal);
+				vk::AttachmentDescription colorAttachment = AttachmentDescription(swapchainFormat,
+					vk::SampleCountFlagBits::e1,vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore,
+					vk::AttachmentLoadOp::eDontCare, vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined,
+					vk::ImageLayout::eShaderReadOnlyOptimal);
 
 				vk::AttachmentReference refColor = { 0,vk::ImageLayout::eColorAttachmentOptimal };
 				builder.AddSubpass(SubpassDescription(1, &refColor));
@@ -437,7 +438,7 @@ public:
 				specs.device = device->GetDevice();
 
 				specs.vertexFilepath = BASE_SPIRV_OUTPUT + "default.spvV";
-				specs.fragmentFilepath = BASE_SPIRV_OUTPUT + "dos2.spvF";
+				specs.fragmentFilepath = BASE_SPIRV_OUTPUT + "page.spvF";
 				specs.swapchainExtent = swapChainExtent;
 				specs.swapchainImageFormat = swapchainFormat;
 
@@ -478,7 +479,7 @@ public:
 				builder.SetPolygoneMode(Renderer::Instance()->GetPolygonMode());
 				builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
 				builder.AddShader(BASE_SPIRV_OUTPUT + "default.spvV", vk::ShaderStageFlagBits::eVertex);
-				builder.AddShader(BASE_SPIRV_OUTPUT + "dos2.spvF", vk::ShaderStageFlagBits::eFragment);
+				builder.AddShader(BASE_SPIRV_OUTPUT + "page.spvF", vk::ShaderStageFlagBits::eFragment);
 				builder.SetSubpassAmount(0);
 				builder.AddExtent(swapChainExtent);
 				builder.AddImageFormat(swapchainFormat);
@@ -503,7 +504,7 @@ public:
 					builder.SetPolygoneMode(Renderer::Instance()->GetPolygonMode());
 					builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
 					builder.AddShader(BASE_SPIRV_OUTPUT + "default.spvV", vk::ShaderStageFlagBits::eVertex);
-					builder.AddShader(BASE_SPIRV_OUTPUT + "dos2.spvF", vk::ShaderStageFlagBits::eFragment);
+					builder.AddShader(BASE_SPIRV_OUTPUT + "page.spvF", vk::ShaderStageFlagBits::eFragment);
 					builder.SetSubpassAmount(0);
 					builder.AddExtent(swapChainExtent);
 					builder.AddImageFormat(swapchainFormat);
@@ -528,7 +529,7 @@ public:
 						builder.SetPolygoneMode(Renderer::Instance()->GetPolygonMode());
 						builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
 						builder.AddShader(BASE_SPIRV_OUTPUT + "default.spvV", vk::ShaderStageFlagBits::eVertex);
-						builder.AddShader(BASE_SPIRV_OUTPUT + "dos2.spvF", vk::ShaderStageFlagBits::eFragment);
+						builder.AddShader(BASE_SPIRV_OUTPUT + "page.spvF", vk::ShaderStageFlagBits::eFragment);
 						builder.SetSubpassAmount(0);
 						builder.AddExtent(swapChainExtent);
 						builder.AddImageFormat(swapchainFormat);
@@ -550,9 +551,9 @@ public:
 					}
 				}
 				
+				
 
 			}
-			UpdateTexture(0);
 
 
 			vk::SemaphoreCreateInfo semaphoreInfo = {};
@@ -569,15 +570,12 @@ public:
 
 				Log::GetLog()->error("failed to create semaphore");
 			}
-
+					
 		};
 
+					
 
-		enum class SideTurning
-		{
-			LEFT,
-			RIGHT
-		};
+			
 
 		
 		auto submitRenderCommands = [&](size_t frameIndex,Camera& camera, vk::Semaphore& imageAvailable, vk::Fence& fence)
@@ -1079,28 +1077,29 @@ public:
 		auto createFramebuffer = [this]()
 		{
 
-			m_PagesImages.resize(4);
+			m_PagesImages.resize(PageAmount);
+			m_PageFramebuffer.resize(PageAmount);
+			auto device = RenderContext::GetDevice();
 			for (int i = 0; i < m_PagesImages.size(); i++)
 			{
-				auto usage = vk::ImageUsageFlagBits::eColorAttachment  |vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled;
-				m_PagesImages[i] = Image::CreateEmptyImage(128,128,vk::Format::eB8G8R8A8Unorm, usage);
+				auto usage = vk::ImageUsageFlagBits::eColorAttachment  |vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eSampled;
+				m_PagesImages[i] = Image::CreateEmptyImage(PageRenderWidth, PageRenderHeight,vk::Format::eB8G8R8A8Unorm, usage);
+				std::vector<vk::ImageView>attachments = { m_PagesImages[i]->GetImageView() };
+				vk::FramebufferCreateInfo framebufferInfo;
+				framebufferInfo.flags = vk::FramebufferCreateFlags();
+				framebufferInfo.renderPass = m_PageRenderPass;
+				framebufferInfo.attachmentCount = attachments.size();
+				framebufferInfo.pAttachments = attachments.data();
+				framebufferInfo.width = PageRenderWidth;
+				framebufferInfo.height = PageRenderHeight;
+				framebufferInfo.layers = 1;
+
+				m_PageFramebuffer[i] = device->GetDevice().createFramebuffer(framebufferInfo);
 			}
 
-			std::vector<vk::ImageView> attachments = {
 				
-					m_PagesImages[0]->GetImageView(),
-			};
-			vk::FramebufferCreateInfo framebufferInfo;
-			framebufferInfo.flags = vk::FramebufferCreateFlags();
-			framebufferInfo.renderPass = m_PageRenderPass;
-			framebufferInfo.attachmentCount = attachments.size();
-			framebufferInfo.pAttachments = attachments.data();
-			framebufferInfo.width = 128;
-			framebufferInfo.height = 128;
-			framebufferInfo.layers = 1;
-
-			auto device = RenderContext::GetDevice();
-			m_PageFramebuffer = device->GetDevice().createFramebuffer(framebufferInfo);
+				
+			
 
 			auto& swapchain = Renderer::Instance()->GetSwapchain();
 			auto& frames = swapchain.GetFrames();
@@ -1136,6 +1135,119 @@ public:
 				}
 
 			}
+			{
+
+				UniformBufferObject ubo{};
+				auto camera = *GetCamera();
+				auto cameraView = camera.GetView();
+				auto cameraProj1 = camera.GetProj();
+				auto orth = glm::ortho(0.f,800.f,600.f,0.f);
+				auto cameraProj = orth;
+				ubo.playerPos = glm::vec4{ camera.GetPosition(),0 };
+				ubo.playerPos = glm::vec4{ m_Follow,0,0 };
+				ubo.view = cameraView;
+				ubo.proj = cameraProj;
+				ubo.time = GetExeTime();
+				memcpy(uniformBuffersMapped[0], &ubo, sizeof(ubo));
+
+				auto& renderCommandBuffer = Renderer::Instance()->GetRenderCommandBuffer(0);
+				auto& vkCommandBuffer = renderCommandBuffer.GetCommandBuffer();
+				vk::CommandBufferBeginInfo beginInfo = {};
+				vkCommandBuffer.begin(beginInfo);
+				vk::ClearValue clearColor = { std::array<float, 4>{0.1f, .3f, 0.1f, 1.0f} };
+
+
+				std::vector<vk::ClearValue> clearValues = { {clearColor} };
+
+				//glm::vec2 pos = { 20,20 };
+				std::string str = "Hello\n  sailor!";
+				//str = R"(Mauris in euismod neque.\n
+				//	Class aptent taciti sociosqu ad litora torquent per conubia nostra,\n
+				//	per inceptos himenaeos. Curabitur id pellentesque ligula, quis eleifend dolor.\n
+				//	Proin diam erat, vulputate eget rutrum cursus, placerat vitae massa. Fusce et sagittis odio. \n
+				//	Mauris et ante mi. Morbi nisl odio, fringilla sit amet tortor ac,\n 
+				//	fringilla maximus orci. Sed quis odio in enim egestas sollicitudin.\n 
+				//	Cras aliquam nisl odio, egestas aliquet est hendrerit sed)";
+
+				str = R"(Mauris in euismod neque. 
+fringilla maximus orci.
+Sed quis odio in enim egestas sollicitudin.
+Cras aliquam nisl odio, egestas aliquet est hendrerit sed)";
+				auto viewportSize = std::make_pair(PageRenderWidth, PageRenderHeight);
+				vk::Viewport viewport;
+				viewport.x = 0;
+				viewport.y = 0;
+				viewport.minDepth = 0;
+				viewport.maxDepth = 1;
+				viewport.height = viewportSize.second;
+				viewport.width = viewportSize.first;
+
+				vk::Rect2D scissors;
+				scissors.offset = vk::Offset2D{ (uint32_t)0,(uint32_t)0 };
+				scissors.extent = vk::Extent2D{ (uint32_t)viewportSize.first,(uint32_t)viewportSize.second };
+				for (auto frame : m_PageFramebuffer)
+				{
+					renderCommandBuffer.BeginRenderPass(m_PageRenderPass, frame, vk::Extent2D{ static_cast<uint32_t>(PageRenderWidth),
+					 static_cast<uint32_t>(PageRenderHeight)}, clearValues);
+					glm::vec2 pos = { 100,500 };
+
+
+					vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PagePipeline->GetLayout(), 0, m_DescriptorSets[0], nullptr);
+					vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PagePipeline->GetLayout(), 1, m_DescriptorSetFont, nullptr);
+
+
+					vkCommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_PagePipeline->GetPipeline());
+
+					vkCommandBuffer.setViewport(0, 1, &viewport);
+					vkCommandBuffer.setScissor(0, 1, &scissors);
+					Renderer::Instance()->BeginBatch();
+					Renderer::Instance()->DrawTxt(vkCommandBuffer, str, pos, Characters);
+					//	Renderer::Instance()->DrawTxt(commandBuffer,"I love you!" ,2.f*pos, Characters);
+
+					renderCommandBuffer.EndRenderPass();
+				}
+
+				vkCommandBuffer.end();
+
+				{
+					std::vector<vk::CommandBuffer> commandBuffers = { vkCommandBuffer };
+					auto& imageAvailable = Renderer::Instance()->GetImageAvailable();
+					//auto fence = Renderer::Instance()->GetFence();
+					//vk::Semaphore waitSemaphores[] = { imageAvailable };
+					//vk::Semaphore signalSemaphores[] = { renderFiniishedSecond };
+
+					vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
+					vk::SubmitInfo submitInfo = {};
+
+					//submitInfo.waitSemaphoreCount = 1;
+					//submitInfo.pWaitSemaphores = waitSemaphores;
+					submitInfo.pWaitDstStageMask = waitStages;
+
+
+					submitInfo.commandBufferCount = commandBuffers.size();
+					submitInfo.pCommandBuffers = commandBuffers.data();
+
+					//submitInfo.signalSemaphoreCount = 1;
+					//submitInfo.pSignalSemaphores = signalSemaphores;
+					auto device = RenderContext::GetDevice();
+					//device->GetDevice().resetFences(fence);
+					device->GetGraphicsQueue().submit(submitInfo);
+					device->GetDevice().waitIdle();
+					//device->GetDevice().waitForFences(fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
+					//device->GetDevice().resetFences(fence);
+				}
+
+				std::vector<vk::DescriptorImageInfo> infos(PageAmount);
+				for (int i =0 ; i < PageAmount; i++)
+				{
+					infos[i].sampler = m_PagesImages[i]->GetSampler();
+					infos[i].imageView= m_PagesImages[i]->GetImageView();
+					infos[i].imageLayout= vk::ImageLayout::eShaderReadOnlyOptimal;
+
+				}
+				//device->UpdateDescriptorSet(m_DescriptorSetTex, PageAmount, infos, vk::DescriptorType::eCombinedImageSampler);
+
+			}
 		};
 
 		auto cleanup = [this]()
@@ -1149,7 +1261,10 @@ public:
 
 			device.destroyRenderPass(m_RenderPass);
 			device.destroyRenderPass(m_PageRenderPass);
-			device.destroyFramebuffer(m_PageFramebuffer);
+			for (int i = 0; i < m_PageFramebuffer.size(); i++)
+			{
+				device.destroyFramebuffer(m_PageFramebuffer[i]);
+			}
 			for (int i = 0; i < m_PagesImages.size(); i++)
 			{
 				m_PagesImages[i].reset();
@@ -1424,7 +1539,7 @@ private:
 	vk::RenderPass m_NewPageRenderPass;
 	vk::RenderPass m_NewPageRenderPassRight;
 
-	vk::Framebuffer m_PageFramebuffer;
+	std::vector<vk::Framebuffer> m_PageFramebuffer;
 	vk::Semaphore m_RenderFinishedSemaphore1;
 	vk::Semaphore m_RenderFinishedSemaphore2;
 	vk::Semaphore m_RenderFinishedSemaphore3;

@@ -450,7 +450,6 @@ const int QUAD_AMOUNT = 700;
 	};
 	void Renderer::DrawTxt(vk::CommandBuffer commandBuffer, std::string_view str, glm::vec2 pos, std::map< unsigned char, Character>& characters)
 	{
-		assert(false);
 		float scale = 0.5;
 		auto offset = pos;
 		for (auto e : str)
@@ -475,48 +474,35 @@ const int QUAD_AMOUNT = 700;
 
 			}
 			if (characters.find(e) == characters.end()) continue;
-		//auto& characterData = characters.at(e);
-		//offset.x = offset.x + characterData.Bearing.x* scale;
-		//// to account for letter like p and q
-		//offset.y = pos.y - ( characterData.Size.y - characterData.Bearing.y)* scale;
-		//glm::vec4 color{ 1 };
-		//glm::mat4 world{ 1 };
-		//// left bottom
-		//UpdateVertex(m_BatchQuad, verticies, color, world, 0);
-		//m_BatchQuad->u = characterData.minUv.x;
-		//m_BatchQuad->v = characterData.maxUv.y;
-		//m_BatchQuad->x = offset.x;
-		//m_BatchQuad->y = offset.y;
-		//m_BatchQuad->z = 0;
-		//
-		//m_BatchQuad++;
-		//// right bottom
-		//m_BatchQuad->u = characterData.maxUv.x;
-		//m_BatchQuad->v = characterData.maxUv.y;
-		//m_BatchQuad->x = offset.x + characterData.Size.x* scale;
-		//m_BatchQuad->y = offset.y;
-		//m_BatchQuad->z = 0;
-		//m_BatchQuad++;
-		//// right top
-		//m_BatchQuad->u = characterData.maxUv.x;
-		//m_BatchQuad->v = characterData.minUv.y;
-		//m_BatchQuad->x = offset.x + characterData.Size.x * scale;
-		//m_BatchQuad->y = offset.y + characterData.Size.y * scale;
-		//m_BatchQuad->z = 0;
-		//m_BatchQuad++;
-		//
-		//
-		//// left top
-		//m_BatchQuad->u = characterData.minUv.x;
-		//m_BatchQuad->v = characterData.minUv.y;
-		//m_BatchQuad->x = offset.x;
-		//m_BatchQuad->y = offset.y + characterData.Size.y * scale;
-		//m_BatchQuad->z = 0;
-		//m_BatchQuad++;
-		//
-		//
-		//offset.x += characterData.Advance / 64.f* scale;
-		//m_QuadIndex += 6;
+		auto& characterData = characters.at(e);
+		offset.x = offset.x + characterData.Bearing.x* scale;
+		// to account for letter like p and q
+		offset.y = pos.y - ( characterData.Size.y - characterData.Bearing.y)* scale;
+		glm::vec4 color{ 1 };
+		glm::mat4 world{ 1 };
+		// left bottom
+		m_BatchQuad->Position = glm::vec3{ offset.x ,offset.y,0};
+		m_BatchQuad->UV = { characterData.minUv.x,characterData.maxUv.y };
+		
+		m_BatchQuad++;
+		// right bottom
+		m_BatchQuad->Position = glm::vec3{ offset.x + characterData.Size.x * scale ,offset.y,0 };
+		m_BatchQuad->UV = { characterData.maxUv.x,characterData.maxUv.y };
+		m_BatchQuad++;
+		// right top
+		m_BatchQuad->Position = glm::vec3{ offset.x + characterData.Size.x * scale,offset.y + characterData.Size.y * scale,0 };
+		m_BatchQuad->UV = { characterData.maxUv.x,characterData.minUv.y };
+		m_BatchQuad++;
+		
+		
+		// left top
+		m_BatchQuad->Position = glm::vec3{ offset.x ,offset.y + characterData.Size.y * scale,0 };
+		m_BatchQuad->UV = { characterData.minUv.x,characterData.minUv.y };
+		m_BatchQuad++;
+		
+		
+		offset.x += characterData.Advance / 64.f* scale;
+		m_QuadIndex += 6;
 		}
 		DrawBatch(commandBuffer);
 	}

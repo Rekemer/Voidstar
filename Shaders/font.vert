@@ -22,9 +22,6 @@ const vec2 screen_corners[6] = vec2[](
 void main()
 {
     gl_Position = ubo.proj * vec4(in_pos.xy, 0.0, 1.0);
-    vec4 pos =  vec4(screen_corners[gl_VertexIndex],0.3,1.0);
-   // gl_Position =  vec4(screen_corners[gl_VertexIndex],0.3,1.0);
-    //vec2 uv = (pos.xy + 1.0) * 0.5;
     vec2 uv = vec2( in_uv.x, in_uv.y);
     TexCoords = uv;
 }  
