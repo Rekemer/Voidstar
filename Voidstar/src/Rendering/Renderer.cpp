@@ -416,9 +416,9 @@ const int QUAD_AMOUNT = 700;
 		m_BatchQuad = m_BatchQuadStart;
 	}
 
-	void Renderer::DrawBatch(vk::CommandBuffer& commandBuffer)
+	void Renderer::DrawBatch(vk::CommandBuffer& commandBuffer,size_t offset)
 	{
-		vk::DeviceSize offsets[] = { 0 };
+		vk::DeviceSize offsets[] = { offset };
 
 		{
 			vk::Buffer vertexBuffers[] = { m_QuadBufferBatch->GetBuffer() };
@@ -427,6 +427,7 @@ const int QUAD_AMOUNT = 700;
 		}
 		commandBuffer.bindIndexBuffer(m_QuadBufferBatchIndex->GetBuffer(), 0, m_QuadBufferBatchIndex->GetIndexType());
 		commandBuffer.drawIndexed(m_QuadIndex, 1, 0, 0, 0);
+		m_QuadIndex = 0;
 	
 	}
 
@@ -505,7 +506,6 @@ const int QUAD_AMOUNT = 700;
 		offset.x += characterData.Advance / 64.f* scale;
 		m_QuadIndex += 6;
 		}
-		DrawBatch(commandBuffer);
 	}
 	void Renderer::DrawQuadScreen(vk::CommandBuffer commandBuffer)
 	{

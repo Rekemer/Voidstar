@@ -1083,7 +1083,7 @@ public:
 
 				//glm::vec2 pos = { 20,20 };
 				std::string str = "Hello  sailor!\n how is it going?";
-				std::string str1 = "Here is page curl rendering\n with vulkan!\n the text is rendered with vulkan too!";
+				std::string str1 = "Here is page\ncurl rendering\n with vulkan!\nthe text is rendered\nwith vulkan too!";
 				std::vector<std::string> txt = { str,str1 };
 				//str = R"(Mauris in euismod neque.\n
 				//	Class aptent taciti sociosqu ad litora torquent per conubia nostra,\n
@@ -1109,6 +1109,7 @@ public:
 				vk::Rect2D scissors;
 				scissors.offset = vk::Offset2D{ (uint32_t)0,(uint32_t)0 };
 				scissors.extent = vk::Extent2D{ (uint32_t)viewportSize.first,(uint32_t)viewportSize.second };
+				Renderer::Instance()->BeginBatch();
 				for (int i = 0; i <  m_PageFramebuffer.size(); i++)
 				{
 					renderCommandBuffer.BeginRenderPass(m_PageRenderPass, m_PageFramebuffer[i], vk::Extent2D{static_cast<uint32_t>(PageRenderWidth),
@@ -1124,9 +1125,14 @@ public:
 
 					vkCommandBuffer.setViewport(0, 1, &viewport);
 					vkCommandBuffer.setScissor(0, 1, &scissors);
-					Renderer::Instance()->BeginBatch();
 					Renderer::Instance()->DrawTxt(vkCommandBuffer, txt[i% txt.size()], pos, Characters);
 					//	Renderer::Instance()->DrawTxt(commandBuffer,"I love you!" ,2.f*pos, Characters);
+					size_t offset = 0;
+					if (i > 0)
+					{
+						offset = sizeof(Vertex) * 4 * txt[(i-1) % txt.size()].size();
+					}
+					Renderer::Instance()->DrawBatch(vkCommandBuffer, offset);
 
 					renderCommandBuffer.EndRenderPass();
 				}

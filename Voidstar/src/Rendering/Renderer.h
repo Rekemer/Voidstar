@@ -136,7 +136,7 @@ namespace Voidstar
 		void DrawQuad(std::vector<Vertex>& verticies);
 		void DrawTxt(vk::CommandBuffer commandBuffer, std::string_view str,glm::vec2 pos, std::map<unsigned char, Character> &Characters);
 		void BeginBatch();
-		void DrawBatch(vk::CommandBuffer& commandBuffer);
+		void DrawBatch(vk::CommandBuffer& commandBuffer, size_t offset = 0);
 		vk::Semaphore GetImageAvailable()
 		{
 			return m_ImageAvailableSemaphore;
