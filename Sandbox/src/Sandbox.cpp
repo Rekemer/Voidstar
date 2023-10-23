@@ -618,7 +618,9 @@ public:
 						if (isDragged && glm::length(GetMousePosition(camera) - leftEdgeBottom) < 15*2)
 						{
 							std::swap(LEFT_PAGE_COLOR, LEFT_NEW_PAGE_COLOR);
+							std::swap(textureIndicies[0], textureIndicies[2]);
 							std::swap(RIGHT_PAGE_COLOR, RIGHT_NEW_PAGE_COLOR);
+							std::swap(textureIndicies[1], textureIndicies[3]);
 						}
 						isClicked = false;
 						isDragged = false;
@@ -699,7 +701,7 @@ public:
 					leftPage[2].Color= LEFT_PAGE_COLOR;
 					leftPage[3].Position = { startPointX +width,startPointY +height,0 };
 					leftPage[3].Color= LEFT_PAGE_COLOR;
-					leftPage[0].textureID= leftPage[1].textureID= leftPage[2].textureID = leftPage[3].textureID =0;
+					leftPage[0].textureID= leftPage[1].textureID= leftPage[2].textureID = leftPage[3].textureID = textureIndicies[0];
 					std::vector<Vertex> rightPage{ 4 };
 					rightPage[0].Position = { width+startPointX,startPointY,0 };
 					rightPage[0].Color = RIGHT_PAGE_COLOR;
@@ -709,7 +711,7 @@ public:
 					rightPage[2].Color = RIGHT_PAGE_COLOR;
 					rightPage[3].Position = { glm::vec2{2*width + startPointX,startPointY + height},0 };
 					rightPage[3].Color = RIGHT_PAGE_COLOR;
-					rightPage[0].textureID= rightPage[1].textureID= rightPage[2].textureID = rightPage[3].textureID =1;
+					rightPage[0].textureID= rightPage[1].textureID= rightPage[2].textureID = rightPage[3].textureID = textureIndicies[1];
 
 					std::vector<Vertex> newLeftPage{ 4 };
 					//newLeftPage[0].Position = { 2 * width + startPointX,startPointY,0 };
@@ -721,7 +723,7 @@ public:
 					newLeftPage[2].Color = LEFT_NEW_PAGE_COLOR;
 					newLeftPage[3].Position = { newLeftPage[0].Position.x - width,newLeftPage[0].Position.y - height ,0 };
 					newLeftPage[3].Color = LEFT_NEW_PAGE_COLOR;
-					newLeftPage[0].textureID= newLeftPage[1].textureID= newLeftPage[2].textureID = newLeftPage[3].textureID =2;
+					newLeftPage[0].textureID= newLeftPage[1].textureID= newLeftPage[2].textureID = newLeftPage[3].textureID = textureIndicies[2];
 
 					std::vector<Vertex> newRightPage{ 4 };
 					newRightPage[0].Position = { width + startPointX,startPointY,-0.5 };
@@ -732,7 +734,7 @@ public:
 					newRightPage[2].Color = RIGHT_NEW_PAGE_COLOR;
 					newRightPage[3].Position = { glm::vec2{2 * width + startPointX,startPointY + height},-0.5 };
 					newRightPage[3].Color = RIGHT_NEW_PAGE_COLOR;
-					newRightPage[0].textureID= newRightPage[1].textureID= newRightPage[2].textureID = newRightPage[3].textureID =3;
+					newRightPage[0].textureID= newRightPage[1].textureID= newRightPage[2].textureID = newRightPage[3].textureID = textureIndicies[3];
 					
 
 					
@@ -1075,16 +1077,14 @@ public:
 				auto& renderCommandBuffer = Renderer::Instance()->GetRenderCommandBuffer(0);
 				auto& vkCommandBuffer = renderCommandBuffer.GetCommandBuffer();
 				vk::CommandBufferBeginInfo beginInfo = {};
-				vkCommandBuffer.begin(beginInfo);
+				
 				vk::ClearValue clearColor = { std::array<float, 4>{0.f, 0.f, 0.f, 1.0f} };
 
 
 				std::vector<vk::ClearValue> clearValues = { {clearColor} };
 
 				//glm::vec2 pos = { 20,20 };
-				std::string str = "Hello  sailor!\n how is it going?";
-				std::string str1 = "Here is page\ncurl rendering\n with vulkan!\nthe text is rendered\nwith vulkan too!";
-				std::vector<std::string> txt = { str,str1 };
+				
 				//str = R"(Mauris in euismod neque.\n
 				//	Class aptent taciti sociosqu ad litora torquent per conubia nostra,\n
 				//	per inceptos himenaeos. Curabitur id pellentesque ligula, quis eleifend dolor.\n
@@ -1109,9 +1109,12 @@ public:
 				vk::Rect2D scissors;
 				scissors.offset = vk::Offset2D{ (uint32_t)0,(uint32_t)0 };
 				scissors.extent = vk::Extent2D{ (uint32_t)viewportSize.first,(uint32_t)viewportSize.second };
-				Renderer::Instance()->BeginBatch();
+				auto fence = Renderer::Instance()->GetFence();
 				for (int i = 0; i <  m_PageFramebuffer.size(); i++)
 				{
+					device->GetDevice().waitForFences(fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
+					device->GetDevice().resetFences(fence);
+					vkCommandBuffer.begin(beginInfo);
 					renderCommandBuffer.BeginRenderPass(m_PageRenderPass, m_PageFramebuffer[i], vk::Extent2D{static_cast<uint32_t>(PageRenderWidth),
 					 static_cast<uint32_t>(PageRenderHeight)}, clearValues);
 					glm::vec2 pos = { 100,500 };
@@ -1125,47 +1128,44 @@ public:
 
 					vkCommandBuffer.setViewport(0, 1, &viewport);
 					vkCommandBuffer.setScissor(0, 1, &scissors);
+					Renderer::Instance()->BeginBatch();
 					Renderer::Instance()->DrawTxt(vkCommandBuffer, txt[i% txt.size()], pos, Characters);
-					//	Renderer::Instance()->DrawTxt(commandBuffer,"I love you!" ,2.f*pos, Characters);
 					size_t offset = 0;
-					if (i > 0)
-					{
-						offset = sizeof(Vertex) * 4 * txt[(i-1) % txt.size()].size();
-					}
 					Renderer::Instance()->DrawBatch(vkCommandBuffer, offset);
 
 					renderCommandBuffer.EndRenderPass();
+					vkCommandBuffer.end();
+					{
+						std::vector<vk::CommandBuffer> commandBuffers = { vkCommandBuffer };
+						auto& imageAvailable = Renderer::Instance()->GetImageAvailable();
+						
+						//vk::Semaphore waitSemaphores[] = { imageAvailable };
+						//vk::Semaphore signalSemaphores[] = { renderFiniishedSecond };
+
+						vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
+						vk::SubmitInfo submitInfo = {};
+
+						//submitInfo.waitSemaphoreCount = 1;
+						//submitInfo.pWaitSemaphores = waitSemaphores;
+						submitInfo.pWaitDstStageMask = waitStages;
+
+
+						submitInfo.commandBufferCount = commandBuffers.size();
+						submitInfo.pCommandBuffers = commandBuffers.data();
+
+						//submitInfo.signalSemaphoreCount = 1;
+						//submitInfo.pSignalSemaphores = signalSemaphores;
+						auto device = RenderContext::GetDevice();
+						//device->GetDevice().resetFences(fence);
+						device->GetGraphicsQueue().submit(submitInfo,fence);
+						
+					}
+
 				}
 
-				vkCommandBuffer.end();
+				
 
-				{
-					std::vector<vk::CommandBuffer> commandBuffers = { vkCommandBuffer };
-					auto& imageAvailable = Renderer::Instance()->GetImageAvailable();
-					//auto fence = Renderer::Instance()->GetFence();
-					//vk::Semaphore waitSemaphores[] = { imageAvailable };
-					//vk::Semaphore signalSemaphores[] = { renderFiniishedSecond };
-
-					vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
-					vk::SubmitInfo submitInfo = {};
-
-					//submitInfo.waitSemaphoreCount = 1;
-					//submitInfo.pWaitSemaphores = waitSemaphores;
-					submitInfo.pWaitDstStageMask = waitStages;
-
-
-					submitInfo.commandBufferCount = commandBuffers.size();
-					submitInfo.pCommandBuffers = commandBuffers.data();
-
-					//submitInfo.signalSemaphoreCount = 1;
-					//submitInfo.pSignalSemaphores = signalSemaphores;
-					auto device = RenderContext::GetDevice();
-					//device->GetDevice().resetFences(fence);
-					device->GetGraphicsQueue().submit(submitInfo);
-					device->GetDevice().waitIdle();
-					//device->GetDevice().waitForFences(fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
-					//device->GetDevice().resetFences(fence);
-				}
+				
 
 				std::vector<vk::DescriptorImageInfo> infos(PageAmount);
 				for (int i =0 ; i < PageAmount; i++)
@@ -1482,6 +1482,14 @@ private:
 	glm::vec4 greyColor = { 0.5,0.5,0.5,1 }; // new left
 	glm::vec4 blueColor = { 0.2,0.2,0.7,1 }; // new right
 	glm::vec2 m_Follow ;
+
+	std::string PageStr1= "Hello  sailor!\n how is it going?";
+	std::string PageStr2 = "Here is page\ncurl rendering\n with vulkan!\nthe text is rendered\nwith vulkan too!";
+	std::string PageStr3 = "This page rendering\nwas inspired by\n similiar effect in\n Divinity Original Sin games";
+	std::vector<std::string> txt = { PageStr1,PageStr2,PageStr3,PageStr1 };
+	std::vector<float> textureIndicies = { 0,1,2,3};
+
+
 
 };
 

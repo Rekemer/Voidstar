@@ -427,7 +427,6 @@ const int QUAD_AMOUNT = 700;
 		}
 		commandBuffer.bindIndexBuffer(m_QuadBufferBatchIndex->GetBuffer(), 0, m_QuadBufferBatchIndex->GetIndexType());
 		commandBuffer.drawIndexed(m_QuadIndex, 1, 0, 0, 0);
-		m_QuadIndex = 0;
 	
 	}
 
