@@ -459,7 +459,7 @@ const int QUAD_AMOUNT = 700;
 			if (e == '\n')
 			{
 				offset.x = pos.x;
-				pos.y -= 2*Character::lineSpacing/64.f;
+				pos.y -= 4*Character::lineSpacing/64.f;
 				continue;
 			}
 			else if (e == ' ')

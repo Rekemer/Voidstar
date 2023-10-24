@@ -32,7 +32,10 @@ namespace Voidstar
 		static SPtr<Image> CreateImage(std::string path);
 		static SPtr<Image> CreateCubemap(std::vector<std::string> pathes);
 
-		static SPtr<Image> CreateEmptyImage( int width, int height,vk::Format format, vk::ImageUsageFlags usage);
+		static SPtr<Image> CreateEmptyImage( int width, int height,vk::Format format,
+			vk::ImageUsageFlags usage,
+			vk::SampleCountFlagBits samples = vk::SampleCountFlagBits::e1,
+			vk::Filter minFilter = vk::Filter::eNearest, vk::Filter magFilter = vk::Filter::eNearest);
 		static SPtr<Image> CreateEmpty3DImage(int width, int height, int depth, vk::Format format);
 		~Image();
 		void Bind();
@@ -50,6 +53,14 @@ namespace Voidstar
 		void SetFormat(vk::Format format)
 		{
 			m_Format = format;
+		}
+		void SetView(vk::ImageView view)
+		{
+			m_ImageView= view;
+		}
+		void SetMemory(vk::DeviceMemory memory)
+		{
+			m_ImageMemory = memory;
 		}
 		int GetWidth()
 		{

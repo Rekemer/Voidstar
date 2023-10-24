@@ -286,13 +286,20 @@ public:
 
 				//Define a general attachment, with its load/store operations
 				vk::AttachmentDescription colorAttachment = AttachmentDescription(swapchainFormat,
-					vk::SampleCountFlagBits::e1,vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore,
+					samples,vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore,
 					vk::AttachmentLoadOp::eDontCare, vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined,
-					vk::ImageLayout::eShaderReadOnlyOptimal);
+					vk::ImageLayout::eColorAttachmentOptimal);
+				vk::AttachmentDescription colorAttachmentResolve =
+					AttachmentDescription(swapchainFormat, vk::SampleCountFlagBits::e1,
+						vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
+						vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined, vk::ImageLayout::eShaderReadOnlyOptimal);
+
 
 				vk::AttachmentReference refColor = { 0,vk::ImageLayout::eColorAttachmentOptimal };
-				builder.AddSubpass(SubpassDescription(1, &refColor));
+				vk::AttachmentReference refResolve = { 1,vk::ImageLayout::eColorAttachmentOptimal };
+				builder.AddSubpass(SubpassDescription(1, &refColor,&refResolve));
 				builder.AddAttachment({ colorAttachment,refColor });
+				builder.AddAttachment({ colorAttachmentResolve,refResolve });
 				vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eNone, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
 				builder.AddSubpassDependency(dependency0);
 				m_PageRenderPass = builder.Build(*device);
@@ -409,7 +416,7 @@ public:
 
 				PipelineBuilder builder;
 				builder.SetDevice(device->GetDevice());
-				builder.SetSamples(vk::SampleCountFlagBits::e1);
+				builder.SetSamples(samples);
 				builder.AddDescriptorLayouts(pipelineLayouts);
 				builder.AddAttributeDescription(attributeDescriptions);
 					builder.AddBindingDescription(bindings);
@@ -423,7 +430,7 @@ public:
 				builder.AddImageFormat(vk::Format::eB8G8R8A8Unorm);
 				builder.SetRenderPass(m_PageRenderPass);
 
-
+				builder.SetSampleShading(VK_TRUE);
 
 				m_PagePipeline = builder.Build();
 
@@ -500,7 +507,7 @@ public:
 						builder.SetPolygoneMode(Renderer::Instance()->GetPolygonMode());
 						builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
 						builder.AddShader(BASE_SPIRV_OUTPUT + "default.spvV", vk::ShaderStageFlagBits::eVertex);
-						builder.AddShader(BASE_SPIRV_OUTPUT + "page.spvF", vk::ShaderStageFlagBits::eFragment);
+						builder.AddShader(BASE_SPIRV_OUTPUT + "leftNewPage.spvF", vk::ShaderStageFlagBits::eFragment);
 						builder.SetSubpassAmount(0);
 						builder.AddExtent(swapChainExtent);
 						builder.AddImageFormat(swapchainFormat);
@@ -514,7 +521,7 @@ public:
 						m_NewPagePipeline = builder.Build();
 						builder.DestroyShaderModules();
 						builder.AddShader(BASE_SPIRV_OUTPUT + "default.spvV", vk::ShaderStageFlagBits::eVertex);
-						builder.AddShader(BASE_SPIRV_OUTPUT + "bookShadow.spvF", vk::ShaderStageFlagBits::eFragment);
+						builder.AddShader(BASE_SPIRV_OUTPUT + "rightNewPage.spvF", vk::ShaderStageFlagBits::eFragment);
 						builder.SetStencilRefNumber(2);
 						builder.StencilTestOp(vk::CompareOp::eEqual, vk::StencilOp::eKeep, vk::StencilOp::eReplace, vk::StencilOp::eKeep);
 						builder.SetBlendOp(vk::BlendOp::eAdd, vk::BlendFactor::eOne,vk::BlendFactor::eZero);
@@ -625,6 +632,7 @@ public:
 						isClicked = false;
 						isDragged = false;
 						m_Follow = rightEdgeBottom;
+						UpdateUniformBuffer(frameIndex,camera);
 					}
 					m_Follow = glm::clamp(m_Follow, leftEdgeBottom, glm::vec2{ rightEdgeBottom.x-0,center.y-40});
 
@@ -636,14 +644,16 @@ public:
 					//t1
 					auto bisectorTangent = t0.x -glm::tan(bisectorAngle) * (rightEdgeBottom.y - t0.y);
 					//bisectorTangent = glm::max(bisectorTangent, spineBottom.x);
-					if (bisectorTangent < spineBottom.x) bisectorTangent = spineBottom.x;
-					if (bisectorTangent > rightEdgeBottom.x) bisectorTangent = rightEdgeBottom.x;
+					if (bisectorTangent < spineBottom.x) bisectorTangent = spineBottom.x-2;
+					if (bisectorTangent > rightEdgeBottom.x) bisectorTangent = rightEdgeBottom.x -2;
 					glm::vec2 t1;
 					glm::vec2 t2;
 					t1.x = bisectorTangent;
 					t1.y = rightEdgeBottom.y;
 					t2.x = t0.x;
 					t2.y = t1.y;
+					t1 = glm::clamp(t1, spineBottom, rightEdgeBottom);
+					t2 = glm::clamp(t2, spineBottom, rightEdgeBottom);
 					const auto PI2 = 3.14f / 2.f;
 					const auto PI = 3.14f;
 					auto deltaXPage= t1.x - m_Follow.x;
@@ -658,10 +668,9 @@ public:
 					{
 						pageAngle = 0;
 					}
-					t1 = glm::clamp(t1, spineBottom, rightEdgeBottom);
-					t2 = glm::clamp(t2, spineBottom, rightEdgeBottom);
 					pageAngle = glm::clamp(pageAngle, 0.f, PI);
-
+					
+					//std::cout << "Follow" << m_Follow.x << " " << m_Follow.y << std::endl;
 					//std::cout << "t1 " << t1.x << " " << t1.y << std::endl;
 					//pageAngle = -(3.14);
 					//std::cout << "dx " << deltaXPage << std::endl;
@@ -869,7 +878,7 @@ public:
 						}
 						
 					};
-					vk::ClearValue clearColor = { std::array<float, 4>{0.1f, .3f, 0.1f, 1.0f} };
+					vk::ClearValue clearColor = { std::array<float, 4>{137.f/255.f, 189.f / 255.f, 199.f / 255.f, 1.0f} };
 
 					vk::ClearValue depthClear;
 					uint32_t stencil0 = 3;
@@ -1003,12 +1012,34 @@ public:
 
 			m_PagesImages.resize(PageAmount);
 			m_PageFramebuffer.resize(PageAmount);
+			m_PagesImageMSAA.resize(PageAmount);
 			auto device = RenderContext::GetDevice();
+			auto samples = device->GetSamples();
 			for (int i = 0; i < m_PagesImages.size(); i++)
 			{
 				auto usage = vk::ImageUsageFlagBits::eColorAttachment  |vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eSampled;
-				m_PagesImages[i] = Image::CreateEmptyImage(PageRenderWidth, PageRenderHeight,vk::Format::eB8G8R8A8Unorm, usage);
-				std::vector<vk::ImageView>attachments = { m_PagesImages[i]->GetImageView() };
+				m_PagesImages[i] = Image::CreateEmptyImage(PageRenderWidth, PageRenderHeight,vk::Format::eB8G8R8A8Unorm, usage, vk::SampleCountFlagBits::e1,vk::Filter::eLinear, vk::Filter::eLinear);
+				
+				
+				ImageSpecs specs;
+				auto extent = vk::Extent2D(PageRenderWidth, PageRenderHeight);
+				auto swapchainFormat = vk::Format::eB8G8R8A8Unorm;
+				specs.width = extent.width;
+				specs.height = extent.height;
+				specs.tiling = vk::ImageTiling::eOptimal;
+				specs.usage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransientAttachment;
+				specs.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+				specs.format = swapchainFormat;
+				auto samples = RenderContext::GetDevice()->GetSamples();
+				auto msaaImage = Image::CreateVKImage(specs, samples);
+				auto msaaImageMemory = Image::CreateMemory(msaaImage, specs);
+				auto msaaImageView = Image::CreateImageView(msaaImage, swapchainFormat, vk::ImageAspectFlagBits::eColor);
+				m_PagesImageMSAA[i] = CreateSPtr<Image>();
+				m_PagesImageMSAA[i]->SetFormat(swapchainFormat);
+				m_PagesImageMSAA[i]->SetView(msaaImageView);
+				m_PagesImageMSAA[i]->SetMemory(msaaImageMemory);
+				
+				std::vector<vk::ImageView>attachments = { m_PagesImageMSAA[i]->GetImageView(),m_PagesImages[i]->GetImageView()};
 				vk::FramebufferCreateInfo framebufferInfo;
 				framebufferInfo.flags = vk::FramebufferCreateFlags();
 				framebufferInfo.renderPass = m_PageRenderPass;
@@ -1081,7 +1112,7 @@ public:
 				vk::ClearValue clearColor = { std::array<float, 4>{0.f, 0.f, 0.f, 1.0f} };
 
 
-				std::vector<vk::ClearValue> clearValues = { {clearColor} };
+				std::vector<vk::ClearValue> clearValues = { {clearColor,clearColor} };
 
 				//glm::vec2 pos = { 20,20 };
 				
@@ -1117,7 +1148,7 @@ public:
 					vkCommandBuffer.begin(beginInfo);
 					renderCommandBuffer.BeginRenderPass(m_PageRenderPass, m_PageFramebuffer[i], vk::Extent2D{static_cast<uint32_t>(PageRenderWidth),
 					 static_cast<uint32_t>(PageRenderHeight)}, clearValues);
-					glm::vec2 pos = { 100,500 };
+					glm::vec2 pos = { 100-40,500 };
 
 
 					vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PagePipeline->GetLayout(), 0, m_DescriptorSets[0], nullptr);
@@ -1303,7 +1334,7 @@ public:
 		{
 			Log::GetLog()->error("ERROR::FREETYPE: Failed to load font {0}", str );
 		}
-		auto error = FT_Set_Pixel_Sizes(face, 0, 48*2.5);
+		auto error = FT_Set_Pixel_Sizes(face, 0, 48*2);
 
 
 
@@ -1443,6 +1474,7 @@ private:
 	vk::DescriptorSet m_DescriptorSetFont;
 		
 	std::vector<SPtr<Image>> m_PagesImages;
+	std::vector<SPtr<Image>> m_PagesImageMSAA;
 	std::vector<UPtr<Buffer>> m_UniformBuffers;
 	std::vector<void*> uniformBuffersMapped;
 	
@@ -1477,16 +1509,17 @@ private:
 
 	bool isClicked = false;
 	bool isDragged = false;
-	glm::vec4 whiteColor = { 0.7,0.7,0.7,1 }; // left
+	glm::vec4 whiteColor = { 0.2,0.7,0.2,1 }; // left
 	glm::vec4 redColor = { 0.6,0,0,1 }; // right
-	glm::vec4 greyColor = { 0.5,0.5,0.5,1 }; // new left
+	glm::vec4 greyColor = { 0.7,0.4,0.7,1 }; // new left
 	glm::vec4 blueColor = { 0.2,0.2,0.7,1 }; // new right
 	glm::vec2 m_Follow ;
 
-	std::string PageStr1= "Hello  sailor!\n how is it going?";
-	std::string PageStr2 = "Here is page\ncurl rendering\n with vulkan!\nthe text is rendered\nwith vulkan too!";
-	std::string PageStr3 = "This page rendering\nwas inspired by\n similiar effect in\n Divinity Original Sin games";
-	std::vector<std::string> txt = { PageStr1,PageStr2,PageStr3,PageStr1 };
+	std::string PageStr1= "Hello, traveller!\nHow is it going?\nHave you found\nwhat you seek?\n\nAnyway...";
+	std::string PageStr2 = "Here is page\ncurl rendering\n with Vulkan!\nThe text is rendered\nwith Vulkan too!";
+	std::string PageStr3 = "This page rendering\nwas inspired by\nsimiliar effect in beloved\nDivinity: Original Sin\nGames";
+	std::string PageStr4 = "May the force\nbe with you!\nHopefully this book\nenriched your potential!";
+	std::vector<std::string> txt = { PageStr1,PageStr2,PageStr3,PageStr4 };
 	std::vector<float> textureIndicies = { 0,1,2,3};
 
 

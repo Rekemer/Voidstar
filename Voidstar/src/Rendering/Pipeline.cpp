@@ -351,7 +351,8 @@ namespace Voidstar
 		//Multisampling
 		vk::PipelineMultisampleStateCreateInfo multisampling = {};
 		multisampling.flags = vk::PipelineMultisampleStateCreateFlags();
-		multisampling.sampleShadingEnable = VK_FALSE;
+		multisampling.sampleShadingEnable = m_SampleShadingEnable;
+		multisampling.minSampleShading = m_MinSampleShading;
 		multisampling.rasterizationSamples = m_Samples;
 		pipelineInfo.pMultisampleState = &multisampling;
 

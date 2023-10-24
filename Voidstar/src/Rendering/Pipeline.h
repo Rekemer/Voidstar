@@ -90,6 +90,10 @@ namespace Voidstar
 			m_BlendSrc = src;
 			m_BlendDst = dst;
 		}
+		void SetSampleShading(vk::Bool32 state)
+		{
+			m_SampleShadingEnable = state; // enable sample shading in the pipeline
+		}
 		void DestroyShaderModules();
 		UPtr<Pipeline> Build();
 		~PipelineBuilder();
@@ -121,6 +125,8 @@ namespace Voidstar
 		int m_SubpassNumber;
 
 		vk::Bool32 m_BlendEnable = VK_TRUE;
+		vk::Bool32 m_SampleShadingEnable = VK_FALSE;
+		float m_MinSampleShading = .2f;
 		vk::BlendOp m_BlendOp = vk::BlendOp::eAdd;
 		vk::BlendFactor m_BlendSrc = vk::BlendFactor::eSrcAlpha;
 		vk::BlendFactor m_BlendDst = vk::BlendFactor::eOneMinusSrcAlpha;

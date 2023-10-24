@@ -380,7 +380,7 @@ namespace Voidstar
 
 		return image;
 	}
-	SPtr<Image> Image::CreateEmptyImage(int width, int height, vk::Format format, vk::ImageUsageFlags usage)
+	SPtr<Image> Image::CreateEmptyImage(int width, int height, vk::Format format, vk::ImageUsageFlags usage,vk::SampleCountFlagBits samples, vk::Filter minFilter, vk::Filter magFilter)
 	{
 		auto image = CreateUPtr<Image>();
 		image->m_CommandPool = Renderer::Instance()->GetCommandPoolManager()->GetFreePool();
@@ -399,7 +399,7 @@ namespace Voidstar
 		specs.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
 		image->m_Format = specs.format;
 		try {
-			image->m_Image = CreateVKImage(specs, vk::SampleCountFlagBits::e1);
+			image->m_Image = CreateVKImage(specs, samples);
 		}
 		catch (vk::SystemError err)
 		{
@@ -458,8 +458,8 @@ namespace Voidstar
 	*/
 		vk::SamplerCreateInfo samplerInfo;
 		samplerInfo.flags = vk::SamplerCreateFlags();
-		samplerInfo.minFilter = vk::Filter::eNearest;
-		samplerInfo.magFilter = vk::Filter::eNearest;
+		samplerInfo.minFilter = minFilter;
+		samplerInfo.magFilter = magFilter;
 		samplerInfo.addressModeU = vk::SamplerAddressMode::eClampToEdge;
 		samplerInfo.addressModeV = vk::SamplerAddressMode::eClampToEdge;
 		samplerInfo.addressModeW = vk::SamplerAddressMode::eRepeat;
