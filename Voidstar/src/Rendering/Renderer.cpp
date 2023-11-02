@@ -451,7 +451,8 @@ const int QUAD_AMOUNT = 700;
 	};
 	void Renderer::DrawTxt(vk::CommandBuffer commandBuffer, std::string_view str, glm::vec2 pos, std::map< unsigned char, Character>& characters)
 	{
-		float scale = 0.5;
+		float scale = 1;
+		float scaleX = 1;
 		auto offset = pos;
 		for (auto e : str)
 		{
@@ -459,12 +460,12 @@ const int QUAD_AMOUNT = 700;
 			if (e == '\n')
 			{
 				offset.x = pos.x;
-				pos.y -= 4*Character::lineSpacing/64.f;
+				pos.y -= 3*Character::lineSpacing/64.f;
 				continue;
 			}
 			else if (e == ' ')
 			{
-				offset.x += 15;
+				offset.x += 5;
 				continue;
 
 			}
@@ -487,11 +488,11 @@ const int QUAD_AMOUNT = 700;
 		
 		m_BatchQuad++;
 		// right bottom
-		m_BatchQuad->Position = glm::vec3{ offset.x + characterData.Size.x * scale ,offset.y,0 };
+		m_BatchQuad->Position = glm::vec3{ offset.x + characterData.Size.x * scaleX ,offset.y,0 };
 		m_BatchQuad->UV = { characterData.maxUv.x,characterData.maxUv.y };
 		m_BatchQuad++;
 		// right top
-		m_BatchQuad->Position = glm::vec3{ offset.x + characterData.Size.x * scale,offset.y + characterData.Size.y * scale,0 };
+		m_BatchQuad->Position = glm::vec3{ offset.x + characterData.Size.x * scaleX,offset.y + characterData.Size.y * scale,0 };
 		m_BatchQuad->UV = { characterData.maxUv.x,characterData.minUv.y };
 		m_BatchQuad++;
 		
@@ -502,7 +503,7 @@ const int QUAD_AMOUNT = 700;
 		m_BatchQuad++;
 		
 		
-		offset.x += characterData.Advance / 64.f* scale;
+		offset.x += characterData.Advance / 64.f* scaleX;
 		m_QuadIndex += 6;
 		}
 	}

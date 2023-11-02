@@ -15,7 +15,7 @@ using namespace Voidstar;
 
 
 std::map<unsigned char, Character> Characters;
-const float PageRenderWidth = 256.f;
+const float PageRenderWidth = 400.f;
 const float PageRenderHeight = 512.f;
 const int PageAmount = 4;
 
@@ -430,7 +430,7 @@ public:
 				builder.AddImageFormat(vk::Format::eB8G8R8A8Unorm);
 				builder.SetRenderPass(m_PageRenderPass);
 
-				builder.SetSampleShading(VK_TRUE);
+				//builder.SetSampleShading(VK_TRUE);
 
 				m_PagePipeline = builder.Build();
 
@@ -558,7 +558,7 @@ public:
 		
 		auto submitRenderCommands = [&](size_t frameIndex,Camera& camera, vk::Semaphore& imageAvailable, vk::Fence& fence)
 		{
-			const auto scale = glm::vec3(glm::vec3(250, 300, 0));
+			const auto scale = glm::vec3(glm::vec3(400, 512, 0));
 			
 #define LEFT_PAGE_COLOR whiteColor
 #define RIGHT_PAGE_COLOR redColor
@@ -566,8 +566,8 @@ public:
 #define LEFT_NEW_PAGE_COLOR greyColor
 			const float width = scale.x;
 			const float height = scale.y;
-			const float startPointX = 150;
-			const float startPointY = 200;
+			const float startPointX = 150*2.f;
+			const float startPointY = 200 ;
 			
 			const glm::vec2 leftEdgeBottom = { startPointX  ,startPointY };
 			const glm::vec2 spineTop = { startPointX + width ,startPointY + height };
@@ -791,8 +791,8 @@ public:
 
 					std::vector<Vertex> clipPage{ 4 };
 					
-					float clipHeight = 380;
-					float clipWidth  = 350;
+					float clipHeight = 600;
+					float clipWidth  = 600;
 					auto modifiedBlueColor = blueColor;
 					modifiedBlueColor.a = 0;
 					clipPage[0].Position = { t1.x - clipWidth  ,t1.y + clipHeight ,0 };
@@ -1096,7 +1096,7 @@ public:
 				auto camera = *GetCamera();
 				auto cameraView = camera.GetView();
 				auto cameraProj1 = camera.GetProj();
-				auto orth = glm::ortho(0.f,600.f,600.f,0.f);
+				auto orth = glm::ortho(0.f, PageRenderWidth, PageRenderHeight,0.f);
 				auto cameraProj = orth;
 				ubo.playerPos = glm::vec4{ camera.GetPosition(),0 };
 				ubo.playerPos = glm::vec4{ m_Follow,0,0 };
@@ -1148,7 +1148,7 @@ public:
 					vkCommandBuffer.begin(beginInfo);
 					renderCommandBuffer.BeginRenderPass(m_PageRenderPass, m_PageFramebuffer[i], vk::Extent2D{static_cast<uint32_t>(PageRenderWidth),
 					 static_cast<uint32_t>(PageRenderHeight)}, clearValues);
-					glm::vec2 pos = { 100-40,500 };
+					glm::vec2 pos = { 20, 400};
 
 
 					vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PagePipeline->GetLayout(), 0, m_DescriptorSets[0], nullptr);
@@ -1334,7 +1334,7 @@ public:
 		{
 			Log::GetLog()->error("ERROR::FREETYPE: Failed to load font {0}", str );
 		}
-		auto error = FT_Set_Pixel_Sizes(face, 0, 48*2);
+		auto error = FT_Set_Pixel_Sizes(face, 0, 40);
 
 
 
@@ -1349,7 +1349,7 @@ public:
 		for (unsigned char c = 0; c < 128; c++)
 		{
 			// load character glyph 
-			if (FT_Load_Char(face, c, FT_LOAD_RENDER) != 0)
+			if (FT_Load_Char(face, c, FT_LOAD_RENDER ) != 0)
 			{
 				Log::GetLog()->error("RROR::FREETYTPE: Failed to load Glyph {}", c);
 			}
@@ -1517,8 +1517,8 @@ private:
 
 	std::string PageStr1= "Hello, traveller!\nHow is it going?\nHave you found\nwhat you seek?\n\nAnyway...";
 	std::string PageStr2 = "Here is page\ncurl rendering\n with Vulkan!\nThe text is rendered\nwith Vulkan too!";
-	std::string PageStr3 = "This page rendering\nwas inspired by\nsimiliar effect in beloved\nDivinity: Original Sin\nGames";
-	std::string PageStr4 = "May the force\nbe with you!\nHopefully this book\nenriched your potential!";
+	std::string PageStr3 = "This page rendering\nwas inspired by\nsimiliar effect in\n beloved\nDivinity: Original\n Sin Games";
+	std::string PageStr4 = "May the force\nbe with you!\nHopefully this book\nenriched your\n potential!";
 	std::vector<std::string> txt = { PageStr1,PageStr2,PageStr3,PageStr4 };
 	std::vector<float> textureIndicies = { 0,1,2,3};
 

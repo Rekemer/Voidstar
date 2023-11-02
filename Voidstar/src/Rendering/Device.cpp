@@ -107,7 +107,7 @@ namespace Voidstar
 
 		deviceFeatures.fillModeNonSolid = true;
 		deviceFeatures.tessellationShader = true;
-		deviceFeatures.sampleRateShading = true;
+		//deviceFeatures.sampleRateShading = true;
 		std::vector<const char*> enabledLayers;
 
 		enabledLayers.push_back("VK_LAYER_KHRONOS_validation");

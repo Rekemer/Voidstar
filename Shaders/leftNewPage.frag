@@ -27,14 +27,14 @@ void main()
     vec3 tex = texture(Text[int(texIndex)],modifiedUv).xyz;
     outColor = color;
     outColor = vec4(tex+ color.xyz,color.a);
-    float leftX = 150;
+    float leftX = 150*2.f;
     float leftY = 200;
-    float width = 250;
+    float width = 400;
     float centerPos = leftX + width;
     float distance = (length(ubo.playerPos.xy - vec2(leftX,leftY)))/(centerPos+width);
     distance = clamp(distance,0,1);
     distance = smoothstep(0,1,distance);
-    float tt = (length(centerPos - fragPos.x )+40+1000*distance)/(width/2);
+    float tt = (length(centerPos - fragPos.x )+40+10000*distance)/(width/2);
     tt = clamp(tt,0,1);
     vec2 ttt = invLerp(vec2(leftX,leftY),vec2(leftX + width*2,leftY), fragPos);
     ttt = clamp(ttt,vec2(0),vec2(1));

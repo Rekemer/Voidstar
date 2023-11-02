@@ -66,6 +66,7 @@ namespace Voidstar
         float zoom = 1000;
         float aspectRatio = 9.f/16.f;
         m_Proj = glm::ortho(0.f, zoom,zoom*aspectRatio,0.f);
+        m_Proj = glm::ortho(0.f, 16.f*90, 9.f * 90,0.f);
 
     }
 

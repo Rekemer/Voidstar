@@ -25,8 +25,8 @@ void main()
     vec3 tex = texture(Text[int(texIndex)],modifiedUv).xyz;
     outColor = color;
     outColor = vec4(tex+ color.xyz,color.a);
-    float leftX = 150;
-    float width = 250;
+    float leftX = 150*2.f;
+    float width = 400;
     float centerPos = leftX + width;
     float tt = (length(centerPos - fragPos.x)+40)/(width/2.f);
     tt = clamp(0,1,tt);

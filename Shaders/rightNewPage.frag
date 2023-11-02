@@ -28,8 +28,8 @@ float scale = 100;
 
 void main() 
 {
-    float leftX = 150;
-    float width = 250;
+    float leftX = 150*2.f;
+    float width = 400;
     float centerPos = leftX + width;
     
     float distance = length(ubo.playerPos.x - fragPos.x)/300.f;
