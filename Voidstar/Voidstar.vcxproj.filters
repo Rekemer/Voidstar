@@ -45,6 +45,12 @@
     <ClInclude Include="src\Quadtree\Quadtree.h">
       <Filter>src\Quadtree</Filter>
     </ClInclude>
+    <ClInclude Include="src\Rendering\Binder.h">
+      <Filter>src\Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Rendering\BinderHelp.h">
+      <Filter>src\Rendering</Filter>
+    </ClInclude>
     <ClInclude Include="src\Rendering\Buffer.h">
       <Filter>src\Rendering</Filter>
     </ClInclude>
@@ -72,10 +78,16 @@
     <ClInclude Include="src\Rendering\IndexBuffer.h">
       <Filter>src\Rendering</Filter>
     </ClInclude>
+    <ClInclude Include="src\Rendering\Initializers.h">
+      <Filter>src\Rendering</Filter>
+    </ClInclude>
     <ClInclude Include="src\Rendering\Instance.h">
       <Filter>src\Rendering</Filter>
     </ClInclude>
     <ClInclude Include="src\Rendering\Model.h">
+      <Filter>src\Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Rendering\Pipeline.h">
       <Filter>src\Rendering</Filter>
     </ClInclude>
     <ClInclude Include="src\Rendering\RenderContext.h">
@@ -105,10 +117,6 @@
     <ClInclude Include="src\Window.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="src\Rendering\Pipeline.h" />
-    <ClInclude Include="src\Rendering\Initializers.h" />
-    <ClInclude Include="src\Rendering\Binder.h" />
-    <ClInclude Include="src\Rendering\BinderHelp.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Dependencies\Tracy\public\TracyClient.cpp">
@@ -162,6 +170,9 @@
     <ClCompile Include="src\Rendering\Model.cpp">
       <Filter>src\Rendering</Filter>
     </ClCompile>
+    <ClCompile Include="src\Rendering\Pipeline.cpp">
+      <Filter>src\Rendering</Filter>
+    </ClCompile>
     <ClCompile Include="src\Rendering\RenderContext.cpp">
       <Filter>src\Rendering</Filter>
     </ClCompile>
@@ -174,6 +185,5 @@
     <ClCompile Include="src\Window.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="src\Rendering\Pipeline.cpp" />
   </ItemGroup>
 </Project>

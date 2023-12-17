@@ -156,64 +156,8 @@ void main()
     vec4 noise_1 =1-texture(u_Noise1,uv*.0025); 
     vec4 selectedShape =texture(u_Selected,uv); 
   
-  
-//float maxLen = length(vec2(100,100));
-  //  float len = length(((quadNumber)-(indexUv)))/(maxLen*1.);
-    float indexLen = length(((quadNumber)-(indexUv)));
-
-
-    
-   
-
-    
-   vec3 balls = meatBalls(scaledUv/20);
-   // outColor.xyz = balls;
-   // outColor.xyz = balls;
-   // outColor.a = 1;
- 
-     // Tile the space
-    vec2 i_st = indexUv;
-    vec2 f_st = fractedUv;
-
-    vec3 m_dist = vec3(1);  // minimum distance
-     const float circleAmount = 120.f;
-    for (int j= -1; j <=1; j++ ) {
-
-        for (int i= -1; i <= 1; i++ ) {
-            // Neighbor place in the grid
-            vec2 neighbor = vec2(float(i),float(j));
-                // Random position from current + neighbor place in the grid
-                vec2 point = random2(i_st + neighbor);
-                // Animate the offset
-                // offset = 0.5 + 0.5*sin(u_time + 6.2831*offset);
-                point =  0.5 + 0.5*sin(ubo.time*1000 + 6.2831*point);
-                // Position of the cell
-                vec2 pos = neighbor + point - f_st;
-
-                // Cell distance
-                float dist = length(pos);
-
-                // Metaball it!
-                //m_dist = min(m_dist, m_dist*dist)*(1-selectedShape.x)*(1-noise_1.x);
-                m_dist = min(m_dist, m_dist*dist)* (1 - selectedShape.xyz) ;
-            
-        }
-    }   
-    vec4 shape = selectedShape;
-    float randomDispl =gradientNoise(uv*20); 
-
-      outColor = shape;
-     //outColor = vec4(randomDispl ,randomDispl ,randomDispl ,1);
-      //m_dist = m_dist+
-      vec4 fillColor = vec4(0,0,1,1);
-      vec3 res = step(vec3(0.0425),m_dist);
-     // res = bicubic(scaledUv);
-      outColor =vec4(vec3(res),1);
-     // outColor =vec4(uv,0,1);
-      //outColor = fillColor*(1-selectedShape);
-      //outColor= noise_1;
-      outColor.a = 1;
     outColor.xyz = 1- selectedShape.xyz;
+    outColor.a =  1;
 
 
 }

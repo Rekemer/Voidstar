@@ -63,7 +63,7 @@ namespace Voidstar
 	std::string BASE_SHADER_PATH = "../Shaders/";
 	std::string BASE_RES_PATH = "res";
 	//const std::string SPIRV_COMPILER_PATH = "C:/VulkanSDK/1.3.216.0/Bin/glslc.exe";
-	const std::string SPIRV_COMPILER_PATH = "C:/VulkanSDK/1.3.216.0/Bin/glslangvalidator.exe";
+	const std::string SPIRV_COMPILER_PATH = "C:/VulkanSDK/1.3.268.0/Bin/glslangvalidator.exe";
 	std::string BASE_SPIRV_OUTPUT = BASE_SHADER_PATH + "Binary/";
 #define INSTANCE_COUNT 4096
 #define ZEROPOS 1
