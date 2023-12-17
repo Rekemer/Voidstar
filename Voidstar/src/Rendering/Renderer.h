@@ -10,7 +10,7 @@
 #include<variant>
 #include<map>
 #include"Font.h"
-
+#include <functional>
 
 
 
@@ -20,13 +20,20 @@ namespace Voidstar
 {
 
 
-	
+	enum class ShaderType : uint32_t
+	{
+		VERTEX,
+		FRAGMENT,
+		COMPUTE,
+		TESS_CONTROL,
+		TESS_EVALUATION
+	};
 
 
 	inline std::string BASE_SHADER_PATH = "../Shaders/";
 	inline std::string BASE_RES_PATH = "res";
 	//const std::string SPIRV_COMPILER_PATH = "C:/VulkanSDK/1.3.216.0/Bin/glslc.exe";
-	const std::string SPIRV_COMPILER_PATH = "C:/VulkanSDK/1.3.216.0/Bin/glslangvalidator.exe";
+	const std::string SPIRV_COMPILER_PATH = "C:/VulkanSDK/1.3.268.0/Bin/glslangvalidator.exe";
 	inline std::string BASE_SPIRV_OUTPUT = BASE_SHADER_PATH + "Binary/";
 
 	class Window;
@@ -96,6 +103,7 @@ namespace Voidstar
 			Bindings;
 		typedef std::unordered_map<std::pair<int, PipelineType>, int, EnumClassHash>
 			Sets;
+
 	public:
 		void Init(size_t screenWidth, size_t screenHeight, std::shared_ptr<Window> window, Application* app );
 		void InitImGui( );
@@ -103,6 +111,7 @@ namespace Voidstar
 		static Renderer* Instance();
 		void Render(float deltaTime,Camera& camera);
 		void UserInit();
+		void CompileShader(std::string_view path, ShaderType type);
 		CommandPoolManager* GetCommandPoolManager()
 		{
 			return m_CommandPoolManager.get();
@@ -240,6 +249,8 @@ namespace Voidstar
 		std::unordered_map<std::pair<int, PipelineType>, std::variant<vk::DescriptorSet, std::vector<vk::DescriptorSet> >, EnumClassHash> m_Sets;
 		Sets m_SetsAmount;
 		Callables m_UserFunctions;
+
+		
 	
 	};
 

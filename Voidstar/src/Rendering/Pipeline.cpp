@@ -11,7 +11,7 @@ namespace Voidstar
 	static vk::PipelineLayout MakePipelineLayout(vk::Device device, std::vector<vk::DescriptorSetLayout> layout);
 
 	
-	UPtr<Pipeline> Pipeline::CreateComputePipeline(std::string computeShader, std::vector<vk::DescriptorSetLayout>& layouts)
+	UPtr<Pipeline> Pipeline::CreateComputePipeline(std::string_view computeShader, std::vector<vk::DescriptorSetLayout>& layouts)
 	{
 		UPtr<Pipeline> pipeline = CreateUPtr<Pipeline>();
 

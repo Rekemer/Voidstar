@@ -163,162 +163,9 @@ const int QUAD_AMOUNT = 700;
 
 
 	
-	std::string GetFileNameWithoutExtension(const std::string& filepath)
-	{
-		size_t extensionIndex = filepath.find_last_of('.');
-		return filepath.substr(0, extensionIndex);
-	}
-
-	std::string CreateCommand(std::string shader, const char* extension, std::string& shaderPath)
-	{
-		auto name = GetFileNameWithoutExtension(shader);
-
-		std::string shaderOutput = BASE_SPIRV_OUTPUT + name.c_str() + extension;
-		std::string command = SPIRV_COMPILER_PATH + " -V " + shaderPath + " -o " + shaderOutput;
-		return command;
-	}
-
-	void CompileAllShaders()
-	{
-		for (auto& shader : std::filesystem::directory_iterator(BASE_SHADER_PATH))
-		{
-			bool isDirectory = shader.is_directory();
-			const std::string& filenameStr = shader.path().filename().string();
-			bool isTesselationFolder = isDirectory && filenameStr.compare("Tesselation") == 0;
-			bool isComputeFolder = isDirectory && filenameStr.compare("Compute") == 0;
-			// vertex and fragment shaders
-			if (!isDirectory)
-			{
-				auto extension = shader.path().extension().string();
-				auto shaderString = shader.path().filename().string();
-				std::string shaderPath = shader.path().string();
-
-				std::string command = "";
-				if (extension == ".vert") {
-					// Handle vertex shader
-					const char* extension = ".spvV";
-					command = CreateCommand(shaderString, extension, shaderPath);
-				}
-				else if (extension == ".frag") {
-					const char* extension = ".spvF";
-					command = CreateCommand(shaderString, extension, shaderPath);
-				}
-				if (command != "")
-				{
-					int result = std::system(command.c_str());
-					if (result != 0)
-					{
-						Log::GetLog()->error("shader {0} is not compiled!", shaderString);
-					}
-				}
-			}
-			// tesselation shaders
-			else if (isTesselationFolder)
-			{
-				auto tesslationFoldePath = shader;
-				for (auto& shader : std::filesystem::directory_iterator(tesslationFoldePath))
-				{
-					std::string command = "";
-					auto extension = shader.path().extension().string();
-					auto shaderString = shader.path().filename().string();
-					auto shaderPath = BASE_SHADER_PATH + "Tesselation/" + shaderString;
-					if (extension == ".tesc") {
-						const char* extension = ".spvC";
-						command = CreateCommand(shaderString, extension, shaderPath);
-					}
-					else  if (extension == ".tese") {
-
-						const char* extension = ".spvE";
-						command = CreateCommand(shaderString, extension, shaderPath);
-					}
-					if (command != "")
-					{
-						int result = std::system(command.c_str());
-						if (result != 0)
-						{
-							Log::GetLog()->error("shader {0} is not compiled!", shaderString);
-						}
-					}
-
-				}
-
-			}
-			else if (isComputeFolder)
-			{
-				auto computeFolderPath = shader;
-				for (auto& shader : std::filesystem::directory_iterator(computeFolderPath))
-				{
-					std::string command = "";
-					auto extension = shader.path().extension().string();
-					auto shaderString = shader.path().filename().string();
-					auto shaderPath = BASE_SHADER_PATH + "Compute/" + shaderString;
-					if (extension == ".comp") {
-						const char* extension = ".spvCmp";
-						command = CreateCommand(shaderString, extension, shaderPath);
-					}
-					if (command != "")
-					{
-						int result = std::system(command.c_str());
-						if (result != 0)
-						{
-							Log::GetLog()->error("shader {0} is not compiled!", shaderString);
-						}
-					}
-				}
-			}
-		}
-	}
-
-	std::vector<std::string> CompileShader(const std::vector<std::string>& shaderFilenames)
-	{
-		//C:\VulkanSDK\1.3.216.0\Bin\glslc.exe shader.vert -o vertex.spv
-		//C:\VulkanSDK\1.3.216.0\Bin\glslc.exe shader.frag - o fragment.spv
-		//C : \VulkanSDK\1.3.216.0\Bin\glslc.exe - c shader.comp - o compute.spv
-
-		auto& vertexShader = shaderFilenames[0];
-		const char* extension = ".spvV";
-		std::string shaderPath = BASE_SHADER_PATH + vertexShader;
-		auto command = CreateCommand(vertexShader, extension, shaderPath);
-
-
-		// Execute the command
-		int result = std::system(command.c_str());
-		// Check the result of the command execution
-		if (result == 0)
-		{
-			// Command executed successfully
-			// Handle the compiled SPIR-V code or other tasks
-		}
-		else
-		{
-			// Command execution failed
-			// Handle the failure scenario
-		}
-		auto& fragmentShader = shaderFilenames[1];
-		shaderPath = BASE_SHADER_PATH + fragmentShader;
-		extension = ".spvF";
-		command = CreateCommand(fragmentShader, extension, shaderPath);
-
-		// Execute the command
-		result = std::system(command.c_str());
-		if (result == 0)
-		{
-			// Command executed successfully
-			// Handle the compiled SPIR-V code or other tasks
-		}
-		else
-		{
-			// Command execution failed
-			// Handle the failure scenario
-		}
-		return {};
-	}
-
-
 	
 
-
-
+	
 	std::string InitFilePath()
 	{
 		std::string baseShaderPath = "";
@@ -555,8 +402,6 @@ const int QUAD_AMOUNT = 700;
 	{
 		
 		InitFilePath();
-		CompileAllShaders();
-		//CompileShader({ "shader.vert","shader.frag" });
 		m_Window=window; 
 		m_ViewportWidth = screenWidth;
 		m_ViewportHeight = screenHeight;
@@ -898,6 +743,158 @@ const int QUAD_AMOUNT = 700;
 
 	}
 
+	static std::unordered_map<ShaderType, const char*> PipelineShaderFolders =
+	{
+		{ShaderType::VERTEX,"Vertex"},
+		{ShaderType::FRAGMENT,"Fragment"},
+		{ShaderType::TESS_CONTROL,"Tesselation"},
+		{ShaderType::TESS_EVALUATION,"Tesselation"},
+		{ShaderType::COMPUTE,"Compute"}
+	};
+	static std::unordered_map<ShaderType, const char*> PipelineShaderExtensions =
+	{
+		{ShaderType::VERTEX,".vert"},
+		{ShaderType::FRAGMENT,".frag"},
+		{ShaderType::TESS_CONTROL,".tesc"},
+		{ShaderType::TESS_EVALUATION,".tese"},
+		{ShaderType::COMPUTE,".comp"}
+	};
+	static std::unordered_map<ShaderType, const char*> PipelineShaderBinaryExtensions =
+	{
+		{ShaderType::VERTEX,".spvV"},
+		{ShaderType::FRAGMENT,".spvF"},
+		{ShaderType::TESS_CONTROL,".spvC"},
+		{ShaderType::TESS_EVALUATION,".spvE"},
+		{ShaderType::COMPUTE,".spvCmp"}
+	};
+
+	std::string GetFileNameWithoutExtension(const std::string& filepath)
+	{
+		size_t extensionIndex = filepath.find_last_of('.');
+		return filepath.substr(0, extensionIndex);
+	}
+
+	std::string CreateCommand(std::string_view shader, const char* binaryExtension, std::string& shaderPath)
+	{
+		auto name = GetFileNameWithoutExtension(shader.data());
+
+		std::string shaderOutput = BASE_SPIRV_OUTPUT + name.c_str() + binaryExtension;
+		std::string command = SPIRV_COMPILER_PATH + " -V " + shaderPath + " -o " + shaderOutput;
+		return command;
+	}
+
+	void Renderer::CompileShader(std::string_view binaryShaderName, ShaderType type)
+	{	
+		auto folder = PipelineShaderFolders[type];
+		auto shaderName = GetFileNameWithoutExtension(binaryShaderName.data());
+		shaderName += PipelineShaderExtensions[type];
+		auto path = BASE_SHADER_PATH +  folder + "/" + shaderName.data();
+		auto isExist = std::filesystem::exists(path);
+		if (isExist)
+		{
+			auto binaryExtension = PipelineShaderBinaryExtensions[type];
+			auto command = CreateCommand(shaderName, binaryExtension , path);
+			int result = std::system(command.c_str());
+			if (result != 0)
+			{
+				Log::GetLog()->error("shader {0} is not compiled! ", shaderName.data());
+			}
+		}
+		else
+		{
+			Log::GetLog()->error("SHADER COMPILATOIN: Path {0} is not found ", path);
+		}
+
+
+
+		//for (auto& shader : std::filesystem::directory_iterator(BASE_SHADER_PATH))
+		//{
+		//	bool isDirectory = shader.is_directory();
+		//	const std::string& filenameStr = shader.path().filename().string();
+		//	bool isTesselationFolder = isDirectory && filenameStr.compare("Tesselation") == 0;
+		//	bool isComputeFolder = isDirectory && filenameStr.compare("Compute") == 0;
+		//	// vertex and fragment shaders
+		//	if (!isDirectory)
+		//	{
+		//		auto extension = shader.path().extension().string();
+		//		auto shaderString = shader.path().filename().string();
+		//		std::string shaderPath = shader.path().string();
+
+		//		std::string command = "";
+		//		if (extension == ".vert") {
+		//			// Handle vertex shader
+		//			const char* extension = ".spvV";
+		//			command = CreateCommand(shaderString, extension, shaderPath);
+		//		}
+		//		else if (extension == ".frag") {
+		//			const char* extension = ".spvF";
+		//			command = CreateCommand(shaderString, extension, shaderPath);
+		//		}
+		//		if (command != "")
+		//		{
+		//			int result = std::system(command.c_str());
+		//			if (result != 0)
+		//			{
+		//				Log::GetLog()->error("shader {0} is not compiled!", shaderString);
+		//			}
+		//		}
+		//	}
+		//	// tesselation shaders
+		//	else if (isTesselationFolder)
+		//	{
+		//		auto tesslationFoldePath = shader;
+		//		for (auto& shader : std::filesystem::directory_iterator(tesslationFoldePath))
+		//		{
+		//			std::string command = "";
+		//			auto extension = shader.path().extension().string();
+		//			auto shaderString = shader.path().filename().string();
+		//			auto shaderPath = BASE_SHADER_PATH + "Tesselation/" + shaderString;
+		//			if (extension == ".tesc") {
+		//				const char* extension = ".spvC";
+		//				command = CreateCommand(shaderString, extension, shaderPath);
+		//			}
+		//			else  if (extension == ".tese") {
+
+		//				const char* extension = ".spvE";
+		//				command = CreateCommand(shaderString, extension, shaderPath);
+		//			}
+		//			if (command != "")
+		//			{
+		//				int result = std::system(command.c_str());
+		//				if (result != 0)
+		//				{
+		//					Log::GetLog()->error("shader {0} is not compiled!", shaderString);
+		//				}
+		//			}
+
+		//		}
+
+		//	}
+		//	else if (isComputeFolder)
+		//	{
+		//		auto computeFolderPath = shader;
+		//		for (auto& shader : std::filesystem::directory_iterator(computeFolderPath))
+		//		{
+		//			std::string command = "";
+		//			auto extension = shader.path().extension().string();
+		//			auto shaderString = shader.path().filename().string();
+		//			auto shaderPath = BASE_SHADER_PATH + "Compute/" + shaderString;
+		//			if (extension == ".comp") {
+		//				const char* extension = ".spvCmp";
+		//				command = CreateCommand(shaderString, extension, shaderPath);
+		//			}
+		//			if (command != "")
+		//			{
+		//				int result = std::system(command.c_str());
+		//				if (result != 0)
+		//				{
+		//					Log::GetLog()->error("shader {0} is not compiled!", shaderString);
+		//				}
+		//			}
+		//		}
+		//	}
+		//}
+	}
 
 	void Renderer::UserInit()
 	{
