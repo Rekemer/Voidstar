@@ -154,6 +154,8 @@ public:
 			
 			
 			std::vector< vk::DescriptorSetLayout>layouts = { m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutSelected->GetLayout() };
+
+			Renderer::Instance()->CompileShader("SelectedTex.spvCmp",ShaderType::COMPUTE);
 			m_ComputePipeline = Pipeline::CreateComputePipeline(BASE_SPIRV_OUTPUT + "SelectedTex.spvCmp", layouts);
 
 			auto& swapchain = Renderer::Instance()->GetSwapchain();
@@ -422,6 +424,8 @@ public:
 					builder.AddBindingDescription(bindings);
 				builder.SetPolygoneMode(Renderer::Instance()->GetPolygonMode());
 				builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
+				Renderer::Instance()->CompileShader("font.spvV", ShaderType::VERTEX);
+				Renderer::Instance()->CompileShader("font.spvF", ShaderType::FRAGMENT);
 				builder.AddShader(BASE_SPIRV_OUTPUT + "font.spvV", vk::ShaderStageFlagBits::eVertex);
 				builder.AddShader(BASE_SPIRV_OUTPUT + "font.spvF", vk::ShaderStageFlagBits::eFragment);
 				builder.SetSubpassAmount(0);
@@ -456,6 +460,8 @@ public:
 				builder.AddBindingDescription(bindings);
 				builder.SetPolygoneMode(Renderer::Instance()->GetPolygonMode());
 				builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
+				Renderer::Instance()->CompileShader("default.spvV", ShaderType::VERTEX);
+				Renderer::Instance()->CompileShader("page.spvF", ShaderType::FRAGMENT);
 				builder.AddShader(BASE_SPIRV_OUTPUT + "default.spvV", vk::ShaderStageFlagBits::eVertex);
 				builder.AddShader(BASE_SPIRV_OUTPUT + "page.spvF", vk::ShaderStageFlagBits::eFragment);
 				builder.SetSubpassAmount(0);
@@ -506,6 +512,7 @@ public:
 						builder.AddBindingDescription(bindings);
 						builder.SetPolygoneMode(Renderer::Instance()->GetPolygonMode());
 						builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
+						Renderer::Instance()->CompileShader("leftNewPage.spvF", ShaderType::FRAGMENT);
 						builder.AddShader(BASE_SPIRV_OUTPUT + "default.spvV", vk::ShaderStageFlagBits::eVertex);
 						builder.AddShader(BASE_SPIRV_OUTPUT + "leftNewPage.spvF", vk::ShaderStageFlagBits::eFragment);
 						builder.SetSubpassAmount(0);
@@ -521,6 +528,7 @@ public:
 						m_NewPagePipeline = builder.Build();
 						builder.DestroyShaderModules();
 						builder.AddShader(BASE_SPIRV_OUTPUT + "default.spvV", vk::ShaderStageFlagBits::eVertex);
+						Renderer::Instance()->CompileShader("rightNewPage.spvF", ShaderType::FRAGMENT);
 						builder.AddShader(BASE_SPIRV_OUTPUT + "rightNewPage.spvF", vk::ShaderStageFlagBits::eFragment);
 						builder.SetStencilRefNumber(2);
 						builder.StencilTestOp(vk::CompareOp::eEqual, vk::StencilOp::eKeep, vk::StencilOp::eReplace, vk::StencilOp::eKeep);
