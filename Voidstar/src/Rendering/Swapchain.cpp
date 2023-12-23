@@ -25,7 +25,7 @@ namespace Voidstar
 
 
 
-		vk::PresentModeKHR presentMode = GetPresentMode(vk::PresentModeKHR::eMailbox, support);
+		vk::PresentModeKHR presentMode = GetPresentMode(vk::PresentModeKHR::eFifo, support);
 
 
 		auto viewportWidth = support.viewportWidth;
@@ -204,8 +204,8 @@ namespace Voidstar
 	{
 		for (vk::PresentModeKHR presentModeSupport : support.presentModes)
 		{
-			if (presentMode == vk::PresentModeKHR::eMailbox) {
-				presentMode = presentModeSupport;
+			if (presentMode == presentModeSupport) {
+				return presentModeSupport;
 			}
 		}
 

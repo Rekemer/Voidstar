@@ -146,13 +146,9 @@ namespace Voidstar
 		void DrawTxt(vk::CommandBuffer commandBuffer, std::string_view str,glm::vec2 pos, std::map<unsigned char, Character> &Characters);
 		void BeginBatch();
 		void DrawBatch(vk::CommandBuffer& commandBuffer, size_t offset = 0);
-		vk::Semaphore GetImageAvailable()
-		{
-			return m_ImageAvailableSemaphore;
-		}
 		vk::Fence GetFence()
 		{
-			return m_InFlightFence;
+			return m_InFlightFence[m_CurrentFrame];
 		}
 		UPtr<Buffer> m_QuadBufferBatch{ nullptr };
 		UPtr<IndexBuffer> m_QuadBufferBatchIndex{ nullptr };
@@ -180,7 +176,7 @@ namespace Voidstar
 		int m_ViewportWidth, m_ViewportHeight;
 		Device* m_Device;
 		UPtr<Swapchain> m_Swapchain;
-		
+		size_t m_CurrentFrame = 0;
 		Application* m_App;
 		
 
@@ -224,9 +220,9 @@ namespace Voidstar
 		UPtr<CommandPoolManager> m_CommandPoolManager;
 		
 
-		vk::Semaphore m_ImageAvailableSemaphore;
-		vk::Semaphore m_RenderFinishedSemaphore;
-		vk::Fence	m_InFlightFence;
+		std::vector<vk::Semaphore> m_ImageAvailableSemaphore;
+		std::vector<vk::Semaphore> m_RenderFinishedSemaphore;
+		std::vector<vk::Fence> m_InFlightFence;
 
 		std::vector<vk::Semaphore> m_ComputeFinishedSemaphores;
 		std::vector<vk::Fence> m_ComputeInFlightFences;

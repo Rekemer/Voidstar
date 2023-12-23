@@ -1176,10 +1176,6 @@ public:
 					vkCommandBuffer.end();
 					{
 						std::vector<vk::CommandBuffer> commandBuffers = { vkCommandBuffer };
-						auto& imageAvailable = Renderer::Instance()->GetImageAvailable();
-						
-						//vk::Semaphore waitSemaphores[] = { imageAvailable };
-						//vk::Semaphore signalSemaphores[] = { renderFiniishedSecond };
 
 						vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
 						vk::SubmitInfo submitInfo = {};

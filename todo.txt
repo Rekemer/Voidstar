@@ -1,5 +1,5 @@
 Use policies for running user's code
-abstract away resources and descriptors
+Create way to link different pipeline and add subpasses
 add suballocations
 
 make it possible to adjust new line offset on y axis if size of the font is big

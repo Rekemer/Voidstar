@@ -66,7 +66,7 @@ namespace Voidstar
 	vk::ShaderModule CreateModule(std::string filename, vk::Device device);
 const int QUAD_AMOUNT = 700;
 
-	size_t currentFrame = 0;
+	
 	// noise
 	const float noiseTextureWidth = 256.f;
 	const float noiseTextureHeight = 256.f;
@@ -804,96 +804,6 @@ const int QUAD_AMOUNT = 700;
 		{
 			Log::GetLog()->error("SHADER COMPILATOIN: Path {0} is not found ", path);
 		}
-
-
-
-		//for (auto& shader : std::filesystem::directory_iterator(BASE_SHADER_PATH))
-		//{
-		//	bool isDirectory = shader.is_directory();
-		//	const std::string& filenameStr = shader.path().filename().string();
-		//	bool isTesselationFolder = isDirectory && filenameStr.compare("Tesselation") == 0;
-		//	bool isComputeFolder = isDirectory && filenameStr.compare("Compute") == 0;
-		//	// vertex and fragment shaders
-		//	if (!isDirectory)
-		//	{
-		//		auto extension = shader.path().extension().string();
-		//		auto shaderString = shader.path().filename().string();
-		//		std::string shaderPath = shader.path().string();
-
-		//		std::string command = "";
-		//		if (extension == ".vert") {
-		//			// Handle vertex shader
-		//			const char* extension = ".spvV";
-		//			command = CreateCommand(shaderString, extension, shaderPath);
-		//		}
-		//		else if (extension == ".frag") {
-		//			const char* extension = ".spvF";
-		//			command = CreateCommand(shaderString, extension, shaderPath);
-		//		}
-		//		if (command != "")
-		//		{
-		//			int result = std::system(command.c_str());
-		//			if (result != 0)
-		//			{
-		//				Log::GetLog()->error("shader {0} is not compiled!", shaderString);
-		//			}
-		//		}
-		//	}
-		//	// tesselation shaders
-		//	else if (isTesselationFolder)
-		//	{
-		//		auto tesslationFoldePath = shader;
-		//		for (auto& shader : std::filesystem::directory_iterator(tesslationFoldePath))
-		//		{
-		//			std::string command = "";
-		//			auto extension = shader.path().extension().string();
-		//			auto shaderString = shader.path().filename().string();
-		//			auto shaderPath = BASE_SHADER_PATH + "Tesselation/" + shaderString;
-		//			if (extension == ".tesc") {
-		//				const char* extension = ".spvC";
-		//				command = CreateCommand(shaderString, extension, shaderPath);
-		//			}
-		//			else  if (extension == ".tese") {
-
-		//				const char* extension = ".spvE";
-		//				command = CreateCommand(shaderString, extension, shaderPath);
-		//			}
-		//			if (command != "")
-		//			{
-		//				int result = std::system(command.c_str());
-		//				if (result != 0)
-		//				{
-		//					Log::GetLog()->error("shader {0} is not compiled!", shaderString);
-		//				}
-		//			}
-
-		//		}
-
-		//	}
-		//	else if (isComputeFolder)
-		//	{
-		//		auto computeFolderPath = shader;
-		//		for (auto& shader : std::filesystem::directory_iterator(computeFolderPath))
-		//		{
-		//			std::string command = "";
-		//			auto extension = shader.path().extension().string();
-		//			auto shaderString = shader.path().filename().string();
-		//			auto shaderPath = BASE_SHADER_PATH + "Compute/" + shaderString;
-		//			if (extension == ".comp") {
-		//				const char* extension = ".spvCmp";
-		//				command = CreateCommand(shaderString, extension, shaderPath);
-		//			}
-		//			if (command != "")
-		//			{
-		//				int result = std::system(command.c_str());
-		//				if (result != 0)
-		//				{
-		//					Log::GetLog()->error("shader {0} is not compiled!", shaderString);
-		//				}
-		//			}
-		//		}
-		//	}
-		//}
 	}
 
 	void Renderer::UserInit()
@@ -912,31 +822,24 @@ const int QUAD_AMOUNT = 700;
 	{	
 		vk::SemaphoreCreateInfo semaphoreInfo = {};
 		semaphoreInfo.flags = vk::SemaphoreCreateFlags();
-
-		try
-		{
-			m_ImageAvailableSemaphore = m_Device->GetDevice().createSemaphore(semaphoreInfo);
-			m_RenderFinishedSemaphore = m_Device->GetDevice().createSemaphore(semaphoreInfo);
-		}
-		catch (vk::SystemError err) {
-			
-			Log::GetLog()->error("failed to create semaphore");
-		}
-
 		vk::FenceCreateInfo fenceInfo = {};
 		fenceInfo.flags = vk::FenceCreateFlags() | vk::FenceCreateFlagBits::eSignaled;
-
-		try
-		{
-			m_InFlightFence = m_Device->GetDevice().createFence(fenceInfo);
-		}
-		catch (vk::SystemError err)
-		{
-			Log::GetLog()->error("failed to create fence");
-		}
 		auto frameAmount = m_Swapchain->m_SwapchainFrames.size();
 		m_ComputeInFlightFences.resize(frameAmount);
 		m_ComputeFinishedSemaphores.resize(frameAmount);
+		m_ImageAvailableSemaphore.resize(frameAmount);
+		m_RenderFinishedSemaphore.resize(frameAmount);
+		m_InFlightFence.resize(frameAmount);
+		for (int i = 0; i < m_Swapchain->GetFrameAmount(); i++)
+		{
+
+			m_ImageAvailableSemaphore[i] = m_Device->GetDevice().createSemaphore(semaphoreInfo);
+			m_RenderFinishedSemaphore[i] = m_Device->GetDevice().createSemaphore(semaphoreInfo);
+			m_InFlightFence[i] = m_Device->GetDevice().createFence(fenceInfo);
+		}
+
+
+		
 		for (int i = 0; i < frameAmount; i++)
 		{
 			vk::SemaphoreCreateInfo semaphoreInfo = {};
@@ -1018,19 +921,15 @@ const int QUAD_AMOUNT = 700;
 			m_UniversalPool.reset();
 			CleanUpLayouts();
 
-
-			m_Device->GetDevice().destroySemaphore(m_ImageAvailableSemaphore);
-			m_Device->GetDevice().destroySemaphore(m_RenderFinishedSemaphore);
-			m_Device->GetDevice().destroyFence(m_InFlightFence);
-
-			for (auto& semaphore : m_ComputeFinishedSemaphores)
+			for (int i = 0; i < m_ImageAvailableSemaphore.size(); i++)
 			{
-				m_Device->GetDevice().destroySemaphore(semaphore);
+				m_Device->GetDevice().destroySemaphore(m_ImageAvailableSemaphore[i]);
+				m_Device->GetDevice().destroySemaphore(m_RenderFinishedSemaphore[i]);
+				m_Device->GetDevice().destroySemaphore(m_ComputeFinishedSemaphores[i]);
+				m_Device->GetDevice().destroyFence(m_InFlightFence[i]);
+				m_Device->GetDevice().destroyFence(m_ComputeInFlightFences[i]);
 			}
-			for (auto& fence : m_ComputeInFlightFences)
-			{
-				m_Device->GetDevice().destroyFence(fence);
-			}
+
 
 
 			m_CommandPoolManager->Release();
@@ -1084,12 +983,12 @@ const int QUAD_AMOUNT = 700;
 		auto swapchain = m_Swapchain->m_Swapchain;
 		{
 			ZoneScopedN("Acquiring new Image");
-			m_Device->GetDevice().acquireNextImageKHR(swapchain, UINT64_MAX, m_ImageAvailableSemaphore, nullptr, &imageIndex);
+			m_Device->GetDevice().acquireNextImageKHR(swapchain, UINT64_MAX, m_ImageAvailableSemaphore[m_CurrentFrame], nullptr, &imageIndex);
 		}
 		
 			m_UserFunctions.postRenderCommands(imageIndex, camera);
 	
-			auto signalSemaphore = m_UserFunctions.submitRenderCommands(imageIndex, camera,m_ImageAvailableSemaphore, m_InFlightFence);
+			auto signalSemaphore = m_UserFunctions.submitRenderCommands(imageIndex, camera,m_ImageAvailableSemaphore[m_CurrentFrame], m_InFlightFence[m_CurrentFrame]);
 			vk::Semaphore waitSemaphore[] = { signalSemaphore };
 	
 			
@@ -1146,7 +1045,7 @@ const int QUAD_AMOUNT = 700;
 		}
 
 
-		currentFrame = (currentFrame + 1) % m_Swapchain->m_SwapchainFrames.size();
+		m_CurrentFrame = (m_CurrentFrame + 1) % m_Swapchain->m_SwapchainFrames.size();
 
 		
 		
