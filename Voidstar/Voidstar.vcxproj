@@ -171,6 +171,7 @@
     <ClInclude Include="src\Rendering\Settings.h" />
     <ClInclude Include="src\Rendering\SupportStruct.h" />
     <ClInclude Include="src\Rendering\Swapchain.h" />
+    <ClInclude Include="src\Rendering\Sync.h" />
     <ClInclude Include="src\Rendering\Vertex.h" />
     <ClInclude Include="src\Transform.h" />
     <ClInclude Include="src\Types.h" />

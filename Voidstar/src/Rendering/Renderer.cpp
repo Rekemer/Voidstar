@@ -37,6 +37,7 @@
 #include  "Binder.h"
 #include  "Generation.h"
 #include"Settings.h"
+#include"Sync.h"
 
 
 
@@ -820,38 +821,14 @@ const int QUAD_AMOUNT = 700;
 	}
 	void Renderer::CreateSyncObjects()
 	{	
-		vk::SemaphoreCreateInfo semaphoreInfo = {};
-		semaphoreInfo.flags = vk::SemaphoreCreateFlags();
-		vk::FenceCreateInfo fenceInfo = {};
-		fenceInfo.flags = vk::FenceCreateFlags() | vk::FenceCreateFlagBits::eSignaled;
+		
+		
 		auto frameAmount = m_Swapchain->m_SwapchainFrames.size();
 		m_ComputeInFlightFences.resize(frameAmount);
 		m_ComputeFinishedSemaphores.resize(frameAmount);
 		m_ImageAvailableSemaphore.resize(frameAmount);
 		m_RenderFinishedSemaphore.resize(frameAmount);
 		m_InFlightFence.resize(frameAmount);
-		for (int i = 0; i < m_Swapchain->GetFrameAmount(); i++)
-		{
-
-			m_ImageAvailableSemaphore[i] = m_Device->GetDevice().createSemaphore(semaphoreInfo);
-			m_RenderFinishedSemaphore[i] = m_Device->GetDevice().createSemaphore(semaphoreInfo);
-			m_InFlightFence[i] = m_Device->GetDevice().createFence(fenceInfo);
-		}
-
-
-		
-		for (int i = 0; i < frameAmount; i++)
-		{
-			vk::SemaphoreCreateInfo semaphoreInfo = {};
-			semaphoreInfo.flags = vk::SemaphoreCreateFlags();
-			m_ComputeFinishedSemaphores[i] = m_Device->GetDevice().createSemaphore(semaphoreInfo);
-
-			vk::FenceCreateInfo fenceInfo = {};
-			fenceInfo.flags = vk::FenceCreateFlags() | vk::FenceCreateFlagBits::eSignaled;
-
-			m_ComputeInFlightFences[i] = m_Device->GetDevice().createFence(fenceInfo);
-		}
-
 	
 	}
 
@@ -923,11 +900,11 @@ const int QUAD_AMOUNT = 700;
 
 			for (int i = 0; i < m_ImageAvailableSemaphore.size(); i++)
 			{
-				m_Device->GetDevice().destroySemaphore(m_ImageAvailableSemaphore[i]);
-				m_Device->GetDevice().destroySemaphore(m_RenderFinishedSemaphore[i]);
-				m_Device->GetDevice().destroySemaphore(m_ComputeFinishedSemaphores[i]);
-				m_Device->GetDevice().destroyFence(m_InFlightFence[i]);
-				m_Device->GetDevice().destroyFence(m_ComputeInFlightFences[i]);
+				m_ImageAvailableSemaphore[i].Destroy();
+				m_RenderFinishedSemaphore[i].Destroy();
+				m_ComputeFinishedSemaphores[i].Destroy();
+				m_InFlightFence[i].Destroy();
+				m_ComputeInFlightFences[i].Destroy();
 			}
 
 
@@ -956,39 +933,26 @@ const int QUAD_AMOUNT = 700;
 		static Renderer renderer ;
 		return &renderer;
 	}
-	void Renderer::WaitFence()
-	{
-		{
-
-			ZoneScopedN("Waiting for fence");
-			m_Device->GetDevice().waitForFences(m_InFlightFence, VK_TRUE, std::numeric_limits<uint64_t>::max());
-		}
-		m_Device->GetDevice().resetFences(m_InFlightFence);
-	}
 	void Renderer::Render(float deltaTime,Camera& camera)
 	{
 		auto exeTime = m_App->GetExeTime();
 		
 		
 
-		{
-
-		//	ZoneScopedN("Waiting for fence");
-		//	m_Device->GetDevice().waitForFences(m_InFlightFence, VK_TRUE, std::numeric_limits<uint64_t>::max());
-		//m_Device->GetDevice().resetFences(m_InFlightFence);
-		}
+		
 
 		uint32_t imageIndex;
 
 		auto swapchain = m_Swapchain->m_Swapchain;
 		{
 			ZoneScopedN("Acquiring new Image");
-			m_Device->GetDevice().acquireNextImageKHR(swapchain, UINT64_MAX, m_ImageAvailableSemaphore[m_CurrentFrame], nullptr, &imageIndex);
+			m_Device->GetDevice().acquireNextImageKHR(swapchain, UINT64_MAX, m_ImageAvailableSemaphore[m_CurrentFrame].GetSemaphore(), nullptr, &imageIndex);
 		}
 		
 			m_UserFunctions.postRenderCommands(imageIndex, camera);
-	
-			auto signalSemaphore = m_UserFunctions.submitRenderCommands(imageIndex, camera,m_ImageAvailableSemaphore[m_CurrentFrame], m_InFlightFence[m_CurrentFrame]);
+			
+			auto& semaphore = m_ImageAvailableSemaphore[m_CurrentFrame].GetSemaphore();
+			auto signalSemaphore = m_UserFunctions.submitRenderCommands(imageIndex, camera, semaphore, m_InFlightFence[m_CurrentFrame].GetFence());
 			vk::Semaphore waitSemaphore[] = { signalSemaphore };
 	
 			
@@ -1061,8 +1025,14 @@ const int QUAD_AMOUNT = 700;
 	
 
 	
-
-
+	void Renderer::Wait(vk::Fence& fence)
+	{
+		m_Device->GetDevice().waitForFences(fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
+	}
+	void Renderer::Reset(vk::Fence& fence)
+	{
+		m_Device->GetDevice().resetFences(fence);
+	}
 
 	
 	void Renderer::Flush(std::vector<vk::CommandBuffer> commandBuffers)

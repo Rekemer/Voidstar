@@ -129,6 +129,7 @@
     <ClInclude Include="src\Window.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="src\Rendering\Sync.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Dependencies\Tracy\public\TracyClient.cpp">

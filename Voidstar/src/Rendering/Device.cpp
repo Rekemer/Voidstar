@@ -235,6 +235,7 @@ namespace Voidstar
 		m_Device.updateDescriptorSets(descriptorWrite, nullptr);
 
 	}
+	
 	void Device::UpdateDescriptorSet(vk::DescriptorSet dscSet, int binding, int descriptorCount, Buffer& buffer, vk::DescriptorType type)
 	{
 		vk::WriteDescriptorSet writeInfo;

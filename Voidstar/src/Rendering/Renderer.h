@@ -11,6 +11,7 @@
 #include<map>
 #include"Font.h"
 #include <functional>
+#include "Sync.h"
 
 
 
@@ -117,7 +118,8 @@ namespace Voidstar
 			return m_CommandPoolManager.get();
 		}
 		void Flush(std::vector< vk:: CommandBuffer > commandBuffers);
-		void WaitFence();
+		void Wait(vk::Fence& fence);
+		void Reset(vk::Fence& fence);
 		void RenderImGui(int frameIndex);
 		void CleanUpImGui();
 		~Renderer();
@@ -148,7 +150,7 @@ namespace Voidstar
 		void DrawBatch(vk::CommandBuffer& commandBuffer, size_t offset = 0);
 		vk::Fence GetFence()
 		{
-			return m_InFlightFence[m_CurrentFrame];
+			return m_InFlightFence[m_CurrentFrame].GetFence();
 		}
 		UPtr<Buffer> m_QuadBufferBatch{ nullptr };
 		UPtr<IndexBuffer> m_QuadBufferBatchIndex{ nullptr };
@@ -220,12 +222,12 @@ namespace Voidstar
 		UPtr<CommandPoolManager> m_CommandPoolManager;
 		
 
-		std::vector<vk::Semaphore> m_ImageAvailableSemaphore;
-		std::vector<vk::Semaphore> m_RenderFinishedSemaphore;
-		std::vector<vk::Fence> m_InFlightFence;
+		std::vector<Semaphore> m_ImageAvailableSemaphore;
+		std::vector<Semaphore> m_RenderFinishedSemaphore;
+		std::vector<Fence> m_InFlightFence;
 
-		std::vector<vk::Semaphore> m_ComputeFinishedSemaphores;
-		std::vector<vk::Fence> m_ComputeInFlightFences;
+		std::vector<Semaphore> m_ComputeFinishedSemaphores;
+		std::vector<Fence> m_ComputeInFlightFences;
 
 		SPtr<Window> m_Window;
 

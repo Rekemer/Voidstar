@@ -29,17 +29,21 @@ namespace Voidstar
 		vk::Format GetDepthFormat() const { return m_SwapchainFrames[0].depthFormat; }
 		vk::Extent2D GetExtent() const { return m_SwapchainExtent; }
 		size_t GetFrameAmount() const { return m_SwapchainFrames.size(); }
-		vk::Framebuffer GetFrameBuffer(size_t frameIndex) const 
+		vk::Framebuffer GetFrameBuffer(size_t frameIndex)  const
 		{
 			assert(frameIndex < (GetFrameAmount())); 
 			return m_SwapchainFrames[frameIndex].framebuffer;
 
 		}
-
-		 std::vector<SwapChainFrame>& GetFrames() 
+		SwapChainFrame& GetFrame(size_t frameIndex) 
 		{
-			return m_SwapchainFrames;
+			assert(frameIndex < (GetFrameAmount()));
+			return m_SwapchainFrames[frameIndex];
 		}
+		 std::vector<SwapChainFrame>& GetFrames() 
+		 {
+			return m_SwapchainFrames;
+		 }
 
 		void CreateMSAAFrame();
 		vk::ImageView GetMSAAImageView() const { return m_MsaaImageView; }

@@ -402,20 +402,10 @@ public:
 
 			};
 			{
-
-
-				
-
-
-
-
 				auto samples = RenderContext::GetDevice()->GetSamples();
-				
 				auto pipelineLayouts = std::vector<vk::DescriptorSetLayout>{
 					m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutFont->GetLayout() };
-
-
-
+				
 				PipelineBuilder builder;
 				builder.SetDevice(device->GetDevice());
 				builder.SetSamples(samples);
@@ -446,11 +436,6 @@ public:
 			{
 				
 				auto pipelineLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutTex->GetLayout() };
-
-				
-
-
-
 
 				PipelineBuilder builder;
 				builder.SetDevice(device->GetDevice());
@@ -899,23 +884,24 @@ public:
 						newLeftPage,
 						newRightPage
 					};
-
-				
 					{
-						
-
-					
-					
 						render(renderCommandBuffer,  clearValues, { pages[0] ,pages[1]}, imageAvailable, m_RenderFinishedSemaphore1, m_RenderPass, m_GraphicsPipeline.get());
-
-
 						render(renderCommandBuffer,  clearValues, { clipPage }, m_RenderFinishedSemaphore1, m_RenderFinishedSemaphore2, m_ClipRenderPass, m_ClipPipeline.get());
 						render(renderCommandBuffer, clearValues, { pages[2]}, m_RenderFinishedSemaphore2, m_RenderFinishedSemaphore3, m_NewPageRenderPass, m_NewPagePipeline.get());
 						render(renderCommandBuffer, clearValues, { pages[3]}, m_RenderFinishedSemaphore3, m_RenderFinishedSemaphore4, m_NewPageRenderPassRight, m_NewPagePipelineRight.get());
-					
-				
-
-				}
+						
+						//render(renderCommandBuffer, clearValues, { clipPage }, m_RenderFinishedSemaphore1, m_RenderFinishedSemaphore2, m_ClipRenderPass, m_ClipPipeline.get());
+						//render(renderCommandBuffer, clearValues, { pages[2] }, m_RenderFinishedSemaphore2, m_RenderFinishedSemaphore3, m_NewPageRenderPass, m_NewPagePipeline.get());
+						//render(renderCommandBuffer, clearValues, { pages[3] }, m_RenderFinishedSemaphore3, m_RenderFinishedSemaphore4, m_NewPageRenderPassRight, m_NewPagePipelineRight.get());
+						
+						
+						//auto& currentFrame = swapchain.GetFrame(frameIndex);
+						//Renderer::Instance()->Wait(fence);
+						//renderCommandBuffer.BeginTransfering();
+						//renderCommandBuffer.ChangeImageLayoutRaw(currentFrame.image,vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::ePresentSrcKHR);
+						//renderCommandBuffer.EndTransfering();
+						//renderCommandBuffer.SubmitSingle();
+					}	
 
 				TracyVkCollect(ctx, commandBuffer);
 				

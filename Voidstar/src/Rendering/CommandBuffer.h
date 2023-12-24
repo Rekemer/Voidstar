@@ -58,6 +58,7 @@ namespace Voidstar
 		void Transfer(Buffer* src, Buffer* target, void* data, size_t  dataSize);
 		
 		void ChangeImageLayout(Image* image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout, int mipMap = 1, int layers = 1);
+		void ChangeImageLayoutRaw(vk::Image& image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout, int mipMap = 1, int layers = 1);
 
 		void CopyBufferToImage(Buffer& buffer, vk::Image& image, int width, int height, vk::Offset3D offset = {0,0,0}, int layers = 1);
 

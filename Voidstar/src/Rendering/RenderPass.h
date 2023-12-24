@@ -17,4 +17,8 @@ namespace Voidstar
 		std::vector<vk::SubpassDescription> m_Subpasses;
 		std::vector<vk::SubpassDependency> m_Dependencies;
 	};
+	class RenderPass
+	{
+
+	};
 }

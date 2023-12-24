@@ -17,6 +17,7 @@
 #include"Rendering/Settings.h"
 #include "Input.h"
 #include "Types.h"
+#include "Rendering/Sync.h"
 #include "Rendering/Camera.h"
 #include "Rendering/Font.h"
 #include "Application.h"

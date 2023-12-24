@@ -22,7 +22,6 @@ namespace Voidstar
 		void UpdateDescriptorSet(vk::DescriptorSet dscSet, int binding, std::vector<vk::DescriptorImageInfo> images, vk::DescriptorType descType);
 		void UpdateDescriptorSet(vk::DescriptorSet dscSet, int binding, int descriptorCount, Buffer& buffer, vk::DescriptorType type);
 		void UpdateDescriptorSet(vk::DescriptorSet dscSet, int binding, int descriptorCount, vk::DescriptorImageInfo& imageInfo, vk::DescriptorType type); 
-
 	private:
 		vk::PhysicalDevice m_PhysicalDevice = VK_NULL_HANDLE;
 		vk::Device m_Device = VK_NULL_HANDLE;
