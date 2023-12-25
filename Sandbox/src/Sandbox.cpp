@@ -999,9 +999,52 @@ public:
 			UpdateTexture(frameIndex);
 		};
 
+		auto cleanup = [this]()
+			{
+
+
+
+				auto device = RenderContext::GetDevice()->GetDevice();
+				device.waitIdle();
+
+				device.destroyRenderPass(m_RenderPass);
+				device.destroyRenderPass(m_ClipRenderPass);
+				device.destroyRenderPass(m_PageRenderPass);
+				device.destroyRenderPass(m_NewPageRenderPass);
+				device.destroyRenderPass(m_NewPageRenderPassRight);
+
+				m_ComputePipeline.reset();
+				m_GraphicsPipeline.reset();
+				m_ClipPipeline.reset();
+				m_PagePipeline.reset();
+				m_NewPagePipeline.reset();
+				m_NewPagePipelineRight.reset();
+				m_ShaderStorageBuffer.reset();
+
+				device.destroySemaphore(m_RenderFinishedSemaphore1);
+				device.destroySemaphore(m_RenderFinishedSemaphore2);
+				device.destroySemaphore(m_RenderFinishedSemaphore3);
+				device.destroySemaphore(m_RenderFinishedSemaphore4);
+				for (int i = 0; i < m_PageFramebuffer.size(); i++)
+				{
+					device.destroyFramebuffer(m_PageFramebuffer[i]);
+				}
+				for (int i = 0; i < m_PagesImages.size(); i++)
+				{
+					m_PagesImages[i].reset();
+					m_PagesImageMSAA[i].reset();
+				}
+				m_UniformBuffers.clear();
+				m_Image.reset();
+				m_ImageSelected.reset();
+				m_FontAtlas.reset();
+
+				Renderer::Instance()->Shutdown();
+
+			};
 
 		// can be better
-		auto createFramebuffer = [this]()
+		auto createFramebuffer = [this, cleanup ]()
 		{
 
 			m_PagesImages.resize(PageAmount);
@@ -1032,6 +1075,7 @@ public:
 				m_PagesImageMSAA[i]->SetFormat(swapchainFormat);
 				m_PagesImageMSAA[i]->SetView(msaaImageView);
 				m_PagesImageMSAA[i]->SetMemory(msaaImageMemory);
+				m_PagesImageMSAA[i]->SetImage(msaaImage);
 				
 				std::vector<vk::ImageView>attachments = { m_PagesImageMSAA[i]->GetImageView(),m_PagesImages[i]->GetImageView()};
 				vk::FramebufferCreateInfo framebufferInfo;
@@ -1046,7 +1090,6 @@ public:
 				m_PageFramebuffer[i] = device->GetDevice().createFramebuffer(framebufferInfo);
 			}
 
-				
 				
 			
 
@@ -1108,20 +1151,6 @@ public:
 
 				std::vector<vk::ClearValue> clearValues = { {clearColor,clearColor} };
 
-				//glm::vec2 pos = { 20,20 };
-				
-				//str = R"(Mauris in euismod neque.\n
-				//	Class aptent taciti sociosqu ad litora torquent per conubia nostra,\n
-				//	per inceptos himenaeos. Curabitur id pellentesque ligula, quis eleifend dolor.\n
-				//	Proin diam erat, vulputate eget rutrum cursus, placerat vitae massa. Fusce et sagittis odio. \n
-				//	Mauris et ante mi. Morbi nisl odio, fringilla sit amet tortor ac,\n 
-				//	fringilla maximus orci. Sed quis odio in enim egestas sollicitudin.\n 
-				//	Cras aliquam nisl odio, egestas aliquet est hendrerit sed)";
-//
-//				str = R"(Mauris in euismod neque. 
-//fringilla maximus orci.
-//Sed quis odio in enim egestas sollicitudin.
-//Cras aliquam nisl odio, egestas aliquet est hendrerit sed)";
 				auto viewportSize = std::make_pair(PageRenderWidth, PageRenderHeight);
 				vk::Viewport viewport;
 				viewport.x = 0;
@@ -1201,29 +1230,8 @@ public:
 			}
 		};
 
-		auto cleanup = [this]()
-		{
-
-			
-
-			auto device = RenderContext::GetDevice()->GetDevice();
 	
-
-
-			device.destroyRenderPass(m_RenderPass);
-			device.destroyRenderPass(m_PageRenderPass);
-			for (int i = 0; i < m_PageFramebuffer.size(); i++)
-			{
-				device.destroyFramebuffer(m_PageFramebuffer[i]);
-			}
-			for (int i = 0; i < m_PagesImages.size(); i++)
-			{
-				m_PagesImages[i].reset();
-			}
-			Renderer::Instance()->Shutdown();
-			
-		};
-		Callables callables;
+		
 		callables.bindingsInit = bindingsInit;
 		callables.bufferInit = bufferInit;
 		callables.loadTextures = loadTextures;
@@ -1240,6 +1248,13 @@ public:
 		
 	}
 
+
+
+
+	~ExampleApplication()
+	{
+		callables.cleanUp();
+	}
 	void UpdateBuffer(Device& device, vk::DescriptorSet set, void* cpuBuffer, Buffer& gpuBuffer, int size )
 	{
 			SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(size);
@@ -1511,7 +1526,7 @@ private:
 	std::string PageStr4 = "May the force\nbe with you!\nHopefully this book\nenriched your\n potential!";
 	std::vector<std::string> txt = { PageStr1,PageStr2,PageStr3,PageStr4 };
 	std::vector<float> textureIndicies = { 0,1,2,3};
-
+	Callables callables;
 
 
 };

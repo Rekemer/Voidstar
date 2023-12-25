@@ -58,6 +58,10 @@ namespace Voidstar
 		{
 			m_ImageView= view;
 		}
+		void SetImage(vk::Image image)
+		{
+			m_Image= image;
+		}
 		void SetMemory(vk::DeviceMemory memory)
 		{
 			m_ImageMemory = memory;

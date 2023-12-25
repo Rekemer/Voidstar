@@ -173,7 +173,6 @@ namespace Voidstar
 
 		
 	private:
-		std::vector <UPtr<Buffer>> m_Buffers;
 		Voidstar::Instance* m_Instance;
 		int m_ViewportWidth, m_ViewportHeight;
 		Device* m_Device;

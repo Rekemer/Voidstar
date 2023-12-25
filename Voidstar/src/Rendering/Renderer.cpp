@@ -453,30 +453,34 @@ const int QUAD_AMOUNT = 700;
 			m_ComputeCommandBuffer = CommandBuffer::CreateBuffers(m_FrameCommandPool, vk::CommandBufferLevel::ePrimary, 3);
 		};
 		commandBufferInit();
+		
 		quad = GeneratePlane(1);
 		auto& verticies = quad.verticies;
 		auto& indices = quad.indicies;
 		
 		auto indexSize = SizeOfBuffer(indices.size(), indices[0]);
 		{
-			SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(indexSize);
-
-
 			{
-				BufferInputChunk inputBuffer;
-				inputBuffer.size = indexSize;
-				inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
-				inputBuffer.usage = vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst;
-				m_QuadIndexBuffer = CreateUPtr<IndexBuffer>(inputBuffer, indices.size(), vk::IndexType::eUint32);
+				SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(indexSize);
 
+
+				{
+					BufferInputChunk inputBuffer;
+					inputBuffer.size = indexSize;
+					inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+					inputBuffer.usage = vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst;
+					m_QuadIndexBuffer = CreateUPtr<IndexBuffer>(inputBuffer, indices.size(), vk::IndexType::eUint32);
+
+				}
+
+				m_TransferCommandBuffer[0].BeginTransfering();
+				m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_QuadIndexBuffer.get(), (void*)indices.data(), indexSize);
+				m_TransferCommandBuffer[0].EndTransfering();
+				m_TransferCommandBuffer[0].SubmitSingle();
 			}
-
-			m_TransferCommandBuffer[0].BeginTransfering();
-			m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_QuadIndexBuffer.get(), (void*)indices.data(), indexSize);
-			m_TransferCommandBuffer[0].EndTransfering();
-			m_TransferCommandBuffer[0].SubmitSingle();
-
-
+			
+			
+			
 			
 
 			{
@@ -534,7 +538,6 @@ const int QUAD_AMOUNT = 700;
 						}
 					}
 				}
-				
 				void* vertexData = const_cast<void*>(static_cast<const void*>(verticies.data()));
 				SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(vertexSize);
 				m_TransferCommandBuffer[0].BeginTransfering();
@@ -545,7 +548,7 @@ const int QUAD_AMOUNT = 700;
 
 		}
 
-
+	
 		auto physDev = m_Device->GetDevicePhys();
 		auto dev = m_Device->GetDevice();
 		auto queue = m_Device->GetGraphicsQueue();
@@ -879,7 +882,6 @@ const int QUAD_AMOUNT = 700;
 
 			m_CommandPoolManager->FreePool(m_TracyCommandPool);
 
-			m_UserFunctions.cleanUp();
 			m_Swapchain->CleanUp();
 
 
@@ -897,19 +899,20 @@ const int QUAD_AMOUNT = 700;
 
 			m_UniversalPool.reset();
 			CleanUpLayouts();
-
-			for (int i = 0; i < m_ImageAvailableSemaphore.size(); i++)
-			{
-				m_ImageAvailableSemaphore[i].Destroy();
-				m_RenderFinishedSemaphore[i].Destroy();
-				m_ComputeFinishedSemaphores[i].Destroy();
-				m_InFlightFence[i].Destroy();
-				m_ComputeInFlightFences[i].Destroy();
-			}
+			m_ImageAvailableSemaphore.clear();
+			m_RenderFinishedSemaphore.clear();
+			m_ComputeFinishedSemaphores.clear();
+			m_InFlightFence.clear();
+			m_ComputeInFlightFences.clear();
+			m_ImageAvailableSemaphore.clear(); 
 
 
 
 			m_CommandPoolManager->Release();
+			m_QuadBuffer.reset();
+			m_QuadBufferBatch.reset();
+			m_QuadBufferBatchIndex.reset();
+			m_QuadIndexBuffer.reset();
 			m_Device->GetDevice().destroy();
 
 			m_Instance->GetInstance().destroySurfaceKHR(m_Surface);
