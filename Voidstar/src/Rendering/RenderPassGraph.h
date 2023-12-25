@@ -5,16 +5,23 @@
 #include"functional"
 namespace Voidstar
 {
+	struct Transition
+	{
+		RenderPass* Next;
+	};
 	class RenderPassGraph;
 	class CommandBuffer;
 	class Pipeline;
-	using ExecFunc = std::function<void* (CommandBuffer& cmdBuffer)>;
+	
 	class RenderPassGraph
 	{
 	public:
-		void AddRenderPass(RenderPass& renderPass, std::initializer_list<Pipeline> pipeline);
+		void AddRenderPass(UPtr<RenderPass> renderPass, std::initializer_list<Pipeline> pipeline);
+		~RenderPassGraph();
 	private:
-		std::unordered_map<std::string, RenderPass> m_RenderPasses;
-		std::unordered_map<std::string, std::vector<RenderPass>> m_;
+		std::unordered_map<std::string_view, UPtr<RenderPass>> m_RenderPasses;
+		std::unordered_map<RenderPass*, std::vector<Pipeline>> m_Pipelines;
+		std::unordered_map<std::string, std::vector<Transition>> m_Transitions;
+		std::unordered_map<std::string, Attachment> m_Transitions;
 	};
 }

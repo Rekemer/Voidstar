@@ -7,7 +7,7 @@
 #include "../Log.h"
 namespace Voidstar
 {
-	Device* Device::Create(Instance* instance, vk::SurfaceKHR surface)
+	Device* Device::Create(Instance* instance, vk::SurfaceKHR& surface)
 	{
 		std::vector<vk::PhysicalDevice> availableDevices = instance->GetInstance().enumeratePhysicalDevices();
 

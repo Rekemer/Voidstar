@@ -38,7 +38,6 @@ namespace Voidstar
 	inline std::string BASE_SPIRV_OUTPUT = BASE_SHADER_PATH + "Binary/";
 
 	class Window;
-	class Surface;
 	class SwapChainSupportDetails;
 	class Buffer;
 	class Camera;
@@ -174,8 +173,8 @@ namespace Voidstar
 		
 	private:
 		Voidstar::Instance* m_Instance;
-		int m_ViewportWidth, m_ViewportHeight;
 		Device* m_Device;
+		int m_ViewportWidth, m_ViewportHeight;
 		UPtr<Swapchain> m_Swapchain;
 		size_t m_CurrentFrame = 0;
 		Application* m_App;
@@ -203,14 +202,10 @@ namespace Voidstar
 
 		vk::CommandPool m_TracyCommandPool;
 
-		//debug callback
-		vk::DebugUtilsMessengerEXT m_DebugMessenger;
-		//dynamic instance dispatcher
-		vk::DispatchLoaderDynamic m_Dldi;
+		
 
 
 
-		vk::SurfaceKHR m_Surface;
 		
 	
 

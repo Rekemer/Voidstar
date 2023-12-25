@@ -8,7 +8,7 @@ namespace Voidstar
 	class Device
 	{
 	public:
-		static Device* Create(Instance* intsance , vk::SurfaceKHR surface);
+		static Device* Create(Instance* intsance , vk::SurfaceKHR& surface);
 		vk::SampleCountFlagBits GetMaxUsableSampleCount();
 		vk::Device& GetDevice() { return m_Device; }
 		vk::PhysicalDevice& GetDevicePhys() { return m_PhysicalDevice; }

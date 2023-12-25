@@ -13,33 +13,36 @@ namespace Voidstar
 
 	vk::PresentModeKHR GetPresentMode(vk::PresentModeKHR presentMode, SwapChainSupportDetails& support);
 
+	// format, extent, usage
 	UPtr<Swapchain> Swapchain::Create(SwapChainSupportDetails& support)
 	{
-		auto device = support.devcie;
-		auto surface = support.surface;
+		auto device = RenderContext::GetDevice();
+		auto surface = RenderContext::GetSurface();
 
 		
 
 
-		vk::SurfaceFormatKHR format = GetSurfaceFormat(vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear, support);
+		//vk::SurfaceFormatKHR format = GetSurfaceFormat(vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear, support);
+		vk::SurfaceFormatKHR format = GetSurfaceFormat(support.Format, support.ColorSpace, support);
 
 
 
-		vk::PresentModeKHR presentMode = GetPresentMode(vk::PresentModeKHR::eFifo, support);
+		//vk::PresentModeKHR presentMode = GetPresentMode(vk::PresentModeKHR::eFifo, support);
+		vk::PresentModeKHR presentMode = GetPresentMode(support.PresentMode, support);
 
 
-		auto viewportWidth = support.viewportWidth;
-		auto viewportHeight = support.viewportHeight;
+		auto viewportWidth = support.ViewportWidth;
+		auto viewportHeight = support.ViewportHeight;
 		vk::Extent2D extent = GetSwapchainExtent(viewportWidth, viewportHeight, support);
 
 		uint32_t imageCount = std::min(
-			support.capabilities.maxImageCount,
-			support.capabilities.minImageCount + 1
+			support.AvailableCapabilities.maxImageCount,
+			(uint32_t)support.FrameAmount
 		);
 		
 		vk::SwapchainCreateInfoKHR createInfo = vk::SwapchainCreateInfoKHR(
 			vk::SwapchainCreateFlagsKHR(), *surface, imageCount, format.format, format.colorSpace,
-			extent, 1, vk::ImageUsageFlagBits::eColorAttachment
+			extent, 1, support.Usage
 		);
 
 
@@ -55,7 +58,7 @@ namespace Voidstar
 			createInfo.imageSharingMode = vk::SharingMode::eExclusive;
 		}
 
-		createInfo.preTransform = support.capabilities.currentTransform;
+		createInfo.preTransform = support.AvailableCapabilities.currentTransform;
 		createInfo.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
 		createInfo.presentMode = presentMode;
 		createInfo.clipped = VK_TRUE;
@@ -71,75 +74,63 @@ namespace Voidstar
 		{
 			Log::GetLog()->error("failed to create swap chain!");
 		}
-
-
-		// images already exists at this point
 		auto images = device->GetDevice().getSwapchainImagesKHR(swapchain->m_Swapchain);
-		swapchain->m_SwapchainFrames.resize(images.size());
-		for (size_t i = 0; i < images.size(); ++i) {
-
-			/*
-			* ImageViewCreateInfo( VULKAN_HPP_NAMESPACE::ImageViewCreateFlags flags_ = {},
-						   VULKAN_HPP_NAMESPACE::Image                image_ = {},
-						   VULKAN_HPP_NAMESPACE::ImageViewType    viewType_  = VULKAN_HPP_NAMESPACE::ImageViewType::e1D,
-						   VULKAN_HPP_NAMESPACE::Format           format_    = VULKAN_HPP_NAMESPACE::Format::eUndefined,
-						   VULKAN_HPP_NAMESPACE::ComponentMapping components_            = {},
-						   VULKAN_HPP_NAMESPACE::ImageSubresourceRange subresourceRange_ = {} ) VULKAN_HPP_NOEXCEPT
-				: flags( flags_ )
-				, image( image_ )
-				, viewType( viewType_ )
-				, format( format_ )
-				, components( components_ )
-				, subresourceRange( subresourceRange_ )
-			*/
-
-		
-
-			swapchain->m_SwapchainFrames[i].image = images[i];
-			swapchain->m_SwapchainFrames[i].imageView = Image::CreateImageView(images[i], format.format, vk::ImageAspectFlagBits::eColor);
-
-
-			// just for depth
-			auto defCandidates = { vk::Format::eD32Sfloat, vk::Format::eD24UnormS8Uint };
-			// for stencil
-			std::vector<vk::Format> candidates = 
-			{
-				vk::Format::eD32SfloatS8Uint,
-				vk::Format::eD24UnormS8Uint,
-				vk::Format::eD16UnormS8Uint
-
-			};
-			auto depthFormat = Image::GetFormat(
-				device->GetDevicePhys(),
-				candidates,
-				vk::ImageTiling::eOptimal,
-				vk::FormatFeatureFlagBits::eDepthStencilAttachment
-			);
-
-			ImageSpecs imageInfo;
-			
-			imageInfo.tiling = vk::ImageTiling::eOptimal;
-			imageInfo.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment| vk::ImageUsageFlagBits::eInputAttachment;
-			imageInfo.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
-			imageInfo.width = viewportWidth;
-			imageInfo.height = viewportHeight;
-			imageInfo.format = depthFormat;
-
-
-			auto samples = RenderContext::GetDevice()->GetSamples();
-			swapchain->m_SwapchainFrames[i].imageDepth= Image::CreateVKImage(imageInfo, samples);
-			swapchain->m_SwapchainFrames[i].depthImageMemory = Image::CreateMemory(swapchain->m_SwapchainFrames[i].imageDepth,imageInfo);
-			swapchain->m_SwapchainFrames[i].imageDepthView = Image::CreateImageView(
-				swapchain->m_SwapchainFrames[i].imageDepth, depthFormat, vk::ImageAspectFlagBits::eDepth
-			);
-
-			swapchain->m_SwapchainFrames[i].depthFormat = depthFormat;
-
+		swapchain->m_Images.resize(images.size());
+		for (int i =0; i < images.size(); i++)
+		{
+			swapchain->m_Images[i].m_Format= format.format;
+			swapchain->m_Images[i].m_Image = images[i];
+			swapchain->m_Images[i].m_ImageView = 
+				Image::CreateImageView(images[i], format.format, vk::ImageAspectFlagBits::eColor);
 		}
-
-		swapchain->m_SwapchainFormat = format.format;
-		swapchain->m_SwapchainExtent = extent;
 		return swapchain;
+		//for (size_t i = 0; i < images.size(); ++i) {
+
+
+		//	swapchain->m_SwapchainFrames[i].ColourImage.m_Image = images[i];
+
+
+		//	// just for depth
+		//	auto defCandidates = { vk::Format::eD32Sfloat, vk::Format::eD24UnormS8Uint };
+		//	// for stencil
+		//	std::vector<vk::Format> candidates = 
+		//	{
+		//		vk::Format::eD32SfloatS8Uint,
+		//		vk::Format::eD24UnormS8Uint,
+		//		vk::Format::eD16UnormS8Uint
+
+		//	};
+		//	auto depthFormat = Image::GetFormat(
+		//		device->GetDevicePhys(),
+		//		candidates,
+		//		vk::ImageTiling::eOptimal,
+		//		vk::FormatFeatureFlagBits::eDepthStencilAttachment
+		//	);
+
+		//	ImageSpecs imageInfo;
+		//	
+		//	imageInfo.tiling = vk::ImageTiling::eOptimal;
+		//	imageInfo.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment| vk::ImageUsageFlagBits::eInputAttachment;
+		//	imageInfo.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+		//	imageInfo.width = viewportWidth;
+		//	imageInfo.height = viewportHeight;
+		//	imageInfo.format = depthFormat;
+
+
+		//	auto samples = RenderContext::GetDevice()->GetSamples();
+		//	swapchain->m_SwapchainFrames[i].imageDepth= Image::CreateVKImage(imageInfo, samples);
+		//	swapchain->m_SwapchainFrames[i].depthImageMemory = Image::CreateMemory(swapchain->m_SwapchainFrames[i].imageDepth,imageInfo);
+		//	swapchain->m_SwapchainFrames[i].imageDepthView = Image::CreateImageView(
+		//	swapchain->m_SwapchainFrames[i].imageDepth, depthFormat, vk::ImageAspectFlagBits::eDepth
+		//	);
+
+		//	swapchain->m_SwapchainFrames[i].depthFormat = depthFormat;
+
+		//}
+
+		//swapchain->m_SwapchainFormat = format.format;
+		//swapchain->m_SwapchainExtent = extent;
+		
 		}
 
 		void Swapchain::CreateMSAAFrame()
@@ -154,27 +145,32 @@ namespace Voidstar
 			specs.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
 			specs.format = swapchainFormat;
 			auto samples = RenderContext::GetDevice()->GetSamples();
-			m_MsaaImage = Image::CreateVKImage(specs, samples);
-			m_MsaaImageMemory = Image::CreateMemory(m_MsaaImage, specs);
-			m_MsaaImageView = Image::CreateImageView(m_MsaaImage, swapchainFormat, vk::ImageAspectFlagBits::eColor);
+			//m_MsaaImage = Image::CreateVKImage(specs, samples);
+			//m_MsaaImageMemory = Image::CreateMemory(m_MsaaImage, specs);
+			//m_MsaaImageView = Image::CreateImageView(m_MsaaImage, swapchainFormat, vk::ImageAspectFlagBits::eColor);
 		}
 		
 		void Swapchain::CleanUp()
 		{
 			auto device = RenderContext::GetDevice()->GetDevice();
-			for (auto& frame : m_SwapchainFrames) {
+			//for (auto& e : m_Images)
+			//{
+			//	e.Destroy();
+			//}
+			//for (auto& frame : m_SwapchainFrames) {
 
-				device.destroyImageView(frame.imageView);
-				device.destroyFramebuffer(frame.framebuffer);
-				device.freeMemory(frame.depthImageMemory);
-				device.destroyImage(frame.imageDepth);
-				device.destroyImageView(frame.imageDepthView);
+			//	 // image is destroyed with swapchain
+			//	device.destroyImageView(frame.imageView);
+			//	device.destroyFramebuffer(frame.framebuffer);
+			//	device.freeMemory(frame.depthImageMemory);
+			//	device.destroyImage(frame.imageDepth);
+			//	device.destroyImageView(frame.imageDepthView);
 
-			}
+			//}
 
-			device.freeMemory(m_MsaaImageMemory);
-			device.destroyImage(m_MsaaImage);
-			device.destroyImageView(m_MsaaImageView);
+			//device.freeMemory(m_MsaaImageMemory);
+			//device.destroyImage(m_MsaaImage);
+			//device.destroyImageView(m_MsaaImageView);
 
 			// cannot not use detroy image on  presentable image
 			device.destroySwapchainKHR(m_Swapchain);
@@ -189,7 +185,7 @@ namespace Voidstar
 
 	vk::SurfaceFormatKHR GetSurfaceFormat(vk::Format format, vk::ColorSpaceKHR colorSpace, SwapChainSupportDetails& support)
 	{
-		for (vk::SurfaceFormatKHR formatSupport : support.formats)
+		for (vk::SurfaceFormatKHR formatSupport : support.AvailableFormats)
 		{
 			if (formatSupport.format == format
 				&& formatSupport.colorSpace == colorSpace) {
@@ -197,12 +193,12 @@ namespace Voidstar
 			}
 		}
 
-		return support.formats[0];
+		return support.AvailableFormats[0];
 	}
 
 	vk::PresentModeKHR GetPresentMode(vk::PresentModeKHR presentMode, SwapChainSupportDetails& support)
 	{
-		for (vk::PresentModeKHR presentModeSupport : support.presentModes)
+		for (vk::PresentModeKHR presentModeSupport : support.AvailablePresentModes)
 		{
 			if (presentMode == presentModeSupport) {
 				return presentModeSupport;
@@ -216,7 +212,7 @@ namespace Voidstar
 	}
 	vk::Extent2D GetSwapchainExtent(uint32_t width, uint32_t height, SwapChainSupportDetails& support) {
 
-		auto capabilities = support.capabilities;
+		auto capabilities = support.AvailableCapabilities;
 		if (capabilities.currentExtent.width != UINT32_MAX) {
 			return capabilities.currentExtent;
 		}

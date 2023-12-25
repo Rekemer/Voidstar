@@ -130,6 +130,8 @@
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\Rendering\Sync.h" />
+    <ClInclude Include="src\Rendering\RenderPassGraph.h" />
+    <ClInclude Include="src\Rendering\Attachment.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Dependencies\Tracy\public\TracyClient.cpp">
@@ -204,5 +206,7 @@
     <ClCompile Include="src\Window.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="src\Rendering\RenderPassGraph.cpp" />
+    <ClCompile Include="src\Rendering\AttachmentManager.cpp" />
   </ItemGroup>
 </Project>

@@ -411,22 +411,11 @@ const int QUAD_AMOUNT = 700;
 		// create instance
 		CreateInstance();
 
-		CreateDebugMessenger();
 
-		CreateSurface();
+		RenderContext::CreateSurface(window.get());
 
-		CreateDevice();
-		RenderContext::SetDevice(m_Device);
-
-		SwapChainSupportDetails support;
-		support.devcie = m_Device;
-		support.surface = &m_Surface;
-		support.capabilities = m_Device->GetDevicePhys().getSurfaceCapabilitiesKHR(m_Surface);
-		support.formats = m_Device->GetDevicePhys().getSurfaceFormatsKHR(m_Surface);
-		support.presentModes = m_Device->GetDevicePhys().getSurfacePresentModesKHR(m_Surface);
-		support.viewportWidth = m_ViewportWidth;
-		support.viewportHeight = m_ViewportHeight;
-		m_Swapchain = Swapchain::Create(support);
+		RenderContext::CreateDevice();
+		
 		
 
 		std::vector<vk::DescriptorPoolSize> pool_sizes =
@@ -601,6 +590,7 @@ const int QUAD_AMOUNT = 700;
 	}
 	void Renderer::InitImGui()
 	{
+#if IMGUI_ENABLED
 		// Create Descriptor Pool
 		{
 			VkDescriptorPoolSize pool_sizes[] =
@@ -669,14 +659,14 @@ const int QUAD_AMOUNT = 700;
 
 		}
 		g_MainWindowData.RenderPass = imguiData.g_RenderPass;
-		
-		
-			
-		auto g_wd= &g_MainWindowData;
+
+
+
+		auto g_wd = &g_MainWindowData;
 		g_wd->Width = m_ViewportWidth;
 		g_wd->Height = m_ViewportHeight;
-		g_wd->Surface = m_Surface;
-		g_wd->ImageCount= m_Swapchain->m_SwapchainFrames.size();
+		g_wd->Surface = *RenderContext::GetSurface();
+		g_wd->ImageCount = m_Swapchain->m_SwapchainFrames.size();
 		g_wd->PresentMode = VK_PRESENT_MODE_MAILBOX_KHR;
 		g_wd->SurfaceFormat.format = VK_FORMAT_B8G8R8A8_UNORM;
 		g_wd->Swapchain = m_Swapchain->m_Swapchain;
@@ -702,10 +692,10 @@ const int QUAD_AMOUNT = 700;
 				auto err = vkCreateFramebuffer(m_Device->GetDevice(), &info, nullptr, &fd->Framebuffer);
 			}
 		}
-		
-		
-		
-		
+
+
+
+
 		//SetupVulkanWindow(&g_MainWindowData,m_Surface,m_ViewportWidth, m_ViewportHeight);
 
 		ImGui::CreateContext();
@@ -714,7 +704,7 @@ const int QUAD_AMOUNT = 700;
 		ImGui::StyleColorsLight();
 
 		// Setup Platform/Renderer backends
-		bool result =ImGui_ImplGlfw_InitForVulkan(m_Window->GetRaw(), true);
+		bool result = ImGui_ImplGlfw_InitForVulkan(m_Window->GetRaw(), true);
 		//this initializes imgui for Vulkan
 		ImGui_ImplVulkan_InitInfo init_info = {};
 		init_info.Instance = m_Instance->GetInstance();
@@ -728,22 +718,24 @@ const int QUAD_AMOUNT = 700;
 
 		result = ImGui_ImplVulkan_Init(&init_info, g_MainWindowData.RenderPass);
 
-		
+
 
 		auto commandBuffer = CommandBuffer::CreateBuffer(imguiData.g_CommandPool, vk::CommandBufferLevel::ePrimary);
 		commandBuffer.BeginTransfering();
 
-		result =  ImGui_ImplVulkan_CreateFontsTexture((VkCommandBuffer)commandBuffer.GetCommandBuffer());
+		result = ImGui_ImplVulkan_CreateFontsTexture((VkCommandBuffer)commandBuffer.GetCommandBuffer());
 		commandBuffer.EndTransfering();
 		commandBuffer.SubmitSingle();
 		commandBuffer.Free();
 
 
-		
+
 		ImGui_ImplVulkan_DestroyFontUploadObjects();
-	
 
 
+
+#endif
+		
 
 	}
 
@@ -825,8 +817,8 @@ const int QUAD_AMOUNT = 700;
 	void Renderer::CreateSyncObjects()
 	{	
 		
-		
-		auto frameAmount = m_Swapchain->m_SwapchainFrames.size();
+		assert(false);
+		auto frameAmount = 2;
 		m_ComputeInFlightFences.resize(frameAmount);
 		m_ComputeFinishedSemaphores.resize(frameAmount);
 		m_ImageAvailableSemaphore.resize(frameAmount);
@@ -849,18 +841,19 @@ const int QUAD_AMOUNT = 700;
 
 
 		m_Device->GetDevice().waitIdle();
-		m_Swapchain->CleanUp();
 
 
 		SwapChainSupportDetails support;
-		support.devcie = m_Device;
-		support.surface = &m_Surface;
-		support.capabilities = m_Device->GetDevicePhys().getSurfaceCapabilitiesKHR(m_Surface);
-		support.formats = m_Device->GetDevicePhys().getSurfaceFormatsKHR(m_Surface);
-		support.presentModes = m_Device->GetDevicePhys().getSurfacePresentModesKHR(m_Surface);
-		support.viewportWidth = m_ViewportWidth;
-		support.viewportHeight = m_ViewportHeight;
-		m_Swapchain = Swapchain::Create(support);
+		auto device = RenderContext::GetDevice();
+		auto surface = RenderContext::GetSurface();
+		support.AvailableCapabilities = device->GetDevicePhys().getSurfaceCapabilitiesKHR(*surface);
+		support.AvailablePresentModes = device->GetDevicePhys().getSurfacePresentModesKHR(*surface);
+		support.AvailableFormats = device->GetDevicePhys().getSurfaceFormatsKHR(*surface);
+		support.ViewportWidth = m_ViewportWidth;
+		support.ViewportHeight = m_ViewportHeight;
+		
+		RenderContext::RecreateSwapchain(support);
+		
 		auto& camera = m_App->GetCamera();
 		camera->UpdateProj(m_ViewportWidth, m_ViewportHeight);
 	}
@@ -913,11 +906,8 @@ const int QUAD_AMOUNT = 700;
 			m_QuadBufferBatch.reset();
 			m_QuadBufferBatchIndex.reset();
 			m_QuadIndexBuffer.reset();
-			m_Device->GetDevice().destroy();
-
-			m_Instance->GetInstance().destroySurfaceKHR(m_Surface);
-			m_Instance->GetInstance().destroyDebugUtilsMessengerEXT(m_DebugMessenger, nullptr, m_Dldi);
-			m_Instance->GetInstance().destroy();
+			RenderContext::Shutdown();
+			
 
 
 		
@@ -1011,8 +1001,8 @@ const int QUAD_AMOUNT = 700;
 			RecreateSwapchain();
 		}
 
-
-		m_CurrentFrame = (m_CurrentFrame + 1) % m_Swapchain->m_SwapchainFrames.size();
+		assert(false);
+		//m_CurrentFrame = (m_CurrentFrame + 1) % m_Swapchain->m_SwapchainFrames.size();
 
 		
 		
@@ -1172,39 +1162,17 @@ const int QUAD_AMOUNT = 700;
 	{
 
 	}
-	void Renderer::CreateDevice()
-	{
-		m_Device = Device::Create(m_Instance, m_Surface);
-	}
-	
+
 	
 
 
 	
 	void Renderer::CreateSurface()
 	{
-		VkSurfaceKHR c_style_surface;
-		auto rawWindow = m_Window->GetRaw();
-		if (glfwCreateWindowSurface(m_Instance->GetInstance(), rawWindow, nullptr, &c_style_surface) != VK_SUCCESS)
-		{
 		
-			std::cout << "Failed to abstract glfw surface for Vulkan\n";
-			Log::GetLog()->error("Failed to abstract glfw surface for Vulkan");
-		}
-		else 
-		{
-			Log::GetLog()->info("Successfully abstracted glfw surface for Vulkan");
-			
-		}
-		//copy constructor converts to hpp convention
-		m_Surface = c_style_surface;
 	}
 	void Renderer::CreateInstance()
 	{
-		
-
-		
-
 		InstanceInfo info;
 		uint32_t version;
 		vkEnumerateInstanceVersion(&version);
@@ -1227,47 +1195,8 @@ const int QUAD_AMOUNT = 700;
 		info.extensions.push_back("VK_EXT_calibrated_timestamps");
 
 		info.layers.push_back("VK_LAYER_KHRONOS_validation");
-
-		m_Instance = Instance::Create(info);
+		RenderContext::CreateInstance(info);
 		
-	
-	}
-
-	inline VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
-		VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-		VkDebugUtilsMessageTypeFlagsEXT messageType,
-		const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-		void* pUserData
-	) {
-		std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
-
-		return VK_FALSE;
-	}
-
-	void Renderer::CreateDebugMessenger()
-	{
-		m_Dldi = vk::DispatchLoaderDynamic(m_Instance->GetInstance(), vkGetInstanceProcAddr);
-
-	
-		vk::DebugUtilsMessengerCreateInfoEXT createInfo = vk::DebugUtilsMessengerCreateInfoEXT(
-			vk::DebugUtilsMessengerCreateFlagsEXT(),
-			/*vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |*/ vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning | vk::DebugUtilsMessageSeverityFlagBitsEXT::eError,
-			vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance,
-			debugCallback,
-			nullptr
-		);
-		
-		try
-		{
-			m_DebugMessenger = m_Instance->GetInstance().createDebugUtilsMessengerEXT(createInfo, nullptr, m_Dldi);
-			Log::GetLog()->info("m_DebugMessenger is created!");
-		}
-		catch (vk::SystemError& err)
-		{
-			Log::GetLog()->error("Falied to create m_DebugMessenger!");
-		}
-		
-
 		
 	}
 	

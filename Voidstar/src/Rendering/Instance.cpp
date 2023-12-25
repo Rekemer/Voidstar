@@ -10,7 +10,7 @@
 
 namespace Voidstar
 {
-	Instance* Instance::Create(InstanceInfo& info)
+	UPtr<Instance> Instance::Create(InstanceInfo& info)
 	{
 		uint32_t version;
 		vkEnumerateInstanceVersion(&version);
@@ -65,7 +65,7 @@ namespace Voidstar
 		{
 
 			auto vkInstance = vk::createInstance(createInfo);
-			auto instance = new Instance();
+			auto instance = CreateUPtr<Instance>();
 			instance->m_Instance = vkInstance;
 			return instance;
 		}
@@ -75,5 +75,45 @@ namespace Voidstar
 
 		}
 
+	}
+
+	inline VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
+		VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+		VkDebugUtilsMessageTypeFlagsEXT messageType,
+		const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+		void* pUserData
+	) {
+		std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
+
+		return VK_FALSE;
+	}
+	void Instance::CreateDebugMessenger()
+	{
+		m_Dldi = vk::DispatchLoaderDynamic(m_Instance, vkGetInstanceProcAddr);
+
+
+		vk::DebugUtilsMessengerCreateInfoEXT createInfo = vk::DebugUtilsMessengerCreateInfoEXT(
+			vk::DebugUtilsMessengerCreateFlagsEXT(),
+			/*vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |*/ vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning | vk::DebugUtilsMessageSeverityFlagBitsEXT::eError,
+			vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance,
+			debugCallback,
+			nullptr
+		);
+
+		try
+		{
+			m_DebugMessenger = m_Instance.createDebugUtilsMessengerEXT(createInfo, nullptr, m_Dldi);
+			Log::GetLog()->info("m_DebugMessenger is created!");
+		}
+		catch (vk::SystemError& err)
+		{
+			Log::GetLog()->error("Falied to create m_DebugMessenger!");
+		}
+	}
+	void Instance::DestroyInstance(vk::SurfaceKHR& surface)
+	{
+		m_Instance.destroySurfaceKHR(surface);
+		m_Instance.destroyDebugUtilsMessengerEXT(m_DebugMessenger, nullptr, m_Dldi);
+		m_Instance.destroy();
 	}
 }

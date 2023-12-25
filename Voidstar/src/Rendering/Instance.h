@@ -1,5 +1,6 @@
 #pragma once
 #include "vulkan/vulkan.hpp"
+#include "Types.h"
 namespace Voidstar
 {
 	struct InstanceInfo
@@ -14,9 +15,15 @@ namespace Voidstar
 	class Instance
 	{
 	public:
-		static Instance* Create(InstanceInfo& info);
+		static UPtr<Instance> Create(InstanceInfo& info);
+		void CreateDebugMessenger();
+		void DestroyInstance(vk::SurfaceKHR& surface);
 		vk::Instance& GetInstance() { return m_Instance; }
 	private:
 		vk::Instance m_Instance = VK_NULL_HANDLE;
+		//debug callback
+		vk::DebugUtilsMessengerEXT m_DebugMessenger;
+		//dynamic instance dispatcher
+		vk::DispatchLoaderDynamic m_Dldi;
 	};
 }

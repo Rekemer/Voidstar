@@ -394,7 +394,6 @@ namespace Voidstar
 		specs.height = image->m_Height;
 		specs.format = format;
 		specs.tiling = vk::ImageTiling::eOptimal;
-		//specs.usage = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled;
 		specs.usage = usage;
 		specs.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
 		image->m_Format = specs.format;

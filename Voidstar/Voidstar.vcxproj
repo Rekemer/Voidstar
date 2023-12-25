@@ -148,6 +148,7 @@
     <ClInclude Include="src\MemoryTracker.h" />
     <ClInclude Include="src\Prereq.h" />
     <ClInclude Include="src\Quadtree\Quadtree.h" />
+    <ClInclude Include="src\Rendering\Attachment.h" />
     <ClInclude Include="src\Rendering\Binder.h" />
     <ClInclude Include="src\Rendering\BinderHelp.h" />
     <ClInclude Include="src\Rendering\Buffer.h" />
@@ -168,6 +169,7 @@
     <ClInclude Include="src\Rendering\RenderContext.h" />
     <ClInclude Include="src\Rendering\RenderPass.h" />
     <ClInclude Include="src\Rendering\Renderer.h" />
+    <ClInclude Include="src\Rendering\RenderPassGraph.h" />
     <ClInclude Include="src\Rendering\Settings.h" />
     <ClInclude Include="src\Rendering\SupportStruct.h" />
     <ClInclude Include="src\Rendering\Swapchain.h" />
@@ -190,6 +192,7 @@
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="src\Quadtree\Quadtree.cpp" />
+    <ClCompile Include="src\Rendering\AttachmentManager.cpp" />
     <ClCompile Include="src\Rendering\Buffer.cpp" />
     <ClCompile Include="src\Rendering\Camera.cpp" />
     <ClCompile Include="src\Rendering\CommandBuffer.cpp" />
@@ -206,6 +209,7 @@
     <ClCompile Include="src\Rendering\RenderPass.cpp" />
     <ClCompile Include="src\Rendering\Renderer.cpp" />
     <ClCompile Include="src\Rendering\Swapchain.cpp" />
+    <ClCompile Include="src\Rendering\RenderPassGraph.cpp" />
     <ClCompile Include="src\Window.cpp" />
   </ItemGroup>
   <ItemGroup>

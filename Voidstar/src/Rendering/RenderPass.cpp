@@ -1,7 +1,9 @@
+
 #include "Prereq.h"
 #include "RenderPass.h"
 #include "Device.h"
 #include "Log.h"
+#include "RenderContext.h"
 namespace Voidstar
 {
 	//On tile - based - renderer, which is pretty much anything on mobile,
@@ -40,7 +42,7 @@ namespace Voidstar
 	{
 		m_Dependencies.push_back(subpassDependency);
 	}
-	vk::RenderPass RenderPassBuilder::Build(Device& device)
+	UPtr<RenderPass> RenderPassBuilder::Build(std::string_view name,Device& device)
 	{
 		//Now create the renderpass
 		vk::RenderPassCreateInfo renderpassInfo = {};
@@ -61,12 +63,20 @@ namespace Voidstar
 
 		try 
 		{
-			return device.GetDevice().createRenderPass(renderpassInfo);
+			auto vkRenderPass = device.GetDevice().createRenderPass(renderpassInfo);
+			UPtr<RenderPass> renderPass = CreateUPtr<RenderPass>(name,vkRenderPass);
+			return std::move(renderPass);
 		}
 		catch (vk::SystemError err)
 		{
 			Log::GetLog()->error("Failed to create renderpass!");
 		}
+	}
+
+	RenderPass::~RenderPass()
+	{
+		auto device = RenderContext::GetDevice()->GetDevice();
+		device.destroyRenderPass(m_RenderPass);
 	}
 
 }
