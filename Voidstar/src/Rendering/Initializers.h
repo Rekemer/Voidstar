@@ -1,5 +1,6 @@
 #pragma once
 #include "vulkan/vulkan.hpp"
+#include "RenderContext.h"
 inline vk::VertexInputBindingDescription VertexBindingDescription(uint32_t binding,
 	uint32_t stride,
 	vk::VertexInputRate inputRate)
@@ -62,7 +63,20 @@ inline vk::SubpassDescription SubpassDescription(uint32_t colorAttachemntCount, 
 }
 
 
+inline vk::Framebuffer CreateFramebuffer(std::vector < vk::ImageView> attachments, vk::RenderPass renderPass,size_t width, size_t height )
+{
+	auto device = Voidstar::RenderContext::GetDevice();
+	vk::FramebufferCreateInfo framebufferInfo;
+	framebufferInfo.flags = vk::FramebufferCreateFlags();
+	framebufferInfo.renderPass = renderPass;
+	framebufferInfo.attachmentCount = attachments.size();
+	framebufferInfo.pAttachments = attachments.data();
+	framebufferInfo.width = width;
+	framebufferInfo.height = height;
+	framebufferInfo.layers = 1;
 
+	return device->GetDevice().createFramebuffer(framebufferInfo);
+}
 
 inline vk::AttachmentDescription AttachmentDescription(vk::Format swapchainImageFormat, vk::SampleCountFlagBits samples, vk::AttachmentLoadOp loadOp, vk::AttachmentStoreOp storeOp, vk::AttachmentLoadOp stencilLoadOp, vk::AttachmentStoreOp stencilStoreOp, vk::ImageLayout initialLayout, vk::ImageLayout finalLayout)
 {

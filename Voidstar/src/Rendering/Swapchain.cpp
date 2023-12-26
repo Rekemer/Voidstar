@@ -78,10 +78,14 @@ namespace Voidstar
 		swapchain->m_Images.resize(images.size());
 		for (int i =0; i < images.size(); i++)
 		{
-			swapchain->m_Images[i].m_Format= format.format;
-			swapchain->m_Images[i].m_Image = images[i];
-			swapchain->m_Images[i].m_ImageView = 
+			swapchain->m_Images[i] = CreateUPtr<SwapchainImage>();
+			swapchain->m_Images[i]->m_Format= format.format;
+			swapchain->m_Images[i]->SetSample(vk::SampleCountFlagBits::e1);
+			swapchain->m_Images[i]->m_Image = images[i];
+			swapchain->m_Images[i]->m_ImageView = 
 				Image::CreateImageView(images[i], format.format, vk::ImageAspectFlagBits::eColor);
+			swapchain->m_Images[i]->SetWidth(viewportWidth );
+			swapchain->m_Images[i]->SetHeight(viewportHeight);
 		}
 		return swapchain;
 		//for (size_t i = 0; i < images.size(); ++i) {

@@ -156,13 +156,13 @@ namespace Voidstar
 		Vertex * m_BatchQuad;
 		Vertex * m_BatchQuadStart;
 		int m_QuadIndex= 0;
+		void CreateSyncObjects();
 	private:
 		void CreateInstance();
 		void CreateDebugMessenger();
 		void CreateSurface();
 		void CreateDevice();
 		void CreatePipeline();
-		void CreateSyncObjects();
 		void RecordCommandBuffer(uint32_t imageIndex, vk::RenderPass& renderPass, vk::Pipeline& pipeline, vk::PipelineLayout& pipelineLayout, int instances);
 		void RecreateSwapchain();
 		void AllocateSets();

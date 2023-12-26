@@ -11,6 +11,7 @@
 #include "Rendering/Generation.h"
 #include "Rendering/Image.h"
 #include "Rendering/DescriptorSetLayout.h"
+#include "Rendering/FramebufferManager.h"
 #include "Rendering/Pipeline.h"
 #include "Rendering/Swapchain.h"
 #include "Rendering/RenderPass.h"

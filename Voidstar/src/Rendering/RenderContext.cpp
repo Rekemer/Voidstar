@@ -14,6 +14,7 @@ namespace Voidstar
 	UPtr<Swapchain> RenderContext::m_Swapchain;
 	UPtr <vk::SurfaceKHR> RenderContext::m_Surface;
 	UPtr<Instance> RenderContext::m_Instance;
+	size_t RenderContext::m_FrameAmount;
 
 	Device* RenderContext::GetDevice()
 	{
@@ -27,12 +28,14 @@ namespace Voidstar
 	{
 		assert(m_Swapchain == nullptr);
 		m_Swapchain = Swapchain::Create(details);
+		m_FrameAmount = m_Swapchain->GetFrameAmount();
 	}
 	void RenderContext::RecreateSwapchain(SwapChainSupportDetails& details)
 	{
 		assert(m_Swapchain != nullptr);
 		m_Swapchain->CleanUp();
-
+		m_Swapchain = Swapchain::Create(details);
+		m_FrameAmount = m_Swapchain->GetFrameAmount();
 	}
 	void RenderContext::CreateSurface(Window* window)
 	{

@@ -132,6 +132,7 @@
     <ClInclude Include="src\Rendering\Sync.h" />
     <ClInclude Include="src\Rendering\RenderPassGraph.h" />
     <ClInclude Include="src\Rendering\Attachment.h" />
+    <ClInclude Include="src\Rendering\FramebufferManager.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Dependencies\Tracy\public\TracyClient.cpp">

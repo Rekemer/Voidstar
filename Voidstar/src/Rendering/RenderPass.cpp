@@ -4,17 +4,88 @@
 #include "Device.h"
 #include "Log.h"
 #include "RenderContext.h"
+#include "Initializers.h"
+#include "AttachmentManager.h"
 namespace Voidstar
 {
+
+
+
+
+
+	void RenderPassBuilder::SetLoadOp(vk::AttachmentLoadOp loadOp)
+	{
+		m_LoadOp = loadOp;
+	}
+	void RenderPassBuilder::SetSaveOp(vk::AttachmentStoreOp storeOp)
+	{
+		m_StoreOp = storeOp;
+	}
+	void RenderPassBuilder::SetStencilLoadOp(vk::AttachmentLoadOp storeOp)
+	{
+		m_StencilLoadOp = storeOp;
+	}
+	void RenderPassBuilder::SetStencilSaveOp(vk::AttachmentStoreOp storeOp)
+	{
+		m_StencilStoreOp = storeOp;
+	}
+	void RenderPassBuilder::SetInitialLayout(vk::ImageLayout initial)
+	{
+		m_InitialLayout = initial;
+	}
+	void RenderPassBuilder::SetFinalLayout(vk::ImageLayout final)
+	{
+		m_FinalLayout = final;
+	}
+
+	vk::AttachmentDescription RenderPassBuilder::BuildAttachmentDesc()
+	{
+		return AttachmentDescription(m_Format,
+			m_Samples, m_LoadOp,
+			m_StoreOp, m_StencilLoadOp,
+			m_StencilStoreOp, m_InitialLayout,
+			m_FinalLayout);
+	}
+
+	void RenderPassBuilder::ColorOutput(std::string_view attachmentName, AttachmentManager& manager)
+	{
+		m_Color.push_back(attachmentName);
+		auto color = manager.GetColor(std::vector{ attachmentName });
+		m_Format = color[0]->SwapchainImage::GetFormat();
+		m_Samples = color[0]->SwapchainImage::GetSample();
+	}
+	//void RenderPassBuilder::DepthOutput(std::string_view attachmentName,
+	//	AttachmentManager& manager, vk::Format format, size_t width, size_t height,
+	//	vk::SampleCountFlagBits samples,
+	//	vk::ImageUsageFlags usage)
+	//{
+	//	assert(false);
+	//}
+		
+	void RenderPassBuilder::DepthStencilOutput(std::string_view attachmentName, AttachmentManager& manager)
+	{
+		m_DepthStencil.push_back(attachmentName);
+		auto color = manager.GetDepth(std::vector{ attachmentName });
+		m_Format = color[0]->SwapchainImage::GetFormat();
+		m_Samples = color[0]->SwapchainImage::GetSample();
+	}
+	//void RenderPassBuilder::StencilOutput(std::string_view attachmentName, AttachmentSpec& spec, AttachmentManager& manager) {
+	//}
+	//void RenderPassBuilder::ResolveOutput(std::string_view attachmentName, AttachmentSpec& spec, AttachmentManager& manager) {
+	//}
+	void RenderPassBuilder::ResolveOutput(std::string_view attachmentName, AttachmentManager& manager)
+	{
+		m_Resolve.push_back(attachmentName);
+		auto color = manager.GetResolve(std::vector{ attachmentName });
+		m_Format = color[0]->SwapchainImage::GetFormat();
+		m_Samples = color[0]->SwapchainImage::GetSample();
+	}
+
+	
+
 	//On tile - based - renderer, which is pretty much anything on mobile,
 	//using input attachments is faster than the traditional multi - pass approach as pixel reads are fetched from tile memory instead of mainframebuffer, 
 	//so if you target the mobile market it’s always a good idea to use input attachments instead of multiple passes when possible.
-
-
-
-
-
-
 
 
 	/*No.The attachment reference layout tells Vulkan what layout to transition the image to at 
@@ -28,9 +99,9 @@ namespace Voidstar
 		that uses the attachment to the finalLayout for the render pass.*/
 
 
-	void RenderPassBuilder::AddAttachment(std::pair<vk::AttachmentDescription, vk::AttachmentReference> attachment)
+	void RenderPassBuilder::AddAttachment(vk::AttachmentDescription desc, vk::AttachmentReference attachment)
 	{
-		m_Attachments.push_back(attachment);
+		m_Attachments.push_back(std::make_pair(desc,attachment));
 	}
 
 	void RenderPassBuilder::AddSubpass(vk::SubpassDescription subpass)
@@ -42,11 +113,11 @@ namespace Voidstar
 	{
 		m_Dependencies.push_back(subpassDependency);
 	}
-	UPtr<RenderPass> RenderPassBuilder::Build(std::string_view name,Device& device)
+	UPtr<RenderPass> RenderPassBuilder::Build(std::string_view name, AttachmentManager& manager, size_t framebufferAmount)
 	{
+		auto device = RenderContext::GetDevice();
 		//Now create the renderpass
 		vk::RenderPassCreateInfo renderpassInfo = {};
-
 		std::vector<vk::AttachmentDescription> attachments;
 		for (auto attachment : m_Attachments)
 		{
@@ -61,10 +132,55 @@ namespace Voidstar
 		renderpassInfo.dependencyCount = m_Dependencies.size();
 		renderpassInfo.pDependencies = m_Dependencies.data();
 
+		auto color = manager.GetColor(m_Color);
+		auto depthStencil= manager.GetDepth(m_DepthStencil);
+		auto resolve = manager.GetResolve(m_Resolve);
+
 		try 
 		{
-			auto vkRenderPass = device.GetDevice().createRenderPass(renderpassInfo);
+			auto vkRenderPass = device->GetDevice().createRenderPass(renderpassInfo);
 			UPtr<RenderPass> renderPass = CreateUPtr<RenderPass>(name,vkRenderPass);
+			renderPass->m_Framebuffers.resize(attachments.size());
+			for (int i=0; i < framebufferAmount; i++)
+			{
+				std::vector<vk::ImageView> views;
+				if (resolve.empty())
+				{
+					if (depthStencil.empty())
+					{
+						views.push_back(color[i]->GetImageView());
+					}
+					else
+					{
+						views.push_back(color[i]->GetImageView());
+						views.push_back(depthStencil[i]->GetImageView());
+					}
+				}
+				else
+				{
+					if (depthStencil.empty())
+					{
+						if (!color.empty())
+						{
+							views.push_back(color[i]->GetImageView());
+						}
+						views.push_back(resolve[i]->GetImageView());
+					}
+					else
+					{
+						if (!color.empty())
+						{
+							views.push_back(color[i]->GetImageView());
+						}
+						views.push_back(color[i]->GetImageView()); 
+						views.push_back(depthStencil[i]->GetImageView());
+					}
+				}
+				
+				renderPass->m_Framebuffers[i] =  CreateFramebuffer(views, vkRenderPass, color[0]->GetWidth(), color[0]->GetHeight());
+			}
+
+			
 			return std::move(renderPass);
 		}
 		catch (vk::SystemError err)

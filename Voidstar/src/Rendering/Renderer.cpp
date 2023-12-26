@@ -415,7 +415,7 @@ const int QUAD_AMOUNT = 700;
 		RenderContext::CreateSurface(window.get());
 
 		RenderContext::CreateDevice();
-		
+		m_Device = RenderContext::GetDevice();
 		
 
 		std::vector<vk::DescriptorPoolSize> pool_sizes =
@@ -429,8 +429,7 @@ const int QUAD_AMOUNT = 700;
 
 		m_UniversalPool = DescriptorPool::Create(pool_sizes, 10);
 
-		CreateSyncObjects();
-		m_Swapchain->CreateMSAAFrame();
+		
 
 
 
@@ -807,17 +806,16 @@ const int QUAD_AMOUNT = 700;
 		m_UserFunctions.bindingsInit();
 		CreateLayouts();
 		AllocateSets();
+		m_UserFunctions.createPipelines();
+		m_UserFunctions.bindResources();
 		m_UserFunctions.bufferInit();
 		m_UserFunctions.loadTextures();
-		m_UserFunctions.bindResources();
-		m_UserFunctions.createPipelines();
 		m_UserFunctions.createFramebuffer();
 
 	}
 	void Renderer::CreateSyncObjects()
 	{	
 		
-		assert(false);
 		auto frameAmount = 2;
 		m_ComputeInFlightFences.resize(frameAmount);
 		m_ComputeFinishedSemaphores.resize(frameAmount);
@@ -1196,7 +1194,7 @@ const int QUAD_AMOUNT = 700;
 
 		info.layers.push_back("VK_LAYER_KHRONOS_validation");
 		RenderContext::CreateInstance(info);
-		
+		m_Instance = RenderContext::GetInstance();
 		
 	}
 	

@@ -17,6 +17,7 @@ namespace Voidstar
 		vk::Filter minFilter;
 		vk::Filter magFilter;
 		vk::SampleCountFlagBits samples;
+		vk::ImageAspectFlagBits imageAspect = vk::ImageAspectFlagBits::eColor;
 		int arrayCount = 1;
 		vk::ImageCreateFlags flags;
 		vk::ImageType imageType = vk::ImageType::e2D;
@@ -34,18 +35,45 @@ namespace Voidstar
 		{
 			return m_Format;
 		}
+		vk::ImageView GetImageView() { return m_ImageView; }
 		void Destroy()
 		{
 			auto logicalDevice = RenderContext::GetDevice()->GetDevice();
 			logicalDevice.destroyImage(m_Image);
 			logicalDevice.destroyImageView(m_ImageView);
 		}
+		int GetWidth()
+		{
+			return m_Width;
+		}
+		int GetHeight()
+		{
+			return m_Height;
+		}
+		void SetSample(vk::SampleCountFlagBits sample)
+		{
+			m_Sample = sample;
+		}
+		void SetHeight(int height)
+		{
+			m_Height = height;
+		}
+		void SetWidth(int height)
+		{
+			m_Width = height;
+		}
+		vk::SampleCountFlagBits GetSample()
+		{
+			return m_Sample;
+		}
+
 	protected:
+		int m_Width, m_Height;
 		vk::Image m_Image;
 		vk::ImageView m_ImageView;
 		vk::Format m_Format;
+		vk::SampleCountFlagBits m_Sample;
 	};
-
 	class Image final : public SwapchainImage
 	{
 	public:
@@ -67,12 +95,10 @@ namespace Voidstar
 		static SPtr<Image> CreateEmpty3DImage(int width, int height, int depth, vk::Format format);
 		~Image();
 		void Bind();
-		static vk::Format GetFormat(vk::PhysicalDevice physicalDevice,
-			const std::vector<vk::Format>& candidates,
-			vk::ImageTiling tiling, vk::FormatFeatureFlags features);
+		
 		
 
-		vk::ImageView GetImageView() { return m_ImageView; }
+		
 		vk::Sampler  GetSampler() { return m_Sampler; }
 		vk::ImageLayout GetLayout() { return m_ImageLayout; }
 		void SetFormat(vk::Format format)
@@ -91,16 +117,11 @@ namespace Voidstar
 		{
 			m_ImageMemory = memory;
 		}
-		int GetWidth()
-		{
-			return m_Width;
-		}
-		int GetHeight()
-		{
-			return m_Height;
-		}
-
 		
+		
+		static vk::Format GetFormat(vk::PhysicalDevice physicalDevice,
+			const std::vector<vk::Format>& candidates,
+			vk::ImageTiling tiling, vk::FormatFeatureFlags features);
 	private:
 		void GenerateMipmaps(VkImage image,VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
 		void* LoadImageRaw();
@@ -108,7 +129,7 @@ namespace Voidstar
 		friend class Renderer;
 		friend class CommandBuffer;
 		friend class Device;
-		int m_Width, m_Height,m_Depth = 0, m_Channels;
+		int m_Depth = 0, m_Channels;
 		int m_MipMapLevels;
 		
 		
