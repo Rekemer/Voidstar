@@ -21,6 +21,7 @@ namespace Voidstar
 		}
 		void Destroy()
 		{
+			RenderContext::GetDevice()->GetDevice().waitIdle();
 			RenderContext::GetDevice()->GetDevice().destroyFence(m_Fence);
 		}
 		vk::Fence GetFence()

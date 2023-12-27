@@ -12,6 +12,8 @@
 #include"Font.h"
 #include <functional>
 #include "Sync.h"
+#include "Pipeline.h"
+#include "RenderPassGraph.h"
 
 
 
@@ -109,7 +111,10 @@ namespace Voidstar
 		void InitImGui( );
 		void SetupVulkanWindow(ImGui_ImplVulkanH_Window* g_wd, VkSurfaceKHR surface, int width, int height);
 		static Renderer* Instance();
+		void BeginFrame(UniformBufferObject& ubo, size_t viewportWidth, 
+			size_t viewportHeight);
 		void Render(float deltaTime,Camera& camera);
+		void EndFrame();
 		void UserInit();
 		void CompileShader(std::string_view path, ShaderType type);
 		CommandPoolManager* GetCommandPoolManager()
@@ -156,6 +161,20 @@ namespace Voidstar
 		Vertex * m_BatchQuadStart;
 		int m_QuadIndex= 0;
 		void CreateSyncObjects();
+		void AddRenderGraph(std::string_view name, RenderPassGraph& graph)
+		{
+			//m_Graphs[name.data()] = std::move(graph);
+		}
+
+	
+		Pipeline* GetPipeline(std::string_view pipeline)
+		{
+			return m_Pipelines.at(pipeline.data()).get();
+		}
+		void AddPipeline(std::string_view name,UPtr<Pipeline> pipeline)
+		{
+			m_Pipelines[name.data()] = std::move(pipeline);
+		}
 	private:
 		void CreateInstance();
 		void CreateDebugMessenger();
@@ -174,7 +193,6 @@ namespace Voidstar
 		Voidstar::Instance* m_Instance;
 		Device* m_Device;
 		int m_ViewportWidth, m_ViewportHeight;
-		UPtr<Swapchain> m_Swapchain;
 		size_t m_CurrentFrame = 0;
 		Application* m_App;
 		
@@ -240,8 +258,8 @@ namespace Voidstar
 		std::unordered_map<std::pair<int, PipelineType>, std::variant<vk::DescriptorSet, std::vector<vk::DescriptorSet> >, EnumClassHash> m_Sets;
 		Sets m_SetsAmount;
 		Callables m_UserFunctions;
-
-		
+		std::unordered_map<std::string,RenderPassGraph> m_Graphs;
+		std::unordered_map<std::string, UPtr<Pipeline>> m_Pipelines;
 	
 	};
 

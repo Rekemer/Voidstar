@@ -10,6 +10,7 @@
 #include FT_FREETYPE_H  
 #include <map>
 #include <utility>
+#include <functional>
 #include "gtx/compatibility.hpp"
 using namespace Voidstar;
 
@@ -17,7 +18,7 @@ using namespace Voidstar;
 std::map<unsigned char, Character> Characters;
 const float PageRenderWidth = 400.f;
 const float PageRenderHeight = 512.f;
-const int PageAmount = 4;
+const int PageAmount = 3;
 
 
 class ExampleApplication : public Voidstar::Application
@@ -142,9 +143,9 @@ public:
 		auto createPipelines = [this]()
 		{
 			auto m_DescriptorSetLayout = Renderer::Instance()->GetSetLayout(0, PipelineType::RENDER);
+			auto m_DescriptorSetLayoutFont = Renderer::Instance()->GetSetLayout(m_TexAtlas, PipelineType::RENDER);
 			auto m_DescriptorSetLayoutTex = Renderer::Instance()->GetSetLayout(1, PipelineType::RENDER);
 			auto m_DescriptorSetLayoutSelected = Renderer::Instance()->GetSetLayout(0, PipelineType::COMPUTE);
-			auto m_DescriptorSetLayoutFont = Renderer::Instance()->GetSetLayout(m_TexAtlas, PipelineType::RENDER);
 			
 			
 			
@@ -160,8 +161,7 @@ public:
 			// render pass
 			auto samples = RenderContext::GetDevice()->GetSamples();
 			size_t actualFrameAmount =3;
-			//m_AttachmentManager.CreateColor("MSAA-Pages", m_AttachmentManager, vk::Format::eB8G8R8A8Unorm,
-			//	PageRenderWidth, PageRenderHeight, samples, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransientAttachment);
+		
 
 			m_AttachmentManager.CreateColor("MSAA", m_AttachmentManager, vk::Format::eB8G8R8A8Unorm,
 				Application::GetScreenWidth(), Application::GetScreenHeight(), samples, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransientAttachment);
@@ -182,506 +182,467 @@ public:
 
 			Renderer::Instance()->CreateSyncObjects();
 
-			{
-
-
-			
-				
-			
-			
-				auto samples = RenderContext::GetDevice()->GetSamples();
-				
-			
-			
-				AttachmentSpec page;
-				page.Specs.width = PageRenderWidth;
-				page.Specs.height = PageRenderHeight;
-				page.Specs.usage = vk::ImageUsageFlagBits::eColorAttachment
-					| vk::ImageUsageFlagBits::eTransferDst | 
-					vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eSampled;
-				page.Specs.format = vk::Format::eB8G8R8A8Unorm;
-				page.Specs.samples = vk::SampleCountFlagBits::e1;
-				page.Specs.minFilter= vk::Filter::eLinear;
-				page.Specs.magFilter= vk::Filter::eLinear;
-				page.Specs.tiling= vk::ImageTiling::eOptimal;
-				page.Specs.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
-				page.Amount = actualFrameAmount;
-				page.Samples = vk::SampleCountFlagBits::e1;
-			
-
-			
-				/*auto samples = RenderContext::GetDevice()->GetSamples();
-				AttachmentSpec msaa;
-				msaa.Specs.width = PageRenderWidth;
-				msaa.Specs.height = PageRenderHeight;
-				msaa.Specs.usage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransientAttachment;
-				msaa.Specs.format = vk::Format::eB8G8R8A8Unorm;
-				msaa.Specs.samples = samples;
-				msaa.Specs.minFilter = vk::Filter::eLinear;
-				msaa.Specs.magFilter = vk::Filter::eLinear;
-				msaa.Specs.tiling = vk::ImageTiling::eOptimal;
-				msaa.Specs.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
-				msaa.Amount = 3;
-				msaa.Samples = vk::SampleCountFlagBits::e1;
-				m_AttachmentManager.AddAttachment<Image>("MSAA", msaa);*/
-			
-
-				
-
-				RenderPassBuilder builder;
-
-				//Define a general attachment, with its load/store operations
-				builder.ColorOutput("MSAA", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
-				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
-				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
-				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
-				builder.SetInitialLayout(vk::ImageLayout::eUndefined);
-				builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
-				auto msaaDecs = builder.BuildAttachmentDesc();
-
-				
-
-
-				/*DepthStencilSpecs depthSpec;
-				depthSpec.Candidates = { vk::Format::eD32SfloatS8Uint ,
-					vk::Format::eD24UnormS8Uint,
-				vk::Format::eD16UnormS8Uint };
-				depthSpec.Specs.width = Application::GetScreenWidth();
-				depthSpec.Specs.height = Application::GetScreenHeight();
-				depthSpec.Specs.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment;
-				depthSpec.Specs.tiling = vk::ImageTiling::eOptimal;
-				depthSpec.Specs.format = vk::Format::eB8G8R8A8Unorm;
-				depthSpec.Specs.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
-				depthSpec.Amount = actualFrameAmount;
-				depthSpec.Samples = samples;
-				depthSpec.FormatFeature = vk::FormatFeatureFlagBits::eDepthStencilAttachment;
-				depthSpec.Specs.imageAspect = vk::ImageAspectFlagBits::eDepth;
-				m_AttachmentManager.AddAttachment<DepthImage>("DepthStencil", depthSpec);*/
-
-				builder.DepthStencilOutput("DepthStencil", m_AttachmentManager, vk::ImageLayout::eDepthStencilAttachmentOptimal);
-				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
-				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
-				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eClear);
-				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eStore);
-				builder.SetInitialLayout(vk::ImageLayout::eUndefined);
-				builder.SetFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
-				auto depth = builder.BuildAttachmentDesc();
-
-
-#if IMGUI_ENABLED
-
-				//Define a general attachment, with its load/store operations
-				vk::AttachmentDescription colorAttachmentResolve =
-					AttachmentDescription(swapchainFormat, vk::SampleCountFlagBits::e1,
-						vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
-						vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal);
-
-
-
-				vk::AttachmentReference refResolve = { 2,vk::ImageLayout::eColorAttachmentOptimal };
-#else
-				//Define a general attachment, with its load/store operations
-
-
-				//SwapchainSpec resolveSpec;
-				//resolveSpec.Specs.width = Application::GetScreenWidth();
-				//resolveSpec.Specs.height = Application::GetScreenHeight();
-				//resolveSpec.Specs.usage = vk::ImageUsageFlagBits::eColorAttachment;
-				//resolveSpec.ColorSpace = vk::ColorSpaceKHR::eSrgbNonlinear;
-				//resolveSpec.PresentMode = vk::PresentModeKHR::eFifo;
-				//resolveSpec.Specs.format = vk::Format::eB8G8R8A8Unorm;
-				//resolveSpec.Amount = 3;
-				//m_AttachmentManager.AddAttachment<SwapchainImage>("Resolve", resolveSpec);
-
-				//builder.ColorOutput("Default", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
-				builder.ResolveOutput("Default",m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
-				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
-				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
-				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
-				builder.SetInitialLayout(vk::ImageLayout::eUndefined);
-				builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
-				auto resolve = builder.BuildAttachmentDesc();
-#endif			
-				builder.AddSubpass({ 0 }, { 1 }, { 2 });
-				vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0,
-					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite,
-					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
-
-				builder.AddSubpassDependency(dependency0);
-				m_RenderPass = builder.Build("Basic",m_AttachmentManager, actualFrameAmount);
-
-				
-				
-
-			}
-			{
-
-
-				RenderPassBuilder builder;
-				builder.ColorOutput("MSAA", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
-				builder.SetLoadOp(vk::AttachmentLoadOp::eLoad);
-				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
-				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
-				builder.SetInitialLayout(vk::ImageLayout::eColorAttachmentOptimal);
-				builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
-
-				auto msaaAttachment = builder.BuildAttachmentDesc();
-				//vk::AttachmentDescription msaaAttachment = AttachmentDescription(swapchainFormat,
-				//	samples, vk::AttachmentLoadOp::eLoad,
-				//	vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
-				//	vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eColorAttachmentOptimal,
-				//	vk::ImageLayout::eColorAttachmentOptimal);
-
-
-
-
-				builder.DepthStencilOutput("DepthStencil", m_AttachmentManager, vk::ImageLayout::eDepthStencilAttachmentOptimal);
-				builder.SetLoadOp(vk::AttachmentLoadOp::eLoad);
-				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
-				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eLoad);
-				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eStore);
-				builder.SetInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
-				builder.SetFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
-				auto depthAttachment = builder.BuildAttachmentDesc();
-				/*vk::AttachmentDescription depthAttachment = AttachmentDescription(
-					swapChainDepthFormat, samples, vk::AttachmentLoadOp::eLoad, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eLoad,
-					vk::AttachmentStoreOp::eStore, vk::ImageLayout::eDepthStencilAttachmentOptimal, vk::ImageLayout::eDepthStencilAttachmentOptimal);*/
-
-
-				builder.ResolveOutput("Default", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
-				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
-				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
-				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
-				builder.SetInitialLayout(vk::ImageLayout::eColorAttachmentOptimal);
-				builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
-
-				vk::AttachmentDescription colorAttachmentResolve = builder.BuildAttachmentDesc();
-				/*vk::AttachmentDescription colorAttachmentResolve =
-					AttachmentDescription(swapchainFormat, vk::SampleCountFlagBits::e1,
-						vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
-						vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::eColorAttachmentOptimal);*/
-
-
-
-				//Renderpasses are broken down into subpasses, there's always at least one.
-
-				builder.AddSubpass({ 0 }, { 0 }, {0});
-
-				vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0,
-					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite,
-					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
-				builder.AddSubpassDependency(dependency0);
-
-				m_ClipRenderPass = builder.Build("Clip", m_AttachmentManager, actualFrameAmount);
-			}
-
-			{
-				RenderPassBuilder builder;
-
-				builder.ColorOutput("MSAA", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
-				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
-				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
-				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
-				builder.SetInitialLayout(vk::ImageLayout::eUndefined);
-				builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
-
-				auto colorAttachment = builder.BuildAttachmentDesc();
-
-
-				//Define a general attachment, with its load/store operations
-				/*vk::AttachmentDescription colorAttachment = AttachmentDescription(swapchainFormat,
-					samples,vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore,
-					vk::AttachmentLoadOp::eDontCare, vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined,
-					vk::ImageLayout::eColorAttachmentOptimal);*/
-
-
-				builder.ResolveOutput("Default", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
-				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
-				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
-				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
-				builder.SetInitialLayout(vk::ImageLayout::eUndefined);
-				builder.SetFinalLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
-				vk::AttachmentDescription colorAttachmentResolve = builder.BuildAttachmentDesc();
-				/*vk::AttachmentDescription colorAttachmentResolve =
-					AttachmentDescription(swapchainFormat, vk::SampleCountFlagBits::e1,
-						vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
-						vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined, vk::ImageLayout::eShaderReadOnlyOptimal);*/
-
-
-				builder.AddSubpass({ 0 }, { 0 }, { 0 });
-				vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eNone, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
-				builder.AddSubpassDependency(dependency0);
-				m_PageRenderPass = builder.Build("BasicPages",  m_AttachmentManager, actualFrameAmount);
-			}
-			{
-				RenderPassBuilder builder;
-				builder.ColorOutput("MSAA", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
-				builder.SetLoadOp(vk::AttachmentLoadOp::eLoad);
-				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
-				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
-				builder.SetInitialLayout(vk::ImageLayout::eColorAttachmentOptimal);
-				builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
-
-				auto msaaAttachment = builder.BuildAttachmentDesc();
-
-				//Define a general attachment, with its load/store operations
-				/*vk::AttachmentDescription msaaAttachment = AttachmentDescription(swapchainFormat,
-					samples, vk::AttachmentLoadOp::eLoad,
-					vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
-					vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eColorAttachmentOptimal,
-					vk::ImageLayout::eColorAttachmentOptimal);*/
-
-
-
-				builder.DepthStencilOutput("DepthStencil", m_AttachmentManager, vk::ImageLayout::eDepthStencilAttachmentOptimal);
-				builder.SetLoadOp(vk::AttachmentLoadOp::eLoad);
-				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
-				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eLoad);
-				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
-				builder.SetInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
-				builder.SetFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
-				auto depthAttachment = builder.BuildAttachmentDesc();
-
-			/*	vk::AttachmentDescription depthAttachment = AttachmentDescription(
-					swapChainDepthFormat, samples, vk::AttachmentLoadOp::eLoad, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eLoad,
-					vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eDepthStencilAttachmentOptimal, vk::ImageLayout::eDepthStencilAttachmentOptimal);*/
-
-
-
-				builder.ResolveOutput("Default", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
-				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
-				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
-				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
-				builder.SetInitialLayout(vk::ImageLayout::eColorAttachmentOptimal);
-				builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
-				vk::AttachmentDescription colorAttachmentResolve = builder.BuildAttachmentDesc();
-
-				//vk::AttachmentDescription colorAttachmentResolve =
-				//	AttachmentDescription(swapchainFormat, vk::SampleCountFlagBits::e1,
-				//		vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
-				//		vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::eColorAttachmentOptimal);
-
-				//Renderpasses are broken down into subpasses, there's always at least one.
-
-				builder.AddSubpass(SubpassDescription({ 0 }, { 0 }, { 0 }));
-
-				vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0,
-					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite,
-					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
-				builder.AddSubpassDependency(dependency0);
-
-				m_NewPageRenderPass = builder.Build("NewPage",m_AttachmentManager, actualFrameAmount);
-				
-			}
-
-			{
-				RenderPassBuilder builder;
-
-				builder.ColorOutput("MSAA", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
-				builder.SetLoadOp(vk::AttachmentLoadOp::eLoad);
-				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
-				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
-				builder.SetInitialLayout(vk::ImageLayout::eColorAttachmentOptimal);
-				builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
-
-				auto msaaAttachment = builder.BuildAttachmentDesc();
-
-
-				//Define a general attachment, with its load/store operations
-				/*vk::AttachmentDescription msaaAttachment = AttachmentDescription(swapchainFormat,
-					samples, vk::AttachmentLoadOp::eLoad,
-					vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
-					vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eColorAttachmentOptimal,
-					vk::ImageLayout::eColorAttachmentOptimal);*/
-
-
-
-				builder.DepthStencilOutput("DepthStencil", m_AttachmentManager, vk::ImageLayout::eDepthStencilAttachmentOptimal);
-				builder.SetLoadOp(vk::AttachmentLoadOp::eLoad);
-				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
-				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eLoad);
-				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
-				builder.SetInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
-				builder.SetFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
-				auto depthAttachment = builder.BuildAttachmentDesc();
-
-				/*vk::AttachmentDescription depthAttachment = AttachmentDescription(
-					swapChainDepthFormat, samples, vk::AttachmentLoadOp::eLoad, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eLoad,
-					vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eDepthStencilAttachmentOptimal, vk::ImageLayout::eDepthStencilAttachmentOptimal);*/
-
-
-
-				builder.ResolveOutput("Default", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
-				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
-				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
-				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
-				builder.SetInitialLayout(vk::ImageLayout::eColorAttachmentOptimal);
-				builder.SetFinalLayout(vk::ImageLayout::ePresentSrcKHR);
-				vk::AttachmentDescription colorAttachmentResolve = builder.BuildAttachmentDesc();
-				/*vk::AttachmentDescription colorAttachmentResolve =
-					AttachmentDescription(swapchainFormat, vk::SampleCountFlagBits::e1,
-						vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
-						vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::ePresentSrcKHR);*/
-
-				//Renderpasses are broken down into subpasses, there's always at least one.
-
-				builder.AddSubpass(SubpassDescription({ 0 }, { 0 }, { 0 }));
-
-				vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0,
-					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite,
-					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
-				builder.AddSubpassDependency(dependency0);
-				m_NewPageRenderPassRight = builder.Build("NewPageRight",m_AttachmentManager, actualFrameAmount);
-			}
-			
-			
-			std::vector<vk::VertexInputBindingDescription> bindings{ VertexBindingDescription(0,sizeof(Vertex),vk::VertexInputRate::eVertex) };
-
-			std::vector<vk::VertexInputAttributeDescription> attributeDescriptions;
-
-			attributeDescriptions =
-			{
-				VertexInputAttributeDescription(0,0,vk::Format::eR32G32B32Sfloat,offsetof(Vertex, Position)),
-				VertexInputAttributeDescription(0,1,vk::Format::eR32G32Sfloat,offsetof(Vertex, UV)),
-				VertexInputAttributeDescription(0,2,vk::Format::eR32G32B32A32Sfloat,offsetof(Vertex, Color)),
-				VertexInputAttributeDescription(0,3,vk::Format::eR32Sfloat,offsetof(Vertex, textureID)),
-
-			};
-			{
-				auto samples = RenderContext::GetDevice()->GetSamples();
-				auto pipelineLayouts = std::vector<vk::DescriptorSetLayout>{
-					m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutFont->GetLayout() };
-				
-				PipelineBuilder builder;
-				builder.SetDevice(device->GetDevice());
-				builder.SetSamples(samples);
-				builder.AddDescriptorLayouts(pipelineLayouts);
-				builder.AddAttributeDescription(attributeDescriptions);
-					builder.AddBindingDescription(bindings);
-				builder.SetPolygoneMode(Renderer::Instance()->GetPolygonMode());
-				builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
-				Renderer::Instance()->CompileShader("font.spvV", ShaderType::VERTEX);
-				Renderer::Instance()->CompileShader("font.spvF", ShaderType::FRAGMENT);
-				builder.AddShader(BASE_SPIRV_OUTPUT + "font.spvV", vk::ShaderStageFlagBits::eVertex);
-				builder.AddShader(BASE_SPIRV_OUTPUT + "font.spvF", vk::ShaderStageFlagBits::eFragment);
-				builder.SetSubpassAmount(0);
-				
-				builder.AddExtent(vk::Extent2D{ 128 ,128 });
-				builder.AddImageFormat(vk::Format::eB8G8R8A8Unorm);
-				builder.SetRenderPass(m_PageRenderPass->GetRaw());
-
-				//builder.SetSampleShading(VK_TRUE);
-
-				m_PagePipeline = builder.Build();
-
-			
-			}
-
-
-			vk::Extent2D  extent = { (uint32_t)Application::GetScreenWidth(),(uint32_t)Application::GetScreenHeight() };
-
-			{
-				
-				auto pipelineLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutTex->GetLayout() };
-
-				PipelineBuilder builder;
-				builder.SetDevice(device->GetDevice());
-				builder.SetSamples(samples);
-				builder.AddDescriptorLayouts(pipelineLayouts);
-				builder.AddAttributeDescription(attributeDescriptions);
-				builder.AddBindingDescription(bindings);
-				builder.SetPolygoneMode(Renderer::Instance()->GetPolygonMode());
-				builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
-				Renderer::Instance()->CompileShader("default.spvV", ShaderType::VERTEX);
-				Renderer::Instance()->CompileShader("page.spvF", ShaderType::FRAGMENT);
-				builder.AddShader(BASE_SPIRV_OUTPUT + "default.spvV", vk::ShaderStageFlagBits::eVertex);
-				builder.AddShader(BASE_SPIRV_OUTPUT + "page.spvF", vk::ShaderStageFlagBits::eFragment);
-				builder.SetSubpassAmount(0);
-				builder.AddExtent(extent);
-				builder.AddImageFormat(vk::Format::eB8G8R8A8Unorm);
-				builder.EnableStencilTest(true);
-				builder.SetDepthTest(true);
-				builder.WriteToDepthBuffer(true);
-				builder.SetRenderPass(m_RenderPass->GetRaw());
-				builder.SetStencilRefNumber(2);
-				builder.StencilTestOp(vk::CompareOp::eAlways,vk::StencilOp::eReplace, vk::StencilOp::eReplace, vk::StencilOp::eReplace);
-				builder.SetMasks(0xff, 0xff);
-
-				m_GraphicsPipeline = builder.Build();
-
-
-				{
-					PipelineBuilder builder;
-					builder.SetDevice(device->GetDevice());
-					builder.SetSamples(samples);
-					builder.AddDescriptorLayouts(pipelineLayouts);
-					builder.AddAttributeDescription(attributeDescriptions);
-					builder.AddBindingDescription(bindings);
-					builder.SetPolygoneMode(Renderer::Instance()->GetPolygonMode());
-					builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
-					builder.AddShader(BASE_SPIRV_OUTPUT + "default.spvV", vk::ShaderStageFlagBits::eVertex);
-					builder.AddShader(BASE_SPIRV_OUTPUT + "page.spvF", vk::ShaderStageFlagBits::eFragment);
-					builder.SetSubpassAmount(0);
-					builder.AddExtent(extent);
-					builder.AddImageFormat(vk::Format::eB8G8R8A8Unorm);
-					builder.EnableStencilTest(true);
-					builder.SetDepthTest(false);
-					builder.WriteToDepthBuffer(true);
-					builder.SetRenderPass(m_ClipRenderPass->GetRaw());
-					builder.SetStencilRefNumber(2);
-					builder.StencilTestOp(vk::CompareOp::eEqual, vk::StencilOp::eKeep, vk::StencilOp::eDecrementAndClamp, vk::StencilOp::eKeep);
-					builder.SetMasks(0xff, 0xff);
-					m_ClipPipeline = builder.Build();
-				}
-
-				{
-					{
-						PipelineBuilder builder;
-						builder.SetDevice(device->GetDevice());
-						builder.SetSamples(samples);
-						builder.AddDescriptorLayouts(pipelineLayouts);
-						builder.AddAttributeDescription(attributeDescriptions);
-						builder.AddBindingDescription(bindings);
-						builder.SetPolygoneMode(Renderer::Instance()->GetPolygonMode());
-						builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
-						Renderer::Instance()->CompileShader("leftNewPage.spvF", ShaderType::FRAGMENT);
-						builder.AddShader(BASE_SPIRV_OUTPUT + "default.spvV", vk::ShaderStageFlagBits::eVertex);
-						builder.AddShader(BASE_SPIRV_OUTPUT + "leftNewPage.spvF", vk::ShaderStageFlagBits::eFragment);
-						builder.SetSubpassAmount(0);
-						builder.AddExtent(extent);
-						builder.AddImageFormat(vk::Format::eB8G8R8A8Unorm);
-						builder.EnableStencilTest(true);
-						builder.SetDepthTest(false);
-						builder.WriteToDepthBuffer(true);
-						builder.SetRenderPass(m_RenderPass->GetRaw());
-						builder.SetStencilRefNumber(1);
-						builder.StencilTestOp(vk::CompareOp::eEqual, vk::StencilOp::eKeep, vk::StencilOp::eReplace, vk::StencilOp::eKeep);
-						builder.SetMasks(0xff, 0xff);
-						m_NewPagePipeline = builder.Build();
-						builder.DestroyShaderModules();
-						builder.AddShader(BASE_SPIRV_OUTPUT + "default.spvV", vk::ShaderStageFlagBits::eVertex);
-						Renderer::Instance()->CompileShader("rightNewPage.spvF", ShaderType::FRAGMENT);
-						builder.AddShader(BASE_SPIRV_OUTPUT + "rightNewPage.spvF", vk::ShaderStageFlagBits::eFragment);
-						builder.SetStencilRefNumber(2);
-						builder.StencilTestOp(vk::CompareOp::eEqual, vk::StencilOp::eKeep, vk::StencilOp::eReplace, vk::StencilOp::eKeep);
-						builder.SetBlendOp(vk::BlendOp::eAdd, vk::BlendFactor::eOne,vk::BlendFactor::eZero);
-						m_NewPagePipelineRight = builder.Build();
-					}
-				}
-				
-				
-
-			}
+//			{
+//
+//
+//			
+//				
+//			
+//			
+//				auto samples = RenderContext::GetDevice()->GetSamples();
+//				
+//			
+//			
+//				AttachmentSpec page;
+//				page.Specs.width = PageRenderWidth;
+//				page.Specs.height = PageRenderHeight;
+//				page.Specs.usage = vk::ImageUsageFlagBits::eColorAttachment
+//					| vk::ImageUsageFlagBits::eTransferDst | 
+//					vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eSampled;
+//				page.Specs.format = vk::Format::eB8G8R8A8Unorm;
+//				page.Specs.samples = vk::SampleCountFlagBits::e1;
+//				page.Specs.minFilter= vk::Filter::eLinear;
+//				page.Specs.magFilter= vk::Filter::eLinear;
+//				page.Specs.tiling= vk::ImageTiling::eOptimal;
+//				page.Specs.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+//				page.Amount = actualFrameAmount;
+//				page.Samples = vk::SampleCountFlagBits::e1;
+//			
+//
+//			
+//				/*auto samples = RenderContext::GetDevice()->GetSamples();
+//				AttachmentSpec msaa;
+//				msaa.Specs.width = PageRenderWidth;
+//				msaa.Specs.height = PageRenderHeight;
+//				msaa.Specs.usage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransientAttachment;
+//				msaa.Specs.format = vk::Format::eB8G8R8A8Unorm;
+//				msaa.Specs.samples = samples;
+//				msaa.Specs.minFilter = vk::Filter::eLinear;
+//				msaa.Specs.magFilter = vk::Filter::eLinear;
+//				msaa.Specs.tiling = vk::ImageTiling::eOptimal;
+//				msaa.Specs.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+//				msaa.Amount = 3;
+//				msaa.Samples = vk::SampleCountFlagBits::e1;
+//				m_AttachmentManager.AddAttachment<Image>("MSAA", msaa);*/
+//			
+//
+//				
+//
+//				RenderPassBuilder builder;
+//
+//				//Define a general attachment, with its load/store operations
+//				builder.ColorOutput("MSAA", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
+//				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
+//				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
+//				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+//				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
+//				builder.SetInitialLayout(vk::ImageLayout::eUndefined);
+//				builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
+//				auto msaaDecs = builder.BuildAttachmentDesc();
+//
+//				
+//
+//
+//				/*DepthStencilSpecs depthSpec;
+//				depthSpec.Candidates = { vk::Format::eD32SfloatS8Uint ,
+//					vk::Format::eD24UnormS8Uint,
+//				vk::Format::eD16UnormS8Uint };
+//				depthSpec.Specs.width = Application::GetScreenWidth();
+//				depthSpec.Specs.height = Application::GetScreenHeight();
+//				depthSpec.Specs.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment;
+//				depthSpec.Specs.tiling = vk::ImageTiling::eOptimal;
+//				depthSpec.Specs.format = vk::Format::eB8G8R8A8Unorm;
+//				depthSpec.Specs.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+//				depthSpec.Amount = actualFrameAmount;
+//				depthSpec.Samples = samples;
+//				depthSpec.FormatFeature = vk::FormatFeatureFlagBits::eDepthStencilAttachment;
+//				depthSpec.Specs.imageAspect = vk::ImageAspectFlagBits::eDepth;
+//				m_AttachmentManager.AddAttachment<DepthImage>("DepthStencil", depthSpec);*/
+//
+//				builder.DepthStencilOutput("DepthStencil", m_AttachmentManager, vk::ImageLayout::eDepthStencilAttachmentOptimal);
+//				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
+//				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
+//				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eClear);
+//				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eStore);
+//				builder.SetInitialLayout(vk::ImageLayout::eUndefined);
+//				builder.SetFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+//				auto depth = builder.BuildAttachmentDesc();
+//
+//
+//#if IMGUI_ENABLED
+//
+//				//Define a general attachment, with its load/store operations
+//				vk::AttachmentDescription colorAttachmentResolve =
+//					AttachmentDescription(swapchainFormat, vk::SampleCountFlagBits::e1,
+//						vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
+//						vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal);
+//
+//
+//
+//				vk::AttachmentReference refResolve = { 2,vk::ImageLayout::eColorAttachmentOptimal };
+//#else
+//				//Define a general attachment, with its load/store operations
+//
+//
+//				//SwapchainSpec resolveSpec;
+//				//resolveSpec.Specs.width = Application::GetScreenWidth();
+//				//resolveSpec.Specs.height = Application::GetScreenHeight();
+//				//resolveSpec.Specs.usage = vk::ImageUsageFlagBits::eColorAttachment;
+//				//resolveSpec.ColorSpace = vk::ColorSpaceKHR::eSrgbNonlinear;
+//				//resolveSpec.PresentMode = vk::PresentModeKHR::eFifo;
+//				//resolveSpec.Specs.format = vk::Format::eB8G8R8A8Unorm;
+//				//resolveSpec.Amount = 3;
+//				//m_AttachmentManager.AddAttachment<SwapchainImage>("Resolve", resolveSpec);
+//
+//				//builder.ColorOutput("Default", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
+//				builder.ResolveOutput("Default",m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
+//				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
+//				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
+//				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+//				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
+//				builder.SetInitialLayout(vk::ImageLayout::eUndefined);
+//				builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
+//				auto resolve = builder.BuildAttachmentDesc();
+//#endif			
+//				builder.AddSubpass({ 0 }, { 1 }, { 2 });
+//				vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0,
+//					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite,
+//					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
+//
+//				builder.AddSubpassDependency(dependency0);
+//				m_RenderPass = builder.Build("Basic",m_AttachmentManager, actualFrameAmount);
+//
+//				
+//				
+//
+//			}
+//			{
+//
+//
+//				RenderPassBuilder builder;
+//				builder.ColorOutput("MSAA", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
+//				builder.SetLoadOp(vk::AttachmentLoadOp::eLoad);
+//				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
+//				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+//				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
+//				builder.SetInitialLayout(vk::ImageLayout::eColorAttachmentOptimal);
+//				builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
+//
+//				auto msaaAttachment = builder.BuildAttachmentDesc();
+//				//vk::AttachmentDescription msaaAttachment = AttachmentDescription(swapchainFormat,
+//				//	samples, vk::AttachmentLoadOp::eLoad,
+//				//	vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
+//				//	vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eColorAttachmentOptimal,
+//				//	vk::ImageLayout::eColorAttachmentOptimal);
+//
+//
+//
+//
+//				builder.DepthStencilOutput("DepthStencil", m_AttachmentManager, vk::ImageLayout::eDepthStencilAttachmentOptimal);
+//				builder.SetLoadOp(vk::AttachmentLoadOp::eLoad);
+//				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
+//				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eLoad);
+//				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eStore);
+//				builder.SetInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+//				builder.SetFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+//				auto depthAttachment = builder.BuildAttachmentDesc();
+//				/*vk::AttachmentDescription depthAttachment = AttachmentDescription(
+//					swapChainDepthFormat, samples, vk::AttachmentLoadOp::eLoad, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eLoad,
+//					vk::AttachmentStoreOp::eStore, vk::ImageLayout::eDepthStencilAttachmentOptimal, vk::ImageLayout::eDepthStencilAttachmentOptimal);*/
+//
+//
+//				builder.ResolveOutput("Default", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
+//				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
+//				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
+//				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+//				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
+//				builder.SetInitialLayout(vk::ImageLayout::eColorAttachmentOptimal);
+//				builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
+//
+//				vk::AttachmentDescription colorAttachmentResolve = builder.BuildAttachmentDesc();
+//				/*vk::AttachmentDescription colorAttachmentResolve =
+//					AttachmentDescription(swapchainFormat, vk::SampleCountFlagBits::e1,
+//						vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
+//						vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::eColorAttachmentOptimal);*/
+//
+//
+//
+//				//Renderpasses are broken down into subpasses, there's always at least one.
+//
+//				builder.AddSubpass({ 0 }, { 0 }, {0});
+//
+//				vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0,
+//					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite,
+//					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
+//				builder.AddSubpassDependency(dependency0);
+//
+//				m_ClipRenderPass = builder.Build("Clip", m_AttachmentManager, actualFrameAmount);
+//			}
+//
+//			
+//			{
+//				RenderPassBuilder builder;
+//				builder.ColorOutput("MSAA", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
+//				builder.SetLoadOp(vk::AttachmentLoadOp::eLoad);
+//				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
+//				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+//				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
+//				builder.SetInitialLayout(vk::ImageLayout::eColorAttachmentOptimal);
+//				builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
+//
+//				auto msaaAttachment = builder.BuildAttachmentDesc();
+//
+//				//Define a general attachment, with its load/store operations
+//				/*vk::AttachmentDescription msaaAttachment = AttachmentDescription(swapchainFormat,
+//					samples, vk::AttachmentLoadOp::eLoad,
+//					vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
+//					vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eColorAttachmentOptimal,
+//					vk::ImageLayout::eColorAttachmentOptimal);*/
+//
+//
+//
+//				builder.DepthStencilOutput("DepthStencil", m_AttachmentManager, vk::ImageLayout::eDepthStencilAttachmentOptimal);
+//				builder.SetLoadOp(vk::AttachmentLoadOp::eLoad);
+//				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
+//				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eLoad);
+//				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
+//				builder.SetInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+//				builder.SetFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+//				auto depthAttachment = builder.BuildAttachmentDesc();
+//
+//			/*	vk::AttachmentDescription depthAttachment = AttachmentDescription(
+//					swapChainDepthFormat, samples, vk::AttachmentLoadOp::eLoad, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eLoad,
+//					vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eDepthStencilAttachmentOptimal, vk::ImageLayout::eDepthStencilAttachmentOptimal);*/
+//
+//
+//
+//				builder.ResolveOutput("Default", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
+//				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
+//				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
+//				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+//				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
+//				builder.SetInitialLayout(vk::ImageLayout::eColorAttachmentOptimal);
+//				builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
+//				vk::AttachmentDescription colorAttachmentResolve = builder.BuildAttachmentDesc();
+//
+//				//vk::AttachmentDescription colorAttachmentResolve =
+//				//	AttachmentDescription(swapchainFormat, vk::SampleCountFlagBits::e1,
+//				//		vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
+//				//		vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::eColorAttachmentOptimal);
+//
+//				//Renderpasses are broken down into subpasses, there's always at least one.
+//
+//				builder.AddSubpass(SubpassDescription({ 0 }, { 0 }, { 0 }));
+//
+//				vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0,
+//					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite,
+//					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
+//				builder.AddSubpassDependency(dependency0);
+//
+//				m_NewPageRenderPass = builder.Build("NewPage",m_AttachmentManager, actualFrameAmount);
+//				
+//			}
+//
+//			{
+//				RenderPassBuilder builder;
+//
+//				builder.ColorOutput("MSAA", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
+//				builder.SetLoadOp(vk::AttachmentLoadOp::eLoad);
+//				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
+//				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+//				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
+//				builder.SetInitialLayout(vk::ImageLayout::eColorAttachmentOptimal);
+//				builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
+//
+//				auto msaaAttachment = builder.BuildAttachmentDesc();
+//
+//
+//				//Define a general attachment, with its load/store operations
+//				/*vk::AttachmentDescription msaaAttachment = AttachmentDescription(swapchainFormat,
+//					samples, vk::AttachmentLoadOp::eLoad,
+//					vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
+//					vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eColorAttachmentOptimal,
+//					vk::ImageLayout::eColorAttachmentOptimal);*/
+//
+//
+//
+//				builder.DepthStencilOutput("DepthStencil", m_AttachmentManager, vk::ImageLayout::eDepthStencilAttachmentOptimal);
+//				builder.SetLoadOp(vk::AttachmentLoadOp::eLoad);
+//				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
+//				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eLoad);
+//				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
+//				builder.SetInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+//				builder.SetFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+//				auto depthAttachment = builder.BuildAttachmentDesc();
+//
+//				/*vk::AttachmentDescription depthAttachment = AttachmentDescription(
+//					swapChainDepthFormat, samples, vk::AttachmentLoadOp::eLoad, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eLoad,
+//					vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eDepthStencilAttachmentOptimal, vk::ImageLayout::eDepthStencilAttachmentOptimal);*/
+//
+//
+//
+//				builder.ResolveOutput("Default", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
+//				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
+//				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
+//				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+//				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
+//				builder.SetInitialLayout(vk::ImageLayout::eColorAttachmentOptimal);
+//				builder.SetFinalLayout(vk::ImageLayout::ePresentSrcKHR);
+//				vk::AttachmentDescription colorAttachmentResolve = builder.BuildAttachmentDesc();
+//				/*vk::AttachmentDescription colorAttachmentResolve =
+//					AttachmentDescription(swapchainFormat, vk::SampleCountFlagBits::e1,
+//						vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
+//						vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::ePresentSrcKHR);*/
+//
+//				//Renderpasses are broken down into subpasses, there's always at least one.
+//
+//				builder.AddSubpass(SubpassDescription({ 0 }, { 0 }, { 0 }));
+//
+//				vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0,
+//					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite,
+//					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
+//				builder.AddSubpassDependency(dependency0);
+//				m_NewPageRenderPassRight = builder.Build("NewPageRight",m_AttachmentManager, actualFrameAmount);
+//			}
+//			
+//			
+//			std::vector<vk::VertexInputBindingDescription> bindings{ VertexBindingDescription(0,sizeof(Vertex),vk::VertexInputRate::eVertex) };
+//
+//			std::vector<vk::VertexInputAttributeDescription> attributeDescriptions;
+//
+//			attributeDescriptions =
+//			{
+//				VertexInputAttributeDescription(0,0,vk::Format::eR32G32B32Sfloat,offsetof(Vertex, Position)),
+//				VertexInputAttributeDescription(0,1,vk::Format::eR32G32Sfloat,offsetof(Vertex, UV)),
+//				VertexInputAttributeDescription(0,2,vk::Format::eR32G32B32A32Sfloat,offsetof(Vertex, Color)),
+//				VertexInputAttributeDescription(0,3,vk::Format::eR32Sfloat,offsetof(Vertex, textureID)),
+//
+//			};
+//			{
+//				auto samples = RenderContext::GetDevice()->GetSamples();
+//				auto pipelineLayouts = std::vector<vk::DescriptorSetLayout>{
+//					m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutFont->GetLayout() };
+//				
+//				PipelineBuilder builder;
+//				builder.SetDevice(device->GetDevice());
+//				builder.SetSamples(samples);
+//				builder.AddDescriptorLayouts(pipelineLayouts);
+//				builder.AddAttributeDescription(attributeDescriptions);
+//					builder.AddBindingDescription(bindings);
+//				builder.SetPolygoneMode(Renderer::Instance()->GetPolygonMode());
+//				builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
+//				Renderer::Instance()->CompileShader("font.spvV", ShaderType::VERTEX);
+//				Renderer::Instance()->CompileShader("font.spvF", ShaderType::FRAGMENT);
+//				builder.AddShader(BASE_SPIRV_OUTPUT + "font.spvV", vk::ShaderStageFlagBits::eVertex);
+//				builder.AddShader(BASE_SPIRV_OUTPUT + "font.spvF", vk::ShaderStageFlagBits::eFragment);
+//				builder.SetSubpassAmount(0);
+//				
+//				builder.AddExtent(vk::Extent2D{ 128 ,128 });
+//				builder.AddImageFormat(vk::Format::eB8G8R8A8Unorm);
+//				builder.SetRenderPass(m_PageRenderPass->GetRaw());
+//
+//				//builder.SetSampleShading(VK_TRUE);
+//
+//				m_PagePipeline = builder.Build();
+//
+//			
+//			}
+//
+//
+//			vk::Extent2D  extent = { (uint32_t)Application::GetScreenWidth(),(uint32_t)Application::GetScreenHeight() };
+//
+//			{
+//				
+//				auto pipelineLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutTex->GetLayout() };
+//
+//				PipelineBuilder builder;
+//				builder.SetDevice(device->GetDevice());
+//				builder.SetSamples(samples);
+//				builder.AddDescriptorLayouts(pipelineLayouts);
+//				builder.AddAttributeDescription(attributeDescriptions);
+//				builder.AddBindingDescription(bindings);
+//				builder.SetPolygoneMode(Renderer::Instance()->GetPolygonMode());
+//				builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
+//				Renderer::Instance()->CompileShader("default.spvV", ShaderType::VERTEX);
+//				Renderer::Instance()->CompileShader("page.spvF", ShaderType::FRAGMENT);
+//				builder.AddShader(BASE_SPIRV_OUTPUT + "default.spvV", vk::ShaderStageFlagBits::eVertex);
+//				builder.AddShader(BASE_SPIRV_OUTPUT + "page.spvF", vk::ShaderStageFlagBits::eFragment);
+//				builder.SetSubpassAmount(0);
+//				builder.AddExtent(extent);
+//				builder.AddImageFormat(vk::Format::eB8G8R8A8Unorm);
+//				builder.EnableStencilTest(true);
+//				builder.SetDepthTest(true);
+//				builder.WriteToDepthBuffer(true);
+//				builder.SetRenderPass(m_RenderPass->GetRaw());
+//				builder.SetStencilRefNumber(2);
+//				builder.StencilTestOp(vk::CompareOp::eAlways,vk::StencilOp::eReplace, vk::StencilOp::eReplace, vk::StencilOp::eReplace);
+//				builder.SetMasks(0xff, 0xff);
+//
+//				m_GraphicsPipeline = builder.Build();
+//
+//
+//				{
+//					PipelineBuilder builder;
+//					builder.SetDevice(device->GetDevice());
+//					builder.SetSamples(samples);
+//					builder.AddDescriptorLayouts(pipelineLayouts);
+//					builder.AddAttributeDescription(attributeDescriptions);
+//					builder.AddBindingDescription(bindings);
+//					builder.SetPolygoneMode(Renderer::Instance()->GetPolygonMode());
+//					builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
+//					builder.AddShader(BASE_SPIRV_OUTPUT + "default.spvV", vk::ShaderStageFlagBits::eVertex);
+//					builder.AddShader(BASE_SPIRV_OUTPUT + "page.spvF", vk::ShaderStageFlagBits::eFragment);
+//					builder.SetSubpassAmount(0);
+//					builder.AddExtent(extent);
+//					builder.AddImageFormat(vk::Format::eB8G8R8A8Unorm);
+//					builder.EnableStencilTest(true);
+//					builder.SetDepthTest(false);
+//					builder.WriteToDepthBuffer(true);
+//					builder.SetRenderPass(m_ClipRenderPass->GetRaw());
+//					builder.SetStencilRefNumber(2);
+//					builder.StencilTestOp(vk::CompareOp::eEqual, vk::StencilOp::eKeep, vk::StencilOp::eDecrementAndClamp, vk::StencilOp::eKeep);
+//					builder.SetMasks(0xff, 0xff);
+//					m_ClipPipeline = builder.Build();
+//				}
+//
+//				{
+//					{
+//						PipelineBuilder builder;
+//						builder.SetDevice(device->GetDevice());
+//						builder.SetSamples(samples);
+//						builder.AddDescriptorLayouts(pipelineLayouts);
+//						builder.AddAttributeDescription(attributeDescriptions);
+//						builder.AddBindingDescription(bindings);
+//						builder.SetPolygoneMode(Renderer::Instance()->GetPolygonMode());
+//						builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
+//						Renderer::Instance()->CompileShader("leftNewPage.spvF", ShaderType::FRAGMENT);
+//						builder.AddShader(BASE_SPIRV_OUTPUT + "default.spvV", vk::ShaderStageFlagBits::eVertex);
+//						builder.AddShader(BASE_SPIRV_OUTPUT + "leftNewPage.spvF", vk::ShaderStageFlagBits::eFragment);
+//						builder.SetSubpassAmount(0);
+//						builder.AddExtent(extent);
+//						builder.AddImageFormat(vk::Format::eB8G8R8A8Unorm);
+//						builder.EnableStencilTest(true);
+//						builder.SetDepthTest(false);
+//						builder.WriteToDepthBuffer(true);
+//						builder.SetRenderPass(m_RenderPass->GetRaw());
+//						builder.SetStencilRefNumber(1);
+//						builder.StencilTestOp(vk::CompareOp::eEqual, vk::StencilOp::eKeep, vk::StencilOp::eReplace, vk::StencilOp::eKeep);
+//						builder.SetMasks(0xff, 0xff);
+//						m_NewPagePipeline = builder.Build();
+//						builder.DestroyShaderModules();
+//						builder.AddShader(BASE_SPIRV_OUTPUT + "default.spvV", vk::ShaderStageFlagBits::eVertex);
+//						Renderer::Instance()->CompileShader("rightNewPage.spvF", ShaderType::FRAGMENT);
+//						builder.AddShader(BASE_SPIRV_OUTPUT + "rightNewPage.spvF", vk::ShaderStageFlagBits::eFragment);
+//						builder.SetStencilRefNumber(2);
+//						builder.StencilTestOp(vk::CompareOp::eEqual, vk::StencilOp::eKeep, vk::StencilOp::eReplace, vk::StencilOp::eKeep);
+//						builder.SetBlendOp(vk::BlendOp::eAdd, vk::BlendFactor::eOne,vk::BlendFactor::eZero);
+//						m_NewPagePipelineRight = builder.Build();
+//					}
+//				}
+//				
+//				
+//
+//			}
 			//render(renderCommandBuffer, clearValues, { pages[0] ,pages[1] }, imageAvailable, m_RenderFinishedSemaphore1, m_RenderPass->GetRaw(), m_GraphicsPipeline.get());
 			//render(renderCommandBuffer, clearValues, { clipPage }, m_RenderFinishedSemaphore1, m_RenderFinishedSemaphore2, m_ClipRenderPass->GetRaw(), m_ClipPipeline.get());
 			//render(renderCommandBuffer, clearValues, { pages[2] }, m_RenderFinishedSemaphore2, m_RenderFinishedSemaphore3, m_NewPageRenderPass->GetRaw(), m_NewPagePipeline.get());
@@ -689,16 +650,18 @@ public:
 			
 
 
-			m_Graph.AddRenderPass(std::move(m_RenderPass));
-			m_Graph.AddRenderPass(std::move(m_ClipRenderPass));
-			m_Graph.AddRenderPass(std::move(m_PageRenderPass));
-			m_Graph.AddRenderPass(std::move(m_NewPageRenderPass));
-			m_Graph.AddRenderPass(std::move(m_NewPageRenderPassRight));
+			//m_Graph.AddRenderPass(std::move(m_RenderPass));
+			//m_Graph.AddRenderPass(std::move(m_ClipRenderPass));
+			//m_Graph.AddRenderPass(std::move(m_PageRenderPass));
+			//m_Graph.AddRenderPass(std::move(m_NewPageRenderPass));
+			//m_Graph.AddRenderPass(std::move(m_NewPageRenderPassRight));
+			//
+			//m_Graph.AddExec("Basic");
+			//m_Graph.AddExec("Clip");
+			//m_Graph.AddExec("NewPage");
+			//m_Graph.AddExec("NewPageRight");
 
-			m_Graph.AddExec("Basic");
-			m_Graph.AddExec("Clip");
-			m_Graph.AddExec("NewPage");
-			m_Graph.AddExec("NewPageRight");
+
 
 			vk::SemaphoreCreateInfo semaphoreInfo = {};
 			semaphoreInfo.flags = vk::SemaphoreCreateFlags();
@@ -1179,20 +1142,12 @@ public:
 				auto device = RenderContext::GetDevice()->GetDevice();
 				device.waitIdle();
 
-				m_RenderPass.reset();
-				m_ClipRenderPass.reset();
-				m_PageRenderPass.reset();
-				m_NewPageRenderPass.reset();
-				m_NewPageRenderPassRight.reset();
-				m_RenderPass.reset();
-				m_PageRenderPass.reset();
+			
 				
-				
-				Renderer::Instance()->Shutdown();
 				m_ComputePipeline.reset();
 				m_GraphicsPipeline.reset();
 				m_ClipPipeline.reset();
-				m_PagePipeline.reset();
+			//	m_PagePipeline.reset();
 				m_NewPagePipeline.reset();
 				m_NewPagePipelineRight.reset();
 				m_ShaderStorageBuffer.reset();
@@ -1214,7 +1169,8 @@ public:
 				m_Image.reset();
 				m_ImageSelected.reset();
 				m_FontAtlas.reset();
-
+				m_AttachmentManager.Destroy();
+				m_Graph.Destroy();
 				Renderer::Instance()->Shutdown();
 
 			};
@@ -1264,48 +1220,176 @@ public:
 			}
 
 
-			m_PagesImages.resize(PageAmount);
-			m_PageFramebuffer.resize(PageAmount);
-			m_PagesImageMSAA.resize(PageAmount);
-			auto device = RenderContext::GetDevice();
-			auto samples = device->GetSamples();
-			for (int i = 0; i < m_PagesImages.size(); i++)
-			{
-				//auto usage = vk::ImageUsageFlagBits::eColorAttachment  |vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eSampled;
-				//m_PagesImages[i] = Image::CreateEmptyImage(PageRenderWidth, PageRenderHeight,vk::Format::eB8G8R8A8Unorm, usage, vk::SampleCountFlagBits::e1,vk::Filter::eLinear, vk::Filter::eLinear);
-				
-				
-				/*ImageSpecs specs;
-				specs.width = extent.width;
-				specs.height = extent.height;
-				specs.tiling = vk::ImageTiling::eOptimal;
-				specs.usage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransientAttachment;
-				specs.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
-				specs.format = swapchainFormat;
-				
-				auto msaaImage = Image::CreateVKImage(specs, samples);
-				auto msaaImageMemory = Image::CreateMemory(msaaImage, specs);
-				auto msaaImageView = Image::CreateImageView(msaaImage, swapchainFormat, vk::ImageAspectFlagBits::eColor);
-				m_PagesImageMSAA[i] = CreateSPtr<Image>();
-				m_PagesImageMSAA[i]->SetFormat(swapchainFormat);
-				m_PagesImageMSAA[i]->SetView(msaaImageView);
-				m_PagesImageMSAA[i]->SetMemory(msaaImageMemory);
-				m_PagesImageMSAA[i]->SetImage(msaaImage);*/
-				
-				std::vector<vk::ImageView>attachments = { m_PagesImageMSAA[i]->GetImageView(),m_PagesImages[i]->GetImageView()};
-				vk::FramebufferCreateInfo framebufferInfo;
-				framebufferInfo.flags = vk::FramebufferCreateFlags();
-				framebufferInfo.renderPass = m_PageRenderPass->GetRaw();
-				framebufferInfo.attachmentCount = attachments.size();
-				framebufferInfo.pAttachments = attachments.data();
-				framebufferInfo.width = PageRenderWidth;
-				framebufferInfo.height = PageRenderHeight;
-				framebufferInfo.layers = 1;
+			m_AttachmentManager.CreateColor("Pages", m_AttachmentManager, vk::Format::eB8G8R8A8Unorm,
+			PageRenderWidth, PageRenderHeight, vk::SampleCountFlagBits::e1, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled);
 
-				m_PageFramebuffer[i] = device->GetDevice().createFramebuffer(framebufferInfo);
+			{
+				RenderPassBuilder builder;
+				//
+				//builder.ColorOutput("MSAA", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
+				//builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
+				//builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
+				//builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+				//builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
+				//builder.SetInitialLayout(vk::ImageLayout::eUndefined);
+				//builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
+				//
+				//auto colorAttachment = builder.BuildAttachmentDesc();
+
+
+				//Define a general attachment, with its load/store operations
+				/*vk::AttachmentDescription colorAttachment = AttachmentDescription(swapchainFormat,
+					samples,vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore,
+					vk::AttachmentLoadOp::eDontCare, vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined,
+					vk::ImageLayout::eColorAttachmentOptimal);*/
+
+
+				builder.ColorOutput("Pages", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
+				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
+				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
+				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
+				builder.SetInitialLayout(vk::ImageLayout::eUndefined);
+				builder.SetFinalLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+				vk::AttachmentDescription colorAttachmentResolve = builder.BuildAttachmentDesc();
+				/*vk::AttachmentDescription colorAttachmentResolve =
+					AttachmentDescription(swapchainFormat, vk::SampleCountFlagBits::e1,
+						vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
+						vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined, vk::ImageLayout::eShaderReadOnlyOptimal);*/
+
+
+				builder.AddSubpass({ 0 }, { 0 }, { 0 });
+				vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eNone, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
+				builder.AddSubpassDependency(dependency0);
+
+
+				m_PageRenderPass = builder.Build("BasicPages", m_AttachmentManager, PageAmount,
+					[this](CommandBuffer& cmd, size_t frameIndex)
+					{
+						auto vkCommandBuffer = cmd.GetCommandBuffer();
+						glm::vec2 pos = { 20, 400 };
+
+						auto pipeline = Renderer::Instance()->GetPipeline("Page");
+						vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 0, m_DescriptorSets[0], nullptr);
+						vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 1, m_DescriptorSetFont, nullptr);
+
+
+						vkCommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline->GetPipeline());
+
+						auto viewportSize = std::make_pair(PageRenderWidth, PageRenderHeight);
+						vk::Viewport viewport;
+						viewport.x = 0;
+						viewport.y = 0;
+						viewport.minDepth = 0;
+						viewport.maxDepth = 1;
+						viewport.height = viewportSize.second;
+						viewport.width = viewportSize.first;
+
+						vk::Rect2D scissors;
+						scissors.offset = vk::Offset2D{ (uint32_t)0,(uint32_t)0 };
+						scissors.extent = vk::Extent2D{ (uint32_t)viewportSize.first,(uint32_t)viewportSize.second };
+
+						vkCommandBuffer.setViewport(0, 1, &viewport);
+						vkCommandBuffer.setScissor(0, 1, &scissors);
+						Renderer::Instance()->BeginBatch();
+						Renderer::Instance()->DrawTxt(vkCommandBuffer, txt[frameIndex % txt.size()], pos, Characters);
+						size_t offset = 0;
+						Renderer::Instance()->DrawBatch(vkCommandBuffer, offset);
+					}
+				
+				);
+			}
+			auto device = RenderContext::GetDevice();
+			{
+				auto m_DescriptorSetLayout = Renderer::Instance()->GetSetLayout(0, PipelineType::RENDER);
+				auto m_DescriptorSetLayoutFont = Renderer::Instance()->GetSetLayout(m_TexAtlas, PipelineType::RENDER);
+
+				auto samples = RenderContext::GetDevice()->GetSamples();
+				auto pipelineLayouts = std::vector<vk::DescriptorSetLayout>{
+					m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutFont->GetLayout() };
+				std::vector<vk::VertexInputBindingDescription> bindings{ VertexBindingDescription(0,sizeof(Vertex),vk::VertexInputRate::eVertex) };
+				
+				std::vector<vk::VertexInputAttributeDescription> attributeDescriptions;
+				
+				attributeDescriptions =
+				{
+					VertexInputAttributeDescription(0,0,vk::Format::eR32G32B32Sfloat,offsetof(Vertex, Position)),
+					VertexInputAttributeDescription(0,1,vk::Format::eR32G32Sfloat,offsetof(Vertex, UV)),
+					VertexInputAttributeDescription(0,2,vk::Format::eR32G32B32A32Sfloat,offsetof(Vertex, Color)),
+					VertexInputAttributeDescription(0,3,vk::Format::eR32Sfloat,offsetof(Vertex, textureID)),
+				
+				};
+
+				PipelineBuilder builder;
+				builder.SetDevice(device->GetDevice());
+				builder.SetSamples(vk::SampleCountFlagBits::e1);
+				builder.AddDescriptorLayouts(pipelineLayouts);
+				builder.AddAttributeDescription(attributeDescriptions);
+					builder.AddBindingDescription(bindings);
+				builder.SetPolygoneMode(Renderer::Instance()->GetPolygonMode());
+				builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
+				Renderer::Instance()->CompileShader("font.spvV", ShaderType::VERTEX);
+				Renderer::Instance()->CompileShader("font.spvF", ShaderType::FRAGMENT);
+				builder.AddShader(BASE_SPIRV_OUTPUT + "font.spvV", vk::ShaderStageFlagBits::eVertex);
+				builder.AddShader(BASE_SPIRV_OUTPUT + "font.spvF", vk::ShaderStageFlagBits::eFragment);
+				builder.SetSubpassAmount(0);
+				
+				builder.AddExtent(vk::Extent2D{ 128 ,128 });
+				builder.AddImageFormat(vk::Format::eB8G8R8A8Unorm);
+				builder.SetRenderPass(m_PageRenderPass->GetRaw());
+
+				//builder.SetSampleShading(VK_TRUE);
+
+				m_PagePipeline = builder.Build();
+				Renderer::Instance()->AddPipeline("Page",std::move(m_PagePipeline));
+			
 			}
 
+
+			//m_PagesImages.resize(PageAmount);
+			//m_PageFramebuffer.resize(PageAmount);
+			//m_PagesImageMSAA.resize(PageAmount);
+			//auto device = RenderContext::GetDevice();
+			//auto samples = device->GetSamples();
+			//for (int i = 0; i < m_PagesImages.size(); i++)
+			//{
+			//	//auto usage = vk::ImageUsageFlagBits::eColorAttachment  |vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eSampled;
+			//	//m_PagesImages[i] = Image::CreateEmptyImage(PageRenderWidth, PageRenderHeight,vk::Format::eB8G8R8A8Unorm, usage, vk::SampleCountFlagBits::e1,vk::Filter::eLinear, vk::Filter::eLinear);
+			//	
+			//	
+			//	/*ImageSpecs specs;
+			//	specs.width = extent.width;
+			//	specs.height = extent.height;
+			//	specs.tiling = vk::ImageTiling::eOptimal;
+			//	specs.usage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransientAttachment;
+			//	specs.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+			//	specs.format = swapchainFormat;
+			//	
+			//	auto msaaImage = Image::CreateVKImage(specs, samples);
+			//	auto msaaImageMemory = Image::CreateMemory(msaaImage, specs);
+			//	auto msaaImageView = Image::CreateImageView(msaaImage, swapchainFormat, vk::ImageAspectFlagBits::eColor);
+			//	m_PagesImageMSAA[i] = CreateSPtr<Image>();
+			//	m_PagesImageMSAA[i]->SetFormat(swapchainFormat);
+			//	m_PagesImageMSAA[i]->SetView(msaaImageView);
+			//	m_PagesImageMSAA[i]->SetMemory(msaaImageMemory);
+			//	m_PagesImageMSAA[i]->SetImage(msaaImage);*/
+			//	
+			//	std::vector<vk::ImageView>attachments = { m_PagesImageMSAA[i]->GetImageView(),m_PagesImages[i]->GetImageView()};
+			//	vk::FramebufferCreateInfo framebufferInfo;
+			//	framebufferInfo.flags = vk::FramebufferCreateFlags();
+			//	framebufferInfo.renderPass = m_PageRenderPass->GetRaw();
+			//	framebufferInfo.attachmentCount = attachments.size();
+			//	framebufferInfo.pAttachments = attachments.data();
+			//	framebufferInfo.width = PageRenderWidth;
+			//	framebufferInfo.height = PageRenderHeight;
+			//	framebufferInfo.layers = 1;
+
+			//	m_PageFramebuffer[i] = device->GetDevice().createFramebuffer(framebufferInfo);
+			//}
+
 				
+			
+
 			
 
 			//auto& swapchain = Renderer::Instance()->GetSwapchain();
@@ -1342,111 +1426,137 @@ public:
 			//	}
 
 			//}
+			UniformBufferObject ubo{};
+			auto camera = *GetCamera();
+			auto cameraView = camera.GetView();
+			auto cameraProj1 = camera.GetProj();
+			auto orth = glm::ortho(0.f, PageRenderWidth, PageRenderHeight, 0.f);
+			auto cameraProj = orth;
+			ubo.playerPos = glm::vec4{ camera.GetPosition(),0 };
+			ubo.playerPos = glm::vec4{ m_Follow,0,0 };
+			ubo.view = cameraView;
+			ubo.proj = cameraProj;
+			ubo.time = GetExeTime();
+			memcpy(uniformBuffersMapped[0], &ubo, sizeof(ubo));
+			auto& cmd = Renderer::Instance()->GetRenderCommandBuffer(0);
+
+
+
+
+			auto extent = vk::Extent2D{ static_cast<uint32_t>(PageRenderWidth),
+					 static_cast<uint32_t>(PageRenderHeight) };
+			vk::ClearValue clearColor = { std::array<float, 4>{0.f, 0.f, 0.f, 1.0f} };
+			std::vector<vk::ClearValue> clearValues = { {clearColor,clearColor} };
+
+			Fence fence;
+			for (int i = 0; i < PageAmount; i++)
 			{
-
-				UniformBufferObject ubo{};
-				auto camera = *GetCamera();
-				auto cameraView = camera.GetView();
-				auto cameraProj1 = camera.GetProj();
-				auto orth = glm::ortho(0.f, PageRenderWidth, PageRenderHeight,0.f);
-				auto cameraProj = orth;
-				ubo.playerPos = glm::vec4{ camera.GetPosition(),0 };
-				ubo.playerPos = glm::vec4{ m_Follow,0,0 };
-				ubo.view = cameraView;
-				ubo.proj = cameraProj;
-				ubo.time = GetExeTime();
-				memcpy(uniformBuffersMapped[0], &ubo, sizeof(ubo));
-
-				auto& renderCommandBuffer = Renderer::Instance()->GetRenderCommandBuffer(0);
-				auto& vkCommandBuffer = renderCommandBuffer.GetCommandBuffer();
-				vk::CommandBufferBeginInfo beginInfo = {};
+				//Renderer::Instance()->BeginFrame(ubo,PageRenderWidth,PageRenderHeight);
+				Renderer::Instance()->Wait(fence.GetFence());
+				Renderer::Instance()->Reset(fence.GetFence());
+				m_PageRenderPass->Execute(cmd,i, extent, clearValues);
 				
-				vk::ClearValue clearColor = { std::array<float, 4>{0.f, 0.f, 0.f, 1.0f} };
-
-
-				std::vector<vk::ClearValue> clearValues = { {clearColor,clearColor} };
-
-				auto viewportSize = std::make_pair(PageRenderWidth, PageRenderHeight);
-				vk::Viewport viewport;
-				viewport.x = 0;
-				viewport.y = 0;
-				viewport.minDepth = 0;
-				viewport.maxDepth = 1;
-				viewport.height = viewportSize.second;
-				viewport.width = viewportSize.first;
-
-				vk::Rect2D scissors;
-				scissors.offset = vk::Offset2D{ (uint32_t)0,(uint32_t)0 };
-				scissors.extent = vk::Extent2D{ (uint32_t)viewportSize.first,(uint32_t)viewportSize.second };
-				auto fence = Renderer::Instance()->GetFence();
-				for (int i = 0; i <  m_PageFramebuffer.size(); i++)
-				{
-					device->GetDevice().waitForFences(fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
-					device->GetDevice().resetFences(fence);
-					vkCommandBuffer.begin(beginInfo);
-					renderCommandBuffer.BeginRenderPass(m_PageRenderPass->GetRaw(), m_PageFramebuffer[i], vk::Extent2D{static_cast<uint32_t>(PageRenderWidth),
-					 static_cast<uint32_t>(PageRenderHeight)}, clearValues);
-					glm::vec2 pos = { 20, 400};
-
-
-					vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PagePipeline->GetLayout(), 0, m_DescriptorSets[0], nullptr);
-					vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PagePipeline->GetLayout(), 1, m_DescriptorSetFont, nullptr);
-
-
-					vkCommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_PagePipeline->GetPipeline());
-
-					vkCommandBuffer.setViewport(0, 1, &viewport);
-					vkCommandBuffer.setScissor(0, 1, &scissors);
-					Renderer::Instance()->BeginBatch();
-					Renderer::Instance()->DrawTxt(vkCommandBuffer, txt[i% txt.size()], pos, Characters);
-					size_t offset = 0;
-					Renderer::Instance()->DrawBatch(vkCommandBuffer, offset);
-
-					renderCommandBuffer.EndRenderPass();
-					vkCommandBuffer.end();
-					{
-						std::vector<vk::CommandBuffer> commandBuffers = { vkCommandBuffer };
-
-						vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
-						vk::SubmitInfo submitInfo = {};
-
-						//submitInfo.waitSemaphoreCount = 1;
-						//submitInfo.pWaitSemaphores = waitSemaphores;
-						submitInfo.pWaitDstStageMask = waitStages;
-
-
-						submitInfo.commandBufferCount = commandBuffers.size();
-						submitInfo.pCommandBuffers = commandBuffers.data();
-
-						//submitInfo.signalSemaphoreCount = 1;
-						//submitInfo.pSignalSemaphores = signalSemaphores;
-						auto device = RenderContext::GetDevice();
-						//device->GetDevice().resetFences(fence);
-						device->GetGraphicsQueue().submit(submitInfo,fence);
-						
-					}
-
-				}
-
-				
-
-				
-
-				std::vector<vk::DescriptorImageInfo> infos(PageAmount);
-				for (int i =0 ; i < PageAmount; i++)
-				{
-					infos[i].sampler = m_PagesImages[i]->GetSampler();
-					infos[i].imageView= m_PagesImages[i]->GetImageView();
-					infos[i].imageLayout= vk::ImageLayout::eShaderReadOnlyOptimal;
-
-				}
-				device->UpdateDescriptorSet(m_DescriptorSetTex, 0, infos, vk::DescriptorType::eCombinedImageSampler);
-
+				cmd.Submit(&fence.GetFence());
 			}
+			return;
+			
+
+			//{
+
+			//	
+
+			//	auto& renderCommandBuffer = Renderer::Instance()->GetRenderCommandBuffer(0);
+			//	auto& vkCommandBuffer = renderCommandBuffer.GetCommandBuffer();
+			//	//vk::CommandBufferBeginInfo beginInfo = {};
+			//	
+			//	vk::ClearValue clearColor = { std::array<float, 4>{0.f, 0.f, 0.f, 1.0f} };
+
+
+			//	std::vector<vk::ClearValue> clearValues = { {clearColor,clearColor} };
+
+			//	
+			//	auto fence = Renderer::Instance()->GetFence();
+			//	for (int i = 0; i <  m_PageFramebuffer.size(); i++)
+			//	{
+			//		//device->GetDevice().waitForFences(fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
+			//		//device->GetDevice().resetFences(fence);
+			//		//vkCommandBuffer.begin(beginInfo);
+			//		//renderCommandBuffer.BeginRenderPass(m_PageRenderPass->GetRaw(), m_PageFramebuffer[i], vk::Extent2D{static_cast<uint32_t>(PageRenderWidth),
+			//		// static_cast<uint32_t>(PageRenderHeight)}, clearValues);
+			//		glm::vec2 pos = { 20, 400};
+
+
+			//		vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PagePipeline->GetLayout(), 0, m_DescriptorSets[0], nullptr);
+			//		vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PagePipeline->GetLayout(), 1, m_DescriptorSetFont, nullptr);
+
+
+			//		vkCommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_PagePipeline->GetPipeline());
+
+			//		auto viewportSize = std::make_pair(PageRenderWidth, PageRenderHeight);
+			//		vk::Viewport viewport;
+			//		viewport.x = 0;
+			//		viewport.y = 0;
+			//		viewport.minDepth = 0;
+			//		viewport.maxDepth = 1;
+			//		viewport.height = viewportSize.second;
+			//		viewport.width = viewportSize.first;
+
+			//		vk::Rect2D scissors;
+			//		scissors.offset = vk::Offset2D{ (uint32_t)0,(uint32_t)0 };
+			//		scissors.extent = vk::Extent2D{ (uint32_t)viewportSize.first,(uint32_t)viewportSize.second };
+
+			//		vkCommandBuffer.setViewport(0, 1, &viewport);
+			//		vkCommandBuffer.setScissor(0, 1, &scissors);
+			//		Renderer::Instance()->BeginBatch();
+			//		Renderer::Instance()->DrawTxt(vkCommandBuffer, txt[i% txt.size()], pos, Characters);
+			//		size_t offset = 0;
+			//		Renderer::Instance()->DrawBatch(vkCommandBuffer, offset);
+
+			//		renderCommandBuffer.EndRenderPass();
+			//		vkCommandBuffer.end();
+			//		{
+			//			std::vector<vk::CommandBuffer> commandBuffers = { vkCommandBuffer };
+
+			//			vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
+			//			vk::SubmitInfo submitInfo = {};
+
+			//			//submitInfo.waitSemaphoreCount = 1;
+			//			//submitInfo.pWaitSemaphores = waitSemaphores;
+			//			submitInfo.pWaitDstStageMask = waitStages;
+
+
+			//			submitInfo.commandBufferCount = commandBuffers.size();
+			//			submitInfo.pCommandBuffers = commandBuffers.data();
+
+			//			//submitInfo.signalSemaphoreCount = 1;
+			//			//submitInfo.pSignalSemaphores = signalSemaphores;
+			//			auto device = RenderContext::GetDevice();
+			//			//device->GetDevice().resetFences(fence);
+			//			device->GetGraphicsQueue().submit(submitInfo,fence);
+			//			
+			//		}
+
+			//	}
+
+			//	
+
+			//	
+			//	
+			//	std::vector<vk::DescriptorImageInfo> infos(PageAmount);
+			//	for (int i =0 ; i < PageAmount; i++)
+			//	{
+			//		infos[i].sampler = m_PagesImages[i]->GetSampler();
+			//		infos[i].imageView= m_PagesImages[i]->GetImageView();
+			//		infos[i].imageLayout= vk::ImageLayout::eShaderReadOnlyOptimal;
+
+			//	}
+			//	device->UpdateDescriptorSet(m_DescriptorSetTex, 0, infos, vk::DescriptorType::eCombinedImageSampler);
+
+			//}
 			
 			
 		};
-		Callables callables;
+
 		callables.bindingsInit = bindingsInit;
 		callables.bufferInit = bufferInit;
 		callables.loadTextures = loadTextures;

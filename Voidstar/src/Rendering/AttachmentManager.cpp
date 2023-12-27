@@ -91,6 +91,23 @@ namespace Voidstar
 		}
 		m_DepthStencil[attachmentName.data()] = images;
 	}
+	void AttachmentManager::Destroy()
+	{
+		auto device = RenderContext::GetDevice()->GetDevice();
+		device.waitIdle();
+		for (auto& e : m_Color)
+		{
+			e.second.clear();
+		}
+		for (auto& e : m_DepthStencil)
+		{
+			e.second.clear();
+		}
+		for (auto& e : m_Resolve)
+		{
+			e.second.clear();
+		}
+	}
 	void AttachmentManager::CreateResolve(std::string_view attachmentName,
 		AttachmentManager& manager, vk::Format format, size_t width, size_t height,
 		vk::PresentModeKHR presentMode,

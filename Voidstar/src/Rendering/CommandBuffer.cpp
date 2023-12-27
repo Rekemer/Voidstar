@@ -14,6 +14,8 @@ namespace Voidstar
 	void CommandBuffer::BeginRendering()
 	{
 		m_CommandBuffer.reset();
+		vk::CommandBufferBeginInfo beginInfo = {};
+		m_CommandBuffer.begin(beginInfo);
 	}
 
 	void CommandBuffer::BeginRenderPass(vk::RenderPass& renderPass, vk::Framebuffer& framebuffer, vk::Extent2D& extent, std::vector<vk::ClearValue>& clearValues)
@@ -44,6 +46,21 @@ namespace Voidstar
 
 	}
 
+
+	void CommandBuffer::Submit(vk::Fence* fence)
+	{
+		vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput};
+		vk::SubmitInfo submitInfo = {};
+
+		submitInfo.pWaitDstStageMask = waitStages;
+
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &m_CommandBuffer;
+
+		auto device = RenderContext::GetDevice();
+		device->GetGraphicsQueue().submit(submitInfo, *fence);
+	}
+
 	void CommandBuffer::Submit(vk::Semaphore* waitSemaphores, vk::Semaphore* signalSemaphores, vk::Fence* fence)
 	{
 		vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput,vk::PipelineStageFlagBits::eVertexInput };
@@ -63,6 +80,7 @@ namespace Voidstar
 	}
 	void CommandBuffer::EndRendering()
 	{
+		m_CommandBuffer.end();
 	}
 
 	void CommandBuffer::Free()

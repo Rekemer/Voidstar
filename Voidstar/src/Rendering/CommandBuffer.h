@@ -46,6 +46,7 @@ namespace Voidstar
 	
 		void EndRenderPass();
 		void Submit(vk::Semaphore* waitSemaphores, vk::Semaphore* signalSemaphores, vk::Fence* fence);
+		void Submit(vk::Fence* fence);
 	
 		void EndRendering();
 		void Free();

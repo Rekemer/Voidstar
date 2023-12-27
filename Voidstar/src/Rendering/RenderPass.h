@@ -2,11 +2,14 @@
 #include <Prereq.h>
 #include "vulkan/vulkan.hpp"
 #include <vector>
+#include <functional>
+#include "RenderContext.h"
+#include "Device.h"
 #include <utility>
 namespace Voidstar
 {
 	class CommandBuffer;
-	using Func = std::function<void(CommandBuffer& cmd)>;
+	using Func = std::function<void(CommandBuffer& cmd,size_t frameIndex)>;
 	enum class OutputType
 	{
 		COLOR,
@@ -43,8 +46,74 @@ namespace Voidstar
 		void AddSubpass(vk::SubpassDescription subpass);
 		void AddSubpass(std::vector<int> indexColor,std::vector<int> indexDepth, std::vector<int> indexResolve);
 		void AddSubpassDependency(vk::SubpassDependency subpassDependency);
-		UPtr<RenderPass> Build(std::string_view name, AttachmentManager& manager,
-			size_t frameBufferAmount);
+
+		template<typename Func>
+		UPtr<RenderPass> Build(std::string_view name,
+			AttachmentManager& manager,
+			size_t framebufferAmount,
+			Func execute)
+		{
+			auto device = RenderContext::GetDevice();
+			//Now create the renderpass
+			vk::RenderPassCreateInfo renderpassInfo = {};
+			std::vector<vk::AttachmentDescription> attachments;
+			for (auto attachment : m_Attachments)
+			{
+				attachments.push_back(attachment);
+			}
+			// to be able to map NDC to screen coordinates - Viewport ans Scissors Transform
+			renderpassInfo.flags = vk::RenderPassCreateFlags();
+			renderpassInfo.attachmentCount = attachments.size();
+			renderpassInfo.pAttachments = attachments.data();
+			renderpassInfo.subpassCount = m_Subpasses.size();
+			renderpassInfo.pSubpasses = m_Subpasses.data();
+			renderpassInfo.dependencyCount = m_Dependencies.size();
+			renderpassInfo.pDependencies = m_Dependencies.data();
+
+			try
+			{
+				auto vkRenderPass = device->GetDevice().createRenderPass(renderpassInfo);
+				UPtr<RenderPass> renderPass = CreateUPtr<RenderPass>(name, vkRenderPass, execute);
+				renderPass->m_Framebuffers.resize(framebufferAmount);
+				for (int i = 0; i < framebufferAmount; i++)
+				{
+					int colorOutputOverall = 0;
+					std::vector<vk::ImageView> views;
+					for (auto type : m_OutputTypes)
+					{
+						if (type == OutputType::COLOR)
+						{
+							views.push_back(m_Color[colorOutputOverall][i]->GetImageView());
+							colorOutputOverall++;
+						}
+						else if (type == OutputType::DEPTH)
+						{
+							views.push_back(m_DepthStencil[i]->GetImageView());
+						}
+						else if (type == OutputType::RESOLVE)
+						{
+							views.push_back(m_Resolve[i]->GetImageView());
+
+						}
+					}
+					// width and height for all images are supposed to be equal to each other
+					renderPass->m_Framebuffers[i] = CreateFramebuffer(views, vkRenderPass, m_Color[0][0]->GetWidth(), m_Color[0][0]->GetHeight());
+				}
+
+				m_DepthReferences.clear();
+				m_ColorReferences.clear();
+				m_ResolveReferences.clear();
+				m_DepthStencil.clear();
+				m_Color.clear();
+				m_Resolve.clear();
+				m_IsMSAA = false;
+				return std::move(renderPass);
+			}
+			catch (vk::SystemError err)
+			{
+				Log::GetLog()->error("Failed to create renderpass!");
+			}
+		}
 	private:
 		size_t m_FrameBufferAmount;
 		std::vector<std::vector<Image*>> m_Color;
@@ -75,17 +144,28 @@ namespace Voidstar
 	class RenderPass
 	{
 	public:
-		template<typename T>
-		RenderPass(std::string_view name, vk::RenderPass renderPass, Func execute) : m_Name{name.data()},
+		RenderPass(std::string_view name, vk::RenderPass renderPass,
+			Func execute) : m_Name{name.data()},
 			m_RenderPass{ renderPass },
 			m_Execute{execute}
+
 		{
 
 		}
-		void Execute(CommandBuffer& cmd)
+		RenderPass(RenderPass&& pass)
 		{
-			m_Execute(cmd);
+
 		}
+		RenderPass(const RenderPass& pass) = delete;
+		RenderPass& operator=(const RenderPass& pass) = delete;
+		
+		RenderPass& operator=(RenderPass&& pass)
+		{
+
+		}
+		void Execute(CommandBuffer& cmd, size_t frameIndex, 
+			vk::Extent2D extent, std::vector<vk::ClearValue> clearValues);
+		
 		vk::RenderPass GetRaw()
 		{
 			return m_RenderPass;
@@ -94,12 +174,23 @@ namespace Voidstar
 		{
 			return m_Name.data();
 		}
+		void Destroy()
+		{
+			auto device = RenderContext::GetDevice()->GetDevice();
+			device.waitIdle();
+			for (auto e : m_Framebuffers)
+			{
+				device.destroyFramebuffer(e);
+			}
+		}
 		~RenderPass();
 	private:
 		friend class RenderPassBuilder;
 		std::string m_Name;
 		vk::RenderPass m_RenderPass;
 		Func m_Execute;
+		vk::Extent2D m_Extent;
+		std::vector<vk::ClearValue> m_ClearValues;
 		std::vector<vk::Framebuffer> m_Framebuffers;
 		
 	};
