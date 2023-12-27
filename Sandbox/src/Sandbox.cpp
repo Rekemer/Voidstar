@@ -236,18 +236,16 @@ public:
 				RenderPassBuilder builder;
 
 				//Define a general attachment, with its load/store operations
-				builder.ColorOutput("MSAA", m_AttachmentManager);
+				builder.ColorOutput("MSAA", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
 				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
 				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
 				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
 				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
 				builder.SetInitialLayout(vk::ImageLayout::eUndefined);
 				builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
-				
 				auto msaaDecs = builder.BuildAttachmentDesc();
 
-				vk::AttachmentReference refMSAA = { 0,vk::ImageLayout::eColorAttachmentOptimal };
-				builder.AddAttachment (msaaDecs,refMSAA);
+				
 
 
 				/*DepthStencilSpecs depthSpec;
@@ -266,18 +264,14 @@ public:
 				depthSpec.Specs.imageAspect = vk::ImageAspectFlagBits::eDepth;
 				m_AttachmentManager.AddAttachment<DepthImage>("DepthStencil", depthSpec);*/
 
-				builder.DepthStencilOutput("DepthStencil", m_AttachmentManager);
+				builder.DepthStencilOutput("DepthStencil", m_AttachmentManager, vk::ImageLayout::eDepthStencilAttachmentOptimal);
 				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
 				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
 				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eClear);
 				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eStore);
 				builder.SetInitialLayout(vk::ImageLayout::eUndefined);
 				builder.SetFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
-
 				auto depth = builder.BuildAttachmentDesc();
-
-				vk::AttachmentReference refDepth = { 1,vk::ImageLayout::eDepthStencilAttachmentOptimal };
-				builder.AddAttachment(depth, refDepth);
 
 
 #if IMGUI_ENABLED
@@ -305,19 +299,16 @@ public:
 				//resolveSpec.Amount = 3;
 				//m_AttachmentManager.AddAttachment<SwapchainImage>("Resolve", resolveSpec);
 
-				builder.ResolveOutput("Resolve",m_AttachmentManager);
+				builder.ResolveOutput("Resolve",m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
 				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
 				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
 				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
 				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
 				builder.SetInitialLayout(vk::ImageLayout::eUndefined);
 				builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
-				vk::AttachmentReference refResolve = { 2,vk::ImageLayout::eColorAttachmentOptimal };
 				auto resolve = builder.BuildAttachmentDesc();
 #endif			
-
-				builder.AddAttachment( resolve, refResolve);
-				builder.AddSubpass(SubpassDescription(1, &refMSAA, &refResolve, &refDepth));
+				builder.AddSubpass({ 0 }, { 1 }, { 2 });
 				vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0,
 					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite,
 					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
@@ -326,84 +317,78 @@ public:
 				m_RenderPass = builder.Build("Basic",m_AttachmentManager, actualFrameAmount);
 
 				
-				{
-
-
-
-
-					RenderPassBuilder builder;
-					builder.ColorOutput("MSAA", m_AttachmentManager);
-					builder.SetLoadOp(vk::AttachmentLoadOp::eLoad);
-					builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
-					builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-					builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
-					builder.SetInitialLayout(vk::ImageLayout::eColorAttachmentOptimal);
-					builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
-					
-					auto msaaAttachment = builder.BuildAttachmentDesc();
-					//vk::AttachmentDescription msaaAttachment = AttachmentDescription(swapchainFormat,
-					//	samples, vk::AttachmentLoadOp::eLoad,
-					//	vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
-					//	vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eColorAttachmentOptimal,
-					//	vk::ImageLayout::eColorAttachmentOptimal);
-
-					vk::AttachmentReference refMSAA = { 0,vk::ImageLayout::eColorAttachmentOptimal };
-					builder.AddAttachment( msaaAttachment ,refMSAA);
-
-
-
-					builder.DepthStencilOutput("DepthStencil", m_AttachmentManager);
-					builder.SetLoadOp(vk::AttachmentLoadOp::eLoad);
-					builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
-					builder.SetStencilLoadOp(vk::AttachmentLoadOp::eLoad);
-					builder.SetStencilSaveOp(vk::AttachmentStoreOp::eStore);
-					builder.SetInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
-					builder.SetFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
-					auto depthAttachment = builder.BuildAttachmentDesc();
-					/*vk::AttachmentDescription depthAttachment = AttachmentDescription(
-						swapChainDepthFormat, samples, vk::AttachmentLoadOp::eLoad, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eLoad,
-						vk::AttachmentStoreOp::eStore, vk::ImageLayout::eDepthStencilAttachmentOptimal, vk::ImageLayout::eDepthStencilAttachmentOptimal);*/
-					vk::AttachmentReference refDepth = { 1,vk::ImageLayout::eDepthStencilAttachmentOptimal };
-					builder.AddAttachment( depthAttachment , refDepth );
-
-
-					builder.ResolveOutput("Resolve", m_AttachmentManager);
-					builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
-					builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
-					builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-					builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
-					builder.SetInitialLayout(vk::ImageLayout::eColorAttachmentOptimal);
-					builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
-
-					vk::AttachmentDescription colorAttachmentResolve = builder.BuildAttachmentDesc();
-					/*vk::AttachmentDescription colorAttachmentResolve =
-						AttachmentDescription(swapchainFormat, vk::SampleCountFlagBits::e1,
-							vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
-							vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::eColorAttachmentOptimal);*/
-					vk::AttachmentReference refResolve = { 2,vk::ImageLayout::eColorAttachmentOptimal };
-
-
-					builder.AddAttachment( colorAttachmentResolve ,refResolve);
-
-					//Renderpasses are broken down into subpasses, there's always at least one.
-
-					builder.AddSubpass(SubpassDescription(1, &refMSAA, &refResolve, &refDepth));
-
-					vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0,
-						vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite,
-						vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
-					builder.AddSubpassDependency(dependency0);
-
-					m_ClipRenderPass= builder.Build("Clip" , m_AttachmentManager, actualFrameAmount);
-				}
+				
 
 			}
-			
+			{
+
+
+
+
+				RenderPassBuilder builder;
+				builder.ColorOutput("MSAA", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
+				builder.SetLoadOp(vk::AttachmentLoadOp::eLoad);
+				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
+				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
+				builder.SetInitialLayout(vk::ImageLayout::eColorAttachmentOptimal);
+				builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
+
+				auto msaaAttachment = builder.BuildAttachmentDesc();
+				//vk::AttachmentDescription msaaAttachment = AttachmentDescription(swapchainFormat,
+				//	samples, vk::AttachmentLoadOp::eLoad,
+				//	vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
+				//	vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eColorAttachmentOptimal,
+				//	vk::ImageLayout::eColorAttachmentOptimal);
+
+
+
+
+				builder.DepthStencilOutput("DepthStencil", m_AttachmentManager, vk::ImageLayout::eDepthStencilAttachmentOptimal);
+				builder.SetLoadOp(vk::AttachmentLoadOp::eLoad);
+				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
+				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eLoad);
+				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eStore);
+				builder.SetInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+				builder.SetFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+				auto depthAttachment = builder.BuildAttachmentDesc();
+				/*vk::AttachmentDescription depthAttachment = AttachmentDescription(
+					swapChainDepthFormat, samples, vk::AttachmentLoadOp::eLoad, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eLoad,
+					vk::AttachmentStoreOp::eStore, vk::ImageLayout::eDepthStencilAttachmentOptimal, vk::ImageLayout::eDepthStencilAttachmentOptimal);*/
+
+
+				builder.ResolveOutput("Resolve", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
+				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
+				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
+				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
+				builder.SetInitialLayout(vk::ImageLayout::eColorAttachmentOptimal);
+				builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
+
+				vk::AttachmentDescription colorAttachmentResolve = builder.BuildAttachmentDesc();
+				/*vk::AttachmentDescription colorAttachmentResolve =
+					AttachmentDescription(swapchainFormat, vk::SampleCountFlagBits::e1,
+						vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
+						vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::eColorAttachmentOptimal);*/
+
+
+
+				//Renderpasses are broken down into subpasses, there's always at least one.
+
+				builder.AddSubpass({ 0 }, { 0 }, {0});
+
+				vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0,
+					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite,
+					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
+				builder.AddSubpassDependency(dependency0);
+
+				m_ClipRenderPass = builder.Build("Clip", m_AttachmentManager, actualFrameAmount);
+			}
 
 			{
 				RenderPassBuilder builder;
 
-				builder.ColorOutput("MSAA", m_AttachmentManager);
+				builder.ColorOutput("MSAA", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
 				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
 				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
 				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
@@ -421,7 +406,7 @@ public:
 					vk::ImageLayout::eColorAttachmentOptimal);*/
 
 
-				builder.ResolveOutput("Resolve", m_AttachmentManager);
+				builder.ResolveOutput("Resolve", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
 				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
 				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
 				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
@@ -435,18 +420,14 @@ public:
 						vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined, vk::ImageLayout::eShaderReadOnlyOptimal);*/
 
 
-				vk::AttachmentReference refColor = { 0,vk::ImageLayout::eColorAttachmentOptimal };
-				vk::AttachmentReference refResolve = { 1,vk::ImageLayout::eColorAttachmentOptimal };
-				builder.AddSubpass(SubpassDescription(1, &refColor,&refResolve));
-				builder.AddAttachment( colorAttachment,refColor);
-				builder.AddAttachment( colorAttachmentResolve,refResolve );
+				builder.AddSubpass({ 0 }, { 0 }, { 0 });
 				vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eNone, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
 				builder.AddSubpassDependency(dependency0);
 				m_PageRenderPass = builder.Build("Basic pages",  m_AttachmentManager, actualFrameAmount);
 			}
 			{
 				RenderPassBuilder builder;
-				builder.ColorOutput("MSAA", m_AttachmentManager);
+				builder.ColorOutput("MSAA", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
 				builder.SetLoadOp(vk::AttachmentLoadOp::eLoad);
 				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
 				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
@@ -463,11 +444,9 @@ public:
 					vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eColorAttachmentOptimal,
 					vk::ImageLayout::eColorAttachmentOptimal);*/
 
-				vk::AttachmentReference refMSAA = { 0,vk::ImageLayout::eColorAttachmentOptimal };
-				builder.AddAttachment( msaaAttachment ,refMSAA );
 
 
-				builder.DepthStencilOutput("DepthStencil", m_AttachmentManager);
+				builder.DepthStencilOutput("DepthStencil", m_AttachmentManager, vk::ImageLayout::eDepthStencilAttachmentOptimal);
 				builder.SetLoadOp(vk::AttachmentLoadOp::eLoad);
 				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
 				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eLoad);
@@ -479,12 +458,10 @@ public:
 			/*	vk::AttachmentDescription depthAttachment = AttachmentDescription(
 					swapChainDepthFormat, samples, vk::AttachmentLoadOp::eLoad, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eLoad,
 					vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eDepthStencilAttachmentOptimal, vk::ImageLayout::eDepthStencilAttachmentOptimal);*/
-				vk::AttachmentReference refDepth = { 1,vk::ImageLayout::eDepthStencilAttachmentOptimal };
-				builder.AddAttachment(depthAttachment , refDepth );
 
 
 
-				builder.ResolveOutput("Resolve", m_AttachmentManager);
+				builder.ResolveOutput("Resolve", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
 				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
 				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
 				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
@@ -497,14 +474,10 @@ public:
 				//	AttachmentDescription(swapchainFormat, vk::SampleCountFlagBits::e1,
 				//		vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
 				//		vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::eColorAttachmentOptimal);
-				vk::AttachmentReference refResolve = { 2,vk::ImageLayout::eColorAttachmentOptimal };
-
-
-				builder.AddAttachment(colorAttachmentResolve ,refResolve );
 
 				//Renderpasses are broken down into subpasses, there's always at least one.
 
-				builder.AddSubpass(SubpassDescription(1, &refMSAA, &refResolve, &refDepth));
+				builder.AddSubpass(SubpassDescription({ 0 }, { 0 }, { 0 }));
 
 				vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0,
 					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite,
@@ -518,7 +491,7 @@ public:
 			{
 				RenderPassBuilder builder;
 
-				builder.ColorOutput("MSAA", m_AttachmentManager);
+				builder.ColorOutput("MSAA", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
 				builder.SetLoadOp(vk::AttachmentLoadOp::eLoad);
 				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
 				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
@@ -536,11 +509,9 @@ public:
 					vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eColorAttachmentOptimal,
 					vk::ImageLayout::eColorAttachmentOptimal);*/
 
-				vk::AttachmentReference refMSAA = { 0,vk::ImageLayout::eColorAttachmentOptimal };
-				builder.AddAttachment(msaaAttachment ,refMSAA );
 
 
-				builder.DepthStencilOutput("DepthStencil", m_AttachmentManager);
+				builder.DepthStencilOutput("DepthStencil", m_AttachmentManager, vk::ImageLayout::eDepthStencilAttachmentOptimal);
 				builder.SetLoadOp(vk::AttachmentLoadOp::eLoad);
 				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
 				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eLoad);
@@ -552,12 +523,10 @@ public:
 				/*vk::AttachmentDescription depthAttachment = AttachmentDescription(
 					swapChainDepthFormat, samples, vk::AttachmentLoadOp::eLoad, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eLoad,
 					vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eDepthStencilAttachmentOptimal, vk::ImageLayout::eDepthStencilAttachmentOptimal);*/
-				vk::AttachmentReference refDepth = { 1,vk::ImageLayout::eDepthStencilAttachmentOptimal };
-				builder.AddAttachment( depthAttachment , refDepth);
 
 
 
-				builder.ResolveOutput("Resolve", m_AttachmentManager);
+				builder.ResolveOutput("Resolve", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
 				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
 				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
 				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
@@ -569,14 +538,10 @@ public:
 					AttachmentDescription(swapchainFormat, vk::SampleCountFlagBits::e1,
 						vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
 						vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::ePresentSrcKHR);*/
-				vk::AttachmentReference refResolve = { 2,vk::ImageLayout::eColorAttachmentOptimal };
-
-
-				builder.AddAttachment( colorAttachmentResolve ,refResolve );
 
 				//Renderpasses are broken down into subpasses, there's always at least one.
 
-				builder.AddSubpass(SubpassDescription(1, &refMSAA, &refResolve, &refDepth));
+				builder.AddSubpass(SubpassDescription({ 0 }, { 0 }, { 0 }));
 
 				vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0,
 					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite,

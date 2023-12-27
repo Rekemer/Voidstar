@@ -6,6 +6,8 @@
 #include "RenderContext.h"
 #include "Initializers.h"
 #include "AttachmentManager.h"
+#include "Image.h"
+#include<algorithm>
 namespace Voidstar
 {
 
@@ -40,19 +42,24 @@ namespace Voidstar
 
 	vk::AttachmentDescription RenderPassBuilder::BuildAttachmentDesc()
 	{
-		return AttachmentDescription(m_Format,
+		auto desc = AttachmentDescription(m_Format,
 			m_Samples, m_LoadOp,
 			m_StoreOp, m_StencilLoadOp,
 			m_StencilStoreOp, m_InitialLayout,
 			m_FinalLayout);
+		AddAttachment(desc);
+		return desc;
 	}
 
-	void RenderPassBuilder::ColorOutput(std::string_view attachmentName, AttachmentManager& manager)
+	void RenderPassBuilder::ColorOutput(std::string_view attachmentName,
+		AttachmentManager& manager, vk::ImageLayout referenceLayout)
 	{
-		m_Color.push_back(attachmentName);
-		auto color = manager.GetColor(std::vector{ attachmentName });
-		m_Format = color[0]->SwapchainImage::GetFormat();
-		m_Samples = color[0]->SwapchainImage::GetSample();
+		auto views = manager.GetColor({ attachmentName });
+		m_Color.push_back(views);
+		m_ColorReferences.push_back({ (uint32_t)m_OutputTypes.size(), referenceLayout});
+		m_OutputTypes.push_back(OutputType::COLOR);
+		m_Format = views[0]->SwapchainImage::GetFormat();
+		m_Samples = views[0]->SwapchainImage::GetSample();
 	}
 	//void RenderPassBuilder::DepthOutput(std::string_view attachmentName,
 	//	AttachmentManager& manager, vk::Format format, size_t width, size_t height,
@@ -62,23 +69,28 @@ namespace Voidstar
 	//	assert(false);
 	//}
 		
-	void RenderPassBuilder::DepthStencilOutput(std::string_view attachmentName, AttachmentManager& manager)
+	void RenderPassBuilder::DepthStencilOutput(std::string_view attachmentName, AttachmentManager& manager, vk::ImageLayout referenceLayout)
 	{
-		m_DepthStencil.push_back(attachmentName);
-		auto color = manager.GetDepth(std::vector{ attachmentName });
-		m_Format = color[0]->SwapchainImage::GetFormat();
-		m_Samples = color[0]->SwapchainImage::GetSample();
+		auto views = manager.GetDepth({ attachmentName });
+		m_DepthStencil = views;
+		m_DepthReferences.push_back({ (uint32_t)m_OutputTypes.size(), referenceLayout });
+		m_OutputTypes.push_back(OutputType::DEPTH);
+		m_Format = views[0]->SwapchainImage::GetFormat();
+		m_Samples = views[0]->SwapchainImage::GetSample();
 	}
 	//void RenderPassBuilder::StencilOutput(std::string_view attachmentName, AttachmentSpec& spec, AttachmentManager& manager) {
 	//}
 	//void RenderPassBuilder::ResolveOutput(std::string_view attachmentName, AttachmentSpec& spec, AttachmentManager& manager) {
 	//}
-	void RenderPassBuilder::ResolveOutput(std::string_view attachmentName, AttachmentManager& manager)
+	void RenderPassBuilder::ResolveOutput(std::string_view attachmentName, AttachmentManager& manager, vk::ImageLayout referenceLayout)
 	{
-		m_Resolve.push_back(attachmentName);
-		auto color = manager.GetResolve(std::vector{ attachmentName });
-		m_Format = color[0]->SwapchainImage::GetFormat();
-		m_Samples = color[0]->SwapchainImage::GetSample();
+		auto views = manager.GetResolve({ attachmentName });
+		m_Resolve = views;
+
+		m_ResolveReferences.push_back({ (uint32_t)m_OutputTypes.size(), referenceLayout });
+		m_OutputTypes.push_back(OutputType::RESOLVE);
+		m_Format = views[0]->SwapchainImage::GetFormat();
+		m_Samples = views[0]->SwapchainImage::GetSample();
 	}
 
 	
@@ -99,11 +111,15 @@ namespace Voidstar
 		that uses the attachment to the finalLayout for the render pass.*/
 
 
-	void RenderPassBuilder::AddAttachment(vk::AttachmentDescription desc, vk::AttachmentReference attachment)
+	void RenderPassBuilder::AddAttachment(vk::AttachmentDescription desc)
 	{
-		m_Attachments.push_back(std::make_pair(desc,attachment));
+		m_Attachments.push_back(desc);
 	}
-
+	void RenderPassBuilder::AddSubpass(std::vector<int> indexColor, std::vector<int> indexDepth,
+		std::vector<int> indexResolve)
+	{
+		AddSubpass(SubpassDescription(m_ColorReferences.size(), m_ColorReferences.data(), m_ResolveReferences.data(), m_DepthReferences.data()));
+	}
 	void RenderPassBuilder::AddSubpass(vk::SubpassDescription subpass)
 	{
 		m_Subpasses.push_back(subpass);
@@ -121,7 +137,7 @@ namespace Voidstar
 		std::vector<vk::AttachmentDescription> attachments;
 		for (auto attachment : m_Attachments)
 		{
-			attachments.push_back(attachment.first);
+			attachments.push_back(attachment);
 		}
 		// to be able to map NDC to screen coordinates - Viewport ans Scissors Transform
 		renderpassInfo.flags = vk::RenderPassCreateFlags();
@@ -131,56 +147,43 @@ namespace Voidstar
 		renderpassInfo.pSubpasses = m_Subpasses.data();
 		renderpassInfo.dependencyCount = m_Dependencies.size();
 		renderpassInfo.pDependencies = m_Dependencies.data();
-
-		auto color = manager.GetColor(m_Color);
-		auto depthStencil= manager.GetDepth(m_DepthStencil);
-		auto resolve = manager.GetResolve(m_Resolve);
-
+		
 		try 
 		{
 			auto vkRenderPass = device->GetDevice().createRenderPass(renderpassInfo);
 			UPtr<RenderPass> renderPass = CreateUPtr<RenderPass>(name,vkRenderPass);
-			renderPass->m_Framebuffers.resize(attachments.size());
+			renderPass->m_Framebuffers.resize(framebufferAmount);
 			for (int i=0; i < framebufferAmount; i++)
 			{
+				int colorOutputOverall = 0;
 				std::vector<vk::ImageView> views;
-				if (resolve.empty())
+				for (auto type : m_OutputTypes)
 				{
-					if (depthStencil.empty())
+					if (type == OutputType::COLOR)
 					{
-						views.push_back(color[i]->GetImageView());
+						views.push_back(m_Color[colorOutputOverall][i]->GetImageView());
+						colorOutputOverall++;
 					}
-					else
+					else if (type == OutputType::DEPTH)
 					{
-						views.push_back(color[i]->GetImageView());
-						views.push_back(depthStencil[i]->GetImageView());
+						views.push_back(m_DepthStencil[i]->GetImageView());
+					}
+					else if (type == OutputType::RESOLVE)
+					{
+						views.push_back(m_Resolve[i]->GetImageView());
+
 					}
 				}
-				else
-				{
-					if (depthStencil.empty())
-					{
-						if (!color.empty())
-						{
-							views.push_back(color[i]->GetImageView());
-						}
-						views.push_back(resolve[i]->GetImageView());
-					}
-					else
-					{
-						if (!color.empty())
-						{
-							views.push_back(color[i]->GetImageView());
-						}
-						views.push_back(color[i]->GetImageView()); 
-						views.push_back(depthStencil[i]->GetImageView());
-					}
-				}
-				
-				renderPass->m_Framebuffers[i] =  CreateFramebuffer(views, vkRenderPass, color[0]->GetWidth(), color[0]->GetHeight());
+				// width and height for all images are supposed to be equal to each other
+				renderPass->m_Framebuffers[i] =  CreateFramebuffer(views, vkRenderPass, m_Color[0][0]->GetWidth(), m_Color[0][0]->GetHeight());
 			}
 
-			
+			m_DepthReferences.clear();
+			m_ColorReferences.clear();
+			m_ResolveReferences.clear();
+			m_DepthStencil.clear();
+			m_Color.clear();
+			m_Resolve.clear();
 			return std::move(renderPass);
 		}
 		catch (vk::SystemError err)

@@ -58,6 +58,8 @@ inline vk::SubpassDescription SubpassDescription(uint32_t colorAttachemntCount, 
 	subpass.colorAttachmentCount = colorAttachemntCount;
 	subpass.pColorAttachments = color;
 	subpass.pResolveAttachments = resolve;
+	subpass.pInputAttachments= nullptr;
+	subpass.inputAttachmentCount= 0;
 	subpass.pDepthStencilAttachment = depthStencil;
 	return subpass;
 }

@@ -5,20 +5,19 @@
 #include <utility>
 namespace Voidstar
 {
-	enum class AttachmentToFrameBuffer
+	enum class OutputType
 	{
-		// means if there are 3 attachments of type
-		// then each frame buffer will have 1 attachment
-		PER_FRAME_BUFFER,
-		// means that all 3 attachments are covered 
-		// by frame buffer
-		ALL_FRAME_BUFFER
+		COLOR,
+		DEPTH,
+		RESOLVE,
 	};
 	class Device;
 	class RenderPass;
 	class AttachmentManager;
 	class FramebufferManager;
 	class AttachmentSpec;
+	class Image;
+	class SwapchainImage;
 	class RenderPassBuilder
 	{
 	public:
@@ -32,24 +31,22 @@ namespace Voidstar
 		void SetFrameBufferAmount(size_t amount) { m_FrameBufferAmount = amount; }
 		vk::AttachmentDescription BuildAttachmentDesc();
 		
-		void ColorOutput(std::string_view attachmentName, AttachmentManager&);
-		void DepthStencilOutput(std::string_view attachmentName, AttachmentManager&);
-		void ResolveOutput(std::string_view attachmentName, AttachmentManager&);
+		void ColorOutput(std::string_view attachmentName, AttachmentManager&, vk::ImageLayout);
+		void DepthStencilOutput(std::string_view attachmentName, AttachmentManager&, vk::ImageLayout);
+		void ResolveOutput(std::string_view attachmentName, AttachmentManager&, vk::ImageLayout);
 
-		void AddOutput(std::string_view name)
-		{
-			m_Color.push_back(name);
-		};
-		void AddAttachment(vk::AttachmentDescription description,vk::AttachmentReference attachmment);
+		void AddAttachment(vk::AttachmentDescription description);
 		void AddSubpass(vk::SubpassDescription subpass);
+		void AddSubpass(std::vector<int> indexColor,std::vector<int> indexDepth, std::vector<int> indexResolve);
 		void AddSubpassDependency(vk::SubpassDependency subpassDependency);
 		UPtr<RenderPass> Build(std::string_view name, AttachmentManager& manager,
 			size_t frameBufferAmount);
 	private:
 		size_t m_FrameBufferAmount;
-		std::vector<std::string_view> m_Color;
-		std::vector<std::string_view> m_DepthStencil;
-		std::vector<std::string_view> m_Resolve;
+		std::vector<std::vector<Image*>> m_Color;
+		std::vector<Image*> m_DepthStencil;
+		std::vector<SwapchainImage*> m_Resolve;
+
 		vk::Format m_Format;
 		vk::SampleCountFlagBits m_Samples;
 		vk::AttachmentLoadOp m_LoadOp  ;
@@ -59,7 +56,15 @@ namespace Voidstar
 		vk::ImageLayout m_InitialLayout;
 		vk::ImageLayout m_FinalLayout;
 		vk::AttachmentDescription m_Description = {};
-		std::vector<std::pair<vk::AttachmentDescription, vk::AttachmentReference>> m_Attachments;
+		std::vector<vk::AttachmentDescription> m_Attachments;
+
+
+		std::vector<vk::AttachmentReference> m_ColorReferences;
+		std::vector<vk::AttachmentReference> m_DepthReferences;
+		std::vector<vk::AttachmentReference> m_ResolveReferences;
+		std::vector<OutputType>m_OutputTypes;
+
+
 		std::vector<vk::SubpassDescription> m_Subpasses;
 		std::vector<vk::SubpassDependency> m_Dependencies;
 	};
