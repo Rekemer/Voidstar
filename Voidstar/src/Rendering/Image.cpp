@@ -631,10 +631,21 @@ namespace Voidstar
 	Image::~Image()
 	{
 		auto logicalDevice = RenderContext::GetDevice()->GetDevice();
-		logicalDevice.freeMemory(m_ImageMemory);
-		logicalDevice.destroyImage(m_Image);
+		// might be swapchain image
+		if (m_ImageMemory != VK_NULL_HANDLE)
+		{
+			logicalDevice.freeMemory(m_ImageMemory);
+		}
+		if (m_Image != VK_NULL_HANDLE)
+		{
+			logicalDevice.destroyImage(m_Image);
+		}
+		if (m_Sampler != VK_NULL_HANDLE)
+		{
+			logicalDevice.destroySampler(m_Sampler);
+		}
+
 		logicalDevice.destroyImageView(m_ImageView);
-		logicalDevice.destroySampler(m_Sampler);
 		Renderer::Instance()->GetCommandPoolManager()->FreePool(m_CommandPool);
 	}
 	vk::Format Image::GetFormat(vk::PhysicalDevice physicalDevice, const std::vector<vk::Format>& candidates, vk::ImageTiling tiling, vk::FormatFeatureFlags features)

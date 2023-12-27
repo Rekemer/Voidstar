@@ -24,57 +24,7 @@ namespace Voidstar
 	};
 
 
-	class SwapchainImage
-	{
-	public:
-		friend class Swapchain;
-		vk::Image GetImage() {
-			return m_Image;
-		}
-		vk::Format GetFormat()
-		{
-			return m_Format;
-		}
-		vk::ImageView GetImageView() { return m_ImageView; }
-		void Destroy()
-		{
-			auto logicalDevice = RenderContext::GetDevice()->GetDevice();
-			logicalDevice.destroyImage(m_Image);
-			logicalDevice.destroyImageView(m_ImageView);
-		}
-		int GetWidth()
-		{
-			return m_Width;
-		}
-		int GetHeight()
-		{
-			return m_Height;
-		}
-		void SetSample(vk::SampleCountFlagBits sample)
-		{
-			m_Sample = sample;
-		}
-		void SetHeight(int height)
-		{
-			m_Height = height;
-		}
-		void SetWidth(int height)
-		{
-			m_Width = height;
-		}
-		vk::SampleCountFlagBits GetSample()
-		{
-			return m_Sample;
-		}
-
-	protected:
-		int m_Width, m_Height;
-		vk::Image m_Image;
-		vk::ImageView m_ImageView;
-		vk::Format m_Format;
-		vk::SampleCountFlagBits m_Sample;
-	};
-	class Image final : public SwapchainImage
+	class Image 
 	{
 	public:
 		Image() = default;
@@ -117,7 +67,44 @@ namespace Voidstar
 		{
 			m_ImageMemory = memory;
 		}
-		
+		vk::Image GetImage() {
+			return m_Image;
+		}
+		vk::Format GetFormat()
+		{
+			return m_Format;
+		}
+		vk::ImageView GetImageView() { return m_ImageView; }
+		void Destroy()
+		{
+			auto logicalDevice = RenderContext::GetDevice()->GetDevice();
+			logicalDevice.destroyImage(m_Image);
+			logicalDevice.destroyImageView(m_ImageView);
+		}
+		int GetWidth()
+		{
+			return m_Width;
+		}
+		int GetHeight()
+		{
+			return m_Height;
+		}
+		void SetSample(vk::SampleCountFlagBits sample)
+		{
+			m_Sample = sample;
+		}
+		void SetHeight(int height)
+		{
+			m_Height = height;
+		}
+		void SetWidth(int height)
+		{
+			m_Width = height;
+		}
+		vk::SampleCountFlagBits GetSample()
+		{
+			return m_Sample;
+		}
 		
 		static vk::Format GetFormat(vk::PhysicalDevice physicalDevice,
 			const std::vector<vk::Format>& candidates,
@@ -127,14 +114,19 @@ namespace Voidstar
 		void* LoadImageRaw();
 	private:
 		friend class Renderer;
+		friend class Swapchain;
 		friend class CommandBuffer;
 		friend class Device;
 		int m_Depth = 0, m_Channels;
 		int m_MipMapLevels;
+		int m_Width, m_Height;
+		vk::Image m_Image = VK_NULL_HANDLE;
+		vk::ImageView m_ImageView = VK_NULL_HANDLE;
+		vk::Format m_Format;
+		vk::SampleCountFlagBits m_Sample;
 		
-		
-		vk::Sampler m_Sampler;
-		vk::DeviceMemory m_ImageMemory;
+		vk::Sampler m_Sampler = VK_NULL_HANDLE;
+		vk::DeviceMemory m_ImageMemory = VK_NULL_HANDLE;
 		vk::CommandPool m_CommandPool;
 		
 		vk::ImageLayout m_ImageLayout = vk::ImageLayout::eUndefined;

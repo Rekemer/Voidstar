@@ -58,8 +58,12 @@ namespace Voidstar
 		m_Color.push_back(views);
 		m_ColorReferences.push_back({ (uint32_t)m_OutputTypes.size(), referenceLayout});
 		m_OutputTypes.push_back(OutputType::COLOR);
-		m_Format = views[0]->SwapchainImage::GetFormat();
-		m_Samples = views[0]->SwapchainImage::GetSample();
+		m_Format = views[0]->GetFormat();
+		m_Samples = views[0]->GetSample();
+		if (m_Samples != vk::SampleCountFlagBits::e1)
+		{
+			m_IsMSAA = true;
+		}
 	}
 	//void RenderPassBuilder::DepthOutput(std::string_view attachmentName,
 	//	AttachmentManager& manager, vk::Format format, size_t width, size_t height,
@@ -75,8 +79,8 @@ namespace Voidstar
 		m_DepthStencil = views;
 		m_DepthReferences.push_back({ (uint32_t)m_OutputTypes.size(), referenceLayout });
 		m_OutputTypes.push_back(OutputType::DEPTH);
-		m_Format = views[0]->SwapchainImage::GetFormat();
-		m_Samples = views[0]->SwapchainImage::GetSample();
+		m_Format = views[0]->GetFormat();
+		m_Samples = views[0]->GetSample();
 	}
 	//void RenderPassBuilder::StencilOutput(std::string_view attachmentName, AttachmentSpec& spec, AttachmentManager& manager) {
 	//}
@@ -89,8 +93,8 @@ namespace Voidstar
 
 		m_ResolveReferences.push_back({ (uint32_t)m_OutputTypes.size(), referenceLayout });
 		m_OutputTypes.push_back(OutputType::RESOLVE);
-		m_Format = views[0]->SwapchainImage::GetFormat();
-		m_Samples = views[0]->SwapchainImage::GetSample();
+		m_Format = views[0]->GetFormat();
+		m_Samples = views[0]->GetSample();
 	}
 
 	
@@ -118,7 +122,15 @@ namespace Voidstar
 	void RenderPassBuilder::AddSubpass(std::vector<int> indexColor, std::vector<int> indexDepth,
 		std::vector<int> indexResolve)
 	{
-		AddSubpass(SubpassDescription(m_ColorReferences.size(), m_ColorReferences.data(), m_ResolveReferences.data(), m_DepthReferences.data()));
+		if (m_IsMSAA)
+		{
+			AddSubpass(SubpassDescription(m_ColorReferences.size(), m_ColorReferences.data(), m_ResolveReferences.data(), m_DepthReferences.data()));
+
+		}
+		else
+		{
+			AddSubpass(SubpassDescription(m_ColorReferences.size(), m_ColorReferences.data(), nullptr, m_DepthReferences.data()));
+		}
 	}
 	void RenderPassBuilder::AddSubpass(vk::SubpassDescription subpass)
 	{
@@ -184,6 +196,7 @@ namespace Voidstar
 			m_DepthStencil.clear();
 			m_Color.clear();
 			m_Resolve.clear();
+			m_IsMSAA = false;
 			return std::move(renderPass);
 		}
 		catch (vk::SystemError err)

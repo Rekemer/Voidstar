@@ -61,7 +61,7 @@ public:
 		auto bufferInit  = [this]()
 		{
 			// get frame amount
-			auto framesAmount = Renderer::Instance()->GetSwapchain().GetFrameAmount();
+			auto framesAmount = RenderContext::GetFrameAmount();
 			auto m_Device = RenderContext::GetDevice();
 			auto bufferSize = sizeof(UniformBufferObject);
 			m_UniformBuffers.resize(framesAmount);
@@ -78,11 +78,6 @@ public:
 				m_UniformBuffers[i] = CreateUPtr<Buffer>(inputBuffer);
 				uniformBuffersMapped[i] = m_Device->GetDevice().mapMemory(m_UniformBuffers[i]->GetMemory(), 0, bufferSize);
 			}
-
-
-
-			
-
 
 
 			{
@@ -125,7 +120,7 @@ public:
 
 			auto bufferPerFrame = Renderer::Instance()->GetSet<std::vector<vk::DescriptorSet>>(m_BaseDesc, PipelineType::RENDER);
 			m_DescriptorSets = bufferPerFrame;
-			auto framesAmount = Renderer::Instance()->GetSwapchain().GetFrameAmount();
+			auto framesAmount = RenderContext::GetFrameAmount();
 			for (size_t i = 0; i < framesAmount; i++)
 			{
 				device->UpdateDescriptorSet(m_DescriptorSets[i], 0, 1, *m_UniformBuffers[i], vk::DescriptorType::eUniformBuffer);
@@ -177,9 +172,9 @@ public:
 
 			// need to split swap chain creation and MSAA images
 
-			m_AttachmentManager.CreateResolve("Resolve", m_AttachmentManager, vk::Format::eB8G8R8A8Unorm,
+			/*m_AttachmentManager.CreateResolve("Resolve", m_AttachmentManager, vk::Format::eB8G8R8A8Unorm,
 				Application::GetScreenWidth(), Application::GetScreenHeight(),
-				vk::PresentModeKHR::eFifo, vk::ColorSpaceKHR::eSrgbNonlinear);
+				vk::PresentModeKHR::eFifo, vk::ColorSpaceKHR::eSrgbNonlinear);*/
 
 			//m_AttachmentManager.CreateColor("MSAA-Pages", m_AttachmentManager, vk::Format::eB8G8R8A8Unorm,
 			//	Application::GetScreenWidth(), Application::GetScreenHeight(), samples, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransientAttachment);
@@ -299,7 +294,8 @@ public:
 				//resolveSpec.Amount = 3;
 				//m_AttachmentManager.AddAttachment<SwapchainImage>("Resolve", resolveSpec);
 
-				builder.ResolveOutput("Resolve",m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
+				//builder.ColorOutput("Default", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
+				builder.ResolveOutput("Default",m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
 				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
 				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
 				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
@@ -321,8 +317,6 @@ public:
 
 			}
 			{
-
-
 
 
 				RenderPassBuilder builder;
@@ -357,7 +351,7 @@ public:
 					vk::AttachmentStoreOp::eStore, vk::ImageLayout::eDepthStencilAttachmentOptimal, vk::ImageLayout::eDepthStencilAttachmentOptimal);*/
 
 
-				builder.ResolveOutput("Resolve", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
+				builder.ResolveOutput("Default", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
 				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
 				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
 				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
@@ -406,7 +400,7 @@ public:
 					vk::ImageLayout::eColorAttachmentOptimal);*/
 
 
-				builder.ResolveOutput("Resolve", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
+				builder.ResolveOutput("Default", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
 				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
 				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
 				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
@@ -423,7 +417,7 @@ public:
 				builder.AddSubpass({ 0 }, { 0 }, { 0 });
 				vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eNone, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
 				builder.AddSubpassDependency(dependency0);
-				m_PageRenderPass = builder.Build("Basic pages",  m_AttachmentManager, actualFrameAmount);
+				m_PageRenderPass = builder.Build("BasicPages",  m_AttachmentManager, actualFrameAmount);
 			}
 			{
 				RenderPassBuilder builder;
@@ -461,7 +455,7 @@ public:
 
 
 
-				builder.ResolveOutput("Resolve", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
+				builder.ResolveOutput("Default", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
 				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
 				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
 				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
@@ -484,7 +478,7 @@ public:
 					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
 				builder.AddSubpassDependency(dependency0);
 
-				m_NewPageRenderPass = builder.Build("New page",m_AttachmentManager, actualFrameAmount);
+				m_NewPageRenderPass = builder.Build("NewPage",m_AttachmentManager, actualFrameAmount);
 				
 			}
 
@@ -526,7 +520,7 @@ public:
 
 
 
-				builder.ResolveOutput("Resolve", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
+				builder.ResolveOutput("Default", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
 				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
 				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
 				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
@@ -547,7 +541,7 @@ public:
 					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite,
 					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
 				builder.AddSubpassDependency(dependency0);
-				m_NewPageRenderPassRight = builder.Build("New page",m_AttachmentManager, actualFrameAmount);
+				m_NewPageRenderPassRight = builder.Build("NewPageRight",m_AttachmentManager, actualFrameAmount);
 			}
 			
 			
@@ -688,7 +682,23 @@ public:
 				
 
 			}
+			//render(renderCommandBuffer, clearValues, { pages[0] ,pages[1] }, imageAvailable, m_RenderFinishedSemaphore1, m_RenderPass->GetRaw(), m_GraphicsPipeline.get());
+			//render(renderCommandBuffer, clearValues, { clipPage }, m_RenderFinishedSemaphore1, m_RenderFinishedSemaphore2, m_ClipRenderPass->GetRaw(), m_ClipPipeline.get());
+			//render(renderCommandBuffer, clearValues, { pages[2] }, m_RenderFinishedSemaphore2, m_RenderFinishedSemaphore3, m_NewPageRenderPass->GetRaw(), m_NewPagePipeline.get());
+			//render(renderCommandBuffer, clearValues, { pages[3] }, m_RenderFinishedSemaphore3, m_RenderFinishedSemaphore4, m_NewPageRenderPa
+			
 
+
+			m_Graph.AddRenderPass(std::move(m_RenderPass));
+			m_Graph.AddRenderPass(std::move(m_ClipRenderPass));
+			m_Graph.AddRenderPass(std::move(m_PageRenderPass));
+			m_Graph.AddRenderPass(std::move(m_NewPageRenderPass));
+			m_Graph.AddRenderPass(std::move(m_NewPageRenderPassRight));
+
+			m_Graph.AddExec("Basic");
+			m_Graph.AddExec("Clip");
+			m_Graph.AddExec("NewPage");
+			m_Graph.AddExec("NewPageRight");
 
 			vk::SemaphoreCreateInfo semaphoreInfo = {};
 			semaphoreInfo.flags = vk::SemaphoreCreateFlags();
@@ -965,7 +975,6 @@ public:
 					}
 					renderCommandBuffer.BeginRendering();
 
-					auto swapchain = Renderer::Instance()->GetSwapchain();
 
 					vk::CommandBufferBeginInfo beginInfo = {};
 
@@ -983,7 +992,7 @@ public:
 					scissors.offset = vk::Offset2D{ (uint32_t)0,(uint32_t)0 };
 					scissors.extent = vk::Extent2D{ (uint32_t)viewportSize.first,(uint32_t)viewportSize.second };
 
-					auto render = [this,frameIndex,device,fence, viewport,scissors, swapchain,beginInfo](CommandBuffer& commandBuffer,
+					auto render = [this,frameIndex,device,fence, viewport,scissors, beginInfo](CommandBuffer& commandBuffer,
 						std::vector<vk::ClearValue> clearValues, std::initializer_list<std::vector<Vertex>> list,
 						vk::Semaphore renderFiniished, vk::Semaphore renderFiniishedSecond, vk::RenderPass& renderPass, Pipeline* pipeline)
 					{
@@ -1733,6 +1742,7 @@ private:
 	std::vector<float> textureIndicies = { 0,1,2,3};
 	Callables callables;
 	AttachmentManager m_AttachmentManager;
+	RenderPassGraph m_Graph;
 
 
 };

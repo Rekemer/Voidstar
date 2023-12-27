@@ -24,7 +24,7 @@ namespace Voidstar
 		//vk::Format GetDepthFormat()  { return m_SwapchainFrames[0].DepthImage.GetFormat(); }
 		vk::Extent2D GetExtent() const { return m_SwapchainExtent; }
 		size_t GetFrameAmount() const { return m_Images.size(); }
-		std::vector<std::shared_ptr<SwapchainImage>> GetImages()  { return m_Images; }
+		std::vector<std::shared_ptr<Image>> GetImages()  { return m_Images; }
 		//vk::Framebuffer GetFrameBuffer(size_t frameIndex)  const
 		//{
 		//	assert(frameIndex < (GetFrameAmount())); 
@@ -51,7 +51,7 @@ namespace Voidstar
 		vk::SwapchainKHR m_Swapchain{ VK_NULL_HANDLE };
 		vk::Format m_SwapchainFormat;
 		vk::Extent2D m_SwapchainExtent;
-		std::vector<std::shared_ptr<SwapchainImage>> m_Images;
+		std::vector<std::shared_ptr<Image>> m_Images;
 	//	vk::Image m_MsaaImage;
 	//	vk::DeviceMemory m_MsaaImageMemory;
 	//	vk::ImageView m_MsaaImageView;

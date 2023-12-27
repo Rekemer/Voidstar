@@ -96,7 +96,8 @@ namespace Voidstar
 		vk::PresentModeKHR presentMode,
 		vk::ColorSpaceKHR colorSpace)
 	{
-		SwapchainSpec resolveSpec;
+		assert(false);
+		/*SwapchainSpec resolveSpec;
 		resolveSpec.Specs.width = width;
 		resolveSpec.Specs.height = height;
 		resolveSpec.Specs.usage = vk::ImageUsageFlagBits::eColorAttachment;
@@ -122,6 +123,6 @@ namespace Voidstar
 		RenderContext::CreateSwapchain(support);
 		auto swapChain = RenderContext::GetSwapchain();
 		auto& images = swapChain->GetImages();
-		m_Resolve[attachmentName.data()] = images;
+		m_Resolve[attachmentName.data()] = images;*/
 	}
 }

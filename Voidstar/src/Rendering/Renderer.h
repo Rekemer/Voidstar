@@ -129,7 +129,6 @@ namespace Voidstar
 		{
 			return std::get<T>(m_Sets[{handle, type}]);;
 		}
-		 Swapchain& GetSwapchain() { return *m_Swapchain; }
 		const DescriptorSetLayout* GetSetLayout(int handle, PipelineType type)
 		{
 			return m_Layout[{handle, type}];

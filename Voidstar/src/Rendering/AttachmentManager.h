@@ -5,35 +5,20 @@
 #include "Image.h"
 #include "SupportStruct.h"
 #include "Swapchain.h"
+#include "AttachmentSpec.h"
 namespace Voidstar
 {
-
-	struct AttachmentSpec
-	{
-		ImageSpecs Specs;
-		// desired 
-		size_t Amount = 3;
-		vk::SampleCountFlagBits Samples;
-	};
-	struct SwapchainSpec : AttachmentSpec
-	{
-		vk::PresentModeKHR PresentMode;
-		vk::ColorSpaceKHR ColorSpace;
-	};
-	struct DepthStencilSpecs : AttachmentSpec
-	{
-		// from most desirable to least desirable
-		std::vector<vk::Format> Candidates;
-		vk::FormatFeatureFlags  FormatFeature;
-	};
-
-
-	
-
 
 	class AttachmentManager
 	{
 	public:
+		AttachmentManager()
+		{
+			// swachain images can be targeted as color or resolve
+			auto swapchainImages = RenderContext::GetFrames();
+			m_Resolve["Default"]  = swapchainImages;
+			m_Color["Default"]  = swapchainImages;
+		}
 		std::vector<Image*> GetColor(std::vector< std::string_view> names)
 		{
 			std::vector<Image*> attachments;
@@ -66,9 +51,9 @@ namespace Voidstar
 			}
 			return attachments;
 		}
-		std::vector<SwapchainImage*> GetResolve(std::vector< std::string_view> names)
+		std::vector<Image*> GetResolve(std::vector< std::string_view> names)
 		{
-			std::vector<SwapchainImage*> attachments;
+			std::vector<Image*> attachments;
 			for (auto name : names)
 			{
 				auto& attachment = m_Resolve.at(name.data());
@@ -103,7 +88,7 @@ namespace Voidstar
 	private:
 		// image or swapchain image
 		std::unordered_map<std::string, std::vector<std::shared_ptr<Image>>> m_Color;
-		std::unordered_map<std::string, std::vector<std::shared_ptr<SwapchainImage>>> m_Resolve;
+		std::unordered_map<std::string, std::vector<std::shared_ptr<Image>>> m_Resolve;
 		std::unordered_map<std::string, std::vector<std::shared_ptr<Image>>> m_DepthStencil;
 	};
 }

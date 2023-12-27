@@ -151,9 +151,8 @@ namespace Voidstar
 	}
 	void CommandBuffer::ChangeImageLayout(Image* image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout, int mipMap, int layers )
 	{
-		auto vkImage = image->m_Image;
 		image->m_ImageLayout  = newLayout;
-		ChangeImageLayoutRaw(vkImage, oldLayout, newLayout, mipMap, layers);
+		ChangeImageLayoutRaw(image->m_Image, oldLayout, newLayout, mipMap, layers);
 		
 	}
 

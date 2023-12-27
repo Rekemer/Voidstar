@@ -3,11 +3,14 @@
 #include"unordered_map"
 #include"string"
 #include"functional"
+#include"Sync.h"
 namespace Voidstar
 {
 	struct Transition
 	{
-		RenderPass* Next;
+		
+		RenderPass* Current;
+		Transition* Next;
 	};
 	class RenderPassGraph;
 	class CommandBuffer;
@@ -16,12 +19,16 @@ namespace Voidstar
 	class RenderPassGraph
 	{
 	public:
-		void AddRenderPass(UPtr<RenderPass> renderPass, std::initializer_list<Pipeline> pipeline);
+		void AddRenderPass(UPtr<RenderPass> renderPass);
 		~RenderPassGraph();
+		void AddExec(std::string_view renderPassName );
+		void Execute();
 	private:
-		std::unordered_map<std::string_view, UPtr<RenderPass>> m_RenderPasses;
-		std::unordered_map<RenderPass*, std::vector<Pipeline>> m_Pipelines;
-		std::unordered_map<std::string, std::vector<Transition>> m_Transitions;
-		std::unordered_map<std::string, Attachment> m_Transitions;
+		std::unordered_map<std::string,UPtr<RenderPass>> m_RenderPasses;
+		std::vector<RenderPass*> m_Transitions;
+		std::vector<Fence> m_Fences;
+		std::vector<Semaphore> m_SemaphoreImageAvailable;
+		std::vector<Semaphore> m_SemaphoreRenderFinished;
+		std::unordered_map<std::string, Pipeline> m_Pipelines;
 	};
 }

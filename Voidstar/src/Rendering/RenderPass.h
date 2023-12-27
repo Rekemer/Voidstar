@@ -5,6 +5,8 @@
 #include <utility>
 namespace Voidstar
 {
+	class CommandBuffer;
+	using Func = std::function<void(CommandBuffer& cmd)>;
 	enum class OutputType
 	{
 		COLOR,
@@ -31,6 +33,8 @@ namespace Voidstar
 		void SetFrameBufferAmount(size_t amount) { m_FrameBufferAmount = amount; }
 		vk::AttachmentDescription BuildAttachmentDesc();
 		
+
+		void PresentOutput();
 		void ColorOutput(std::string_view attachmentName, AttachmentManager&, vk::ImageLayout);
 		void DepthStencilOutput(std::string_view attachmentName, AttachmentManager&, vk::ImageLayout);
 		void ResolveOutput(std::string_view attachmentName, AttachmentManager&, vk::ImageLayout);
@@ -45,8 +49,7 @@ namespace Voidstar
 		size_t m_FrameBufferAmount;
 		std::vector<std::vector<Image*>> m_Color;
 		std::vector<Image*> m_DepthStencil;
-		std::vector<SwapchainImage*> m_Resolve;
-
+		std::vector<Image*> m_Resolve;
 		vk::Format m_Format;
 		vk::SampleCountFlagBits m_Samples;
 		vk::AttachmentLoadOp m_LoadOp  ;
@@ -64,27 +67,40 @@ namespace Voidstar
 		std::vector<vk::AttachmentReference> m_ResolveReferences;
 		std::vector<OutputType>m_OutputTypes;
 
-
+		bool m_IsMSAA = false;
 		std::vector<vk::SubpassDescription> m_Subpasses;
 		std::vector<vk::SubpassDependency> m_Dependencies;
 	};
+	
 	class RenderPass
 	{
 	public:
-		RenderPass(std::string_view name, vk::RenderPass renderPass) : m_Name{name.data()},
-			m_RenderPass{ renderPass }
+		template<typename T>
+		RenderPass(std::string_view name, vk::RenderPass renderPass, Func execute) : m_Name{name.data()},
+			m_RenderPass{ renderPass },
+			m_Execute{execute}
 		{
 
+		}
+		void Execute(CommandBuffer& cmd)
+		{
+			m_Execute(cmd);
 		}
 		vk::RenderPass GetRaw()
 		{
 			return m_RenderPass;
+		}
+		std::string_view GetName()
+		{
+			return m_Name.data();
 		}
 		~RenderPass();
 	private:
 		friend class RenderPassBuilder;
 		std::string m_Name;
 		vk::RenderPass m_RenderPass;
+		Func m_Execute;
 		std::vector<vk::Framebuffer> m_Framebuffers;
+		
 	};
 }

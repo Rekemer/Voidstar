@@ -413,10 +413,14 @@ const int QUAD_AMOUNT = 700;
 
 
 		RenderContext::CreateSurface(window.get());
-
 		RenderContext::CreateDevice();
 		m_Device = RenderContext::GetDevice();
+
+		RenderContext::CreateSwapchain(vk::Format::eB8G8R8A8Unorm,
+			m_ViewportWidth, m_ViewportHeight,
+			vk::PresentModeKHR::eFifo, vk::ColorSpaceKHR::eSrgbNonlinear) ;
 		
+
 
 		std::vector<vk::DescriptorPoolSize> pool_sizes =
 		{
@@ -435,10 +439,11 @@ const int QUAD_AMOUNT = 700;
 
 		auto commandBufferInit = [this]()
 		{
+			auto frameAmount = RenderContext::GetFrameAmount();
 			m_FrameCommandPool = Renderer::Instance()->GetCommandPoolManager()->GetFreePool();
-			m_RenderCommandBuffer = CommandBuffer::CreateBuffers(m_FrameCommandPool, vk::CommandBufferLevel::ePrimary, 3);
-			m_TransferCommandBuffer = CommandBuffer::CreateBuffers(m_FrameCommandPool, vk::CommandBufferLevel::ePrimary, 3);
-			m_ComputeCommandBuffer = CommandBuffer::CreateBuffers(m_FrameCommandPool, vk::CommandBufferLevel::ePrimary, 3);
+			m_RenderCommandBuffer = CommandBuffer::CreateBuffers(m_FrameCommandPool, vk::CommandBufferLevel::ePrimary, frameAmount	);
+			m_TransferCommandBuffer = CommandBuffer::CreateBuffers(m_FrameCommandPool, vk::CommandBufferLevel::ePrimary, frameAmount);
+			m_ComputeCommandBuffer = CommandBuffer::CreateBuffers(m_FrameCommandPool, vk::CommandBufferLevel::ePrimary, frameAmount);
 		};
 		commandBufferInit();
 		
@@ -806,10 +811,10 @@ const int QUAD_AMOUNT = 700;
 		m_UserFunctions.bindingsInit();
 		CreateLayouts();
 		AllocateSets();
-		m_UserFunctions.createPipelines();
-		m_UserFunctions.bindResources();
 		m_UserFunctions.bufferInit();
 		m_UserFunctions.loadTextures();
+		m_UserFunctions.bindResources();
+		m_UserFunctions.createPipelines();
 		m_UserFunctions.createFramebuffer();
 
 	}

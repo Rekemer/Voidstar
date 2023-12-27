@@ -78,7 +78,7 @@ namespace Voidstar
 		swapchain->m_Images.resize(images.size());
 		for (int i =0; i < images.size(); i++)
 		{
-			swapchain->m_Images[i] = CreateUPtr<SwapchainImage>();
+			swapchain->m_Images[i] = CreateUPtr<Image>();
 			swapchain->m_Images[i]->m_Format= format.format;
 			swapchain->m_Images[i]->SetSample(vk::SampleCountFlagBits::e1);
 			swapchain->m_Images[i]->m_Image = images[i];
