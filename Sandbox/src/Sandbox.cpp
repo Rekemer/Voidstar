@@ -23,6 +23,37 @@ std::string_view BASIC_RENDER_PASS = "Basic";
 std::string_view CLIP_RENDER_PASS = "Clip";
 std::string_view NEW_PAGE_RENDER_PASS = "NewPage";
 std::string_view NEW_PAGE_RIGHT_RENDER_PASS = "NewPageRight";
+std::string_view PAGE_RENDER_PASS = "Page";
+
+
+#define execute(PipelineName)\
+			[this](CommandBuffer& commandBuffer, size_t frameIndex)\
+			{\
+				Renderer::Instance()->BeginBatch();\
+				auto vkCommandBuffer = commandBuffer.GetCommandBuffer();\
+				auto pipeline = Renderer::Instance()->GetPipeline(PipelineName);\
+				vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 0, m_DescriptorSets[frameIndex], nullptr);\
+				vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 1, m_DescriptorSetTex, nullptr);\
+				vkCommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline->GetPipeline());\
+				vk::Viewport viewport;\
+				viewport.x = 0;\
+				viewport.y = 0;\
+				viewport.minDepth = 0;\
+				viewport.maxDepth = 1;\
+				viewport.width = Application::GetScreenWidth();\
+				viewport.height = Application::GetScreenHeight();\
+				vk::Rect2D scissors;\
+				scissors.offset = vk::Offset2D{ (uint32_t)0,(uint32_t)0 };\
+				scissors.extent = vk::Extent2D{ (uint32_t)viewport.width,(uint32_t)viewport.height};\
+				vkCommandBuffer.setViewport(0, 1, &viewport);\
+				vkCommandBuffer.setScissor(0, 1, &scissors);\
+				auto& drawables = Renderer::Instance()->GetDrawables(PipelineName);\
+				for (auto& quad : drawables)\
+				{\
+					Renderer::Instance()->Draw(quad);\
+				}\
+				Renderer::Instance()->DrawBatch(vkCommandBuffer);\
+			}
 
 
 class ExampleApplication : public Voidstar::Application
@@ -180,43 +211,9 @@ public:
 			depthClear.depthStencil = vk::ClearDepthStencilValue({ 1.0f, stencil0 });
 			std::vector<vk::ClearValue> clearValues = { {clearColor, depthClear,clearColor} };
 
-
-			auto render = [this](CommandBuffer& commandBuffer, size_t frameIndex)
-				{
-					Renderer::Instance()->BeginBatch();
-					auto vkCommandBuffer = commandBuffer.GetCommandBuffer();
-					auto pipeline = Renderer::Instance()->GetPipeline("test");
-					//commandBuffer.BeginRenderPass(renderPass, swapchain.GetFrameBuffer(frameIndex), swapchain.GetExtent(), clearValues);
-
-					vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 0, m_DescriptorSets[frameIndex], nullptr);
-					vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 1, m_DescriptorSetTex, nullptr);
-					vkCommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline->GetPipeline());
-
-					vk::Viewport viewport;
-					viewport.x = 0;
-					viewport.y = 0;
-					viewport.minDepth = 0;
-					viewport.maxDepth = 1;
-					viewport.width = Application::GetScreenWidth();
-					viewport.height = Application::GetScreenHeight();
-
-					vk::Rect2D scissors;
-					scissors.offset = vk::Offset2D{ (uint32_t)0,(uint32_t)0 };
-					scissors.extent = vk::Extent2D{ (uint32_t)viewport.width,(uint32_t)viewport.height};
-
-					vkCommandBuffer.setViewport(0, 1, &viewport);
-					vkCommandBuffer.setScissor(0, 1, &scissors);
-					//auto& drawables = Renderer::Instance()->GetDrawables("Name of render pass");
-					//for (auto& quad : drawables)
-					//{
-					//	Renderer::Instance()->Draw(quad);
-					//}
-
-					Renderer::Instance()->DrawBatch(vkCommandBuffer);
-
-
-				};
-
+		
+			auto render = execute("s");
+			
 			{
 
 
@@ -344,8 +341,9 @@ public:
 					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite,
 					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
 
+				//auto f = execute(BASIC_RENDER_PASS.data());
 				builder.AddSubpassDependency(dependency0);
-				m_RenderPass = builder.Build(BASIC_RENDER_PASS, m_AttachmentManager, actualFrameAmount, extent,clearValues, render);
+				m_RenderPass = builder.Build(BASIC_RENDER_PASS, m_AttachmentManager, actualFrameAmount, extent, clearValues, execute(BASIC_RENDER_PASS));
 
 				
 				
@@ -411,7 +409,7 @@ public:
 					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
 				builder.AddSubpassDependency(dependency0);
 
-				m_ClipRenderPass = builder.Build(CLIP_RENDER_PASS, m_AttachmentManager, actualFrameAmount, extent, clearValues, render);
+				m_ClipRenderPass = builder.Build(CLIP_RENDER_PASS, m_AttachmentManager, actualFrameAmount, extent, clearValues, execute(CLIP_RENDER_PASS));
 			}
 
 			
@@ -474,7 +472,7 @@ public:
 					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
 				builder.AddSubpassDependency(dependency0);
 
-				m_NewPageRenderPass = builder.Build(NEW_PAGE_RENDER_PASS,m_AttachmentManager, actualFrameAmount, extent, clearValues, render);
+				m_NewPageRenderPass = builder.Build(NEW_PAGE_RENDER_PASS,m_AttachmentManager, actualFrameAmount, extent, clearValues, execute(NEW_PAGE_RENDER_PASS));
 				
 			}
 
@@ -537,7 +535,7 @@ public:
 					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite,
 					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
 				builder.AddSubpassDependency(dependency0);
-				m_NewPageRenderPassRight = builder.Build(NEW_PAGE_RIGHT_RENDER_PASS,m_AttachmentManager, actualFrameAmount, extent, clearValues, render);
+				m_NewPageRenderPassRight = builder.Build(NEW_PAGE_RIGHT_RENDER_PASS,m_AttachmentManager, actualFrameAmount, extent, clearValues, execute(NEW_PAGE_RIGHT_RENDER_PASS));
 			}
 			
 			
@@ -583,7 +581,7 @@ public:
 				builder.StencilTestOp(vk::CompareOp::eAlways,vk::StencilOp::eReplace, vk::StencilOp::eReplace, vk::StencilOp::eReplace);
 				builder.SetMasks(0xff, 0xff);
 
-				m_GraphicsPipeline = builder.Build();
+				builder.Build(BASIC_RENDER_PASS);
 
 
 				{
@@ -607,7 +605,7 @@ public:
 					builder.SetStencilRefNumber(2);
 					builder.StencilTestOp(vk::CompareOp::eEqual, vk::StencilOp::eKeep, vk::StencilOp::eDecrementAndClamp, vk::StencilOp::eKeep);
 					builder.SetMasks(0xff, 0xff);
-					m_ClipPipeline = builder.Build();
+					builder.Build(CLIP_RENDER_PASS);
 				}
 
 				{
@@ -633,15 +631,18 @@ public:
 						builder.SetStencilRefNumber(1);
 						builder.StencilTestOp(vk::CompareOp::eEqual, vk::StencilOp::eKeep, vk::StencilOp::eReplace, vk::StencilOp::eKeep);
 						builder.SetMasks(0xff, 0xff);
-						m_NewPagePipeline = builder.Build();
+						builder.SetRenderPass(m_NewPageRenderPass->GetRaw());
+						builder.Build(NEW_PAGE_RENDER_PASS);
+
 						builder.DestroyShaderModules();
 						builder.AddShader(BASE_SPIRV_OUTPUT + "default.spvV", vk::ShaderStageFlagBits::eVertex);
 						Renderer::Instance()->CompileShader("rightNewPage.spvF", ShaderType::FRAGMENT);
+						builder.SetRenderPass(m_NewPageRenderPassRight->GetRaw());
 						builder.AddShader(BASE_SPIRV_OUTPUT + "rightNewPage.spvF", vk::ShaderStageFlagBits::eFragment);
 						builder.SetStencilRefNumber(2);
 						builder.StencilTestOp(vk::CompareOp::eEqual, vk::StencilOp::eKeep, vk::StencilOp::eReplace, vk::StencilOp::eKeep);
 						builder.SetBlendOp(vk::BlendOp::eAdd, vk::BlendFactor::eOne,vk::BlendFactor::eZero);
-						m_NewPagePipelineRight = builder.Build();
+						builder.Build(NEW_PAGE_RIGHT_RENDER_PASS);
 					}
 				}
 				
@@ -665,7 +666,6 @@ public:
 			graph->AddExec("NewPageRight");
 
 			Renderer::Instance()->AddRenderGraph("",std::move(graph));
-
 	
 					
 		};
@@ -677,21 +677,7 @@ public:
 
 				auto device = RenderContext::GetDevice()->GetDevice();
 				device.waitIdle();
-
-			
-				
 				m_ShaderStorageBuffer.reset();
-
-				for (int i = 0; i < m_PageFramebuffer.size(); i++)
-				{
-					device.destroyFramebuffer(m_PageFramebuffer[i]);
-				}
-				for (int i = 0; i < m_PagesImages.size(); i++)
-				{
-					m_PagesImages[i].reset();
-					m_PagesImageMSAA[i].reset();
-				}
-				
 				m_Image.reset();
 				m_ImageSelected.reset();
 				m_FontAtlas.reset();
@@ -745,8 +731,10 @@ public:
 			}
 
 
-			m_AttachmentManager.CreateColor("Pages", m_AttachmentManager, vk::Format::eB8G8R8A8Unorm,
-			PageRenderWidth, PageRenderHeight, vk::SampleCountFlagBits::e1, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled);
+			m_AttachmentManager.CreateColor(PAGE_RENDER_PASS, m_AttachmentManager, vk::Format::eB8G8R8A8Unorm,
+			PageRenderWidth, PageRenderHeight, vk::SampleCountFlagBits::e1,
+				vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferDst |
+				vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eSampled);
 			UPtr<RenderPass> m_PageRenderPass;
 			{
 				RenderPassBuilder builder;
@@ -769,7 +757,7 @@ public:
 					vk::ImageLayout::eColorAttachmentOptimal);*/
 
 
-				builder.ColorOutput("Pages", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
+				builder.ColorOutput(PAGE_RENDER_PASS, m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
 				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
 				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
 				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
@@ -791,13 +779,13 @@ public:
 
 				std::vector<vk::ClearValue> clearValues = { {clearColor,clearColor} };
 
-				m_PageRenderPass = builder.Build("BasicPages", m_AttachmentManager, PageAmount, { (uint32_t)PageRenderWidth, (uint32_t)PageRenderHeight }, clearValues,
+				m_PageRenderPass = builder.Build(PAGE_RENDER_PASS , m_AttachmentManager, PageAmount, { (uint32_t)PageRenderWidth, (uint32_t)PageRenderHeight }, clearValues,
 					[this](CommandBuffer& cmd, size_t frameIndex)
 					{
 						auto vkCommandBuffer = cmd.GetCommandBuffer();
 						glm::vec2 pos = { 20, 400 };
 
-						auto pipeline = Renderer::Instance()->GetPipeline("Page");
+						auto pipeline = Renderer::Instance()->GetPipeline(PAGE_RENDER_PASS);
 						vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 0, m_DescriptorSets[0], nullptr);
 						vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 1, m_DescriptorSetFont, nullptr);
 
@@ -868,8 +856,8 @@ public:
 
 				//builder.SetSampleShading(VK_TRUE);
 
-				auto pagePipeline = builder.Build();
-				Renderer::Instance()->AddPipeline("Page",std::move(pagePipeline));
+				builder.Build(PAGE_RENDER_PASS);
+				auto pagePipeline =  Renderer::Instance()->GetPipeline(PAGE_RENDER_PASS);
 			
 			}
 
@@ -974,9 +962,7 @@ public:
 				
 				cmd.Submit(&fence.GetFence());
 			}
-			return;
 			
-
 			//{
 
 			//	
@@ -1056,19 +1042,19 @@ public:
 
 			//	
 
-			//	
-			//	
-			//	std::vector<vk::DescriptorImageInfo> infos(PageAmount);
-			//	for (int i =0 ; i < PageAmount; i++)
-			//	{
-			//		infos[i].sampler = m_PagesImages[i]->GetSampler();
-			//		infos[i].imageView= m_PagesImages[i]->GetImageView();
-			//		infos[i].imageLayout= vk::ImageLayout::eShaderReadOnlyOptimal;
+			{
+				std::vector<vk::DescriptorImageInfo> infos(PageAmount);
+				auto attach = m_AttachmentManager.GetColor({ PAGE_RENDER_PASS });
+				for (int i =0 ; i < PageAmount; i++)
+				{
+					infos[i].sampler = attach[i]->GetSampler();
+					infos[i].imageView= attach[i]->GetImageView();
+					infos[i].imageLayout= vk::ImageLayout::eShaderReadOnlyOptimal;
+			
+				}
+				device->UpdateDescriptorSet(m_DescriptorSetTex, 0, infos, vk::DescriptorType::eCombinedImageSampler);
 
-			//	}
-			//	device->UpdateDescriptorSet(m_DescriptorSetTex, 0, infos, vk::DescriptorType::eCombinedImageSampler);
-
-			//}
+			}
 			
 			
 		};
@@ -1574,23 +1560,15 @@ private:
 	vk::DescriptorSet m_DescriptorSetSelected;
 	vk::DescriptorSet m_DescriptorSetFont;
 		
-	std::vector<SPtr<Image>> m_PagesImages;
-	std::vector<SPtr<Image>> m_PagesImageMSAA;
 
 	
 	UPtr<Buffer> m_ShaderStorageBuffer;
 	SPtr<Image> m_Image;
 	SPtr<Image> m_ImageSelected;
 	SPtr<Image> m_FontAtlas;
+	
 	std::vector<glm::vec2> m_ClickPoints;
 
-
-	
-	
-
-
-
-	std::vector<vk::Framebuffer> m_PageFramebuffer;
 
 	bool isClicked = false;
 	bool isDragged = false;

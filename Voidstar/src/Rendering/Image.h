@@ -32,7 +32,7 @@ namespace Voidstar
 		//Image(Image&& image);
 		// create image
 		static VkImageView CreateImageView(vk::Image& image, vk::Format format, vk::ImageAspectFlags aspect, vk::ImageViewType viewType =  vk::ImageViewType::e2D, int mipmap = 1, int layers = 1);
-
+		static vk::Sampler CreateSampler();
 		static vk::Image CreateVKImage(ImageSpecs& specs, vk::SampleCountFlagBits samples = vk::SampleCountFlagBits::e1, int mipmap = 1);
 		static vk::DeviceMemory CreateMemory(vk::Image& image, ImageSpecs& specs);
 		static SPtr<Image> CreateImage(std::string path);
@@ -111,6 +111,7 @@ namespace Voidstar
 		friend class Swapchain;
 		friend class CommandBuffer;
 		friend class Device;
+		friend class AttachmentManager;
 		int m_Depth = 0, m_Channels;
 		int m_MipMapLevels;
 		int m_Width, m_Height;

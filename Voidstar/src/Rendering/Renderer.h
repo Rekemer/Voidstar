@@ -179,7 +179,7 @@ namespace Voidstar
 		}
 		void AddDrawable(std::string_view renderPassName, const Drawable& drawable)
 		{
-			auto& drawables = m_Drawables.at(renderPassName.data());
+			auto& drawables = m_Drawables[renderPassName.data()];
 			drawables.push_back(drawable);
 		}
 

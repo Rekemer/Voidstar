@@ -851,8 +851,7 @@ const int QUAD_AMOUNT = 700;
 	}
 	void Renderer::CreateSyncObjects()
 	{	
-		
-		auto frameAmount = 2;
+		auto frameAmount = RenderContext::GetFrameAmount();
 		m_ComputeInFlightFences.resize(frameAmount);
 		m_ComputeFinishedSemaphores.resize(frameAmount);
 		m_ImageAvailableSemaphore.resize(frameAmount);
@@ -967,78 +966,72 @@ const int QUAD_AMOUNT = 700;
 	void Renderer::Render(float deltaTime,Camera& camera)
 	{
 		auto exeTime = m_App->GetExeTime();
-		
-		return;
 		uint32_t imageIndex;
 		auto swapchain = RenderContext::GetSwapchain();
 		{
 			ZoneScopedN("Acquiring new Image");
 			m_Device->GetDevice().acquireNextImageKHR(swapchain->m_Swapchain, UINT64_MAX, m_ImageAvailableSemaphore[m_CurrentFrame].GetSemaphore(), nullptr, &imageIndex);
 		}
-		for (auto& graph : m_Graphs)
-		{
-			graph->Execute(m_RenderCommandBuffer[m_CurrentFrame], m_CurrentFrame);
-		}
+		vk::Semaphore renderFinished;
+		renderFinished = m_Graphs[0]->Execute(m_RenderCommandBuffer[m_CurrentFrame], m_CurrentFrame, m_ImageAvailableSemaphore[m_CurrentFrame]);
 		
-//		
-//		auto& semaphore = m_ImageAvailableSemaphore[m_CurrentFrame].GetSemaphore();
-//		auto signalSemaphore = m_UserFunctions.submitRenderCommands(imageIndex, camera, semaphore, m_InFlightFence[m_CurrentFrame].GetFence());
-//		vk::Semaphore waitSemaphore[] = { signalSemaphore };
-//	
-//			
-//#if IMGUI_ENABLED
-//		
-//			RenderImGui(imageIndex);
-//			commandBuffers.push_back(g_MainWindowData.Frames[imageIndex].CommandBuffer);
-//#endif
-//			/*
-//			 std::vector<vk::CommandBuffer> commandBuffers = { renderCommandBuffer.GetCommandBuffer() };
-//			vk::Semaphore waitSemaphores[] = { m_ImageAvailableSemaphore };
-//
-//			vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
-//			vk::SubmitInfo submitInfo = {};
-//
-//			submitInfo.waitSemaphoreCount = 1;
-//			submitInfo.pWaitSemaphores = waitSemaphores;
-//			submitInfo.pWaitDstStageMask = waitStages;
-//
-//
-//			submitInfo.commandBufferCount = commandBuffers.size();
-//			submitInfo.pCommandBuffers = commandBuffers.data();
-//
-//			submitInfo.signalSemaphoreCount = 1;
-//			submitInfo.pSignalSemaphores = signalSemaphores;
-//			auto device = RenderContext::GetDevice();
-//			device->GetGraphicsQueue().submit(submitInfo, m_InFlightFence);*/
-//			
-//
-//		
-//
-//		vk::PresentInfoKHR presentInfo = {};
-//		presentInfo.waitSemaphoreCount = 1;
-//		presentInfo.pWaitSemaphores = waitSemaphore;
-//
-//		vk::SwapchainKHR swapChains[] = { swapchain };
-//		presentInfo.swapchainCount = 1;
-//		presentInfo.pSwapchains = swapChains;
-//
-//		presentInfo.pImageIndices = &imageIndex;
-//		vk::Result present;
-//		try {
-//			ZoneScopedN("Presenting");
-//			present = m_Device->GetPresentQueue().presentKHR(presentInfo);
-//		}
-//
-//		catch (vk::OutOfDateKHRError error) {
-//			present = vk::Result::eErrorOutOfDateKHR;
-//		}
-//		if (present == vk::Result::eErrorOutOfDateKHR)
-//		{
-//			ZoneScopedN("Recreating swapchain");
-//			RecreateSwapchain();
-//		}
+		
+		auto& semaphore = m_ImageAvailableSemaphore[m_CurrentFrame].GetSemaphore();
+		vk::Semaphore waitSemaphore[] = { renderFinished};
+	
+			
+#if IMGUI_ENABLED
+		
+			RenderImGui(imageIndex);
+			commandBuffers.push_back(g_MainWindowData.Frames[imageIndex].CommandBuffer);
+#endif
+			/*
+			 std::vector<vk::CommandBuffer> commandBuffers = { renderCommandBuffer.GetCommandBuffer() };
+			vk::Semaphore waitSemaphores[] = { m_ImageAvailableSemaphore };
 
-		assert(false);
+			vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
+			vk::SubmitInfo submitInfo = {};
+
+			submitInfo.waitSemaphoreCount = 1;
+			submitInfo.pWaitSemaphores = waitSemaphores;
+			submitInfo.pWaitDstStageMask = waitStages;
+
+
+			submitInfo.commandBufferCount = commandBuffers.size();
+			submitInfo.pCommandBuffers = commandBuffers.data();
+
+			submitInfo.signalSemaphoreCount = 1;
+			submitInfo.pSignalSemaphores = signalSemaphores;
+			auto device = RenderContext::GetDevice();
+			device->GetGraphicsQueue().submit(submitInfo, m_InFlightFence);*/
+			
+
+		
+
+		vk::PresentInfoKHR presentInfo = {};
+		presentInfo.waitSemaphoreCount = 1;
+		presentInfo.pWaitSemaphores = waitSemaphore;
+
+		vk::SwapchainKHR swapChains[] = { swapchain->m_Swapchain };
+		presentInfo.swapchainCount = 1;
+		presentInfo.pSwapchains = swapChains;
+
+		presentInfo.pImageIndices = &imageIndex;
+		vk::Result present;
+		try {
+			ZoneScopedN("Presenting");
+			present = m_Device->GetPresentQueue().presentKHR(presentInfo);
+		}
+
+		catch (vk::OutOfDateKHRError error) {
+			present = vk::Result::eErrorOutOfDateKHR;
+		}
+		if (present == vk::Result::eErrorOutOfDateKHR)
+		{
+			ZoneScopedN("Recreating swapchain");
+			RecreateSwapchain();
+		}
+
 		m_CurrentFrame = (m_CurrentFrame + 1) % RenderContext::GetFrameAmount();
 
 		

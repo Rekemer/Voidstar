@@ -65,7 +65,7 @@ namespace Voidstar
 			m_SampleShadingEnable = state; // enable sample shading in the pipeline
 		}
 		void DestroyShaderModules();
-		UPtr<Pipeline> Build();
+		void Build(std::string_view name);
 		~PipelineBuilder();
 	private:
 		std::vector<vk::ShaderModule> m_Modules;

@@ -3,6 +3,7 @@
 #include <fstream>
 #include "Device.h"
 #include "RenderContext.h"
+#include "Renderer.h"
 #include "../Log.h"
 namespace Voidstar
 {
@@ -230,8 +231,10 @@ namespace Voidstar
 		m_SubpassNumber = numberOfSubpass;
 	}
 
-	UPtr<Pipeline>  PipelineBuilder::Build()
+	void PipelineBuilder::Build(std::string_view name)
 	{
+		
+
 		auto pipeline = CreateUPtr<Pipeline>();
 		/*
 		* Build and return a graphics pipeline based on the given info.
@@ -410,12 +413,8 @@ namespace Voidstar
 
 		pipeline->m_PipelineLayout = m_pipelineLayout;
 		pipeline->m_Pipeline = graphicsPipeline;
-
-
-		
-
+		Renderer::Instance()->AddPipeline(name,std::move(pipeline));
 		Log::GetLog()->info("Pipeline is Created!");
-		return pipeline;
 	}
 
 

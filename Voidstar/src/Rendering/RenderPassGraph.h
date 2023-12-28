@@ -25,14 +25,13 @@ namespace Voidstar
 		RenderPassGraph& operator=(const RenderPassGraph& ) = delete;
 		void AddRenderPass(UPtr<RenderPass> renderPass);
 		void AddExec(std::string_view renderPassName );
-		void Execute(CommandBuffer& cmd, size_t frameIndex);
+		vk::Semaphore  Execute(CommandBuffer& cmd, size_t frameIndex, Semaphore& imageIsAvailable);
 		void ExecuteOffline();
 		void Destroy();
 	private:
 		std::unordered_map<std::string,UPtr<RenderPass>> m_RenderPasses;
 		std::vector<RenderPass*> m_Transitions;
-		std::vector<Fence> m_Fences;
-		std::vector<Semaphore> m_SemaphoreImageAvailable;
-		std::vector<Semaphore> m_SemaphoreRenderFinished;
+		Fence m_Fence;
+		std::vector<Semaphore> m_Semaphores;
 	};
 }

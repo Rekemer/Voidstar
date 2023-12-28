@@ -10,6 +10,7 @@ namespace Voidstar
 		vk::SampleCountFlagBits samples,
 		vk::ImageUsageFlags usage)
 	{
+		
 		AttachmentSpec msaa;
 		msaa.Specs.width = width;
 		msaa.Specs.height = height;
@@ -32,6 +33,10 @@ namespace Voidstar
 			auto msaaImageMemory = Image::CreateMemory(msaaImage, specs);
 			auto msaaImageView = Image::CreateImageView(msaaImage, specs.format, specs.imageAspect);
 			images[i] = CreateSPtr<Image>();
+			if (usage & vk::ImageUsageFlagBits::eSampled)
+			{
+				images[i]->m_Sampler = Image::CreateSampler();
+			}
 			images[i]->SetFormat(specs.format);
 			images[i]->SetSample(msaa.Samples);
 			images[i]->SetView(msaaImageView);

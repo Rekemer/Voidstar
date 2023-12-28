@@ -67,10 +67,6 @@ namespace Voidstar
 			}
 			return attachments;
 		}
-		std::vector<Attachment> GetAttachments(std::vector<std::string_view>& names,size_t amountPerFrameBuffer)
-		{
-			
-		}
 		void CreateColor(std::string_view attachmentName,
 			AttachmentManager& manager, vk::Format format, size_t width, size_t height,
 			vk::SampleCountFlagBits samples,
