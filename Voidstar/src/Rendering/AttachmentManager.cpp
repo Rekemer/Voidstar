@@ -97,15 +97,32 @@ namespace Voidstar
 		device.waitIdle();
 		for (auto& e : m_Color)
 		{
-			e.second.clear();
+			std::for_each(e.second.begin(),
+				e.second.end(),
+				[](SPtr<Image>& image)
+				{
+					image.reset();
+				});
 		}
 		for (auto& e : m_DepthStencil)
 		{
-			e.second.clear();
+
+			std::for_each(e.second.begin(),
+				e.second.end(),
+				[](SPtr<Image>& image)
+				{
+					image.reset();
+				});
 		}
 		for (auto& e : m_Resolve)
 		{
-			e.second.clear();
+
+			std::for_each(e.second.begin(),
+				e.second.end(),
+				[](SPtr<Image>& image)
+				{
+					image.reset();
+				});
 		}
 	}
 	void AttachmentManager::CreateResolve(std::string_view attachmentName,

@@ -368,6 +368,12 @@ const int QUAD_AMOUNT = 700;
 		commandBuffer.bindIndexBuffer(m_QuadBufferBatchIndex->GetBuffer(), 0, m_QuadBufferBatchIndex->GetIndexType());
 		commandBuffer.drawIndexed(5*6, 1, 0, 0,0);
 	}
+
+
+	void Renderer::Draw(QuadRangle& quadrangle)
+	{
+		DrawQuad(quadrangle.Verticies);
+	}
 	void Renderer::DrawQuad(glm::mat4& world, glm::vec4 color)
 	{
 		auto& verticies = quad.verticies;
@@ -539,6 +545,26 @@ const int QUAD_AMOUNT = 700;
 				m_TransferCommandBuffer[0].SubmitSingle();
 			}
 
+		}
+
+
+		// get frame amount
+		auto framesAmount = RenderContext::GetFrameAmount();
+		auto m_Device = RenderContext::GetDevice();
+		auto bufferSize = sizeof(UniformBufferObject);
+		m_UniformBuffers.resize(framesAmount);
+		uniformBuffersMapped.resize(framesAmount);
+
+
+		BufferInputChunk inputBuffer;
+		inputBuffer.size = bufferSize;
+		inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+		inputBuffer.usage = vk::BufferUsageFlagBits::eUniformBuffer;
+
+		for (size_t i = 0; i < framesAmount; i++)
+		{
+			m_UniformBuffers[i] = CreateUPtr<Buffer>(inputBuffer);
+			uniformBuffersMapped[i] = m_Device->GetDevice().mapMemory(m_UniformBuffers[i]->GetMemory(), 0, bufferSize);
 		}
 
 	
@@ -805,12 +831,17 @@ const int QUAD_AMOUNT = 700;
 			Log::GetLog()->error("SHADER COMPILATOIN: Path {0} is not found ", path);
 		}
 	}
-
+	void Renderer::Draw(Drawable& drawable)
+	{
+		drawable.m_Self->Draw();
+	}
 	void Renderer::UserInit()
 	{
 		m_UserFunctions.bindingsInit();
 		CreateLayouts();
 		AllocateSets();
+
+
 		m_UserFunctions.bufferInit();
 		m_UserFunctions.loadTextures();
 		m_UserFunctions.bindResources();
@@ -878,7 +909,12 @@ const int QUAD_AMOUNT = 700;
 
 			m_CommandPoolManager->FreePool(m_TracyCommandPool);
 
-
+				std::for_each(m_Graphs.begin(),
+					m_Graphs.end(),
+					[](UPtr<RenderPassGraph>& graph)
+					{
+						graph->Destroy();
+					});
 
 			for (int i = 0; i < m_ComputeCommandBuffer.size(); i++)
 			{
@@ -891,7 +927,7 @@ const int QUAD_AMOUNT = 700;
 
 
 
-
+			m_UniformBuffers.clear();
 			m_UniversalPool.reset();
 			CleanUpLayouts();
 			m_ImageAvailableSemaphore.clear();
@@ -902,7 +938,7 @@ const int QUAD_AMOUNT = 700;
 			m_ImageAvailableSemaphore.clear(); 
 
 
-
+			m_Pipelines.clear();
 			m_CommandPoolManager->Release();
 			m_QuadBuffer.reset();
 			m_QuadBufferBatch.reset();
@@ -933,22 +969,21 @@ const int QUAD_AMOUNT = 700;
 		auto exeTime = m_App->GetExeTime();
 		
 		return;
-
+		uint32_t imageIndex;
+		auto swapchain = RenderContext::GetSwapchain();
+		{
+			ZoneScopedN("Acquiring new Image");
+			m_Device->GetDevice().acquireNextImageKHR(swapchain->m_Swapchain, UINT64_MAX, m_ImageAvailableSemaphore[m_CurrentFrame].GetSemaphore(), nullptr, &imageIndex);
+		}
+		for (auto& graph : m_Graphs)
+		{
+			graph->Execute(m_RenderCommandBuffer[m_CurrentFrame], m_CurrentFrame);
+		}
 		
-
-//		uint32_t imageIndex;
-//
-//		auto swapchain = m_Swapchain->m_Swapchain;
-//		{
-//			ZoneScopedN("Acquiring new Image");
-//			m_Device->GetDevice().acquireNextImageKHR(swapchain, UINT64_MAX, m_ImageAvailableSemaphore[m_CurrentFrame].GetSemaphore(), nullptr, &imageIndex);
-//		}
 //		
-//			m_UserFunctions.postRenderCommands(imageIndex, camera);
-//			
-//			auto& semaphore = m_ImageAvailableSemaphore[m_CurrentFrame].GetSemaphore();
-//			auto signalSemaphore = m_UserFunctions.submitRenderCommands(imageIndex, camera, semaphore, m_InFlightFence[m_CurrentFrame].GetFence());
-//			vk::Semaphore waitSemaphore[] = { signalSemaphore };
+//		auto& semaphore = m_ImageAvailableSemaphore[m_CurrentFrame].GetSemaphore();
+//		auto signalSemaphore = m_UserFunctions.submitRenderCommands(imageIndex, camera, semaphore, m_InFlightFence[m_CurrentFrame].GetFence());
+//		vk::Semaphore waitSemaphore[] = { signalSemaphore };
 //	
 //			
 //#if IMGUI_ENABLED
@@ -1002,13 +1037,13 @@ const int QUAD_AMOUNT = 700;
 //			ZoneScopedN("Recreating swapchain");
 //			RecreateSwapchain();
 //		}
-//
-//		assert(false);
-//		//m_CurrentFrame = (m_CurrentFrame + 1) % m_Swapchain->m_SwapchainFrames.size();
-//
-//		
-//		
-//		FrameMark;
+
+		assert(false);
+		m_CurrentFrame = (m_CurrentFrame + 1) % RenderContext::GetFrameAmount();
+
+		
+		
+		FrameMark;
 	}
 
 
@@ -1033,10 +1068,37 @@ const int QUAD_AMOUNT = 700;
 	void Renderer::Flush(std::vector<vk::CommandBuffer> commandBuffers)
 	{
 		assert(false);
-		
+
+
+	}
+	void Renderer::UpdateUniformBuffer(const glm::mat4& proj,Camera& camera)
+	{
+		UniformBufferObject ubo{};
+
+		auto cameraView = camera.GetView();
+		auto cameraProj = proj;
+		ubo.playerPos = glm::vec4{ camera.GetPosition(),0 };
+		ubo.playerPos = glm::vec4{ m_Follow,0,0 };
+		ubo.view = cameraView;
+		ubo.proj = cameraProj;
+		ubo.time = m_App->GetExeTime();
+		memcpy(uniformBuffersMapped[m_CurrentFrame], &ubo, sizeof(ubo));
 
 	}
 
+	void Renderer::BeginFrame(Camera& camera, size_t viewportWidth,
+		size_t viewportHeight)
+	{
+		auto proj = glm::ortho(0, (int)viewportWidth, (int)viewportHeight,0);
+		UpdateUniformBuffer(proj, camera);
+	}
+	void Renderer::EndFrame()
+	{
+		for (auto& e : m_Drawables)
+		{
+			e.second.clear();
+		}
+	}
 	void Renderer::RenderImGui(int imageIndex)
 	{
 		ImGui_ImplVulkan_NewFrame();

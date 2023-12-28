@@ -95,6 +95,7 @@ namespace Voidstar
 	std::vector<std::shared_ptr<Image>> RenderContext::GetFrames() { return m_Swapchain->GetImages(); }
 	void RenderContext::Shutdown()
 	{
+		m_Swapchain->CleanUp();
 		m_Device->GetDevice().destroy();
 		m_Instance->DestroyInstance(*m_Surface);
 		

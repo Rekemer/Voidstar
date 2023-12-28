@@ -145,11 +145,10 @@ namespace Voidstar
 	
 
 
-	void RenderPass::Execute(CommandBuffer& cmd, size_t frameIndex, 
-		vk::Extent2D extent, std::vector<vk::ClearValue> clearValues)
+	void RenderPass::Execute(CommandBuffer& cmd, size_t frameIndex)
 	{
 		cmd.BeginRendering();
-		cmd.BeginRenderPass(m_RenderPass, m_Framebuffers[frameIndex], extent, clearValues);
+		cmd.BeginRenderPass(m_RenderPass, m_Framebuffers[frameIndex], m_Extent, m_ClearValues);
 		m_Execute(cmd, frameIndex);
 		cmd.EndRenderPass();
 		cmd.EndRendering();
@@ -159,7 +158,12 @@ namespace Voidstar
 	RenderPass::~RenderPass()
 	{
 		auto device = RenderContext::GetDevice()->GetDevice();
+		device.waitIdle();
 		device.destroyRenderPass(m_RenderPass);
+		for (auto e : m_Framebuffers)
+		{
+			device.destroyFramebuffer(e);
+		}
 	}
 
 }

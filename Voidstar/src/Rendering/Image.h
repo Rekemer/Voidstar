@@ -75,12 +75,6 @@ namespace Voidstar
 			return m_Format;
 		}
 		vk::ImageView GetImageView() { return m_ImageView; }
-		void Destroy()
-		{
-			auto logicalDevice = RenderContext::GetDevice()->GetDevice();
-			logicalDevice.destroyImage(m_Image);
-			logicalDevice.destroyImageView(m_ImageView);
-		}
 		int GetWidth()
 		{
 			return m_Width;

@@ -159,6 +159,7 @@
     <ClInclude Include="src\Rendering\DescriptorPool.h" />
     <ClInclude Include="src\Rendering\DescriptorSetLayout.h" />
     <ClInclude Include="src\Rendering\Device.h" />
+    <ClInclude Include="src\Rendering\Drawables.h" />
     <ClInclude Include="src\Rendering\Font.h" />
     <ClInclude Include="src\Rendering\Generation.h" />
     <ClInclude Include="src\Rendering\Image.h" />

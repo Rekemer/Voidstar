@@ -81,7 +81,7 @@ namespace Voidstar
 			swapchain->m_Images[i] = CreateUPtr<Image>();
 			swapchain->m_Images[i]->m_Format= format.format;
 			swapchain->m_Images[i]->SetSample(vk::SampleCountFlagBits::e1);
-			swapchain->m_Images[i]->m_Image = images[i];
+			//swapchain->m_Images[i]->m_Image = images[i];
 			swapchain->m_Images[i]->m_ImageView = 
 				Image::CreateImageView(images[i], format.format, vk::ImageAspectFlagBits::eColor);
 			swapchain->m_Images[i]->SetWidth(viewportWidth );
@@ -157,10 +157,11 @@ namespace Voidstar
 		void Swapchain::CleanUp()
 		{
 			auto device = RenderContext::GetDevice()->GetDevice();
-			//for (auto& e : m_Images)
-			//{
-			//	e.Destroy();
-			//}
+			for (auto& e : m_Images)
+			{	
+
+				e.reset();
+			}
 			//for (auto& frame : m_SwapchainFrames) {
 
 			//	 // image is destroyed with swapchain

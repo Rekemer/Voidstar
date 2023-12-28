@@ -51,6 +51,8 @@ namespace Voidstar
 		UPtr<RenderPass> Build(std::string_view name,
 			AttachmentManager& manager,
 			size_t framebufferAmount,
+			vk::Extent2D extent,
+			std::vector<vk::ClearValue> clearValues,
 			Func execute)
 		{
 			auto device = RenderContext::GetDevice();
@@ -73,7 +75,7 @@ namespace Voidstar
 			try
 			{
 				auto vkRenderPass = device->GetDevice().createRenderPass(renderpassInfo);
-				UPtr<RenderPass> renderPass = CreateUPtr<RenderPass>(name, vkRenderPass, execute);
+				UPtr<RenderPass> renderPass = CreateUPtr<RenderPass>(name, vkRenderPass, extent,clearValues,execute);
 				renderPass->m_Framebuffers.resize(framebufferAmount);
 				for (int i = 0; i < framebufferAmount; i++)
 				{
@@ -145,7 +147,10 @@ namespace Voidstar
 	{
 	public:
 		RenderPass(std::string_view name, vk::RenderPass renderPass,
+			vk::Extent2D extent, std::vector<vk::ClearValue> clearValues,
 			Func execute) : m_Name{name.data()},
+			m_Extent{extent},
+			m_ClearValues{ clearValues },
 			m_RenderPass{ renderPass },
 			m_Execute{execute}
 
@@ -163,8 +168,7 @@ namespace Voidstar
 		{
 
 		}
-		void Execute(CommandBuffer& cmd, size_t frameIndex, 
-			vk::Extent2D extent, std::vector<vk::ClearValue> clearValues);
+		void Execute(CommandBuffer& cmd, size_t frameIndex);
 		
 		vk::RenderPass GetRaw()
 		{
@@ -173,15 +177,6 @@ namespace Voidstar
 		std::string_view GetName()
 		{
 			return m_Name.data();
-		}
-		void Destroy()
-		{
-			auto device = RenderContext::GetDevice()->GetDevice();
-			device.waitIdle();
-			for (auto e : m_Framebuffers)
-			{
-				device.destroyFramebuffer(e);
-			}
 		}
 		~RenderPass();
 	private:

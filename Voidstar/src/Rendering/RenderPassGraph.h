@@ -31,8 +31,8 @@ namespace Voidstar
 	private:
 		std::unordered_map<std::string,UPtr<RenderPass>> m_RenderPasses;
 		std::vector<RenderPass*> m_Transitions;
-		//std::vector<Fence> m_Fences;
-		//std::vector<Semaphore> m_SemaphoreImageAvailable;
-		//std::vector<Semaphore> m_SemaphoreRenderFinished;
+		std::vector<Fence> m_Fences;
+		std::vector<Semaphore> m_SemaphoreImageAvailable;
+		std::vector<Semaphore> m_SemaphoreRenderFinished;
 	};
 }

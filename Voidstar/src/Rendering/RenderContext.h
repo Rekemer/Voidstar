@@ -31,6 +31,8 @@ namespace Voidstar
 		static size_t GetFrameAmount();
 		static std::vector<std::shared_ptr<Image>> GetFrames();
 	private:
+		friend class Renderer;
+		static Swapchain* GetSwapchain() { return m_Swapchain.get(); }
 		static void CreateSwapchain(SwapChainSupportDetails& attachment);
 		static Device* m_Device;
 		static UPtr<Swapchain> m_Swapchain;

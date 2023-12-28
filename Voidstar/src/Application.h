@@ -1,7 +1,11 @@
 #pragma once
 #include"Prereq.h"
+#include "glm.hpp"
 namespace Voidstar
 {
+	// must be passed somehow to renderer
+	// for now just global variable
+	inline glm::vec2 m_Follow;
 	class Renderer;
 	class Window;
 	class Camera;
@@ -13,7 +17,7 @@ namespace Voidstar
 
 		std::unique_ptr<Camera>& GetCamera() { return m_Camera; }
 		float GetExeTime() { return m_ExeTime; }
-		virtual void Execute() {};
+		virtual void PreRender(Camera& camera) {};
 		virtual ~Application();
 		size_t GetScreenWidth() { return m_ScreenWidth; }
 		size_t GetScreenHeight() { return m_ScreenHeight; }
