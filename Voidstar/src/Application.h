@@ -1,11 +1,10 @@
 #pragma once
 #include"Prereq.h"
-#include "glm.hpp"
 namespace Voidstar
 {
 	// must be passed somehow to renderer
 	// for now just global variable
-	inline glm::vec2 m_Follow;
+	
 	class Renderer;
 	class Window;
 	class Camera;

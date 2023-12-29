@@ -1071,7 +1071,8 @@ const int QUAD_AMOUNT = 700;
 		auto cameraView = camera.GetView();
 		auto cameraProj = proj;
 		ubo.playerPos = glm::vec4{ camera.GetPosition(),0 };
-		ubo.playerPos = glm::vec4{ m_Follow,0,0 };
+		ubo.playerPos = glm::vec4{ ::m_Follow,0,0 };
+		std::cout << ::m_Follow.x << " " << ::m_Follow.y << std::endl;
 		ubo.view = cameraView;
 		ubo.proj = cameraProj;
 		ubo.time = m_App->GetExeTime();
@@ -1082,7 +1083,7 @@ const int QUAD_AMOUNT = 700;
 	void Renderer::BeginFrame(Camera& camera, size_t viewportWidth,
 		size_t viewportHeight)
 	{
-		auto proj = glm::ortho(0, (int)viewportWidth, (int)viewportHeight,0);
+		auto proj = glm::ortho(0.0f, (float)viewportWidth, (float)viewportHeight,0.f);
 		UpdateUniformBuffer(proj, camera);
 	}
 	void Renderer::EndFrame()

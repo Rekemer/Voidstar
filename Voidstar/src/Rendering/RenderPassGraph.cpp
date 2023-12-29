@@ -42,6 +42,6 @@ namespace Voidstar
 					&m_Semaphores[i ].GetSemaphore(), &m_Fence.GetFence());
 			}
 		}
-		return m_Semaphores[m_Semaphores.size() - 1 ].GetSemaphore();
+		return m_Semaphores[m_Transitions.size()-1].GetSemaphore();
 	}
 }

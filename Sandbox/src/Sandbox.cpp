@@ -18,7 +18,7 @@ using namespace Voidstar;
 std::map<unsigned char, Character> Characters;
 const float PageRenderWidth = 400.f;
 const float PageRenderHeight = 512.f;
-const int PageAmount = 3;
+const int PageAmount = 4;
 std::string_view BASIC_RENDER_PASS = "Basic";
 std::string_view CLIP_RENDER_PASS = "Clip";
 std::string_view NEW_PAGE_RENDER_PASS = "NewPage";
@@ -172,7 +172,7 @@ public:
 
 			// render pass
 			auto samples = RenderContext::GetDevice()->GetSamples();
-			size_t actualFrameAmount =3;
+			size_t actualFrameAmount = RenderContext::GetFrameAmount();
 		
 
 			m_AttachmentManager.CreateColor("MSAA", m_AttachmentManager, vk::Format::eB8G8R8A8Unorm,
@@ -212,7 +212,6 @@ public:
 			std::vector<vk::ClearValue> clearValues = { {clearColor, depthClear,clearColor} };
 
 		
-			auto render = execute("s");
 			
 			{
 
@@ -333,7 +332,7 @@ public:
 				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
 				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
 				builder.SetInitialLayout(vk::ImageLayout::eUndefined);
-				builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
+				builder.SetFinalLayout(vk::ImageLayout::eAttachmentOptimal);
 				auto resolve = builder.BuildAttachmentDesc();
 #endif			
 				builder.AddSubpass({ 0 }, { 1 }, { 2 });
@@ -465,7 +464,7 @@ public:
 
 				//Renderpasses are broken down into subpasses, there's always at least one.
 
-				builder.AddSubpass(SubpassDescription({ 0 }, { 0 }, { 0 }));
+				builder.AddSubpass({ 0 }, { 0 }, { 0 });
 
 				vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0,
 					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite,
@@ -529,7 +528,7 @@ public:
 
 				//Renderpasses are broken down into subpasses, there's always at least one.
 
-				builder.AddSubpass(SubpassDescription({ 0 }, { 0 }, { 0 }));
+				builder.AddSubpass({ 0 }, { 0 }, { 0 });
 
 				vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0,
 					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite,
@@ -649,10 +648,6 @@ public:
 				
 
 			}
-			//render(renderCommandBuffer, clearValues, { pages[0] ,pages[1] }, imageAvailable, m_RenderFinishedSemaphore1, m_RenderPass->GetRaw(), m_GraphicsPipeline.get());
-			//render(renderCommandBuffer, clearValues, { clipPage }, m_RenderFinishedSemaphore1, m_RenderFinishedSemaphore2, m_ClipRenderPass->GetRaw(), m_ClipPipeline.get());
-			//render(renderCommandBuffer, clearValues, { pages[2] }, m_RenderFinishedSemaphore2, m_RenderFinishedSemaphore3, m_NewPageRenderPass->GetRaw(), m_NewPagePipeline.get());
-			//render(renderCommandBuffer, clearValues, { pages[3] }, m_RenderFinishedSemaphore3, m_RenderFinishedSemaphore4, m_NewPageRenderPa
 			
 
 			auto graph = CreateUPtr<RenderPassGraph>();
@@ -660,10 +655,10 @@ public:
 			graph->AddRenderPass(std::move(m_ClipRenderPass));
 			graph->AddRenderPass(std::move(m_NewPageRenderPass));
 			graph->AddRenderPass(std::move(m_NewPageRenderPassRight));
-			graph->AddExec("Basic");
-			graph->AddExec("Clip");
-			graph->AddExec("NewPage");
-			graph->AddExec("NewPageRight");
+			graph->AddExec(BASIC_RENDER_PASS);
+			graph->AddExec(CLIP_RENDER_PASS);
+			graph->AddExec(NEW_PAGE_RENDER_PASS);
+			graph->AddExec(NEW_PAGE_RIGHT_RENDER_PASS);
 
 			Renderer::Instance()->AddRenderGraph("",std::move(graph));
 	
@@ -1350,7 +1345,7 @@ public:
 				isDragged = false;
 				m_Follow = rightEdgeBottom;
 			}
-			m_Follow = glm::clamp(m_Follow, leftEdgeBottom, glm::vec2{ rightEdgeBottom.x - 0,center.y - 40 });
+			::m_Follow = glm::clamp(m_Follow, leftEdgeBottom, glm::vec2{ rightEdgeBottom.x - 0,center.y - 40 });
 
 			glm::vec2 t0;
 			t0.x = m_Follow.x + .5 * (rightEdgeBottom.x - m_Follow.x);

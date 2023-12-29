@@ -21,6 +21,10 @@ namespace Voidstar
 		msaa.Specs.tiling = vk::ImageTiling::eOptimal;
 		msaa.Specs.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
 		msaa.Amount = 3;
+		if (attachmentName == "Page")
+		{
+			msaa.Amount = 4;
+		}
 		msaa.Samples = samples;
 
 		auto specs = msaa.Specs;
