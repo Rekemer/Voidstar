@@ -8,7 +8,7 @@ namespace Voidstar
 	void AttachmentManager::CreateColor(std::string_view attachmentName,
 		AttachmentManager& manager, vk::Format format, size_t width, size_t height,
 		vk::SampleCountFlagBits samples,
-		vk::ImageUsageFlags usage)
+		vk::ImageUsageFlags usage, size_t attachmentAmount)
 	{
 		
 		AttachmentSpec msaa;
@@ -20,11 +20,7 @@ namespace Voidstar
 		msaa.Specs.magFilter = vk::Filter::eLinear;
 		msaa.Specs.tiling = vk::ImageTiling::eOptimal;
 		msaa.Specs.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
-		msaa.Amount = 3;
-		if (attachmentName == "Page")
-		{
-			msaa.Amount = 4;
-		}
+		msaa.Amount = attachmentAmount;
 		msaa.Samples = samples;
 
 		auto specs = msaa.Specs;
@@ -54,7 +50,7 @@ namespace Voidstar
 	void AttachmentManager::CreateDepthStencil(std::string_view attachmentName,
 		AttachmentManager& manager, size_t width, size_t height,
 		vk::SampleCountFlagBits samples,
-		vk::ImageUsageFlags usage)
+		vk::ImageUsageFlags usage,size_t attachmentAmount)
 	{
 		DepthStencilSpecs depthSpec;
 		depthSpec.Candidates = { vk::Format::eD32SfloatS8Uint ,
@@ -66,7 +62,7 @@ namespace Voidstar
 		depthSpec.Specs.usage = usage;
 		depthSpec.Specs.tiling = vk::ImageTiling::eOptimal;
 		depthSpec.Specs.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
-		depthSpec.Amount = 3;
+		depthSpec.Amount = attachmentAmount;
 		depthSpec.Samples = samples;
 		depthSpec.FormatFeature = vk::FormatFeatureFlagBits::eDepthStencilAttachment;
 		depthSpec.Specs.imageAspect = vk::ImageAspectFlagBits::eDepth;
@@ -134,38 +130,5 @@ namespace Voidstar
 				});
 		}
 	}
-	void AttachmentManager::CreateResolve(std::string_view attachmentName,
-		AttachmentManager& manager, vk::Format format, size_t width, size_t height,
-		vk::PresentModeKHR presentMode,
-		vk::ColorSpaceKHR colorSpace)
-	{
-		assert(false);
-		/*SwapchainSpec resolveSpec;
-		resolveSpec.Specs.width = width;
-		resolveSpec.Specs.height = height;
-		resolveSpec.Specs.usage = vk::ImageUsageFlagBits::eColorAttachment;
-		resolveSpec.ColorSpace = colorSpace;
-		resolveSpec.PresentMode = presentMode;
-		resolveSpec.Specs.format = format;
-		resolveSpec.Amount = 3;
-
-		auto& swapchainSpec = static_cast<SwapchainSpec&>(resolveSpec);
-		SwapChainSupportDetails support;
-		auto device = RenderContext::GetDevice();
-		auto surface = RenderContext::GetSurface();
-		support.AvailableCapabilities = device->GetDevicePhys().getSurfaceCapabilitiesKHR(*surface);
-		support.AvailablePresentModes = device->GetDevicePhys().getSurfacePresentModesKHR(*surface);
-		support.AvailableFormats = device->GetDevicePhys().getSurfaceFormatsKHR(*surface);
-		support.ViewportWidth = swapchainSpec.Specs.width;
-		support.ViewportHeight = swapchainSpec.Specs.height;
-		support.PresentMode = swapchainSpec.PresentMode;
-		support.Format = swapchainSpec.Specs.format;
-		support.ColorSpace = swapchainSpec.ColorSpace;
-		support.Usage = swapchainSpec.Specs.usage;
-		support.FrameAmount = swapchainSpec.Amount;
-		RenderContext::CreateSwapchain(support);
-		auto swapChain = RenderContext::GetSwapchain();
-		auto& images = swapChain->GetImages();
-		m_Resolve[attachmentName.data()] = images;*/
-	}
+	
 }

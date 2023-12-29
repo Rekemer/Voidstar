@@ -56,11 +56,9 @@ namespace Voidstar
 	struct Callables
 	{
 		std::function<void()> bindingsInit;
-		std::function<void()> bufferInit;
-		std::function<void()> loadTextures;
+		std::function<void()> createResources;
 		std::function<void()> bindResources;
 		std::function<void()> createPipelines;
-		std::function<void()> createFramebuffer;
 		std::function<void()> cleanUp;
 	};
 
@@ -69,7 +67,6 @@ namespace Voidstar
 	struct UniformBufferObject {
 		glm::mat4 view;
 		glm::mat4 proj;
-		alignas(16)glm::vec4 playerPos;
 		alignas(4)float time;
 	};
 

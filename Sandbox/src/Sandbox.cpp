@@ -79,7 +79,8 @@ public:
 			m_BaseDesc = binderRender.BeginBind(3);
 			binderRender.Bind(0, 1, vk::DescriptorType::eUniformBuffer, vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eTessellationControl
 				| vk::ShaderStageFlagBits::eTessellationEvaluation | vk::ShaderStageFlagBits::eFragment);
-
+			binderRender.Bind(1, 1, vk::DescriptorType::eUniformBuffer,  vk::ShaderStageFlagBits::eFragment);
+			
 			m_TexDesc = binderRender.BeginBind();
 			binderRender.Bind(0, PageAmount, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment);
 
@@ -94,7 +95,7 @@ public:
 
 		};
 
-		auto bufferInit  = [this]()
+		auto createResources= [this]()
 		{
 			{
 				BufferInputChunk info;
@@ -105,20 +106,22 @@ public:
 					vk::MemoryPropertyFlagBits::eHostCoherent;
 				m_ShaderStorageBuffer = CreateUPtr<Buffer>(info);
 			}
-		};
-
-
-
-		
-
-		auto loadTextures = [this]()
-		{
+			m_MouseInfo.resize(RenderContext::GetFrameAmount());
+			for (int i = 0; i < RenderContext::GetFrameAmount(); i++)
+			{
+				BufferInputChunk inputBuffer;
+				inputBuffer.size = sizeof glm::vec2;
+				inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+				inputBuffer.usage = vk::BufferUsageFlagBits::eUniformBuffer;
+				m_MouseInfo[i] = CreateUPtr<Buffer>(inputBuffer);
+			}
 			const float noiseTextureWidth = 256.f;
 			const float noiseTextureHeight = 256.f;
 			auto usage = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled;
-			m_ImageSelected = Image::CreateEmptyImage(noiseTextureWidth, noiseTextureHeight, vk::Format::eR8G8B8A8Snorm,usage);
+			m_ImageSelected = Image::CreateEmptyImage(noiseTextureWidth, noiseTextureHeight, vk::Format::eR8G8B8A8Snorm, usage);
 			m_Image = Image::CreateImage(BASE_RES_PATH + "dos_2_noise.png");
 		};
+
 
 		auto bindResources = [this]()
 		{
@@ -176,20 +179,16 @@ public:
 		
 
 			m_AttachmentManager.CreateColor("MSAA", m_AttachmentManager, vk::Format::eB8G8R8A8Unorm,
-				Application::GetScreenWidth(), Application::GetScreenHeight(), samples, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransientAttachment);
+				Application::GetScreenWidth(), Application::GetScreenHeight(), 
+				samples, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransientAttachment,
+				actualFrameAmount);
 
 			m_AttachmentManager.CreateDepthStencil("DepthStencil", m_AttachmentManager,
 				Application::GetScreenWidth(), Application::GetScreenHeight(),
-				samples, vk::ImageUsageFlagBits::eDepthStencilAttachment);
+				samples, vk::ImageUsageFlagBits::eDepthStencilAttachment,
+				actualFrameAmount);
 
-			// need to split swap chain creation and MSAA images
-
-			/*m_AttachmentManager.CreateResolve("Resolve", m_AttachmentManager, vk::Format::eB8G8R8A8Unorm,
-				Application::GetScreenWidth(), Application::GetScreenHeight(),
-				vk::PresentModeKHR::eFifo, vk::ColorSpaceKHR::eSrgbNonlinear);*/
-
-			//m_AttachmentManager.CreateColor("MSAA-Pages", m_AttachmentManager, vk::Format::eB8G8R8A8Unorm,
-			//	Application::GetScreenWidth(), Application::GetScreenHeight(), samples, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransientAttachment);
+			
 				
 
 			Renderer::Instance()->CreateSyncObjects();
@@ -241,20 +240,6 @@ public:
 			
 
 			
-				/*auto samples = RenderContext::GetDevice()->GetSamples();
-				AttachmentSpec msaa;
-				msaa.Specs.width = PageRenderWidth;
-				msaa.Specs.height = PageRenderHeight;
-				msaa.Specs.usage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransientAttachment;
-				msaa.Specs.format = vk::Format::eB8G8R8A8Unorm;
-				msaa.Specs.samples = samples;
-				msaa.Specs.minFilter = vk::Filter::eLinear;
-				msaa.Specs.magFilter = vk::Filter::eLinear;
-				msaa.Specs.tiling = vk::ImageTiling::eOptimal;
-				msaa.Specs.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
-				msaa.Amount = 3;
-				msaa.Samples = vk::SampleCountFlagBits::e1;
-				m_AttachmentManager.AddAttachment<Image>("MSAA", msaa);*/
 			
 
 				
@@ -274,22 +259,7 @@ public:
 				
 
 
-				/*DepthStencilSpecs depthSpec;
-				depthSpec.Candidates = { vk::Format::eD32SfloatS8Uint ,
-					vk::Format::eD24UnormS8Uint,
-				vk::Format::eD16UnormS8Uint };
-				depthSpec.Specs.width = Application::GetScreenWidth();
-				depthSpec.Specs.height = Application::GetScreenHeight();
-				depthSpec.Specs.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment;
-				depthSpec.Specs.tiling = vk::ImageTiling::eOptimal;
-				depthSpec.Specs.format = vk::Format::eB8G8R8A8Unorm;
-				depthSpec.Specs.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
-				depthSpec.Amount = actualFrameAmount;
-				depthSpec.Samples = samples;
-				depthSpec.FormatFeature = vk::FormatFeatureFlagBits::eDepthStencilAttachment;
-				depthSpec.Specs.imageAspect = vk::ImageAspectFlagBits::eDepth;
-				m_AttachmentManager.AddAttachment<DepthImage>("DepthStencil", depthSpec);*/
-
+				
 				builder.DepthStencilOutput("DepthStencil", m_AttachmentManager, vk::ImageLayout::eDepthStencilAttachmentOptimal);
 				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
 				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
@@ -312,27 +282,16 @@ public:
 
 				vk::AttachmentReference refResolve = { 2,vk::ImageLayout::eColorAttachmentOptimal };
 #else
-				//Define a general attachment, with its load/store operations
+			
 
 
-				//SwapchainSpec resolveSpec;
-				//resolveSpec.Specs.width = Application::GetScreenWidth();
-				//resolveSpec.Specs.height = Application::GetScreenHeight();
-				//resolveSpec.Specs.usage = vk::ImageUsageFlagBits::eColorAttachment;
-				//resolveSpec.ColorSpace = vk::ColorSpaceKHR::eSrgbNonlinear;
-				//resolveSpec.PresentMode = vk::PresentModeKHR::eFifo;
-				//resolveSpec.Specs.format = vk::Format::eB8G8R8A8Unorm;
-				//resolveSpec.Amount = 3;
-				//m_AttachmentManager.AddAttachment<SwapchainImage>("Resolve", resolveSpec);
-
-				//builder.ColorOutput("Default", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
 				builder.ResolveOutput("Default",m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
 				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
 				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
 				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
 				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
 				builder.SetInitialLayout(vk::ImageLayout::eUndefined);
-				builder.SetFinalLayout(vk::ImageLayout::eAttachmentOptimal);
+				builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
 				auto resolve = builder.BuildAttachmentDesc();
 #endif			
 				builder.AddSubpass({ 0 }, { 1 }, { 2 });
@@ -340,7 +299,6 @@ public:
 					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite,
 					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
 
-				//auto f = execute(BASIC_RENDER_PASS.data());
 				builder.AddSubpassDependency(dependency0);
 				m_RenderPass = builder.Build(BASIC_RENDER_PASS, m_AttachmentManager, actualFrameAmount, extent, clearValues, execute(BASIC_RENDER_PASS));
 
@@ -361,11 +319,7 @@ public:
 				builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
 
 				auto msaaAttachment = builder.BuildAttachmentDesc();
-				//vk::AttachmentDescription msaaAttachment = AttachmentDescription(swapchainFormat,
-				//	samples, vk::AttachmentLoadOp::eLoad,
-				//	vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
-				//	vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eColorAttachmentOptimal,
-				//	vk::ImageLayout::eColorAttachmentOptimal);
+				
 
 
 
@@ -378,10 +332,7 @@ public:
 				builder.SetInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
 				builder.SetFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
 				auto depthAttachment = builder.BuildAttachmentDesc();
-				/*vk::AttachmentDescription depthAttachment = AttachmentDescription(
-					swapChainDepthFormat, samples, vk::AttachmentLoadOp::eLoad, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eLoad,
-					vk::AttachmentStoreOp::eStore, vk::ImageLayout::eDepthStencilAttachmentOptimal, vk::ImageLayout::eDepthStencilAttachmentOptimal);*/
-
+				
 
 				builder.ResolveOutput("Default", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
 				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
@@ -392,14 +343,7 @@ public:
 				builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
 
 				vk::AttachmentDescription colorAttachmentResolve = builder.BuildAttachmentDesc();
-				/*vk::AttachmentDescription colorAttachmentResolve =
-					AttachmentDescription(swapchainFormat, vk::SampleCountFlagBits::e1,
-						vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
-						vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::eColorAttachmentOptimal);*/
-
-
-
-				//Renderpasses are broken down into subpasses, there's always at least one.
+			
 
 				builder.AddSubpass({ 0 }, { 0 }, {0});
 
@@ -424,12 +368,6 @@ public:
 
 				auto msaaAttachment = builder.BuildAttachmentDesc();
 
-				//Define a general attachment, with its load/store operations
-				/*vk::AttachmentDescription msaaAttachment = AttachmentDescription(swapchainFormat,
-					samples, vk::AttachmentLoadOp::eLoad,
-					vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
-					vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eColorAttachmentOptimal,
-					vk::ImageLayout::eColorAttachmentOptimal);*/
 
 
 
@@ -442,9 +380,6 @@ public:
 				builder.SetFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
 				auto depthAttachment = builder.BuildAttachmentDesc();
 
-			/*	vk::AttachmentDescription depthAttachment = AttachmentDescription(
-					swapChainDepthFormat, samples, vk::AttachmentLoadOp::eLoad, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eLoad,
-					vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eDepthStencilAttachmentOptimal, vk::ImageLayout::eDepthStencilAttachmentOptimal);*/
 
 
 
@@ -457,12 +392,6 @@ public:
 				builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
 				vk::AttachmentDescription colorAttachmentResolve = builder.BuildAttachmentDesc();
 
-				//vk::AttachmentDescription colorAttachmentResolve =
-				//	AttachmentDescription(swapchainFormat, vk::SampleCountFlagBits::e1,
-				//		vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
-				//		vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::eColorAttachmentOptimal);
-
-				//Renderpasses are broken down into subpasses, there's always at least one.
 
 				builder.AddSubpass({ 0 }, { 0 }, { 0 });
 
@@ -489,12 +418,6 @@ public:
 				auto msaaAttachment = builder.BuildAttachmentDesc();
 
 
-				//Define a general attachment, with its load/store operations
-				/*vk::AttachmentDescription msaaAttachment = AttachmentDescription(swapchainFormat,
-					samples, vk::AttachmentLoadOp::eLoad,
-					vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
-					vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eColorAttachmentOptimal,
-					vk::ImageLayout::eColorAttachmentOptimal);*/
 
 
 
@@ -507,10 +430,6 @@ public:
 				builder.SetFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
 				auto depthAttachment = builder.BuildAttachmentDesc();
 
-				/*vk::AttachmentDescription depthAttachment = AttachmentDescription(
-					swapChainDepthFormat, samples, vk::AttachmentLoadOp::eLoad, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eLoad,
-					vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eDepthStencilAttachmentOptimal, vk::ImageLayout::eDepthStencilAttachmentOptimal);*/
-
 
 
 				builder.ResolveOutput("Default", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
@@ -521,10 +440,6 @@ public:
 				builder.SetInitialLayout(vk::ImageLayout::eColorAttachmentOptimal);
 				builder.SetFinalLayout(vk::ImageLayout::ePresentSrcKHR);
 				vk::AttachmentDescription colorAttachmentResolve = builder.BuildAttachmentDesc();
-				/*vk::AttachmentDescription colorAttachmentResolve =
-					AttachmentDescription(swapchainFormat, vk::SampleCountFlagBits::e1,
-						vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
-						vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::ePresentSrcKHR);*/
 
 				//Renderpasses are broken down into subpasses, there's always at least one.
 
@@ -661,96 +576,16 @@ public:
 			graph->AddExec(NEW_PAGE_RIGHT_RENDER_PASS);
 
 			Renderer::Instance()->AddRenderGraph("",std::move(graph));
-	
-					
-		};
 
-		auto cleanup = [this]()
-			{
-
-
-
-				auto device = RenderContext::GetDevice()->GetDevice();
-				device.waitIdle();
-				m_ShaderStorageBuffer.reset();
-				m_Image.reset();
-				m_ImageSelected.reset();
-				m_FontAtlas.reset();
-				m_AttachmentManager.Destroy();
-				Renderer::Instance()->Shutdown();
-
-			};
-
-		// can be better
-		auto createFramebuffer = [this, cleanup ]()
-		{
-			
-			{
-				AttachmentSpec resolve;
-				resolve.Specs.width = Application::GetScreenWidth();
-				resolve.Specs.height = Application::GetScreenHeight();
-				resolve.Specs.usage = vk::ImageUsageFlagBits::eColorAttachment;
-				resolve.Amount = 3;
-			}
-			{
-				AttachmentSpec page;
-				page.Specs.width = PageRenderWidth;
-				page.Specs.height = PageRenderHeight;
-				page.Specs.usage = vk::ImageUsageFlagBits::eColorAttachment
-					| vk::ImageUsageFlagBits::eTransferDst | 
-					vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eSampled;
-				page.Specs.format = vk::Format::eB8G8R8A8Unorm;
-				page.Specs.samples = vk::SampleCountFlagBits::e1;
-				page.Specs.minFilter= vk::Filter::eLinear;
-				page.Specs.magFilter= vk::Filter::eLinear;
-				page.Specs.tiling= vk::ImageTiling::eOptimal;
-				page.Specs.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
-				page.Amount = 3;
-				page.Samples = vk::SampleCountFlagBits::e1;
-			}
-
-			{
-				auto samples = RenderContext::GetDevice()->GetSamples();
-				AttachmentSpec msaa;
-				msaa.Specs.width = PageRenderWidth;
-				msaa.Specs.height = PageRenderHeight;
-				msaa.Specs.usage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransientAttachment;
-				msaa.Specs.format = vk::Format::eB8G8R8A8Unorm;
-				msaa.Specs.samples = samples;
-				msaa.Specs.minFilter = vk::Filter::eLinear;
-				msaa.Specs.magFilter = vk::Filter::eLinear;
-				msaa.Specs.tiling = vk::ImageTiling::eOptimal;
-				msaa.Specs.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
-				msaa.Amount = 3;
-				msaa.Samples = vk::SampleCountFlagBits::e1;
-			}
 
 
 			m_AttachmentManager.CreateColor(PAGE_RENDER_PASS, m_AttachmentManager, vk::Format::eB8G8R8A8Unorm,
-			PageRenderWidth, PageRenderHeight, vk::SampleCountFlagBits::e1,
+				PageRenderWidth, PageRenderHeight, vk::SampleCountFlagBits::e1,
 				vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferDst |
-				vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eSampled);
+				vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eSampled, PageAmount);
 			UPtr<RenderPass> m_PageRenderPass;
 			{
 				RenderPassBuilder builder;
-				//
-				//builder.ColorOutput("MSAA", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
-				//builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
-				//builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
-				//builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-				//builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
-				//builder.SetInitialLayout(vk::ImageLayout::eUndefined);
-				//builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
-				//
-				//auto colorAttachment = builder.BuildAttachmentDesc();
-
-
-				//Define a general attachment, with its load/store operations
-				/*vk::AttachmentDescription colorAttachment = AttachmentDescription(swapchainFormat,
-					samples,vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore,
-					vk::AttachmentLoadOp::eDontCare, vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined,
-					vk::ImageLayout::eColorAttachmentOptimal);*/
-
 
 				builder.ColorOutput(PAGE_RENDER_PASS, m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
 				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
@@ -760,11 +595,6 @@ public:
 				builder.SetInitialLayout(vk::ImageLayout::eUndefined);
 				builder.SetFinalLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
 				vk::AttachmentDescription colorAttachmentResolve = builder.BuildAttachmentDesc();
-				/*vk::AttachmentDescription colorAttachmentResolve =
-					AttachmentDescription(swapchainFormat, vk::SampleCountFlagBits::e1,
-						vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
-						vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined, vk::ImageLayout::eShaderReadOnlyOptimal);*/
-
 
 				builder.AddSubpass({ 0 }, { 0 }, { 0 });
 				vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eNone, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
@@ -774,7 +604,7 @@ public:
 
 				std::vector<vk::ClearValue> clearValues = { {clearColor,clearColor} };
 
-				m_PageRenderPass = builder.Build(PAGE_RENDER_PASS , m_AttachmentManager, PageAmount, { (uint32_t)PageRenderWidth, (uint32_t)PageRenderHeight }, clearValues,
+				m_PageRenderPass = builder.Build(PAGE_RENDER_PASS, m_AttachmentManager, PageAmount, { (uint32_t)PageRenderWidth, (uint32_t)PageRenderHeight }, clearValues,
 					[this](CommandBuffer& cmd, size_t frameIndex)
 					{
 						auto vkCommandBuffer = cmd.GetCommandBuffer();
@@ -807,10 +637,10 @@ public:
 						size_t offset = 0;
 						Renderer::Instance()->DrawBatch(vkCommandBuffer, offset);
 					}
-				
+
 				);
 			}
-			auto device = RenderContext::GetDevice();
+
 			{
 				auto m_DescriptorSetLayout = Renderer::Instance()->GetSetLayout(0, PipelineType::RENDER);
 				auto m_DescriptorSetLayoutFont = Renderer::Instance()->GetSetLayout(m_TexAtlas, PipelineType::RENDER);
@@ -819,16 +649,13 @@ public:
 				auto pipelineLayouts = std::vector<vk::DescriptorSetLayout>{
 					m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutFont->GetLayout() };
 				std::vector<vk::VertexInputBindingDescription> bindings{ VertexBindingDescription(0,sizeof(Vertex),vk::VertexInputRate::eVertex) };
-				
+
 				std::vector<vk::VertexInputAttributeDescription> attributeDescriptions;
-				
+
 				attributeDescriptions =
 				{
 					VertexInputAttributeDescription(0,0,vk::Format::eR32G32B32Sfloat,offsetof(Vertex, Position)),
-					VertexInputAttributeDescription(0,1,vk::Format::eR32G32Sfloat,offsetof(Vertex, UV)),
-					VertexInputAttributeDescription(0,2,vk::Format::eR32G32B32A32Sfloat,offsetof(Vertex, Color)),
-					VertexInputAttributeDescription(0,3,vk::Format::eR32Sfloat,offsetof(Vertex, textureID)),
-				
+					VertexInputAttributeDescription(0,1,vk::Format::eR32G32Sfloat,offsetof(Vertex, UV))
 				};
 
 				PipelineBuilder builder;
@@ -836,7 +663,7 @@ public:
 				builder.SetSamples(vk::SampleCountFlagBits::e1);
 				builder.AddDescriptorLayouts(pipelineLayouts);
 				builder.AddAttributeDescription(attributeDescriptions);
-					builder.AddBindingDescription(bindings);
+				builder.AddBindingDescription(bindings);
 				builder.SetPolygoneMode(Renderer::Instance()->GetPolygonMode());
 				builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
 				Renderer::Instance()->CompileShader("font.spvV", ShaderType::VERTEX);
@@ -844,7 +671,7 @@ public:
 				builder.AddShader(BASE_SPIRV_OUTPUT + "font.spvV", vk::ShaderStageFlagBits::eVertex);
 				builder.AddShader(BASE_SPIRV_OUTPUT + "font.spvF", vk::ShaderStageFlagBits::eFragment);
 				builder.SetSubpassAmount(0);
-				
+
 				builder.AddExtent(vk::Extent2D{ 128 ,128 });
 				builder.AddImageFormat(vk::Format::eB8G8R8A8Unorm);
 				builder.SetRenderPass(m_PageRenderPass->GetRaw());
@@ -852,214 +679,65 @@ public:
 				//builder.SetSampleShading(VK_TRUE);
 
 				builder.Build(PAGE_RENDER_PASS);
-				auto pagePipeline =  Renderer::Instance()->GetPipeline(PAGE_RENDER_PASS);
-			
+				auto pagePipeline = Renderer::Instance()->GetPipeline(PAGE_RENDER_PASS);
+
 			}
 
 
-			//m_PagesImages.resize(PageAmount);
-			//m_PageFramebuffer.resize(PageAmount);
-			//m_PagesImageMSAA.resize(PageAmount);
-			//auto device = RenderContext::GetDevice();
-			//auto samples = device->GetSamples();
-			//for (int i = 0; i < m_PagesImages.size(); i++)
-			//{
-			//	//auto usage = vk::ImageUsageFlagBits::eColorAttachment  |vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eSampled;
-			//	//m_PagesImages[i] = Image::CreateEmptyImage(PageRenderWidth, PageRenderHeight,vk::Format::eB8G8R8A8Unorm, usage, vk::SampleCountFlagBits::e1,vk::Filter::eLinear, vk::Filter::eLinear);
-			//	
-			//	
-			//	/*ImageSpecs specs;
-			//	specs.width = extent.width;
-			//	specs.height = extent.height;
-			//	specs.tiling = vk::ImageTiling::eOptimal;
-			//	specs.usage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransientAttachment;
-			//	specs.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
-			//	specs.format = swapchainFormat;
-			//	
-			//	auto msaaImage = Image::CreateVKImage(specs, samples);
-			//	auto msaaImageMemory = Image::CreateMemory(msaaImage, specs);
-			//	auto msaaImageView = Image::CreateImageView(msaaImage, swapchainFormat, vk::ImageAspectFlagBits::eColor);
-			//	m_PagesImageMSAA[i] = CreateSPtr<Image>();
-			//	m_PagesImageMSAA[i]->SetFormat(swapchainFormat);
-			//	m_PagesImageMSAA[i]->SetView(msaaImageView);
-			//	m_PagesImageMSAA[i]->SetMemory(msaaImageMemory);
-			//	m_PagesImageMSAA[i]->SetImage(msaaImage);*/
-			//	
-			//	std::vector<vk::ImageView>attachments = { m_PagesImageMSAA[i]->GetImageView(),m_PagesImages[i]->GetImageView()};
-			//	vk::FramebufferCreateInfo framebufferInfo;
-			//	framebufferInfo.flags = vk::FramebufferCreateFlags();
-			//	framebufferInfo.renderPass = m_PageRenderPass->GetRaw();
-			//	framebufferInfo.attachmentCount = attachments.size();
-			//	framebufferInfo.pAttachments = attachments.data();
-			//	framebufferInfo.width = PageRenderWidth;
-			//	framebufferInfo.height = PageRenderHeight;
-			//	framebufferInfo.layers = 1;
 
-			//	m_PageFramebuffer[i] = device->GetDevice().createFramebuffer(framebufferInfo);
-			//}
-
-				
-			
-
-			
-
-			//auto& swapchain = Renderer::Instance()->GetSwapchain();
-			//auto& frames = swapchain.GetFrames();
-			//auto swapChainExtent = swapchain.GetExtent();
-			//auto msaaImageView = swapchain.GetMSAAImageView();
-			//for (int i = 0; i < frames.size(); ++i) {
-
-			//	std::vector<vk::ImageView> attachments = {
-			//		msaaImageView,
-			//		frames[i].imageDepthView,
-			//		frames[i].imageView,
-			//	};
-
-			//	vk::FramebufferCreateInfo framebufferInfo;
-			//	framebufferInfo.flags = vk::FramebufferCreateFlags();
-			//	framebufferInfo.renderPass = m_RenderPass->GetRaw();
-			//	framebufferInfo.attachmentCount = attachments.size();
-			//	framebufferInfo.pAttachments = attachments.data();
-			//	framebufferInfo.width = swapChainExtent.width;
-			//	framebufferInfo.height = swapChainExtent.height;
-			//	framebufferInfo.layers = 1;
-
-			//	try
-			//	{
-			//		frames[i].framebuffer = device->GetDevice().createFramebuffer(framebufferInfo);
-
-			//	}
-			//	catch (vk::SystemError err)
-			//	{
-			//		
-			//		//Log::GetLog()->error("Failed to create framebuffer for frame{0} ", i);
-			//		assert(false);
-			//	}
-
-			//}
 			auto camera = *GetCamera();
-			//Renderer::Instance()->UpdateUniformBuffer(camera);
 			auto& cmd = Renderer::Instance()->GetRenderCommandBuffer(0);
-
-
-			auto extent = vk::Extent2D{ static_cast<uint32_t>(PageRenderWidth),
-					 static_cast<uint32_t>(PageRenderHeight) };
-			vk::ClearValue clearColor = { std::array<float, 4>{0.f, 0.f, 0.f, 1.0f} };
-			std::vector<vk::ClearValue> clearValues = { {clearColor,clearColor} };
 
 			Fence fence;
 			for (int i = 0; i < PageAmount; i++)
 			{
-				Renderer::Instance()->BeginFrame(camera,PageRenderWidth,PageRenderHeight);
+				Renderer::Instance()->BeginFrame(camera, PageRenderWidth, PageRenderHeight);
 				Renderer::Instance()->Wait(fence.GetFence());
 				Renderer::Instance()->Reset(fence.GetFence());
-				m_PageRenderPass->Execute(cmd,i);
-				
+				m_PageRenderPass->Execute(cmd, i);
+
 				cmd.Submit(&fence.GetFence());
 			}
-			
-			//{
-
-			//	
-
-			//	auto& renderCommandBuffer = Renderer::Instance()->GetRenderCommandBuffer(0);
-			//	auto& vkCommandBuffer = renderCommandBuffer.GetCommandBuffer();
-			//	//vk::CommandBufferBeginInfo beginInfo = {};
-			//	
-			//	vk::ClearValue clearColor = { std::array<float, 4>{0.f, 0.f, 0.f, 1.0f} };
-
-
-			//	std::vector<vk::ClearValue> clearValues = { {clearColor,clearColor} };
-
-			//	
-			//	auto fence = Renderer::Instance()->GetFence();
-			//	for (int i = 0; i <  m_PageFramebuffer.size(); i++)
-			//	{
-			//		//device->GetDevice().waitForFences(fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
-			//		//device->GetDevice().resetFences(fence);
-			//		//vkCommandBuffer.begin(beginInfo);
-			//		//renderCommandBuffer.BeginRenderPass(m_PageRenderPass->GetRaw(), m_PageFramebuffer[i], vk::Extent2D{static_cast<uint32_t>(PageRenderWidth),
-			//		// static_cast<uint32_t>(PageRenderHeight)}, clearValues);
-			//		glm::vec2 pos = { 20, 400};
-
-
-			//		vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PagePipeline->GetLayout(), 0, m_DescriptorSets[0], nullptr);
-			//		vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_PagePipeline->GetLayout(), 1, m_DescriptorSetFont, nullptr);
-
-
-			//		vkCommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_PagePipeline->GetPipeline());
-
-			//		auto viewportSize = std::make_pair(PageRenderWidth, PageRenderHeight);
-			//		vk::Viewport viewport;
-			//		viewport.x = 0;
-			//		viewport.y = 0;
-			//		viewport.minDepth = 0;
-			//		viewport.maxDepth = 1;
-			//		viewport.height = viewportSize.second;
-			//		viewport.width = viewportSize.first;
-
-			//		vk::Rect2D scissors;
-			//		scissors.offset = vk::Offset2D{ (uint32_t)0,(uint32_t)0 };
-			//		scissors.extent = vk::Extent2D{ (uint32_t)viewportSize.first,(uint32_t)viewportSize.second };
-
-			//		vkCommandBuffer.setViewport(0, 1, &viewport);
-			//		vkCommandBuffer.setScissor(0, 1, &scissors);
-			//		Renderer::Instance()->BeginBatch();
-			//		Renderer::Instance()->DrawTxt(vkCommandBuffer, txt[i% txt.size()], pos, Characters);
-			//		size_t offset = 0;
-			//		Renderer::Instance()->DrawBatch(vkCommandBuffer, offset);
-
-			//		renderCommandBuffer.EndRenderPass();
-			//		vkCommandBuffer.end();
-			//		{
-			//			std::vector<vk::CommandBuffer> commandBuffers = { vkCommandBuffer };
-
-			//			vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
-			//			vk::SubmitInfo submitInfo = {};
-
-			//			//submitInfo.waitSemaphoreCount = 1;
-			//			//submitInfo.pWaitSemaphores = waitSemaphores;
-			//			submitInfo.pWaitDstStageMask = waitStages;
-
-
-			//			submitInfo.commandBufferCount = commandBuffers.size();
-			//			submitInfo.pCommandBuffers = commandBuffers.data();
-
-			//			//submitInfo.signalSemaphoreCount = 1;
-			//			//submitInfo.pSignalSemaphores = signalSemaphores;
-			//			auto device = RenderContext::GetDevice();
-			//			//device->GetDevice().resetFences(fence);
-			//			device->GetGraphicsQueue().submit(submitInfo,fence);
-			//			
-			//		}
-
-			//	}
-
-			//	
 
 			{
 				std::vector<vk::DescriptorImageInfo> infos(PageAmount);
 				auto attach = m_AttachmentManager.GetColor({ PAGE_RENDER_PASS });
-				for (int i =0 ; i < PageAmount; i++)
+				for (int i = 0; i < PageAmount; i++)
 				{
 					infos[i].sampler = attach[i]->GetSampler();
-					infos[i].imageView= attach[i]->GetImageView();
-					infos[i].imageLayout= vk::ImageLayout::eShaderReadOnlyOptimal;
-			
+					infos[i].imageView = attach[i]->GetImageView();
+					infos[i].imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+
 				}
 				device->UpdateDescriptorSet(m_DescriptorSetTex, 0, infos, vk::DescriptorType::eCombinedImageSampler);
 
 			}
-			
-			
+
+	
+					
 		};
 
+		auto cleanup = [this]()
+			{
+
+
+
+				auto device = RenderContext::GetDevice()->GetDevice();
+				device.waitIdle();
+				m_ShaderStorageBuffer.reset();
+				m_MouseInfo.clear();
+				m_Image.reset();
+				m_ImageSelected.reset();
+				m_FontAtlas.reset();
+				m_AttachmentManager.Destroy();
+				Renderer::Instance()->Shutdown();
+
+			};
+
 		callables.bindingsInit = bindingsInit;
-		callables.bufferInit = bufferInit;
-		callables.loadTextures = loadTextures;
+		callables.createResources = createResources;
 		callables.bindResources = bindResources;
 		callables.createPipelines = createPipelines;
-		callables.createFramebuffer = createFramebuffer;
 		callables.cleanUp= cleanup;
 
 
@@ -1345,7 +1023,7 @@ public:
 				isDragged = false;
 				m_Follow = rightEdgeBottom;
 			}
-			::m_Follow = glm::clamp(m_Follow, leftEdgeBottom, glm::vec2{ rightEdgeBottom.x - 0,center.y - 40 });
+			m_Follow = glm::clamp(m_Follow, leftEdgeBottom, glm::vec2{ rightEdgeBottom.x - 0,center.y - 40 });
 
 			glm::vec2 t0;
 			t0.x = m_Follow.x + .5 * (rightEdgeBottom.x - m_Follow.x);
@@ -1535,15 +1213,27 @@ public:
 			Renderer::Instance()->AddDrawable(CLIP_RENDER_PASS, QuadRangle{ (clipPage) });
 			Renderer::Instance()->AddDrawable(NEW_PAGE_RENDER_PASS, QuadRangle{ (pages[2]) });
 			Renderer::Instance()->AddDrawable(NEW_PAGE_RIGHT_RENDER_PASS, QuadRangle{ (pages[3]) });
-			
+			static size_t currentFrame = 0;
+			AdditionalData data;
+			data.mouseFollow = m_Follow;
+			auto ptr = RenderContext::GetDevice()->GetDevice().mapMemory(m_MouseInfo[currentFrame]->GetMemory(), 0, sizeof AdditionalData);
+			memcpy(ptr,&data,sizeof AdditionalData);
+			RenderContext::GetDevice()->GetDevice().unmapMemory(m_MouseInfo[currentFrame]->GetMemory());
 
+			RenderContext::GetDevice()->UpdateDescriptorSet(m_DescriptorSets[currentFrame],1,1,
+				*m_MouseInfo[currentFrame], vk::DescriptorType::eUniformBuffer);
+			currentFrame++;
+			currentFrame %= RenderContext::GetFrameAmount();
 		}
 	}
 
 
 
 private:
-
+	struct AdditionalData
+	{
+		glm::vec2 mouseFollow;
+	};
 	int m_BaseDesc = 0;
 	int m_TexDesc = 0;
 	int m_Compute = 0;
@@ -1554,9 +1244,10 @@ private:
 	vk::DescriptorSet m_DescriptorSetTex;
 	vk::DescriptorSet m_DescriptorSetSelected;
 	vk::DescriptorSet m_DescriptorSetFont;
-		
+	glm::vec2 m_Follow;
 
 	
+	std::vector<UPtr<Buffer>> m_MouseInfo;
 	UPtr<Buffer> m_ShaderStorageBuffer;
 	SPtr<Image> m_Image;
 	SPtr<Image> m_ImageSelected;

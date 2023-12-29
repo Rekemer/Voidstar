@@ -19,72 +19,53 @@ namespace Voidstar
 			m_Resolve["Default"]  = swapchainImages;
 			m_Color["Default"]  = swapchainImages;
 		}
-		std::vector<Image*> GetColor(std::vector< std::string_view> names)
+		std::vector<SPtr<Image>> GetColor(std::vector< std::string_view> names)
 		{
-			std::vector<Image*> attachments;
-			for (auto name : names)
-			{
-				auto& attachment = m_Color.at(name.data());
-				for (auto& image : attachment)
-				{
-					
-					attachments.push_back(image.get());
-				
-				}
-
-			}
+			auto attachments = GetAttachhmentsFrom(m_Color, names);
 			return attachments;
 		}
-		std::vector<Image*> GetDepth(std::vector< std::string_view> names)
+		std::vector<SPtr<Image>> GetDepth(std::vector< std::string_view> names)
 		{
-			std::vector<Image*> attachments;
-			for (auto name : names)
-			{
-				auto& attachment = m_DepthStencil.at(name.data());
-				for (auto& image : attachment)
-				{
-				
-					attachments.push_back(image.get());
-				
-				}
-
-			}
+			auto attachments = GetAttachhmentsFrom(m_DepthStencil, names);
 			return attachments;
 		}
-		std::vector<Image*> GetResolve(std::vector< std::string_view> names)
+		std::vector<SPtr<Image>> GetResolve(std::vector< std::string_view> names)
 		{
-			std::vector<Image*> attachments;
-			for (auto name : names)
-			{
-				auto& attachment = m_Resolve.at(name.data());
-				for (auto& image : attachment)
-				{
-				
-					attachments.push_back(image.get());
-				
-				}
-
-			}
+			auto attachments = GetAttachhmentsFrom(m_Resolve, names);
 			return attachments;
 		}
 		void CreateColor(std::string_view attachmentName,
 			AttachmentManager& manager, vk::Format format, size_t width, size_t height,
 			vk::SampleCountFlagBits samples,
-			vk::ImageUsageFlags usage);
+			vk::ImageUsageFlags usage,size_t attachmentAmount);
 		void CreateDepthStencil(std::string_view attachmentName,
 			AttachmentManager& manager,  size_t width, size_t height,
 			vk::SampleCountFlagBits samples,
-			vk::ImageUsageFlags usage);
-		void CreateResolve(std::string_view attachmentName,
-			AttachmentManager& manager, vk::Format format, size_t width, size_t height,
-			vk::PresentModeKHR presentMode,
-			vk::ColorSpaceKHR colorSpace);
-
+			vk::ImageUsageFlags usage,size_t attachmentAmount);
+		
 		void Destroy();
 	private:
+		std::vector<SPtr<Image>> GetAttachhmentsFrom(std::unordered_map<std::string, std::vector<SPtr<Image>>>& from,
+			std::vector< std::string_view> names)
+		{
+			std::vector<SPtr<Image>> attachments;
+			for (auto name : names)
+			{
+				auto& attachment = from.at(name.data());
+				for (auto& image : attachment)
+				{
+
+					attachments.push_back(image);
+
+				}
+
+			}
+			return attachments;
+		}
+	private:
 		// image or swapchain image
-		std::unordered_map<std::string, std::vector<std::shared_ptr<Image>>> m_Color;
-		std::unordered_map<std::string, std::vector<std::shared_ptr<Image>>> m_Resolve;
-		std::unordered_map<std::string, std::vector<std::shared_ptr<Image>>> m_DepthStencil;
+		std::unordered_map<std::string, std::vector<SPtr<Image>>> m_Color;
+		std::unordered_map<std::string, std::vector<SPtr<Image>>> m_Resolve;
+		std::unordered_map<std::string, std::vector<SPtr<Image>>> m_DepthStencil;
 	};
 }

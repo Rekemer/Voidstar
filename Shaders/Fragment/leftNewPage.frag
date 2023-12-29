@@ -4,7 +4,6 @@ layout(location = 1) in vec4 color;
 layout(location = 2) in vec2 fragPos;
 layout(location = 3) in float texIndex;
 layout(location = 0) out vec4 outColor;
-layout(set = 1, binding = 0) uniform sampler2D Text[4];
 
 layout(set = 0, binding = 0) uniform UniformBufferObject {
     mat4 view;
@@ -13,7 +12,10 @@ layout(set = 0, binding = 0) uniform UniformBufferObject {
     float time;
     
 } ubo;
-
+layout(set = 0, binding = 1) uniform AdditionalData {
+    vec2 playerPos;
+} additionalData;
+layout(set = 1, binding = 0) uniform sampler2D Text[4];
 vec2 invLerp(vec2 a, vec2 b, vec2 v)
 {
     return (v - a)/ (b-a);
@@ -31,7 +33,7 @@ void main()
     float leftY = 200;
     float width = 400;
     float centerPos = leftX + width;
-    float distance = (length(ubo.playerPos.xy - vec2(leftX,leftY)))/(centerPos+width);
+    float distance = (length(additionalData.playerPos.xy - vec2(leftX,leftY)))/(centerPos+width);
     distance = clamp(distance,0,1);
     distance = smoothstep(0,1,distance);
     float tt = (length(centerPos - fragPos.x )+40+10000*distance)/(width/2);

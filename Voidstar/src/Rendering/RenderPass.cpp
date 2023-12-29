@@ -66,13 +66,6 @@ namespace Voidstar
 			m_IsMSAA = true;
 		}
 	}
-	//void RenderPassBuilder::DepthOutput(std::string_view attachmentName,
-	//	AttachmentManager& manager, vk::Format format, size_t width, size_t height,
-	//	vk::SampleCountFlagBits samples,
-	//	vk::ImageUsageFlags usage)
-	//{
-	//	assert(false);
-	//}
 		
 	void RenderPassBuilder::DepthStencilOutput(std::string_view attachmentName, AttachmentManager& manager, vk::ImageLayout referenceLayout)
 	{
@@ -83,10 +76,6 @@ namespace Voidstar
 		m_Format = views[0]->GetFormat();
 		m_Samples = views[0]->GetSample();
 	}
-	//void RenderPassBuilder::StencilOutput(std::string_view attachmentName, AttachmentSpec& spec, AttachmentManager& manager) {
-	//}
-	//void RenderPassBuilder::ResolveOutput(std::string_view attachmentName, AttachmentSpec& spec, AttachmentManager& manager) {
-	//}
 	void RenderPassBuilder::ResolveOutput(std::string_view attachmentName, AttachmentManager& manager, vk::ImageLayout referenceLayout)
 	{
 		auto views = manager.GetResolve({ attachmentName });

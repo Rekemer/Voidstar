@@ -118,9 +118,9 @@ namespace Voidstar
 		}
 	private:
 		size_t m_FrameBufferAmount;
-		std::vector<std::vector<Image*>> m_Color;
-		std::vector<Image*> m_DepthStencil;
-		std::vector<Image*> m_Resolve;
+		std::vector<std::vector<SPtr<Image>>> m_Color;
+		std::vector<SPtr<Image>> m_DepthStencil;
+		std::vector<SPtr<Image>> m_Resolve;
 		vk::Format m_Format;
 		vk::SampleCountFlagBits m_Samples;
 		vk::AttachmentLoadOp m_LoadOp  ;

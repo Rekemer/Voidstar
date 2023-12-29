@@ -162,11 +162,6 @@ const int QUAD_AMOUNT = 700;
 		return CubeVerticies;
 	}
 
-
-	
-	
-
-	
 	std::string InitFilePath()
 	{
 		std::string baseShaderPath = "";
@@ -191,15 +186,6 @@ const int QUAD_AMOUNT = 700;
 
 		return baseShaderPath;
 	}
-
-
-
-
-	
-
-	
-
-	
 	
 	void Renderer::CreateLayouts()
 	{
@@ -840,13 +826,9 @@ const int QUAD_AMOUNT = 700;
 		m_UserFunctions.bindingsInit();
 		CreateLayouts();
 		AllocateSets();
-
-
-		m_UserFunctions.bufferInit();
-		m_UserFunctions.loadTextures();
+		m_UserFunctions.createResources();
 		m_UserFunctions.bindResources();
 		m_UserFunctions.createPipelines();
-		m_UserFunctions.createFramebuffer();
 
 	}
 	void Renderer::CreateSyncObjects()
@@ -985,27 +967,6 @@ const int QUAD_AMOUNT = 700;
 			RenderImGui(imageIndex);
 			commandBuffers.push_back(g_MainWindowData.Frames[imageIndex].CommandBuffer);
 #endif
-			/*
-			 std::vector<vk::CommandBuffer> commandBuffers = { renderCommandBuffer.GetCommandBuffer() };
-			vk::Semaphore waitSemaphores[] = { m_ImageAvailableSemaphore };
-
-			vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
-			vk::SubmitInfo submitInfo = {};
-
-			submitInfo.waitSemaphoreCount = 1;
-			submitInfo.pWaitSemaphores = waitSemaphores;
-			submitInfo.pWaitDstStageMask = waitStages;
-
-
-			submitInfo.commandBufferCount = commandBuffers.size();
-			submitInfo.pCommandBuffers = commandBuffers.data();
-
-			submitInfo.signalSemaphoreCount = 1;
-			submitInfo.pSignalSemaphores = signalSemaphores;
-			auto device = RenderContext::GetDevice();
-			device->GetGraphicsQueue().submit(submitInfo, m_InFlightFence);*/
-			
-
 		
 
 		vk::PresentInfoKHR presentInfo = {};
@@ -1070,9 +1031,6 @@ const int QUAD_AMOUNT = 700;
 
 		auto cameraView = camera.GetView();
 		auto cameraProj = proj;
-		ubo.playerPos = glm::vec4{ camera.GetPosition(),0 };
-		ubo.playerPos = glm::vec4{ ::m_Follow,0,0 };
-		std::cout << ::m_Follow.x << " " << ::m_Follow.y << std::endl;
 		ubo.view = cameraView;
 		ubo.proj = cameraProj;
 		ubo.time = m_App->GetExeTime();
