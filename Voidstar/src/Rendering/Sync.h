@@ -26,7 +26,7 @@ namespace Voidstar
 		}
 		void Destroy()
 		{
-			if (m_Fence != VK_NULL_HANDLE)
+			if (m_Fence.operator!=(VK_NULL_HANDLE))
 			{
 				RenderContext::GetDevice()->GetDevice().waitIdle();
 				RenderContext::GetDevice()->GetDevice().destroyFence(m_Fence);
@@ -63,7 +63,7 @@ namespace Voidstar
 		};
 		void Destroy()
 		{
-			if (m_Semaphore != VK_NULL_HANDLE)
+			if (m_Semaphore.operator!=(VK_NULL_HANDLE))
 			{
 				RenderContext::GetDevice()->GetDevice().waitIdle();
 				RenderContext::GetDevice()->GetDevice().destroySemaphore(m_Semaphore);

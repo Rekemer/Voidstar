@@ -36,8 +36,8 @@ namespace Voidstar
 
 	inline std::string BASE_SHADER_PATH = "../Shaders/";
 	inline std::string BASE_RES_PATH = "res";
-	//const std::string SPIRV_COMPILER_PATH = "C:/VulkanSDK/1.3.216.0/Bin/glslc.exe";
-	const std::string SPIRV_COMPILER_PATH = "C:/VulkanSDK/1.3.268.0/Bin/glslangvalidator.exe";
+	const std::string SPIRV_COMPILER_PATH = "C:/VulkanSDK/1.3.216.0/Bin/glslangvalidator.exe";
+	//const std::string SPIRV_COMPILER_PATH = "C:/VulkanSDK/1.3.268.0/Bin/glslangvalidator.exe";
 	inline std::string BASE_SPIRV_OUTPUT = BASE_SHADER_PATH + "Binary/";
 
 	class Window;

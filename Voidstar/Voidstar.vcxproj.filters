@@ -45,6 +45,12 @@
     <ClInclude Include="src\Quadtree\Quadtree.h">
       <Filter>src\Quadtree</Filter>
     </ClInclude>
+    <ClInclude Include="src\Rendering\AttachmentManager.h">
+      <Filter>src\Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Rendering\AttachmentSpec.h">
+      <Filter>src\Rendering</Filter>
+    </ClInclude>
     <ClInclude Include="src\Rendering\Binder.h">
       <Filter>src\Rendering</Filter>
     </ClInclude>
@@ -70,6 +76,9 @@
       <Filter>src\Rendering</Filter>
     </ClInclude>
     <ClInclude Include="src\Rendering\Device.h">
+      <Filter>src\Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Rendering\Drawables.h">
       <Filter>src\Rendering</Filter>
     </ClInclude>
     <ClInclude Include="src\Rendering\Font.h">
@@ -102,6 +111,9 @@
     <ClInclude Include="src\Rendering\RenderPass.h">
       <Filter>src\Rendering</Filter>
     </ClInclude>
+    <ClInclude Include="src\Rendering\RenderPassGraph.h">
+      <Filter>src\Rendering</Filter>
+    </ClInclude>
     <ClInclude Include="src\Rendering\Renderer.h">
       <Filter>src\Rendering</Filter>
     </ClInclude>
@@ -112,6 +124,9 @@
       <Filter>src\Rendering</Filter>
     </ClInclude>
     <ClInclude Include="src\Rendering\Swapchain.h">
+      <Filter>src\Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Rendering\Sync.h">
       <Filter>src\Rendering</Filter>
     </ClInclude>
     <ClInclude Include="src\Rendering\Vertex.h">
@@ -129,11 +144,6 @@
     <ClInclude Include="src\Window.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="src\Rendering\Sync.h" />
-    <ClInclude Include="src\Rendering\RenderPassGraph.h" />
-    <ClInclude Include="src\Rendering\Attachment.h" />
-    <ClInclude Include="src\Rendering\AttachmentSpec.h" />
-    <ClInclude Include="src\Rendering\Drawables.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Dependencies\Tracy\public\TracyClient.cpp">
@@ -156,6 +166,9 @@
     </ClCompile>
     <ClCompile Include="src\Quadtree\Quadtree.cpp">
       <Filter>src\Quadtree</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Rendering\AttachmentManager.cpp">
+      <Filter>src\Rendering</Filter>
     </ClCompile>
     <ClCompile Include="src\Rendering\Buffer.cpp">
       <Filter>src\Rendering</Filter>
@@ -199,6 +212,9 @@
     <ClCompile Include="src\Rendering\RenderPass.cpp">
       <Filter>src\Rendering</Filter>
     </ClCompile>
+    <ClCompile Include="src\Rendering\RenderPassGraph.cpp">
+      <Filter>src\Rendering</Filter>
+    </ClCompile>
     <ClCompile Include="src\Rendering\Renderer.cpp">
       <Filter>src\Rendering</Filter>
     </ClCompile>
@@ -208,7 +224,5 @@
     <ClCompile Include="src\Window.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="src\Rendering\RenderPassGraph.cpp" />
-    <ClCompile Include="src\Rendering\AttachmentManager.cpp" />
   </ItemGroup>
 </Project>

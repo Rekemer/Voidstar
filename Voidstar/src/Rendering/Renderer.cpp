@@ -27,9 +27,7 @@
 #include <filesystem>
 #include <cstdlib>
 #include <algorithm>
-#include "imgui.h"
-#include "backends/imgui_impl_glfw.h"
-#include "backends/imgui_impl_vulkan.h"
+
 #include "Pipeline.h"
 #include <random>
 #include "Initializers.h"
@@ -71,20 +69,7 @@ const int QUAD_AMOUNT = 700;
 	// noise
 	const float noiseTextureWidth = 256.f;
 	const float noiseTextureHeight = 256.f;
-	// Data
-	static VkAllocationCallbacks* g_Allocator = nullptr;
-	static VkInstance               g_Instance = VK_NULL_HANDLE;
-	static VkPhysicalDevice         g_PhysicalDevice = VK_NULL_HANDLE;
-	static VkDevice                 g_Device = VK_NULL_HANDLE;
-	static uint32_t                 g_QueueFamily = (uint32_t)-1;
-	static VkQueue                  g_Queue = VK_NULL_HANDLE;
-	static VkDebugReportCallbackEXT g_DebugReport = VK_NULL_HANDLE;
-	static VkPipelineCache          g_PipelineCache = VK_NULL_HANDLE;
-	static VkDescriptorPool         g_DescriptorPool = VK_NULL_HANDLE;
 
-	static ImGui_ImplVulkanH_Window g_MainWindowData;
-	static int                      g_MinImageCount = 2;
-	static bool                     g_SwapChainRebuild = false;
 
 
 	std::vector<Vertex> GetCube()
@@ -567,193 +552,11 @@ const int QUAD_AMOUNT = 700;
 			vkGetPhysicalDeviceCalibrateableTimeDomainsEXT, vkGetCalibratedTimestampsEXT);
 
 
-#if IMGUI_ENABLED
-		InitImGui();
-#endif	
 		
 	}
 
-	void Renderer::SetupVulkanWindow(ImGui_ImplVulkanH_Window* g_wd, VkSurfaceKHR surface, int width, int height)
-	{
-		g_wd->Surface = surface;
-
-		// Check for WSI support
-		VkBool32 res;
-		vkGetPhysicalDeviceSurfaceSupportKHR(m_Device->GetDevicePhys(), m_Device->GetGraphicsIndex(), g_wd->Surface, &res);
-		if (res != VK_TRUE)
-		{
-			fprintf(stderr, "Error no WSI support on physical device 0\n");
-			exit(-1);
-		}
-
-		// Select Surface Format
-		const VkFormat requestSurfaceImageFormat[] = { VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_B8G8R8_UNORM, VK_FORMAT_R8G8B8_UNORM };
-		const VkColorSpaceKHR requestSurfaceColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
-		g_wd->SurfaceFormat = ImGui_ImplVulkanH_SelectSurfaceFormat(m_Device->GetDevicePhys(), g_wd->Surface, requestSurfaceImageFormat, (size_t)IM_ARRAYSIZE(requestSurfaceImageFormat), requestSurfaceColorSpace);
-
-		// Select Present Mode
-#ifdef IMGUI_UNLIMITED_FRAME_RATE
-		VkPresentModeKHR present_modes[] = { VK_PRESENT_MODE_MAILBOX_KHR, VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_FIFO_KHR };
-#else
-		VkPresentModeKHR present_modes[] = { VK_PRESENT_MODE_FIFO_KHR };
-#endif
-		g_wd->PresentMode = ImGui_ImplVulkanH_SelectPresentMode(m_Device->GetDevicePhys(), g_wd->Surface, &present_modes[0], IM_ARRAYSIZE(present_modes));
-		//printf("[vulkan] Selected PresentMode = %d\n", wd->PresentMode);
-
-		// Create SwapChain, RenderPass, Framebuffer, etc.
-		IM_ASSERT(g_MinImageCount >= 2);
-		ImGui_ImplVulkanH_CreateOrResizeWindow(m_Instance->GetInstance(), m_Device->GetDevicePhys(), m_Device->GetDevice(), g_wd, m_Device->GetGraphicsIndex(), NULL, width, height, g_MinImageCount);
-	}
-	void Renderer::InitImGui()
-	{
-#if IMGUI_ENABLED
-		// Create Descriptor Pool
-		{
-			VkDescriptorPoolSize pool_sizes[] =
-			{
-				{ VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
-				{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
-				{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
-				{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
-				{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
-				{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
-				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
-				{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
-				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
-				{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
-				{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
-			};
-			VkDescriptorPoolCreateInfo pool_info = {};
-			pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-			pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-			pool_info.maxSets = 1000 * IM_ARRAYSIZE(pool_sizes);
-			pool_info.poolSizeCount = (uint32_t)IM_ARRAYSIZE(pool_sizes);
-			pool_info.pPoolSizes = pool_sizes;
-			vkCreateDescriptorPool(m_Device->GetDevice(), &pool_info, VK_NULL_HANDLE, &imguiData.g_DescriptorPool);
-		}
-
-		g_MinImageCount = m_Swapchain->m_SwapchainFrames.size();
-		g_Device = m_Device->GetDevice();
-		g_QueueFamily = m_Device->GetGraphicsIndex();
-		g_Queue = m_Device->GetGraphicsQueue();
-		imguiData.g_CommandPool = m_CommandPoolManager->GetFreePool();
-		imguiData.g_CommandBuffers = CommandBuffer::CreateBuffers(imguiData.g_CommandPool, vk::CommandBufferLevel::ePrimary, m_Swapchain->m_SwapchainFrames.size());
-		// Create the Render Pass
-		{
-			VkAttachmentDescription attachment = {};
-			attachment.format = (VkFormat)m_Swapchain->m_SwapchainFormat;
-			attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-			attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-			attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-			attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-			attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-			attachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-			attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-			VkAttachmentReference color_attachment = {};
-			color_attachment.attachment = 0;
-			color_attachment.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-			VkSubpassDescription subpass = {};
-			subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-			subpass.colorAttachmentCount = 1;
-			subpass.pColorAttachments = &color_attachment;
-			VkSubpassDependency dependency = {};
-			dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-			dependency.dstSubpass = 0;
-			dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-			dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-			dependency.srcAccessMask = 0;
-			dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-			VkRenderPassCreateInfo info = {};
-			info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-			info.attachmentCount = 1;
-			info.pAttachments = &attachment;
-			info.subpassCount = 1;
-			info.pSubpasses = &subpass;
-			info.dependencyCount = 1;
-			info.pDependencies = &dependency;
-			auto err = vkCreateRenderPass(m_Device->GetDevice(), &info, nullptr, &imguiData.g_RenderPass);
-
-		}
-		g_MainWindowData.RenderPass = imguiData.g_RenderPass;
-
-
-
-		auto g_wd = &g_MainWindowData;
-		g_wd->Width = m_ViewportWidth;
-		g_wd->Height = m_ViewportHeight;
-		g_wd->Surface = *RenderContext::GetSurface();
-		g_wd->ImageCount = m_Swapchain->m_SwapchainFrames.size();
-		g_wd->PresentMode = VK_PRESENT_MODE_MAILBOX_KHR;
-		g_wd->SurfaceFormat.format = VK_FORMAT_B8G8R8A8_UNORM;
-		g_wd->Swapchain = m_Swapchain->m_Swapchain;
-
-		{
-			VkImageView attachment[1];
-			VkFramebufferCreateInfo info = {};
-			info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-			info.renderPass = g_wd->RenderPass;
-			info.attachmentCount = 1;
-			info.pAttachments = attachment;
-			info.width = g_wd->Width;
-			info.height = g_wd->Height;
-			info.layers = 1;
-			g_wd->Frames = new ImGui_ImplVulkanH_Frame[g_wd->ImageCount];
-			for (uint32_t i = 0; i < g_wd->ImageCount; i++)
-			{
-				g_wd->Frames[i].Backbuffer = m_Swapchain->m_SwapchainFrames[i].image;
-				g_wd->Frames[i].BackbufferView = m_Swapchain->m_SwapchainFrames[i].imageView;
-				g_wd->Frames[i].CommandBuffer = imguiData.g_CommandBuffers[i].GetCommandBuffer();
-				ImGui_ImplVulkanH_Frame* fd = &g_wd->Frames[i];
-				attachment[0] = fd->BackbufferView;
-				auto err = vkCreateFramebuffer(m_Device->GetDevice(), &info, nullptr, &fd->Framebuffer);
-			}
-		}
-
-
-
-
-		//SetupVulkanWindow(&g_MainWindowData,m_Surface,m_ViewportWidth, m_ViewportHeight);
-
-		ImGui::CreateContext();
-		// Setup Dear ImGui style
-		//ImGui::StyleColorsDark();
-		ImGui::StyleColorsLight();
-
-		// Setup Platform/Renderer backends
-		bool result = ImGui_ImplGlfw_InitForVulkan(m_Window->GetRaw(), true);
-		//this initializes imgui for Vulkan
-		ImGui_ImplVulkan_InitInfo init_info = {};
-		init_info.Instance = m_Instance->GetInstance();
-		init_info.PhysicalDevice = m_Device->GetDevicePhys();
-		init_info.Device = m_Device->GetDevice();
-		init_info.Queue = m_Device->GetGraphicsQueue();
-		init_info.DescriptorPool = imguiData.g_DescriptorPool;
-		init_info.MinImageCount = m_Swapchain->m_SwapchainFrames.size();
-		init_info.ImageCount = m_Swapchain->m_SwapchainFrames.size();
-		init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
-
-		result = ImGui_ImplVulkan_Init(&init_info, g_MainWindowData.RenderPass);
-
-
-
-		auto commandBuffer = CommandBuffer::CreateBuffer(imguiData.g_CommandPool, vk::CommandBufferLevel::ePrimary);
-		commandBuffer.BeginTransfering();
-
-		result = ImGui_ImplVulkan_CreateFontsTexture((VkCommandBuffer)commandBuffer.GetCommandBuffer());
-		commandBuffer.EndTransfering();
-		commandBuffer.SubmitSingle();
-		commandBuffer.Free();
-
-
-
-		ImGui_ImplVulkan_DestroyFontUploadObjects();
-
-
-
-#endif
-		
-
-	}
+	
+	
 
 	static std::unordered_map<ShaderType, const char*> PipelineShaderFolders =
 	{
@@ -883,7 +686,6 @@ const int QUAD_AMOUNT = 700;
 			auto device = m_Device->GetDevice();
 			device.waitIdle();
 
-			CleanUpImGui();
 
 
 			TracyVkDestroy(ctx)
@@ -962,11 +764,7 @@ const int QUAD_AMOUNT = 700;
 		vk::Semaphore waitSemaphore[] = { renderFinished};
 	
 			
-#if IMGUI_ENABLED
-		
-			RenderImGui(imageIndex);
-			commandBuffers.push_back(g_MainWindowData.Frames[imageIndex].CommandBuffer);
-#endif
+
 		
 
 		vk::PresentInfoKHR presentInfo = {};
@@ -1051,104 +849,7 @@ const int QUAD_AMOUNT = 700;
 			e.second.clear();
 		}
 	}
-	void Renderer::RenderImGui(int imageIndex)
-	{
-		ImGui_ImplVulkan_NewFrame();
-		ImGui_ImplGlfw_NewFrame();
-		ImGui::NewFrame();
-		bool show_demo_window = false;
-		bool show_another_window = false;
-		ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
-		// 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
-		if (show_demo_window)
-			ImGui::ShowDemoWindow(&show_demo_window);
-
-
-
-		ImGui::Begin("Surface paramentrs", &show_another_window);
-		ImGui::End();
-		m_IsNewParametrs |= m_IsResized;
-
-		// Rendering
-		ImGui::Render();
-		ImDrawData* draw_data = ImGui::GetDrawData();
-		const bool is_minimized = (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f);
-		auto wd = &g_MainWindowData;
-		if (!is_minimized)
-		{
-			wd->ClearValue.color.float32[0] = clear_color.x * clear_color.w;
-			wd->ClearValue.color.float32[1] = clear_color.y * clear_color.w;
-			wd->ClearValue.color.float32[2] = clear_color.z * clear_color.w;
-			wd->ClearValue.color.float32[3] = clear_color.w;
-
-			// frame render
-			{
-
-
-				ImGui_ImplVulkanH_Frame* fd = &wd->Frames[imageIndex];
-				{
-
-				}
-				{
-					vkResetCommandBuffer(fd->CommandBuffer, 0);
-					VkCommandBufferBeginInfo info = {};
-					info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-					info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-					vkBeginCommandBuffer(fd->CommandBuffer, &info);
-				}
-				{
-					VkRenderPassBeginInfo info = {};
-					info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-					info.renderPass = wd->RenderPass;
-					info.framebuffer = fd->Framebuffer;
-					info.renderArea.extent.width = wd->Width;
-					info.renderArea.extent.height = wd->Height;
-					info.clearValueCount = 1;
-					info.pClearValues = &wd->ClearValue;
-					vkCmdBeginRenderPass(fd->CommandBuffer, &info, VK_SUBPASS_CONTENTS_INLINE);
-				}
-
-				// Record dear imgui primitives into command buffer
-				ImGui_ImplVulkan_RenderDrawData(draw_data, fd->CommandBuffer);
-
-				// Submit command buffer
-				vkCmdEndRenderPass(fd->CommandBuffer);
-				vkEndCommandBuffer(fd->CommandBuffer);
-				{
-
-				}
-			}
-
-
-		}
-
-
-
-
-	}
-	void Renderer::CleanUpImGui()
-	{
-#if IMGUI_ENABLED
-		m_CommandPoolManager->FreePool(imguiData.g_CommandPool);
-		m_Device->GetDevice().destroyRenderPass(imguiData.g_RenderPass);
-		
-		auto device = RenderContext::GetDevice()->GetDevice();
-		for (int i = 0; i < g_MainWindowData.ImageCount; i++)
-		{
-			device.destroyFramebuffer(g_MainWindowData.Frames[i].Framebuffer);
-		}
-		device.destroyDescriptorPool(imguiData.g_DescriptorPool);
-		delete g_MainWindowData.Frames;
-		
-		ImGui_ImplVulkan_Shutdown();
-		ImGui_ImplGlfw_Shutdown();
-		ImGui::DestroyContext();
-
-
-#endif
-
-	}
 
 	
 

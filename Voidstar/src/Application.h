@@ -20,6 +20,8 @@ namespace Voidstar
 		virtual ~Application();
 		size_t GetScreenWidth() { return m_ScreenWidth; }
 		size_t GetScreenHeight() { return m_ScreenHeight; }
+		SPtr<Window> GetWindow() { return m_Window; }
+		
 	private:
 		friend class Renderer;
 		size_t m_ScreenWidth, m_ScreenHeight;

@@ -15,11 +15,28 @@
 using namespace Voidstar;
 
 
+#include "imgui.h"
+#include "backends/imgui_impl_glfw.h"
+#include "backends/imgui_impl_vulkan.h"
+
+// ImGui
+static VkDescriptorPool         g_DescriptorPool = VK_NULL_HANDLE;
+
+void CleanUpImGui()
+{
+	auto device = RenderContext::GetDevice()->GetDevice();
+	device.destroyDescriptorPool(g_DescriptorPool);
+	ImGui_ImplVulkan_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
+}
+
 std::map<unsigned char, Character> Characters;
 const float PageRenderWidth = 400.f;
 const float PageRenderHeight = 512.f;
 const int PageAmount = 4;
 std::string_view BASIC_RENDER_PASS = "Basic";
+std::string_view IMGUI_RENDER_PASS = "ImGui";
 std::string_view CLIP_RENDER_PASS = "Clip";
 std::string_view NEW_PAGE_RENDER_PASS = "NewPage";
 std::string_view NEW_PAGE_RIGHT_RENDER_PASS = "NewPageRight";
@@ -59,10 +76,10 @@ std::string_view PAGE_RENDER_PASS = "Page";
 class ExampleApplication : public Voidstar::Application
 {
 public:
+
+
 	ExampleApplication(std::string appName, size_t screenWidth, size_t screenHeight) : Voidstar::Application(appName, screenWidth, screenHeight)
 	{
-		// init renderer
-
 		
 		Settings params{3};
 		m_ClickPoints.resize(MAX_POINTS, glm::vec2(-1, -1));
@@ -175,6 +192,7 @@ public:
 
 			// render pass
 			auto samples = RenderContext::GetDevice()->GetSamples();
+			samples = vk::SampleCountFlagBits::e2;
 			size_t actualFrameAmount = RenderContext::GetFrameAmount();
 		
 
@@ -194,6 +212,7 @@ public:
 			Renderer::Instance()->CreateSyncObjects();
 
 			UPtr<RenderPass> m_RenderPass;
+			
 			UPtr<RenderPass> m_ClipRenderPass;
 			UPtr<RenderPass> m_NewPageRenderPass;
 			UPtr<RenderPass> m_NewPageRenderPassRight;
@@ -270,18 +289,16 @@ public:
 				auto depth = builder.BuildAttachmentDesc();
 
 
-#if IMGUI_ENABLED
 
-				//Define a general attachment, with its load/store operations
-				vk::AttachmentDescription colorAttachmentResolve =
-					AttachmentDescription(swapchainFormat, vk::SampleCountFlagBits::e1,
-						vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
-						vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal);
-
-
-
-				vk::AttachmentReference refResolve = { 2,vk::ImageLayout::eColorAttachmentOptimal };
-#else
+				////Define a general attachment, with its load/store operations
+				//vk::AttachmentDescription colorAttachmentResolve =
+				//	AttachmentDescription(swapchainFormat, vk::SampleCountFlagBits::e1,
+				//		vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
+				//		vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal);
+				//
+				//
+				//
+				//vk::AttachmentReference refResolve = { 2,vk::ImageLayout::eColorAttachmentOptimal };
 			
 
 
@@ -293,7 +310,6 @@ public:
 				builder.SetInitialLayout(vk::ImageLayout::eUndefined);
 				builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
 				auto resolve = builder.BuildAttachmentDesc();
-#endif			
 				builder.AddSubpass({ 0 }, { 1 }, { 2 });
 				vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0,
 					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite,
@@ -438,7 +454,7 @@ public:
 				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
 				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
 				builder.SetInitialLayout(vk::ImageLayout::eColorAttachmentOptimal);
-				builder.SetFinalLayout(vk::ImageLayout::ePresentSrcKHR);
+				builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
 				vk::AttachmentDescription colorAttachmentResolve = builder.BuildAttachmentDesc();
 
 				//Renderpasses are broken down into subpasses, there's always at least one.
@@ -565,15 +581,140 @@ public:
 			}
 			
 
+			// Create Descriptor Pool
+
+	//	VkAttachmentDescription attachment = {};
+//	attachment.format = (VkFormat)m_Swapchain->m_SwapchainFormat;
+//	attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+//	attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+//	attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+//	attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+//	attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+//	attachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+//	attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+//	VkAttachmentReference color_attachment = {};
+//	color_attachment.attachment = 0;
+//	color_attachment.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+			RenderPassBuilder builder;
+			builder.ColorOutput("Default", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
+			builder.SetLoadOp(vk::AttachmentLoadOp::eLoad);
+			builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
+			builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+			builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
+			builder.SetInitialLayout(vk::ImageLayout::eColorAttachmentOptimal);
+			builder.SetFinalLayout(vk::ImageLayout::ePresentSrcKHR);
+			auto defau = builder.BuildAttachmentDesc();
+
+			builder.AddSubpass({ 0 }, { 0 }, { 0 });
+
+			vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0,
+				vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite,
+				vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
+			builder.AddSubpassDependency(dependency0);
+
+			UPtr<RenderPass> m_ImGuiRenderPass = builder.Build(IMGUI_RENDER_PASS, m_AttachmentManager,
+				RenderContext::GetFrameAmount(),
+				extent, clearValues, [this](CommandBuffer& commandBuffer, size_t frameIndex)
+				{
+					ImGui_ImplVulkan_NewFrame();
+					ImGui_ImplGlfw_NewFrame();
+					ImGui::NewFrame();
+					bool show_demo_window = true;
+					bool show_another_window = false;
+					ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+
+					// 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
+					if (show_demo_window)
+						ImGui::ShowDemoWindow(&show_demo_window);
+
+
+
+					//ImGui::Begin("Surface paramentrs", &show_another_window);
+					//ImGui::End();
+
+
+					// Rendering
+					ImGui::Render();
+					ImDrawData* draw_data = ImGui::GetDrawData();
+					const bool is_minimized = (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f);
+					if (!is_minimized)
+					{
+						// Record dear imgui primitives into command buffer
+						ImGui_ImplVulkan_RenderDrawData(draw_data, commandBuffer.GetCommandBuffer());
+
+					}
+				});
+
+			
+
+			//auto device = RenderContext::GetDevice();
+			auto surface = RenderContext::GetSurface();
+			auto instance = RenderContext::GetInstance();
+			{
+				VkDescriptorPoolSize pool_sizes[] =
+				{
+					{ VK_DESCRIPTOR_TYPE_SAMPLER, 10 },
+					{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 10 },
+					{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 10 },
+					{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 10 },
+					{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 10 },
+					{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 10 },
+					{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10 },
+					{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 10 },
+					{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 10 },
+					{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 10 },
+					{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 10 }
+				};
+				VkDescriptorPoolCreateInfo pool_info = {};
+				pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+				pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+				pool_info.maxSets = 10 * IM_ARRAYSIZE(pool_sizes);
+				pool_info.poolSizeCount = (uint32_t)IM_ARRAYSIZE(pool_sizes);
+				pool_info.pPoolSizes = pool_sizes;
+				vkCreateDescriptorPool(device->GetDevice(), &pool_info, VK_NULL_HANDLE, &g_DescriptorPool);
+			}
+
+
+
+
+			ImGui::CreateContext();
+			// Setup Dear ImGui style
+			//ImGui::StyleColorsDark();
+			ImGui::StyleColorsLight();
+
+			// Setup Platform/Renderer backends
+			bool result = ImGui_ImplGlfw_InitForVulkan(Application::GetWindow()->GetRaw(), true);
+			//this initializes imgui for Vulkan
+			ImGui_ImplVulkan_InitInfo init_info = {};
+			init_info.Instance = instance->GetInstance();
+			init_info.PhysicalDevice = device->GetDevicePhys();
+			init_info.Device = device->GetDevice();
+			init_info.Queue = device->GetGraphicsQueue();
+			init_info.DescriptorPool = g_DescriptorPool;
+			init_info.MinImageCount = 2;
+			init_info.ImageCount = RenderContext::GetFrameAmount();
+			init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+			result = ImGui_ImplVulkan_Init(&init_info, m_ImGuiRenderPass->GetRaw());
+			auto commandBuffer = Renderer::Instance()->GetTransferCommandBuffer(0);
+			commandBuffer.BeginTransfering();
+			result = ImGui_ImplVulkan_CreateFontsTexture((VkCommandBuffer)commandBuffer.GetCommandBuffer());
+			commandBuffer.EndTransfering();
+			commandBuffer.SubmitSingle();
+			ImGui_ImplVulkan_DestroyFontUploadObjects();
+
+
 			auto graph = CreateUPtr<RenderPassGraph>();
 			graph->AddRenderPass(std::move(m_RenderPass));
 			graph->AddRenderPass(std::move(m_ClipRenderPass));
 			graph->AddRenderPass(std::move(m_NewPageRenderPass));
 			graph->AddRenderPass(std::move(m_NewPageRenderPassRight));
+			graph->AddRenderPass(std::move(m_ImGuiRenderPass));
 			graph->AddExec(BASIC_RENDER_PASS);
 			graph->AddExec(CLIP_RENDER_PASS);
 			graph->AddExec(NEW_PAGE_RENDER_PASS);
 			graph->AddExec(NEW_PAGE_RIGHT_RENDER_PASS);
+			graph->AddExec(IMGUI_RENDER_PASS);
 
 			Renderer::Instance()->AddRenderGraph("",std::move(graph));
 
@@ -713,12 +854,11 @@ public:
 
 			}
 
-	
 					
 		};
 
 		auto cleanup = [this]()
-			{
+		{
 
 
 
@@ -730,6 +870,7 @@ public:
 				m_ImageSelected.reset();
 				m_FontAtlas.reset();
 				m_AttachmentManager.Destroy();
+				CleanUpImGui();
 				Renderer::Instance()->Shutdown();
 
 			};

@@ -29,7 +29,7 @@ project "Voidstar"
     }
     libdirs { "%{wks.location}/Dependencies/GLFW/lib-vc2019", os.getenv("VULKAN_SDK") .. "/Lib" }
     
-    links { "glfw3.lib", "vulkan-1.lib", "ImGui"}
+    links { "glfw3.lib", "vulkan-1.lib"}
 
     -- Exclude tracy.cpp from using precompiled headers
     filter "files:../Dependencies/Tracy/public/**.cpp"

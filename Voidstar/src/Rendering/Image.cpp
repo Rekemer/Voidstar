@@ -657,15 +657,15 @@ namespace Voidstar
 	{
 		auto logicalDevice = RenderContext::GetDevice()->GetDevice();
 		// might be swapchain image
-		if (m_ImageMemory != VK_NULL_HANDLE)
+		if (m_ImageMemory.operator!=(VK_NULL_HANDLE))
 		{
 			logicalDevice.freeMemory(m_ImageMemory);
 		}
-		if (m_Image != VK_NULL_HANDLE)
+		if (m_Image.operator!=(VK_NULL_HANDLE))
 		{
 			logicalDevice.destroyImage(m_Image);
 		}
-		if (m_Sampler != VK_NULL_HANDLE)
+		if (m_Sampler.operator!=(VK_NULL_HANDLE))
 		{
 			logicalDevice.destroySampler(m_Sampler);
 		}
