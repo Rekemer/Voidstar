@@ -36,8 +36,8 @@ namespace Voidstar
 
 	inline std::string BASE_SHADER_PATH = "../Shaders/";
 	inline std::string BASE_RES_PATH = "res";
-	const std::string SPIRV_COMPILER_PATH = "C:/VulkanSDK/1.3.216.0/Bin/glslangvalidator.exe";
-	//const std::string SPIRV_COMPILER_PATH = "C:/VulkanSDK/1.3.268.0/Bin/glslangvalidator.exe";
+	//const std::string SPIRV_COMPILER_PATH = "C:/VulkanSDK/1.3.216.0/Bin/glslangvalidator.exe";
+	const std::string SPIRV_COMPILER_PATH = "C:/VulkanSDK/1.3.268.0/Bin/glslangvalidator.exe";
 	inline std::string BASE_SPIRV_OUTPUT = BASE_SHADER_PATH + "Binary/";
 
 	class Window;
@@ -149,7 +149,8 @@ namespace Voidstar
 		void Draw(Drawable& drawable);
 		
 		void BeginBatch();
-		void DrawBatch(vk::CommandBuffer& commandBuffer, size_t offset = 0);
+		void DrawBatch(vk::CommandBuffer& commandBuffer,size_t offset = 0, int index = 0);
+		void DrawBatchCustom(vk::CommandBuffer& commandBuffer, size_t indexAmount, size_t offset = 0, int index = 0);
 		vk::Fence GetFence()
 		{
 			return m_InFlightFence[m_CurrentFrame].GetFence();

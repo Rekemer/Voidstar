@@ -42,7 +42,7 @@ void main()
     ttt = clamp(ttt,vec2(0),vec2(1));
     float centerShadow = smoothstep(0,1,tt) ;
     outColor.xyz *= centerShadow ;
-    outColor.xyz *= (1- distance);
+    outColor.xyz *= (1 - distance);
  
     
 }

@@ -35,7 +35,7 @@ void main()
     tt = clamp(0,1,tt);
     float centerShadow = smoothstep(0,1,tt);
     centerShadow = clamp(centerShadow, 0,1);
-    outColor.xyz *= leftShadow * centerShadow ;
+   outColor.xyz *= leftShadow * centerShadow ;
    // outColor.xy = uv;   outColor.z = 0;outColor.a = 1;
  
     

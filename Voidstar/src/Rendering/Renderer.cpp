@@ -62,13 +62,8 @@ namespace Voidstar
 	QuadData quad;
 
 	TracyVkCtx ctx;
-	vk::ShaderModule CreateModule(std::string filename, vk::Device device);
-const int QUAD_AMOUNT = 700;
+	const int QUAD_AMOUNT = 700;
 
-	
-	// noise
-	const float noiseTextureWidth = 256.f;
-	const float noiseTextureHeight = 256.f;
 
 
 
@@ -235,18 +230,27 @@ const int QUAD_AMOUNT = 700;
 		m_BatchQuad = m_BatchQuadStart;
 	}
 
-	void Renderer::DrawBatch(vk::CommandBuffer& commandBuffer,size_t offset)
+	void Renderer::DrawBatch(vk::CommandBuffer& commandBuffer,size_t offset, int index)
 	{
 		vk::DeviceSize offsets[] = { offset };
 
 		{
 			vk::Buffer vertexBuffers[] = { m_QuadBufferBatch->GetBuffer() };
 			commandBuffer.bindVertexBuffers(0, 1, vertexBuffers, offsets);
-
 		}
 		commandBuffer.bindIndexBuffer(m_QuadBufferBatchIndex->GetBuffer(), 0, m_QuadBufferBatchIndex->GetIndexType());
 		commandBuffer.drawIndexed(m_QuadIndex, 1, 0, 0, 0);
-	
+	}
+	void Renderer::DrawBatchCustom(vk::CommandBuffer& commandBuffer, size_t indexAmount,size_t offset, int index)
+	{
+		vk::DeviceSize offsets[] = { offset };
+
+		{
+			vk::Buffer vertexBuffers[] = { m_QuadBufferBatch->GetBuffer() };
+			commandBuffer.bindVertexBuffers(0, 1, vertexBuffers, offsets);
+		}
+		commandBuffer.bindIndexBuffer(m_QuadBufferBatchIndex->GetBuffer(), 0, m_QuadBufferBatchIndex->GetIndexType());
+		commandBuffer.drawIndexed(indexAmount, 1, m_QuadIndex-index, 0, 0);
 	}
 
 	void UpdateVertex(Vertex*& vertex, glm::vec3 position, glm::vec4& color, glm::mat4& world,  int vertIndex, size_t texID =0)

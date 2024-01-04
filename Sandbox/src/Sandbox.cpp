@@ -308,15 +308,82 @@ public:
 				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
 				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
 				builder.SetInitialLayout(vk::ImageLayout::eUndefined);
-				builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
+				//builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
+				builder.SetFinalLayout(vk::ImageLayout::ePresentSrcKHR);
 				auto resolve = builder.BuildAttachmentDesc();
-				builder.AddSubpass({ 0 }, { 1 }, { 2 });
+				
+				
+			
+
+
+
 				vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0,
 					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite,
 					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
+				vk::SubpassDependency dependency1 = SubpassDependency(0, 1,
+					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite,
+					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
+				vk::SubpassDependency dependency2 = SubpassDependency(1,2,
+					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite,
+					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
+				vk::SubpassDependency dependency3 = SubpassDependency(2, 3,
+					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite,
+					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
+
+
+				builder.AddSubpass({ 0 }, { 1 }, { 2 });
+				builder.AddSubpass({ 0 }, { 1 }, { 2 });
+				builder.AddSubpass({ 0 }, { 1 }, { 2 });
+				builder.AddSubpass({ 0 }, { 1 }, { 2 });
 
 				builder.AddSubpassDependency(dependency0);
-				m_RenderPass = builder.Build(BASIC_RENDER_PASS, m_AttachmentManager, actualFrameAmount, extent, clearValues, execute(BASIC_RENDER_PASS));
+				builder.AddSubpassDependency(dependency1);
+				builder.AddSubpassDependency(dependency2);
+				builder.AddSubpassDependency(dependency3);
+
+
+				auto exe = [this](CommandBuffer& commandBuffer, size_t frameIndex)
+				{
+					auto vkCommandBuffer = commandBuffer.GetCommandBuffer();
+					std::string_view names[] = {BASIC_RENDER_PASS,CLIP_RENDER_PASS,NEW_PAGE_RENDER_PASS,NEW_PAGE_RIGHT_RENDER_PASS};
+					auto size = std::size(names);
+					Renderer::Instance()->BeginBatch(); 
+					for (auto i = 0; i < size; i++)
+					{
+						auto pipeline = Renderer::Instance()->GetPipeline(names[i]);
+						vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 0, m_DescriptorSets[frameIndex], nullptr); 
+						vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 1, m_DescriptorSetTex, nullptr); 
+						vkCommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline->GetPipeline()); 
+						vk::Viewport viewport; 
+						viewport.x = 0; 
+						viewport.y = 0; 
+						viewport.minDepth = 0; 
+						viewport.maxDepth = 1; 
+						viewport.width = Application::GetScreenWidth(); 
+						viewport.height = Application::GetScreenHeight(); 
+						vk::Rect2D scissors; 
+						scissors.offset = vk::Offset2D{ (uint32_t)0,(uint32_t)0 }; 
+						scissors.extent = vk::Extent2D{ (uint32_t)viewport.width,(uint32_t)viewport.height }; 
+						vkCommandBuffer.setViewport(0, 1, &viewport);
+						vkCommandBuffer.setScissor(0, 1, &scissors); 
+						auto& drawables = Renderer::Instance()->GetDrawables(names[i]);
+						for (auto& quad : drawables)
+						{
+							Renderer::Instance()->Draw(quad); 
+						}
+						auto offset = 0;
+						//if (i == 1 || i == 2 || i == 3)
+						//{
+						//	offset = sizeof(Vertex) * 4;
+						//}
+						Renderer::Instance()->DrawBatchCustom(vkCommandBuffer,drawables.size()*6,0, drawables.size() * 6);
+						if (i != size - 1)
+						vkCommandBuffer.nextSubpass(vk::SubpassContents::eInline);
+
+					}
+				};
+
+				m_RenderPass = builder.Build(BASIC_RENDER_PASS, m_AttachmentManager, actualFrameAmount, extent, clearValues, exe);
 
 				
 				
@@ -357,6 +424,7 @@ public:
 				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
 				builder.SetInitialLayout(vk::ImageLayout::eColorAttachmentOptimal);
 				builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
+				
 
 				vk::AttachmentDescription colorAttachmentResolve = builder.BuildAttachmentDesc();
 			
@@ -525,13 +593,13 @@ public:
 					builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
 					builder.AddShader(BASE_SPIRV_OUTPUT + "default.spvV", vk::ShaderStageFlagBits::eVertex);
 					builder.AddShader(BASE_SPIRV_OUTPUT + "page.spvF", vk::ShaderStageFlagBits::eFragment);
-					builder.SetSubpassAmount(0);
+					builder.SetSubpassAmount(1);
 					builder.AddExtent(extent);
 					builder.AddImageFormat(vk::Format::eB8G8R8A8Unorm);
 					builder.EnableStencilTest(true);
 					builder.SetDepthTest(false);
 					builder.WriteToDepthBuffer(true);
-					builder.SetRenderPass(m_ClipRenderPass->GetRaw());
+					builder.SetRenderPass(m_RenderPass->GetRaw());
 					builder.SetStencilRefNumber(2);
 					builder.StencilTestOp(vk::CompareOp::eEqual, vk::StencilOp::eKeep, vk::StencilOp::eDecrementAndClamp, vk::StencilOp::eKeep);
 					builder.SetMasks(0xff, 0xff);
@@ -551,7 +619,7 @@ public:
 						Renderer::Instance()->CompileShader("leftNewPage.spvF", ShaderType::FRAGMENT);
 						builder.AddShader(BASE_SPIRV_OUTPUT + "default.spvV", vk::ShaderStageFlagBits::eVertex);
 						builder.AddShader(BASE_SPIRV_OUTPUT + "leftNewPage.spvF", vk::ShaderStageFlagBits::eFragment);
-						builder.SetSubpassAmount(0);
+						builder.SetSubpassAmount(2);
 						builder.AddExtent(extent);
 						builder.AddImageFormat(vk::Format::eB8G8R8A8Unorm);
 						builder.EnableStencilTest(true);
@@ -561,13 +629,13 @@ public:
 						builder.SetStencilRefNumber(1);
 						builder.StencilTestOp(vk::CompareOp::eEqual, vk::StencilOp::eKeep, vk::StencilOp::eReplace, vk::StencilOp::eKeep);
 						builder.SetMasks(0xff, 0xff);
-						builder.SetRenderPass(m_NewPageRenderPass->GetRaw());
 						builder.Build(NEW_PAGE_RENDER_PASS);
 
 						builder.DestroyShaderModules();
 						builder.AddShader(BASE_SPIRV_OUTPUT + "default.spvV", vk::ShaderStageFlagBits::eVertex);
 						Renderer::Instance()->CompileShader("rightNewPage.spvF", ShaderType::FRAGMENT);
-						builder.SetRenderPass(m_NewPageRenderPassRight->GetRaw());
+						builder.SetSubpassAmount(3);
+						builder.SetRenderPass(m_RenderPass->GetRaw());
 						builder.AddShader(BASE_SPIRV_OUTPUT + "rightNewPage.spvF", vk::ShaderStageFlagBits::eFragment);
 						builder.SetStencilRefNumber(2);
 						builder.StencilTestOp(vk::CompareOp::eEqual, vk::StencilOp::eKeep, vk::StencilOp::eReplace, vk::StencilOp::eKeep);
@@ -581,20 +649,7 @@ public:
 			}
 			
 
-			// Create Descriptor Pool
-
-	//	VkAttachmentDescription attachment = {};
-//	attachment.format = (VkFormat)m_Swapchain->m_SwapchainFormat;
-//	attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-//	attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-//	attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-//	attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-//	attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-//	attachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-//	attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-//	VkAttachmentReference color_attachment = {};
-//	color_attachment.attachment = 0;
-//	color_attachment.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		
 
 			RenderPassBuilder builder;
 			builder.ColorOutput("Default", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
@@ -706,15 +761,15 @@ public:
 
 			auto graph = CreateUPtr<RenderPassGraph>();
 			graph->AddRenderPass(std::move(m_RenderPass));
-			graph->AddRenderPass(std::move(m_ClipRenderPass));
-			graph->AddRenderPass(std::move(m_NewPageRenderPass));
-			graph->AddRenderPass(std::move(m_NewPageRenderPassRight));
+			//graph->AddRenderPass(std::move(m_ClipRenderPass));
+			//graph->AddRenderPass(std::move(m_NewPageRenderPass));
+			//graph->AddRenderPass(std::move(m_NewPageRenderPassRight));
 			graph->AddRenderPass(std::move(m_ImGuiRenderPass));
 			graph->AddExec(BASIC_RENDER_PASS);
-			graph->AddExec(CLIP_RENDER_PASS);
-			graph->AddExec(NEW_PAGE_RENDER_PASS);
-			graph->AddExec(NEW_PAGE_RIGHT_RENDER_PASS);
-			graph->AddExec(IMGUI_RENDER_PASS);
+			//graph->AddExec(CLIP_RENDER_PASS);
+			//graph->AddExec(NEW_PAGE_RENDER_PASS);
+			//graph->AddExec(NEW_PAGE_RIGHT_RENDER_PASS);
+			//graph->AddExec(IMGUI_RENDER_PASS);
 
 			Renderer::Instance()->AddRenderGraph("",std::move(graph));
 

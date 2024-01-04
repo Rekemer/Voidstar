@@ -92,7 +92,7 @@ namespace Voidstar
 		vk::StencilOp m_DepthFailOp = vk::StencilOp::eReplace;
 		uint32_t m_StencilRefNumber = 0;
 		vk::RenderPass m_RenderPass;
-		int m_SubpassNumber;
+		int m_SubpassNumber = 0;
 
 		vk::Bool32 m_BlendEnable = VK_TRUE;
 		vk::Bool32 m_SampleShadingEnable = VK_FALSE;
