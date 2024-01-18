@@ -36,11 +36,8 @@ const float PageRenderWidth = 400.f;
 const float PageRenderHeight = 512.f;
 const int PageAmount = 4;
 std::string_view BASIC_RENDER_PASS = "Basic";
+std::string_view FEEDBACK_RENDER_PASS = "Feedback";
 std::string_view IMGUI_RENDER_PASS = "ImGui";
-std::string_view CLIP_RENDER_PASS = "Clip";
-std::string_view NEW_PAGE_RENDER_PASS = "NewPage";
-std::string_view NEW_PAGE_RIGHT_RENDER_PASS = "NewPageRight";
-std::string_view PAGE_RENDER_PASS = "Page";
 
 
 #define execute(PipelineName)\
@@ -201,70 +198,42 @@ public:
 				samples, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransientAttachment,
 				actualFrameAmount);
 
+			m_AttachmentManager.CreateColor("FeedbackBuffer", m_AttachmentManager, vk::Format::eR8G8B8A8Uint,
+				Application::GetScreenWidth()/10, Application::GetScreenHeight()/10,
+				vk::SampleCountFlagBits::e1, vk::ImageUsageFlagBits::eColorAttachment ,
+				actualFrameAmount);
+
 			m_AttachmentManager.CreateDepthStencil("DepthStencil", m_AttachmentManager,
 				Application::GetScreenWidth(), Application::GetScreenHeight(),
 				samples, vk::ImageUsageFlagBits::eDepthStencilAttachment,
 				1);
 
-			
+			m_AttachmentManager.CreateDepthStencil("FeedbackDepthStencil", m_AttachmentManager,
+				Application::GetScreenWidth(), Application::GetScreenHeight(),
+				vk::SampleCountFlagBits::e1, vk::ImageUsageFlagBits::eDepthStencilAttachment,
+				1);
 				
 
 			Renderer::Instance()->CreateSyncObjects();
 
 			UPtr<RenderPass> m_RenderPass;
-			
-			UPtr<RenderPass> m_ClipRenderPass;
-			UPtr<RenderPass> m_NewPageRenderPass;
-			UPtr<RenderPass> m_NewPageRenderPassRight;
-			UPtr<Pipeline> m_PagePipeline;
-			UPtr<Pipeline> m_GraphicsPipeline;
-			UPtr<Pipeline> m_ClipPipeline;
-			UPtr<Pipeline> m_NewPagePipeline;
-			UPtr<Pipeline> m_NewPagePipelineRight;
+			UPtr<RenderPass> m_FeedbackRenderPass;
+			UPtr<Pipeline> m_FeedbackPipeline;
 
 			vk::ClearValue clearColor = { std::array<float, 4>{137.f / 255.f, 189.f / 255.f, 199.f / 255.f, 1.0f} };
 			vk::Extent2D extent = { (uint32_t)Application::GetScreenWidth(),(uint32_t)Application::GetScreenHeight() };
+			vk::Extent2D feedbackExtent = { (uint32_t)Application::GetScreenWidth()/10,(uint32_t)Application::GetScreenHeight()/10 };
 			vk::ClearValue depthClear;
 			uint32_t stencil0 = 3;
 			depthClear.depthStencil = vk::ClearDepthStencilValue({ 1.0f, 0 });
 			std::vector<vk::ClearValue> clearValues = { {clearColor, depthClear,clearColor} };
 
 		
-			
+			// basicRender pass
 			{
 
-
-
-
-
-
 				auto samples = RenderContext::GetDevice()->GetSamples();
-
-
-
-				AttachmentSpec page;
-				page.Specs.width = PageRenderWidth;
-				page.Specs.height = PageRenderHeight;
-				page.Specs.usage = vk::ImageUsageFlagBits::eColorAttachment
-					| vk::ImageUsageFlagBits::eTransferDst |
-					vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eSampled;
-				page.Specs.format = vk::Format::eB8G8R8A8Unorm;
-				page.Specs.samples = vk::SampleCountFlagBits::e1;
-				page.Specs.minFilter = vk::Filter::eLinear;
-				page.Specs.magFilter = vk::Filter::eLinear;
-				page.Specs.tiling = vk::ImageTiling::eOptimal;
-				page.Specs.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
-				page.Amount = actualFrameAmount;
-				page.Samples = vk::SampleCountFlagBits::e1;
-
-
-
-
-
-
-
 				RenderPassBuilder builder;
-
 				//Define a general attachment, with its load/store operations
 				builder.ColorOutput("MSAA", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
 				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
@@ -275,10 +244,6 @@ public:
 				builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
 				auto msaaDecs = builder.BuildAttachmentDesc();
 
-
-
-
-
 				builder.DepthStencilOutput("DepthStencil", m_AttachmentManager, vk::ImageLayout::eDepthStencilAttachmentOptimal);
 				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
 				builder.SetSaveOp(vk::AttachmentStoreOp::eDontCare);
@@ -287,12 +252,6 @@ public:
 				builder.SetInitialLayout(vk::ImageLayout::eUndefined);
 				builder.SetFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
 				auto depth = builder.BuildAttachmentDesc();
-
-
-
-		
-
-
 
 				builder.ResolveOutput("Default", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
 				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
@@ -350,25 +309,15 @@ public:
 				m_Sphere.Pos = { 0,0,0 };
 				//m_Sphere.Rot = m_SphereRot;
 				GetCamera()->LookAt(m_Sphere.Pos);
-				
-
 			}
-			
-
-			
-			
-			
-			
-			
 			std::vector<vk::VertexInputBindingDescription> bindings
 			{
 				VertexBindingDescription(0,sizeof(Vertex),vk::VertexInputRate::eVertex),
 				VertexBindingDescription(1,sizeof(InstanceData),vk::VertexInputRate::eInstance)
 			};
 
-			std::vector<vk::VertexInputAttributeDescription> attributeDescriptions;
 
-			attributeDescriptions =
+			std::vector<vk::VertexInputAttributeDescription> attributeDescriptions =
 			{
 				VertexInputAttributeDescription(0,0,vk::Format::eR32G32B32Sfloat,offsetof(Vertex, Position)),
 				VertexInputAttributeDescription(0,1,vk::Format::eR32G32Sfloat,offsetof(Vertex, UV)),
@@ -377,17 +326,13 @@ public:
 
 				VertexInputAttributeDescription(1,4,vk::Format::eR32G32B32A32Sfloat,offsetof(InstanceData, Color)),
 				VertexInputAttributeDescription(1,5,vk::Format::eR32G32B32A32Sfloat,offsetof(InstanceData, WorldMatrix)),
-				VertexInputAttributeDescription(1,6,vk::Format::eR32G32B32A32Sfloat,offsetof(InstanceData, WorldMatrix)+sizeof(float) * 4),
-				VertexInputAttributeDescription(1,7,vk::Format::eR32G32B32A32Sfloat,offsetof(InstanceData, WorldMatrix)+sizeof(float) * 8),
-				VertexInputAttributeDescription(1,8,vk::Format::eR32G32B32A32Sfloat,offsetof(InstanceData, WorldMatrix)+sizeof(float) * 12),
+				VertexInputAttributeDescription(1,6,vk::Format::eR32G32B32A32Sfloat,offsetof(InstanceData, WorldMatrix) + sizeof(float) * 4),
+				VertexInputAttributeDescription(1,7,vk::Format::eR32G32B32A32Sfloat,offsetof(InstanceData, WorldMatrix) + sizeof(float) * 8),
+				VertexInputAttributeDescription(1,8,vk::Format::eR32G32B32A32Sfloat,offsetof(InstanceData, WorldMatrix) + sizeof(float) * 12),
 			};
-			
-
 
 			{
-				
 				auto pipelineLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutTex->GetLayout() };
-
 				PipelineBuilder builder;
 				builder.SetDevice(device->GetDevice());
 				builder.SetSamples(samples);
@@ -396,8 +341,8 @@ public:
 				builder.AddBindingDescription(bindings);
 				builder.SetPolygoneMode(Renderer::Instance()->GetPolygonMode());
 				builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
-				Renderer::Instance()->CompileShader("earth.spvV", ShaderType::VERTEX);
-				Renderer::Instance()->CompileShader("earth.spvF", ShaderType::FRAGMENT);
+				//Renderer::Instance()->CompileShader("earth.spvV", ShaderType::VERTEX);
+				//Renderer::Instance()->CompileShader("earth.spvF", ShaderType::FRAGMENT);
 				builder.AddShader(BASE_SPIRV_OUTPUT + "earth.spvV", vk::ShaderStageFlagBits::eVertex);
 				builder.AddShader(BASE_SPIRV_OUTPUT + "earth.spvF", vk::ShaderStageFlagBits::eFragment);
 				builder.SetSubpassAmount(0);
@@ -408,21 +353,96 @@ public:
 				builder.WriteToDepthBuffer(true);
 				builder.SetRenderPass(m_RenderPass->GetRaw());
 				builder.SetStencilRefNumber(2);
-				builder.StencilTestOp(vk::CompareOp::eAlways,vk::StencilOp::eReplace, vk::StencilOp::eReplace, vk::StencilOp::eReplace);
+				builder.StencilTestOp(vk::CompareOp::eAlways, vk::StencilOp::eReplace, vk::StencilOp::eReplace, vk::StencilOp::eReplace);
 				builder.SetMasks(0xff, 0xff);
 				builder.SetPolygoneMode(vk::PolygonMode::eFill);
 				builder.Build(BASIC_RENDER_PASS);
+			}
+			// feedbackPass
+			{
 
+				auto samples = RenderContext::GetDevice()->GetSamples();
+				RenderPassBuilder builder;
+				builder.ColorOutput("FeedbackBuffer", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
+				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
+				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
+				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
+				builder.SetInitialLayout(vk::ImageLayout::eUndefined);
+				builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
+				builder.SetInitialLayout(vk::ImageLayout::eUndefined);
+				builder.SetFinalLayout(vk::ImageLayout::eReadOnlyOptimal);
+				builder.BuildAttachmentDesc();
 
-				
-				
-				
+				builder.DepthStencilOutput("FeedbackDepthStencil", m_AttachmentManager, vk::ImageLayout::eDepthStencilAttachmentOptimal);
+				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
+				builder.SetSaveOp(vk::AttachmentStoreOp::eDontCare);
+				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
+				builder.SetInitialLayout(vk::ImageLayout::eUndefined);
+				builder.SetFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+				auto depth = builder.BuildAttachmentDesc();
+				vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0,
+					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite,
+					vk::PipelineStageFlagBits::eColorAttachmentOutput , vk::AccessFlagBits::eColorAttachmentWrite);
+				builder.AddSubpass({ 0 }, { 1 }, { 2 });
+				builder.AddSubpassDependency(dependency0);
+				auto exe = [this](CommandBuffer& commandBuffer, size_t frameIndex)
+					{
+						auto vkCommandBuffer = commandBuffer.GetCommandBuffer();
+						Renderer::Instance()->BeginBatch();
+						auto pipeline = Renderer::Instance()->GetPipeline(FEEDBACK_RENDER_PASS);
+						vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 0, m_DescriptorSets[frameIndex], nullptr);
+						vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 1, m_DescriptorSetTex, nullptr);
+						vkCommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline->GetPipeline());
+						vk::Viewport viewport;
+						viewport.x = 0.0f;
+						viewport.y = 0.0f;
+						viewport.minDepth = 0;
+						viewport.maxDepth = 1;
+						viewport.width = Application::GetScreenWidth();
+						viewport.height = Application::GetScreenHeight();
+						vk::Rect2D scissors;
+						scissors.offset = vk::Offset2D{ (uint32_t)0,(uint32_t)0 };
+						scissors.extent = vk::Extent2D{ (uint32_t)viewport.width,(uint32_t)viewport.height };
+						vkCommandBuffer.setViewport(0, 1, &viewport);
+						vkCommandBuffer.setScissor(0, 1, &scissors);
+						Renderer::Instance()->Draw(m_Sphere);
+						Renderer::Instance()->DrawSphereInstance(vkCommandBuffer);
+					};
+				m_FeedbackRenderPass = builder.Build(FEEDBACK_RENDER_PASS, m_AttachmentManager, actualFrameAmount, feedbackExtent, { clearColor }, exe);
+			}
 
+			{
+				auto pipelineLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutTex->GetLayout() };
+				PipelineBuilder builder;
+				builder.SetDevice(device->GetDevice());
+				builder.SetSamples(vk::SampleCountFlagBits::e1);
+				builder.AddDescriptorLayouts(pipelineLayouts);
+				builder.AddAttributeDescription(attributeDescriptions);
+				builder.AddBindingDescription(bindings);
+				builder.SetPolygoneMode(Renderer::Instance()->GetPolygonMode());
+				builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
+				Renderer::Instance()->CompileShader("feedback.spvV", ShaderType::VERTEX);
+				Renderer::Instance()->CompileShader("feedback.spvF", ShaderType::FRAGMENT);
+				builder.AddShader(BASE_SPIRV_OUTPUT + "feedback.spvV", vk::ShaderStageFlagBits::eVertex);
+				builder.AddShader(BASE_SPIRV_OUTPUT + "feedback.spvF", vk::ShaderStageFlagBits::eFragment);
+				builder.SetSubpassAmount(0);
+				builder.AddExtent(feedbackExtent);
+				builder.AddImageFormat(vk::Format::eR8G8B8A8Uint);
+				builder.EnableStencilTest(false);
+				builder.SetDepthTest(true);
+				builder.EnableBlend(false);
+				builder.WriteToDepthBuffer(true);
+				builder.SetRenderPass(m_FeedbackRenderPass->GetRaw());
+				builder.SetPolygoneMode(vk::PolygonMode::eFill);
+				builder.Build(FEEDBACK_RENDER_PASS);
 			}
 			
-
 		
 
+		
+			// ImGui
 			RenderPassBuilder builder;
 			builder.ColorOutput("Default", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
 			builder.SetLoadOp(vk::AttachmentLoadOp::eLoad);
@@ -532,147 +552,14 @@ public:
 
 
 			auto graph = CreateUPtr<RenderPassGraph>();
-			graph->AddRenderPass(std::move(m_RenderPass));
+			graph->AddRenderPass(std::move(m_FeedbackRenderPass));
 			graph->AddRenderPass(std::move(m_ImGuiRenderPass));
-			graph->AddExec(BASIC_RENDER_PASS);
+			graph->AddExec(FEEDBACK_RENDER_PASS);
 
 			Renderer::Instance()->AddRenderGraph("",std::move(graph));
 
 
 
-			m_AttachmentManager.CreateColor(PAGE_RENDER_PASS, m_AttachmentManager, vk::Format::eB8G8R8A8Unorm,
-				PageRenderWidth, PageRenderHeight, vk::SampleCountFlagBits::e1,
-				vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferDst |
-				vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eSampled, PageAmount);
-			UPtr<RenderPass> m_PageRenderPass;
-			{
-				RenderPassBuilder builder;
-
-				builder.ColorOutput(PAGE_RENDER_PASS, m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
-				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
-				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
-				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
-				builder.SetInitialLayout(vk::ImageLayout::eUndefined);
-				builder.SetFinalLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
-				vk::AttachmentDescription colorAttachmentResolve = builder.BuildAttachmentDesc();
-
-				builder.AddSubpass({ 0 }, { 0 }, { 0 });
-				vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eNone, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
-				builder.AddSubpassDependency(dependency0);
-				vk::ClearValue clearColor = { std::array<float, 4>{0.f, 0.f, 0.f, 1.0f} };
-
-
-				std::vector<vk::ClearValue> clearValues = { {clearColor,clearColor} };
-
-				m_PageRenderPass = builder.Build(PAGE_RENDER_PASS, m_AttachmentManager, PageAmount, { (uint32_t)PageRenderWidth, (uint32_t)PageRenderHeight }, clearValues,
-					[this](CommandBuffer& cmd, size_t frameIndex)
-					{
-						auto vkCommandBuffer = cmd.GetCommandBuffer();
-						glm::vec2 pos = { 20, 400 };
-
-						auto pipeline = Renderer::Instance()->GetPipeline(PAGE_RENDER_PASS);
-						vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 0, m_DescriptorSets[0], nullptr);
-						vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 1, m_DescriptorSetFont, nullptr);
-
-
-						vkCommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline->GetPipeline());
-
-						auto viewportSize = std::make_pair(PageRenderWidth, PageRenderHeight);
-						vk::Viewport viewport;
-						viewport.x = 0;
-						viewport.y = 0;
-						viewport.minDepth = 0;
-						viewport.maxDepth = 1;
-						viewport.height = viewportSize.second;
-						viewport.width = viewportSize.first;
-
-						vk::Rect2D scissors;
-						scissors.offset = vk::Offset2D{ (uint32_t)0,(uint32_t)0 };
-						scissors.extent = vk::Extent2D{ (uint32_t)viewportSize.first,(uint32_t)viewportSize.second };
-
-						vkCommandBuffer.setViewport(0, 1, &viewport);
-						vkCommandBuffer.setScissor(0, 1, &scissors);
-						Renderer::Instance()->BeginBatch();
-						Renderer::Instance()->DrawTxt(vkCommandBuffer, txt[frameIndex % txt.size()], pos, Characters);
-						size_t offset = 0;
-						Renderer::Instance()->DrawBatch(vkCommandBuffer, offset);
-					}
-
-				);
-			}
-
-			{
-				auto m_DescriptorSetLayout = Renderer::Instance()->GetSetLayout(0, PipelineType::RENDER);
-				auto m_DescriptorSetLayoutFont = Renderer::Instance()->GetSetLayout(m_TexAtlas, PipelineType::RENDER);
-
-				auto samples = RenderContext::GetDevice()->GetSamples();
-				auto pipelineLayouts = std::vector<vk::DescriptorSetLayout>{
-					m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutFont->GetLayout() };
-				std::vector<vk::VertexInputBindingDescription> bindings{ VertexBindingDescription(0,sizeof(Vertex),vk::VertexInputRate::eVertex) };
-
-				std::vector<vk::VertexInputAttributeDescription> attributeDescriptions;
-
-				attributeDescriptions =
-				{
-					VertexInputAttributeDescription(0,0,vk::Format::eR32G32B32Sfloat,offsetof(Vertex, Position)),
-					VertexInputAttributeDescription(0,1,vk::Format::eR32G32Sfloat,offsetof(Vertex, UV))
-				};
-
-				PipelineBuilder builder;
-				builder.SetDevice(device->GetDevice());
-				builder.SetSamples(vk::SampleCountFlagBits::e1);
-				builder.AddDescriptorLayouts(pipelineLayouts);
-				builder.AddAttributeDescription(attributeDescriptions);
-				builder.AddBindingDescription(bindings);
-				builder.SetPolygoneMode(Renderer::Instance()->GetPolygonMode());
-				builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
-				Renderer::Instance()->CompileShader("font.spvV", ShaderType::VERTEX);
-				Renderer::Instance()->CompileShader("font.spvF", ShaderType::FRAGMENT);
-				builder.AddShader(BASE_SPIRV_OUTPUT + "font.spvV", vk::ShaderStageFlagBits::eVertex);
-				builder.AddShader(BASE_SPIRV_OUTPUT + "font.spvF", vk::ShaderStageFlagBits::eFragment);
-				builder.SetSubpassAmount(0);
-
-				builder.AddExtent(vk::Extent2D{ 128 ,128 });
-				builder.AddImageFormat(vk::Format::eB8G8R8A8Unorm);
-				builder.SetRenderPass(m_PageRenderPass->GetRaw());
-
-				//builder.SetSampleShading(VK_TRUE);
-
-				builder.Build(PAGE_RENDER_PASS);
-				auto pagePipeline = Renderer::Instance()->GetPipeline(PAGE_RENDER_PASS);
-
-			}
-
-
-
-			auto camera = *GetCamera();
-			auto& cmd = Renderer::Instance()->GetRenderCommandBuffer(0);
-
-			Fence fence;
-			for (int i = 0; i < PageAmount; i++)
-			{
-				Renderer::Instance()->BeginFrame(camera, PageRenderWidth, PageRenderHeight);
-				Renderer::Instance()->Wait(fence.GetFence());
-				Renderer::Instance()->Reset(fence.GetFence());
-				m_PageRenderPass->Execute(cmd, i);
-
-				cmd.Submit(&fence.GetFence());
-			}
-
-			{
-				std::vector<vk::DescriptorImageInfo> infos(PageAmount);
-				auto attach = m_AttachmentManager.GetColor({ PAGE_RENDER_PASS });
-				for (int i = 0; i < PageAmount; i++)
-				{
-					infos[i].sampler = attach[i]->GetSampler();
-					infos[i].imageView = attach[i]->GetImageView();
-					infos[i].imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-
-				}
-				device->UpdateDescriptorSet(m_DescriptorSetTex, 0, infos, vk::DescriptorType::eCombinedImageSampler);
-
-			}
 
 					
 		};

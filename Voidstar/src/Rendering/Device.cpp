@@ -124,6 +124,10 @@ namespace Voidstar
 			&deviceFeatures
 		);
 
+		// for read only optimal image layout of attachment 
+		vk::PhysicalDeviceSynchronization2Features sync2;
+		sync2.synchronization2 = true;
+		deviceInfo.pNext = &sync2;
 		try {
 			device->m_Device = device->m_PhysicalDevice.createDevice(deviceInfo);
 

@@ -40,7 +40,10 @@ namespace Voidstar
 		void SetSamples(vk::SampleCountFlagBits samples);
 		void SetRenderPass(vk::RenderPass renderPass);
 		void SetSubpassAmount(int amount);
-		void SetBlendOp();
+		void EnableBlend(bool state)
+		{
+			m_BlendEnable = state;
+		}
 		void SetStencilRefNumber(uint32_t number)
 		{
 			m_StencilRefNumber = number;

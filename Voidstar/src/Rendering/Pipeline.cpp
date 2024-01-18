@@ -364,7 +364,7 @@ namespace Voidstar
 		colorBlendAttachment.colorWriteMask = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA;
 
 
-		colorBlendAttachment.blendEnable = VK_TRUE;
+		colorBlendAttachment.blendEnable = m_BlendEnable;
 		colorBlendAttachment.colorBlendOp = m_BlendOp;
 		colorBlendAttachment.srcColorBlendFactor = m_BlendSrc;
 		colorBlendAttachment.dstColorBlendFactor = m_BlendDst;
