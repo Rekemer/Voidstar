@@ -16,6 +16,7 @@ namespace Voidstar
 			static bool IsKeyPressed(int keycode);
 			static bool IsKeyTyped(int keycode);
 			static bool IsMousePressed(int mouse);
+			static void SetMousePos(float x, float y);
 			static std::tuple<float,float> GetMousePos();
 		private:
 			friend static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);

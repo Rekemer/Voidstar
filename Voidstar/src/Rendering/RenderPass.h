@@ -90,7 +90,7 @@ namespace Voidstar
 						}
 						else if (type == OutputType::DEPTH)
 						{
-							views.push_back(m_DepthStencil[i]->GetImageView());
+							views.push_back(m_DepthStencil[0]->GetImageView());
 						}
 						else if (type == OutputType::RESOLVE)
 						{

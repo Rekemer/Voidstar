@@ -36,7 +36,8 @@
 #include  "Generation.h"
 #include"Settings.h"
 #include"Sync.h"
-
+#include <gtc/matrix_transform.hpp>
+#include <gtc/quaternion.hpp>
 
 
 namespace std
@@ -60,7 +61,8 @@ namespace Voidstar
 
 	
 	QuadData quad;
-
+	std::vector<Vertex> sphere;
+	std::vector<IndexType> sphereIndicies;
 	TracyVkCtx ctx;
 	const int QUAD_AMOUNT = 700;
 
@@ -209,7 +211,6 @@ namespace Voidstar
 	{
 		assert(frameindex < m_RenderCommandBuffer.size());
 		return m_RenderCommandBuffer[frameindex];
-		// TODO: �������� ����� �������� return
 	}
 
 	CommandBuffer& Renderer::GetComputeCommandBuffer(size_t frameindex)
@@ -228,6 +229,7 @@ namespace Voidstar
 	{
 		m_QuadIndex = 0;
 		m_BatchQuad = m_BatchQuadStart;
+		m_BatchInstance = m_BatchInstanceStart;
 	}
 
 	void Renderer::DrawBatch(vk::CommandBuffer& commandBuffer,size_t offset, int index)
@@ -344,10 +346,41 @@ namespace Voidstar
 		commandBuffer.drawIndexed(5*6, 1, 0, 0,0);
 	}
 
-
+	void Renderer::Draw(Sphere& sphere)
+	{
+		DrawSphere(sphere.Pos,sphere.Scale,sphere.Color,sphere.Rot);
+	}
 	void Renderer::Draw(QuadRangle& quadrangle)
 	{
 		DrawQuad(quadrangle.Verticies);
+	}
+	void Renderer::DrawSphere(glm::vec3 pos, glm::vec3 scale, glm::vec4 color, glm::vec3 rot)
+	{
+		m_BatchInstance->Color = color;
+		std::cout << rot.x << " " << rot.y << std::endl;
+		auto iden = glm::identity<glm::mat4>();
+		iden = glm::translate(iden, pos);
+		auto rotMatrix =  glm::rotate(iden, glm::radians(rot.x), glm::vec3{ 1,0,0 });
+		rotMatrix = glm::rotate(rotMatrix, glm::radians(rot.y), glm::vec3{ 0,1,0 });
+		rotMatrix = glm::scale(rotMatrix,scale);
+		auto transpose = glm::transpose(rotMatrix);
+		m_BatchInstance->WorldMatrix= transpose;
+		m_BatchInstance++;
+	}
+	void Renderer::DrawSphereInstance(vk::CommandBuffer& commandBuffer)
+	{
+		vk::DeviceSize offsets[] = { 0 };
+
+		{
+			vk::Buffer vertexBuffers[] = { m_SphereBuffer->GetBuffer() };
+			vk::Buffer instanceBuffers[] = { m_InstanceBuffer->GetBuffer() };
+			commandBuffer.bindVertexBuffers(0, 1, vertexBuffers, offsets);
+			commandBuffer.bindVertexBuffers(1, 1, instanceBuffers, offsets);
+
+		}
+		commandBuffer.bindIndexBuffer(m_SphereIndexBuffer->GetBuffer(), 0, m_SphereIndexBuffer->GetIndexType());
+		auto instanceAmount = static_cast<uint64_t>(m_BatchInstance - m_BatchInstanceStart);
+		commandBuffer.drawIndexed(m_SphereIndexBuffer->GetIndexAmount(), instanceAmount, 0, 0, 0);
 	}
 	void Renderer::DrawQuad(glm::mat4& world, glm::vec4 color)
 	{
@@ -429,9 +462,9 @@ namespace Voidstar
 		commandBufferInit();
 		
 		quad = GeneratePlane(1);
+		sphere = GenerateSphere(1,10, sphereIndicies);
 		auto& verticies = quad.verticies;
 		auto& indices = quad.indicies;
-		
 		auto indexSize = SizeOfBuffer(indices.size(), indices[0]);
 		{
 			{
@@ -452,11 +485,6 @@ namespace Voidstar
 				m_TransferCommandBuffer[0].EndTransfering();
 				m_TransferCommandBuffer[0].SubmitSingle();
 			}
-			
-			
-			
-			
-
 			{
 
 
@@ -520,8 +548,61 @@ namespace Voidstar
 				m_TransferCommandBuffer[0].SubmitSingle();
 			}
 
+
+
 		}
 
+
+		{
+			auto indexSize = SizeOfBuffer(sphereIndicies.size(), sphereIndicies[0]);
+			{
+				{
+					SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(indexSize);
+
+
+					{
+						BufferInputChunk inputBuffer;
+						inputBuffer.size = indexSize;
+						inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+						inputBuffer.usage = vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst;
+						m_SphereIndexBuffer = CreateUPtr<IndexBuffer>(inputBuffer, sphereIndicies.size(), vk::IndexType::eUint32);
+
+					}
+
+					m_TransferCommandBuffer[0].BeginTransfering();
+					m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_SphereIndexBuffer.get(), (void*)sphereIndicies.data(), indexSize);
+					m_TransferCommandBuffer[0].EndTransfering();
+					m_TransferCommandBuffer[0].SubmitSingle();
+				}
+				{
+					auto vertexSize = SizeOfBuffer(sphere.size(), sphere[0]);
+					{
+						BufferInputChunk inputBuffer;
+						inputBuffer.size = vertexSize;
+						inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+						inputBuffer.usage = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer;
+
+						m_SphereBuffer = CreateUPtr<Buffer>(inputBuffer);
+					}
+					SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(vertexSize);
+					m_TransferCommandBuffer[0].BeginTransfering();
+					m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_SphereBuffer.get(), (void*)sphere.data(), vertexSize);
+					m_TransferCommandBuffer[0].EndTransfering();
+					m_TransferCommandBuffer[0].SubmitSingle();
+				}
+			}
+		}
+		
+
+		{
+			BufferInputChunk inputBuffer;
+			inputBuffer.size = sizeof(InstanceData) * 30;
+			inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+			inputBuffer.usage = vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eVertexBuffer;
+			m_InstanceBuffer = CreateUPtr<Buffer>(inputBuffer);
+			m_BatchInstanceStart = reinterpret_cast<InstanceData*>(m_Device->GetDevice().mapMemory(m_InstanceBuffer->GetMemory(), 0, inputBuffer.size));
+
+		}
 
 		// get frame amount
 		auto framesAmount = RenderContext::GetFrameAmount();
@@ -728,9 +809,12 @@ namespace Voidstar
 			m_Pipelines.clear();
 			m_CommandPoolManager->Release();
 			m_QuadBuffer.reset();
+			m_SphereBuffer.reset();
+			m_InstanceBuffer.reset();
+			m_SphereIndexBuffer.reset();
+			m_QuadIndexBuffer.reset();
 			m_QuadBufferBatch.reset();
 			m_QuadBufferBatchIndex.reset();
-			m_QuadIndexBuffer.reset();
 			RenderContext::Shutdown();
 			
 
@@ -832,11 +916,14 @@ namespace Voidstar
 		UniformBufferObject ubo{};
 
 		auto cameraView = camera.GetView();
-		auto cameraProj = proj;
+		auto cameraProj = camera.GetProj();
 		ubo.view = cameraView;
 		ubo.proj = cameraProj;
 		ubo.time = m_App->GetExeTime();
 		memcpy(uniformBuffersMapped[m_CurrentFrame], &ubo, sizeof(ubo));
+		//auto ans = cameraProj * cameraView * glm::vec4{ 1,0,1,1 };
+		//ans /= ans.w;
+		//std::cout << "sd";
 
 	}
 
@@ -844,7 +931,7 @@ namespace Voidstar
 		size_t viewportHeight)
 	{
 		auto proj = glm::ortho(0.0f, (float)viewportWidth, (float)viewportHeight,0.f);
-		UpdateUniformBuffer(proj, camera);
+		UpdateUniformBuffer(camera.GetProj(), camera);
 	}
 	void Renderer::EndFrame()
 	{

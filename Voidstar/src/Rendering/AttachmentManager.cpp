@@ -56,7 +56,7 @@ namespace Voidstar
 		depthSpec.Candidates = { vk::Format::eD32SfloatS8Uint ,
 			vk::Format::eD24UnormS8Uint,
 		vk::Format::eD16UnormS8Uint };
-
+		//{ vk::Format::eD32Sfloat, vk::Format::eD24UnormS8Uint }
 		depthSpec.Specs.width = width;
 		depthSpec.Specs.height = height;
 		depthSpec.Specs.usage = usage;

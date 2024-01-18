@@ -54,6 +54,10 @@ namespace Voidstar {
 	{
 		return glfwGetMouseButton(m_currentWindow->GetRaw(), mouse);
 	}
+	void Input::SetMousePos(float x, float y)
+	{
+		glfwSetCursorPos(m_currentWindow->GetRaw(), x, y);
+	}
 	std::tuple<float, float> Input::GetMousePos()
 	{
 		double currentPosX = 0, currentPosY = 0;

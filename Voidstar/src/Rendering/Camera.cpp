@@ -3,8 +3,11 @@
 #include "../Input.h"
 #include "../Keys.h"
 #include "../Log.h"
-#include "gtc/quaternion.hpp"
-#include "gtc/quaternion.hpp"
+#include<gtc/matrix_transform.hpp>
+#include<gtc/type_ptr.hpp>
+#include<gtx/rotate_vector.hpp>
+#include<gtx/vector_angle.hpp>
+#include "glfw3.h"
 namespace Voidstar
 {
 
@@ -21,6 +24,7 @@ namespace Voidstar
             ProcessInput(deltaTime);
             ProcessMouse();
             UpdateView();
+           // LookAt({0,0,0});
         }
       //Log::GetLog()->info("camera pos: {0} {1} {2}\n", m_Position.x, m_Position.y, m_Position.z);
         if (Input::IsKeyTyped(VS_KEY_C))
@@ -35,8 +39,8 @@ namespace Voidstar
                                 0,-1,0,0,
                                 0,0,-1,0,
                                 0,0,0,1});
-        m_View = x*glm::lookAt(m_Position, m_Position + m_Front, m_Up);
-        auto invertedView = glm::inverse(m_View);
+        m_View = glm::lookAt(m_Position, m_Position + m_Front, m_Up);
+        //auto invertedView = glm::inverse(m_View);
         //vec3(inverse(ubo.view)[3]);
        // Log::GetLog()->info("front {0} {1} {2}", m_Front.x , m_Front.y, m_Front.z);
         //m_View= glm::lookAt(glm::vec3(0.0f, 2.0f, -2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
@@ -53,20 +57,21 @@ namespace Voidstar
         float inverseAspect = 1.f / aspect;
         float angle = glm::radians(45.f);
         float tan = glm::tan(angle/2);
-        const float farPlane = 10000;
-        const float nearPlane = 10.0;
+        const float farPlane = 10;
+        const float nearPlane = 1.0;
         glm::mat4 p = {inverseAspect/tan,0,0,0,
                         0,1/tan,0,0,
                         0,0,farPlane/(farPlane - nearPlane),1,
                         0,0,(-nearPlane*farPlane)/(farPlane-nearPlane),0};
-        m_Proj = glm::perspective(angle, aspect, nearPlane, farPlane);
-        m_Proj = p;
-        m_Proj = glm::ortho(-width / 16,width/16, -height / 16,height/16,0.f,1000.f);
-        m_Proj = glm::ortho(0.0f, 800.0f,600.0f, 0.0f);
-        float zoom = 1000;
-        float aspectRatio = 9.f/16.f;
-        m_Proj = glm::ortho(0.f, zoom,zoom*aspectRatio,0.f);
-        m_Proj = glm::ortho(0.f, 16.f*90, 9.f * 90,0.f);
+       m_Proj = glm::perspective(angle, aspect, nearPlane, farPlane);
+       m_Proj[1][1] *= -1;
+      // m_Proj = p;
+       //m_Proj = glm::ortho(-width / 16,width/16, -height / 16,height/16,0.f,1000.f);
+       //m_Proj = glm::ortho(0.0f, 800.0f,600.0f, 0.0f);
+       //float zoom = 1000;
+       //float aspectRatio = 9.f/16.f;
+       //m_Proj = glm::ortho(0.f, zoom,zoom*aspectRatio,0.f);
+       //m_Proj = glm::ortho(0.f, 16.f*90, 9.f * 90,0.f);
 
     }
 
@@ -99,6 +104,7 @@ namespace Voidstar
 
             if (Input::IsKeyPressed(VS_KEY_D))
             {
+
                 auto pos = m_Position + right * cameraSpeed * deltaTime;
                 m_Position = pos;
             }
@@ -110,11 +116,13 @@ namespace Voidstar
     double lastX = 0;
     double lastY = 0;
 
-   // void Camera::LookAt(glm::vec3 pos)
-   // {
-   //
-   // }
-
+    void Camera::LookAt(glm::vec3 pos)
+    {
+        auto diff = glm::normalize(pos - m_Position);
+        m_Front = diff;
+        m_View = glm::lookAt(m_Position, pos, m_Up);
+    }
+   
     void Camera::ProcessMouse()
     {
        if (firstMouse)
@@ -131,34 +139,32 @@ namespace Voidstar
         float res = 90;
         float screenWidth = 16 * res;
         float screenHeight = 9 * res;
-        double currentXPos = std::get<0>(position);
-        double currentYPos = std::get<1>(position);
-        float  clipX = (2 * currentXPos / screenWidth) - 1;
-        float   clipY = 1 - (2 * currentYPos / screenHeight);
-
-
+        glm::vec2 currentPos = { std::get<0>(position),std::get<1>(position) };
+       // float  clipX = (2 * currentXPos / screenWidth) - 1;
+       // float   clipY = 1 - (2 * currentYPos / screenHeight);
+        float sens = 20.f;
+        float rotX = sens * (float)(currentPos.y - (screenHeight / 2)) / screenHeight;
+        float rotY = sens * (float)(currentPos.x- (screenWidth / 2)) / screenWidth;
         
+#if 1
 
-        float xoffset = currentXPos - lastX;
-        float yoffset = currentYPos - lastY;
-        yoffset = 20;
+        // Calculates upcoming vertical change in the Orientation
+        glm::vec3 newOrientation = glm::rotate(m_Front, glm::radians(-rotX), glm::normalize(glm::cross(m_Front, m_Up)));
 
+        // Decides whether or not the next vertical Orientation is legal or not
+        if (abs(glm::angle(newOrientation, m_Up) - glm::radians(90.0f)) <= glm::radians(85.0f))
+        {
+            m_Front = newOrientation;
+        }
+
+        // Rotates the Orientation left and right
+        m_Front = glm::rotate(m_Front, glm::radians(-rotY), m_Up);
+        // Sets mouse cursor to the middle of the screen so that it doesn't end up roaming around
+        Input::SetMousePos((screenWidth / 2), (screenHeight / 2));
+#else
         
-        
-        lastX = currentXPos;
-        lastY = currentYPos;
-        glm::vec3 direction;
-        float sens = 0.4f;
-        m_Yaw += xoffset * sens;
-        m_Pitch -= yoffset * sens;
-        m_Pitch = glm::clamp(m_Pitch, -89.f, 89.f);
-        float sq = cos(glm::radians(m_Pitch));
-        direction.x = cos(glm::radians(m_Yaw)) * sq;
-        direction.y = sin(glm::radians(m_Pitch));
-        direction.z = sin(glm::radians(m_Yaw)) * sq;
-        m_Front = glm::normalize(direction);
-        lastX = currentXPos;
-        lastY = currentYPos;
+#endif // 0
+
 
     }
 }

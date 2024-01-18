@@ -78,51 +78,36 @@ QuadData GeneratePlane(float detail)
 	
 		return {vertices,indices};
 	}
-
-std::vector<Vertex> GenerateSphere(float radius, int rings, int sectors, std::vector<IndexType>& indices)
+float toRadians(float degrees) { return (degrees * 2.0f * 3.14159f) / 360.0f; }
+std::vector<Vertex> GenerateSphere(float radius, float prec, std::vector<IndexType>& indices)
 	{
+		float numVertices = (prec + 1) * (prec + 1);
+		float numIndices = prec * prec * 6;
+
 		std::vector<Vertex> vertices;
-		float const R = 1.0f / static_cast<float>(rings - 1);
-		float const S = 1.0f / static_cast<float>(sectors - 1);
-		{
-	
-			int r, s;
-			float pi = 3.14159;
-			for (r = 0; r < rings; ++r) {
-				for (s = 0; s < sectors; ++s) {
-					float const y = glm::sin(-pi * 2 + pi * r * R);
-					float const x = glm::cos(2 * pi * s * S) * glm::sin(pi * r * R);
-					float const z = glm::sin(2 * pi * s * S) * glm::sin(pi * r * R);
-	
-					Vertex vertex;
-					vertex.Position.x  = x * radius;
-					vertex.Position.y  = y * radius;
-					vertex.Position.z  = z * radius;
-	
-					vertices.push_back(vertex);
-				}
+		indices.resize(numIndices);
+		vertices.resize(numVertices);
+		for (int i = 0; i <= prec; i++) {
+			for (int j = 0; j <= prec; j++) {
+				float y = (float)cos(toRadians(180.0f - i * 180.0f / prec));
+				float x = -(float)cos(toRadians(j * 360.0f / prec)) * (float)abs(cos(asin(y)));
+				float z = (float)sin(toRadians(j * 360.0f / prec)) * (float)abs(cos(asin(y)));
+				vertices[i * (prec + 1) + j].Position = glm::vec3(x, y, z);
+				vertices[i * (prec + 1) + j].UV = glm::vec2(((float)j / prec), ((float)i / prec));
 			}
 		}
 	
-		{
-			int r, s;
-	
-			for (r = 0; r < rings - 1; ++r) {
-				for (s = 0; s < sectors - 1; ++s) {
-					int first = r * sectors + s;
-					int second = (r + 1) * sectors + s;
-					int third = (r + 1) * sectors + (s + 1);
-					int fourth = r * sectors + (s + 1);
-	
-					indices.push_back(first);
-					indices.push_back(second);
-					indices.push_back(third);
-	
-					indices.push_back(first);
-					indices.push_back(third);
-					indices.push_back(fourth);
-				}
+		// generate indexes
+		for (int i = 0; i < prec; i++) {
+			for (int j = 0; j < prec; j++) {
+				indices[6 * (i * prec + j) + 0] = i * (prec + 1) + j;
+				indices[6 * (i * prec + j) + 1] = i * (prec + 1) + j + 1;
+				indices[6 * (i * prec + j) + 2] = (i + 1) * (prec + 1) + j;
+				indices[6 * (i * prec + j) + 3] = i * (prec + 1) + j + 1;
+				indices[6 * (i * prec + j) + 4] = (i + 1) * (prec + 1) + j + 1;
+				indices[6 * (i * prec + j) + 5] = (i + 1) * (prec + 1) + j;
 			}
+
 		}
 	
 	

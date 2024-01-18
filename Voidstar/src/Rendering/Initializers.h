@@ -38,7 +38,8 @@ inline vk::DescriptorSetLayoutBinding DescriptorBindingDescription(
 //dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests;
 //dependency.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
 
-inline vk::SubpassDependency SubpassDependency(uint32_t srcSubpass, uint32_t dstSubpass, vk::PipelineStageFlags srcStageMask, vk::AccessFlags srcAccessMask, vk::PipelineStageFlags dstStageMask, vk::AccessFlagBits dstcAccessMask)
+inline vk::SubpassDependency SubpassDependency(uint32_t srcSubpass, uint32_t dstSubpass, 
+	vk::Flags<vk::PipelineStageFlagBits> srcStageMask, vk::Flags<vk::AccessFlagBits> srcAccessMask, vk::Flags<vk::PipelineStageFlagBits> dstStageMask, vk::Flags<vk::AccessFlagBits> dstcAccessMask)
 {
 	vk::SubpassDependency dependency{};
 	dependency.srcSubpass = srcSubpass;

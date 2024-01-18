@@ -37,6 +37,4 @@ void main()
     centerShadow = clamp(centerShadow, 0,1);
    outColor.xyz *= leftShadow * centerShadow ;
    // outColor.xy = uv;   outColor.z = 0;outColor.a = 1;
- 
-    
 }

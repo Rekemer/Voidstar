@@ -11,5 +11,5 @@ namespace Voidstar
 	};
 
 	QuadData GeneratePlane(float detail);
-	std::vector<Vertex> GenerateSphere(float radius, int rings, int sectors, std::vector<IndexType>& indices);
+	std::vector<Vertex> GenerateSphere(float radius, float prec, std::vector<IndexType>& indices);
 }

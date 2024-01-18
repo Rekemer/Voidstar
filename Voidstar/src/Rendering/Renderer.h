@@ -147,7 +147,9 @@ namespace Voidstar
 		void DrawQuad(std::vector<Vertex>& verticies);
 		void DrawTxt(vk::CommandBuffer commandBuffer, std::string_view str,glm::vec2 pos, std::map<unsigned char, Character> &Characters);
 		void Draw(Drawable& drawable);
-		
+		void Renderer::DrawSphere(glm::vec3 pos, glm::vec3 scale,
+			glm::vec4 color, glm::vec3 rot);
+		void Renderer::DrawSphereInstance(vk::CommandBuffer& commandBuffer);
 		void BeginBatch();
 		void DrawBatch(vk::CommandBuffer& commandBuffer,size_t offset = 0, int index = 0);
 		void DrawBatchCustom(vk::CommandBuffer& commandBuffer, size_t indexAmount, size_t offset = 0, int index = 0);
@@ -159,6 +161,9 @@ namespace Voidstar
 		UPtr<IndexBuffer> m_QuadBufferBatchIndex{ nullptr };
 		Vertex * m_BatchQuad;
 		Vertex * m_BatchQuadStart;
+		UPtr<Buffer> m_InstanceBuffer{ nullptr };
+		InstanceData* m_BatchInstance; 
+		InstanceData* m_BatchInstanceStart;
 		int m_QuadIndex= 0;
 		void CreateSyncObjects();
 		void AddRenderGraph(std::string_view name, UPtr<RenderPassGraph> graph)
@@ -180,14 +185,25 @@ namespace Voidstar
 			auto& drawables = m_Drawables[renderPassName.data()];
 			drawables.push_back(drawable);
 		}
+		void AddStaticDrawable(std::string_view renderPassName, const Drawable& drawable)
+		{
+			auto& drawables = m_StaticDrawables[renderPassName.data()];
+			drawables.push_back(drawable);
+		}
 
 		std::vector<Drawable>& GetDrawables(std::string_view renderPassName)
 		{
 			auto& drawables = m_Drawables.at(renderPassName.data());
 			return drawables;
 		}
+		std::vector<Drawable>& GetStaticDrawables(std::string_view renderPassName)
+		{
+			auto& drawables = m_StaticDrawables.at(renderPassName.data());
+			return drawables;
+		}
 		std::vector<UPtr<Buffer>> m_UniformBuffers;
 		void Draw(Quad& drawable);
+		void Draw(Sphere& drawable);
 		void Draw(QuadRangle& drawable);
 	private:
 		void UpdateUniformBuffer(const glm::mat4& proj, Camera& camera);
@@ -210,6 +226,9 @@ namespace Voidstar
 		vk::CommandPool m_FrameCommandPool;
 		UPtr<IndexBuffer> m_QuadIndexBuffer;
 		UPtr<Buffer> m_QuadBuffer{ nullptr };
+
+		UPtr<IndexBuffer> m_SphereIndexBuffer;
+		UPtr<Buffer> m_SphereBuffer{ nullptr };
 
 		SPtr<DescriptorPool> m_UniversalPool;
 		// can be in one buffer?
@@ -246,6 +265,7 @@ namespace Voidstar
 		Callables m_UserFunctions;
 		std::vector<UPtr<RenderPassGraph>> m_Graphs;
 		std::unordered_map<std::string,std::vector<Drawable>> m_Drawables;
+		std::unordered_map<std::string,std::vector<Drawable>> m_StaticDrawables;
 
 		std::unordered_map<std::string, UPtr<Pipeline>> m_Pipelines;
 	
