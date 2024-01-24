@@ -34,10 +34,11 @@ namespace Voidstar
 			auto attachments = GetAttachhmentsFrom(m_Resolve, names);
 			return attachments;
 		}
+		
 		void CreateColor(std::string_view attachmentName,
 			AttachmentManager& manager, vk::Format format, size_t width, size_t height,
 			vk::SampleCountFlagBits samples,
-			vk::ImageUsageFlags usage,size_t attachmentAmount);
+			vk::ImageUsageFlags usage, size_t attachmentAmount, vk::MemoryPropertyFlags flags = vk::MemoryPropertyFlagBits::eDeviceLocal);
 		void CreateDepthStencil(std::string_view attachmentName,
 			AttachmentManager& manager,  size_t width, size_t height,
 			vk::SampleCountFlagBits samples,

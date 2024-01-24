@@ -99,7 +99,11 @@ namespace Voidstar
 		{
 			return m_Sample;
 		}
-		
+		vk::DeviceMemory GetMemory()
+		{
+			assert(m_ImageMemory != VK_NULL_HANDLE);
+			return m_ImageMemory;
+		}
 		static vk::Format GetFormat(vk::PhysicalDevice physicalDevice,
 			const std::vector<vk::Format>& candidates,
 			vk::ImageTiling tiling, vk::FormatFeatureFlags features);

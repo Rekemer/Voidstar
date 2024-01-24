@@ -357,7 +357,6 @@ namespace Voidstar
 	void Renderer::DrawSphere(glm::vec3 pos, glm::vec3 scale, glm::vec4 color, glm::vec3 rot)
 	{
 		m_BatchInstance->Color = color;
-		std::cout << rot.x << " " << rot.y << std::endl;
 		auto iden = glm::identity<glm::mat4>();
 		iden = glm::translate(iden, pos);
 		auto rotMatrix =  glm::rotate(iden, glm::radians(rot.x), glm::vec3{ 1,0,0 });

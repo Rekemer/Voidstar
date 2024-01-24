@@ -29,5 +29,7 @@ float tex_mip_level(vec2 coord, vec2 tex_size)
 void main() 
 {
     outColor = color;  
-    outColor = vec4(uv,0,1);
+    float miplevel = tex_mip_level(uv,vec2(128,64));
+    outColor = vec4(uv,miplevel,1);
+   //outColor = vec4(0.2,0.3,3.4,1);
 }

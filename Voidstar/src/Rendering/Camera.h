@@ -33,6 +33,7 @@ namespace Voidstar
 		void SetPosition(glm::vec3 pos) { m_Position = pos; }
 		void SetUp(glm::vec3 up) { m_Up= up; }
 	private:
+		void UpdateProj();
 		void UpdateView();
 		void UpdateProj(float width,float height);
 		void ProcessInput(float deltaTime);
@@ -45,9 +46,14 @@ namespace Voidstar
 		glm::vec3 m_Position{0,0,-5};
 		glm::mat4 m_Proj;
 		glm::mat4 m_View;
+		float m_Fov = glm::radians(45.f);;
 		float m_Yaw = 90.0f; // around y axis
 		float m_Pitch = 0.f; // around x axis
 		float speed = 10.f;
 		bool m_IsControlEnabled = false;
+		float width;
+		float height;
+		const float farPlane = 10;
+		const float nearPlane = 1.0;
 	};
 }

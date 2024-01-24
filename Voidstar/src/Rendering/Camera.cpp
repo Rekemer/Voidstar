@@ -31,8 +31,27 @@ namespace Voidstar
         {
             m_IsControlEnabled = !m_IsControlEnabled;
         }
+        auto delta = .125;
+        if (Input::IsKeyPressed(VS_KEY_F))
+        {
+
+            m_Fov -= delta;
+            std::cout << m_Fov << std::endl;
+            UpdateProj();
+        }
+        if (Input::IsKeyPressed(VS_KEY_G))
+        {
+
+            m_Fov += delta;
+            UpdateProj();
+        }
 
 	}
+    void Camera::UpdateProj()
+    {
+        float aspect = width / height;
+        m_Proj = glm::perspective(m_Fov, aspect, nearPlane, farPlane);
+    }
     void Camera::UpdateView()
     {
         glm::mat4 x = glm::inverse(glm::mat4{1,0,0,0,
@@ -52,18 +71,17 @@ namespace Voidstar
 
     void Camera::UpdateProj(float width, float height)
     {
-
+        this->width = width;
+        this->height= height;
         float aspect = width / height;
         float inverseAspect = 1.f / aspect;
-        float angle = glm::radians(45.f);
-        float tan = glm::tan(angle/2);
-        const float farPlane = 10;
-        const float nearPlane = 1.0;
+        float tan = glm::tan(m_Fov /2);
+        
         glm::mat4 p = {inverseAspect/tan,0,0,0,
                         0,1/tan,0,0,
                         0,0,farPlane/(farPlane - nearPlane),1,
                         0,0,(-nearPlane*farPlane)/(farPlane-nearPlane),0};
-       m_Proj = glm::perspective(angle, aspect, nearPlane, farPlane);
+       m_Proj = glm::perspective(m_Fov, aspect, nearPlane, farPlane);
        m_Proj[1][1] *= -1;
       // m_Proj = p;
        //m_Proj = glm::ortho(-width / 16,width/16, -height / 16,height/16,0.f,1000.f);
@@ -80,37 +98,37 @@ namespace Voidstar
     void Camera::ProcessInput(float deltaTime)
 	{
             const float cameraSpeed = speed;
-            deltaTime = 0.01f;
-            if (Input::IsKeyPressed(VS_KEY_W))
-            {
-                auto pos = m_Position + cameraSpeed * m_Front * deltaTime;
-              
-                m_Position = pos;
-            }
+           deltaTime = 0.01f;
+           if (Input::IsKeyPressed(VS_KEY_W))
+           {
+               auto pos = m_Position + cameraSpeed * m_Front * deltaTime;
+             
+               m_Position = pos;
+           }
+           
+           if (Input::IsKeyPressed(VS_KEY_S))
+           {
+               auto pos = m_Position - cameraSpeed * m_Front * deltaTime;
+               m_Position = pos;
+           }
+           
+            auto right = glm::normalize(glm::cross(m_Front, m_Up));
+           if (Input::IsKeyPressed(VS_KEY_A))
+           {
+               auto pos = m_Position - right * cameraSpeed * deltaTime;
+               m_Position = pos;
+           
+           }
+           
+           if (Input::IsKeyPressed(VS_KEY_D))
+           {
+           
+               auto pos = m_Position + right * cameraSpeed * deltaTime;
+               m_Position = pos;
+           }
 
-            if (Input::IsKeyPressed(VS_KEY_S))
-            {
-                auto pos = m_Position - cameraSpeed * m_Front * deltaTime;
-                m_Position = pos;
-            }
-
-             auto right = glm::normalize(glm::cross(m_Front, m_Up));
-            if (Input::IsKeyPressed(VS_KEY_A))
-            {
-                auto pos = m_Position - right * cameraSpeed * deltaTime;
-                m_Position = pos;
-
-            }
-
-            if (Input::IsKeyPressed(VS_KEY_D))
-            {
-
-                auto pos = m_Position + right * cameraSpeed * deltaTime;
-                m_Position = pos;
-            }
-
-
-        
+             
+           
 	}
     bool firstMouse = true;
     double lastX = 0;
@@ -125,6 +143,12 @@ namespace Voidstar
    
     void Camera::ProcessMouse()
     {
+
+        if (Input::IsMousePressed(1))
+        {
+
+        }
+
        if (firstMouse)
        {
          

@@ -8,7 +8,7 @@ namespace Voidstar
 	void AttachmentManager::CreateColor(std::string_view attachmentName,
 		AttachmentManager& manager, vk::Format format, size_t width, size_t height,
 		vk::SampleCountFlagBits samples,
-		vk::ImageUsageFlags usage, size_t attachmentAmount)
+		vk::ImageUsageFlags usage, size_t attachmentAmount, vk::MemoryPropertyFlags flags)
 	{
 		
 		AttachmentSpec msaa;
@@ -19,7 +19,7 @@ namespace Voidstar
 		msaa.Specs.minFilter = vk::Filter::eLinear;
 		msaa.Specs.magFilter = vk::Filter::eLinear;
 		msaa.Specs.tiling = vk::ImageTiling::eOptimal;
-		msaa.Specs.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+		msaa.Specs.memoryProperties = flags;
 		msaa.Amount = attachmentAmount;
 		msaa.Samples = samples;
 

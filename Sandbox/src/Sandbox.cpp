@@ -198,10 +198,10 @@ public:
 				samples, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransientAttachment,
 				actualFrameAmount);
 
-			m_AttachmentManager.CreateColor("FeedbackBuffer", m_AttachmentManager, vk::Format::eR8G8B8A8Uint,
+			m_AttachmentManager.CreateColor("FeedbackBuffer", m_AttachmentManager, vk::Format::eR32G32B32A32Sfloat,
 				Application::GetScreenWidth()/10, Application::GetScreenHeight()/10,
-				vk::SampleCountFlagBits::e1, vk::ImageUsageFlagBits::eColorAttachment ,
-				actualFrameAmount);
+				vk::SampleCountFlagBits::e1, vk::ImageUsageFlagBits::eColorAttachment,
+				actualFrameAmount, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
 
 			m_AttachmentManager.CreateDepthStencil("DepthStencil", m_AttachmentManager,
 				Application::GetScreenWidth(), Application::GetScreenHeight(),
@@ -281,6 +281,20 @@ public:
 
 				auto exe = [this](CommandBuffer& commandBuffer, size_t frameIndex)
 				{
+
+					auto color = m_AttachmentManager.GetColor({ "FeedbackBuffer" })[frameIndex];
+					auto device = RenderContext::GetDevice();
+					uint64_t bufferSize = 4 * Application::GetScreenWidth() / 10 * Application::GetScreenHeight() / 10;
+					auto ptr = (char*)device->GetDevice().mapMemory(color->GetMemory(),(uint64_t)0, bufferSize);
+
+					int memoryRead = 0;
+
+					for (; memoryRead != bufferSize; memoryRead += 4)
+					{
+						ptr += 4;
+					}
+
+					device->GetDevice().unmapMemory(color->GetMemory());
 					auto vkCommandBuffer = commandBuffer.GetCommandBuffer();
 					Renderer::Instance()->BeginBatch(); 
 					auto pipeline = Renderer::Instance()->GetPipeline(BASIC_RENDER_PASS);
@@ -307,7 +321,6 @@ public:
 				m_RenderPass = builder.Build(BASIC_RENDER_PASS, m_AttachmentManager, actualFrameAmount, extent, clearValues, exe);
 
 				m_Sphere.Pos = { 0,0,0 };
-				//m_Sphere.Rot = m_SphereRot;
 				GetCamera()->LookAt(m_Sphere.Pos);
 			}
 			std::vector<vk::VertexInputBindingDescription> bindings
@@ -400,8 +413,8 @@ public:
 						viewport.y = 0.0f;
 						viewport.minDepth = 0;
 						viewport.maxDepth = 1;
-						viewport.width = Application::GetScreenWidth();
-						viewport.height = Application::GetScreenHeight();
+						viewport.width = Application::GetScreenWidth()/10;
+						viewport.height = Application::GetScreenHeight()/10;
 						vk::Rect2D scissors;
 						scissors.offset = vk::Offset2D{ (uint32_t)0,(uint32_t)0 };
 						scissors.extent = vk::Extent2D{ (uint32_t)viewport.width,(uint32_t)viewport.height };
@@ -410,7 +423,7 @@ public:
 						Renderer::Instance()->Draw(m_Sphere);
 						Renderer::Instance()->DrawSphereInstance(vkCommandBuffer);
 					};
-				m_FeedbackRenderPass = builder.Build(FEEDBACK_RENDER_PASS, m_AttachmentManager, actualFrameAmount, feedbackExtent, { clearColor }, exe);
+				m_FeedbackRenderPass = builder.Build(FEEDBACK_RENDER_PASS, m_AttachmentManager, actualFrameAmount, feedbackExtent, { {std::array<float, 4>{137.f / 255.f, 189.f / 255.f, 199.f / 255.f, 0.0f} }, depthClear }, exe);
 			}
 
 			{
@@ -553,8 +566,10 @@ public:
 
 			auto graph = CreateUPtr<RenderPassGraph>();
 			graph->AddRenderPass(std::move(m_FeedbackRenderPass));
+			graph->AddRenderPass(std::move(m_RenderPass));
 			graph->AddRenderPass(std::move(m_ImGuiRenderPass));
 			graph->AddExec(FEEDBACK_RENDER_PASS);
+			graph->AddExec(BASIC_RENDER_PASS);
 
 			Renderer::Instance()->AddRenderGraph("",std::move(graph));
 
