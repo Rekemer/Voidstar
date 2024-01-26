@@ -40,12 +40,13 @@ namespace Voidstar
 
 		static SPtr<Image> CreateEmptyImage( int width, int height,vk::Format format,
 			vk::ImageUsageFlags usage,
+			int mipLevels = 1,
 			vk::SampleCountFlagBits samples = vk::SampleCountFlagBits::e1,
 			vk::Filter minFilter = vk::Filter::eNearest, vk::Filter magFilter = vk::Filter::eNearest);
 		static SPtr<Image> CreateEmpty3DImage(int width, int height, int depth, vk::Format format);
 		~Image();
 		void Bind();
-		
+		void static UpdateRegionWithImage(std::string& path, SPtr<Image> image, vk::Offset3D offset);
 		
 
 		
@@ -107,6 +108,7 @@ namespace Voidstar
 		static vk::Format GetFormat(vk::PhysicalDevice physicalDevice,
 			const std::vector<vk::Format>& candidates,
 			vk::ImageTiling tiling, vk::FormatFeatureFlags features);
+		void GenerateMipmaps(uint32_t mipLevels);
 	private:
 		void GenerateMipmaps(VkImage image,VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
 		void* LoadImageRaw();

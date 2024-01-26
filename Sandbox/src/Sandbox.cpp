@@ -32,10 +32,10 @@ void CleanUpImGui()
 }
 
 std::map<unsigned char, Character> Characters;
-const float PageRenderWidth = 400.f;
-const float PageRenderHeight = 512.f;
-const int PageAmount = 4;
+const int pageWidth = 128;
+const int pageHeight = 64;
 std::string_view BASIC_RENDER_PASS = "Basic";
+std::string_view DEBUG_RENDER_PASS = "Debug";
 std::string_view FEEDBACK_RENDER_PASS = "Feedback";
 std::string_view IMGUI_RENDER_PASS = "ImGui";
 
@@ -94,32 +94,14 @@ public:
 			binderRender.Bind(0, 1, vk::DescriptorType::eUniformBuffer, vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eTessellationControl
 				| vk::ShaderStageFlagBits::eTessellationEvaluation | vk::ShaderStageFlagBits::eFragment);
 			binderRender.Bind(1, 1, vk::DescriptorType::eUniformBuffer,  vk::ShaderStageFlagBits::eFragment);
-			
-			m_TexDesc = binderRender.BeginBind();
-			binderRender.Bind(0, PageAmount, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment);
-
-			m_TexAtlas = binderRender.BeginBind();
-			binderRender.Bind(0, 1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment);
-			
-			auto binderCompute = Binder<COMPUTE>();
-			m_Compute = binderCompute.BeginBind();
-			binderCompute.Bind(0, 1, vk::DescriptorType::eStorageImage, vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute);
-			binderCompute.Bind(1, 1, vk::DescriptorType::eStorageBuffer, vk::ShaderStageFlagBits::eCompute);
-			binderCompute.Bind(2, 1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eCompute);
+			m_DebugTexturesDesc= binderRender.BeginBind();
+			binderRender.Bind(0,1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment);
 
 		};
 
 		auto createResources= [this]()
 		{
-			{
-				BufferInputChunk info;
-				info.size = sizeof(glm::vec2) * MAX_POINTS;
-				info.usage = vk::BufferUsageFlagBits::eStorageBuffer |
-					vk::BufferUsageFlagBits::eTransferDst;
-				info.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible |
-					vk::MemoryPropertyFlagBits::eHostCoherent;
-				m_ShaderStorageBuffer = CreateUPtr<Buffer>(info);
-			}
+			
 			m_MouseInfo.resize(RenderContext::GetFrameAmount());
 			for (int i = 0; i < RenderContext::GetFrameAmount(); i++)
 			{
@@ -129,25 +111,33 @@ public:
 				inputBuffer.usage = vk::BufferUsageFlagBits::eUniformBuffer;
 				m_MouseInfo[i] = CreateUPtr<Buffer>(inputBuffer);
 			}
-			const float noiseTextureWidth = 256.f;
-			const float noiseTextureHeight = 256.f;
-			auto usage = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled;
-			m_ImageSelected = Image::CreateEmptyImage(noiseTextureWidth, noiseTextureHeight, vk::Format::eR8G8B8A8Snorm, usage);
-			m_Image = Image::CreateImage(BASE_RES_PATH + "dos_2_noise.png");
+
+			const int workingSetWidth = pageWidth * 10;
+			const int workingSetHeight = pageHeight* 10;
+			auto usage =  vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst;
+
+			m_WorkingSet = Image::CreateEmptyImage(workingSetWidth, workingSetHeight, vk::Format::eR8G8B8A8Unorm, usage);
+			const int pageTableWidth = 32768/pageWidth;
+			const int pageTableHeight = 16384/pageHeight;
+			uint32_t mipLevels = std::log2(std::max(pageTableWidth, pageTableHeight));
+			m_PageTable = Image::CreateEmptyImage(pageTableWidth, pageTableHeight, vk::Format::eR8G8B8A8Unorm, usage 
+				| vk::ImageUsageFlagBits::eTransferSrc| vk::ImageUsageFlagBits::eTransferDst, mipLevels);
+			auto commandBuffer = Renderer::Instance()->GetTransferCommandBuffer(0);
+			commandBuffer.BeginTransfering();
+			commandBuffer.ChangeImageLayout(m_PageTable.get(), vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal, mipLevels);
+			commandBuffer.EndTransfering();
+			commandBuffer.SubmitSingle();
+
+			m_PageTable->GenerateMipmaps(mipLevels);
 		};
 
 
 		auto bindResources = [this]()
 		{
-			vk::DescriptorImageInfo imageDescriptor;
-			imageDescriptor.imageLayout = vk::ImageLayout::eGeneral;
-			imageDescriptor.imageView = m_ImageSelected->GetImageView();
-			imageDescriptor.sampler = m_ImageSelected->GetSampler();
+			
 
 
-			m_DescriptorSetSelected = Renderer::Instance()->GetSet<vk::DescriptorSet>(m_Compute, PipelineType::COMPUTE);
-			m_DescriptorSetTex = Renderer::Instance()->GetSet<vk::DescriptorSet>(m_TexDesc, PipelineType::RENDER);
-			m_DescriptorSetFont = Renderer::Instance()->GetSet<vk::DescriptorSet>(m_TexAtlas, PipelineType::RENDER);
+			m_DescriptorSetDebug = Renderer::Instance()->GetSet<vk::DescriptorSet>(m_DebugTexturesDesc, PipelineType::RENDER);
 
 			auto device = RenderContext::GetDevice();
 
@@ -159,29 +149,36 @@ public:
 				device->UpdateDescriptorSet(m_DescriptorSets[i], 0, 1, *Renderer::Instance()->m_UniformBuffers[i], vk::DescriptorType::eUniformBuffer);
 			}
 
-			vk::DescriptorImageInfo imageDescriptor1;
-			imageDescriptor1.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-			imageDescriptor1.imageView = m_Image->GetImageView();
-			imageDescriptor1.sampler = m_Image->GetSampler();
-			device->UpdateDescriptorSet(m_DescriptorSetSelected, 0, 1, imageDescriptor, vk::DescriptorType::eStorageImage);
-			device->UpdateDescriptorSet(m_DescriptorSetSelected, 2, 1, *m_Image, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
 
 
-			UpdateBuffer(*device, m_DescriptorSetSelected, m_ClickPoints.data(), *m_ShaderStorageBuffer, MAX_POINTS * sizeof(glm::vec2));
-			LoadFont(BASE_RES_PATH + "fonts/CrimsonText-Regular.ttf");
-			device->UpdateDescriptorSet(m_DescriptorSetFont, 0, 1, *m_FontAtlas, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
+			vk::DescriptorImageInfo imageDescriptor;
+			imageDescriptor.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+			imageDescriptor.imageView = m_WorkingSet->GetImageView();
+			imageDescriptor.sampler = m_WorkingSet->GetSampler();
+
+			device->UpdateDescriptorSet(m_DescriptorSetDebug, 0,1, imageDescriptor , vk::DescriptorType::eCombinedImageSampler);
+
+
+		//	vk::DescriptorImageInfo imageDescriptor1;
+		//	imageDescriptor1.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+		//	imageDescriptor1.imageView = m_Image->GetImageView();
+		//	imageDescriptor1.sampler = m_Image->GetSampler();
+		//	device->UpdateDescriptorSet(m_DescriptorSetSelected, 0, 1, imageDescriptor, vk::DescriptorType::eStorageImage);
+		//	device->UpdateDescriptorSet(m_DescriptorSetSelected, 2, 1, *m_Image, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
+		//
+		//
+		//	UpdateBuffer(*device, m_DescriptorSetSelected, m_ClickPoints.data(), *m_ShaderStorageBuffer, MAX_POINTS * sizeof(glm::vec2));
+		//	LoadFont(BASE_RES_PATH + "fonts/CrimsonText-Regular.ttf");
+		//	device->UpdateDescriptorSet(m_DescriptorSetFont, 0, 1, *m_FontAtlas, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
 		};
 
 		auto createPipelines = [this]()
 		{
-			auto m_DescriptorSetLayout = Renderer::Instance()->GetSetLayout(0, PipelineType::RENDER);
-			auto m_DescriptorSetLayoutFont = Renderer::Instance()->GetSetLayout(m_TexAtlas, PipelineType::RENDER);
-			auto m_DescriptorSetLayoutTex = Renderer::Instance()->GetSetLayout(1, PipelineType::RENDER);
-			auto m_DescriptorSetLayoutSelected = Renderer::Instance()->GetSetLayout(0, PipelineType::COMPUTE);
+			auto m_DescriptorSetLayout = Renderer::Instance()->GetSetLayout(m_BaseDesc, PipelineType::RENDER);
+			auto m_DescriptorSetDebugLayout = Renderer::Instance()->GetSetLayout(m_DebugTexturesDesc, PipelineType::RENDER);
 			
 			
 			
-			std::vector< vk::DescriptorSetLayout>layouts = { m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutSelected->GetLayout() };
 
 
 
@@ -217,8 +214,8 @@ public:
 			Renderer::Instance()->CreateSyncObjects();
 
 			UPtr<RenderPass> m_RenderPass;
+			UPtr<RenderPass> m_DebugRenderPass;
 			UPtr<RenderPass> m_FeedbackRenderPass;
-			UPtr<Pipeline> m_FeedbackPipeline;
 
 			vk::ClearValue clearColor = { std::array<float, 4>{137.f / 255.f, 189.f / 255.f, 199.f / 255.f, 1.0f} };
 			vk::Extent2D extent = { (uint32_t)Application::GetScreenWidth(),(uint32_t)Application::GetScreenHeight() };
@@ -259,8 +256,8 @@ public:
 				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
 				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
 				builder.SetInitialLayout(vk::ImageLayout::eUndefined);
-				//builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
-				builder.SetFinalLayout(vk::ImageLayout::ePresentSrcKHR);
+				builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
+				//builder.SetFinalLayout(vk::ImageLayout::ePresentSrcKHR);
 				auto resolve = builder.BuildAttachmentDesc();
 
 
@@ -278,28 +275,44 @@ public:
 				
 				builder.AddSubpassDependency(dependency0);
 
-
-				auto exe = [this](CommandBuffer& commandBuffer, size_t frameIndex)
+				uint64_t bufferSize = 4 * Application::GetScreenWidth() / 10 * Application::GetScreenHeight() / 10;
+				m_FeedbackRes.resize(bufferSize);
+				auto exe = [this, bufferSize](CommandBuffer& commandBuffer, size_t frameIndex)
 				{
 
 					auto color = m_AttachmentManager.GetColor({ "FeedbackBuffer" })[frameIndex];
 					auto device = RenderContext::GetDevice();
-					uint64_t bufferSize = 4 * Application::GetScreenWidth() / 10 * Application::GetScreenHeight() / 10;
-					auto ptr = (char*)device->GetDevice().mapMemory(color->GetMemory(),(uint64_t)0, bufferSize);
+					auto ptr = (float*)device->GetDevice().mapMemory(color->GetMemory(),(uint64_t)0, bufferSize);
 
-					int memoryRead = 0;
-
-					for (; memoryRead != bufferSize; memoryRead += 4)
+					//memcpy(m_FeedbackRes.data(), ptr, bufferSize);
+					//std::copy(m_FeedbackRes.begin(), m_FeedbackRes.end(), ptr);
+					
+					for (int i = 0, memoryRead = 0; memoryRead < bufferSize; memoryRead += 4, i++)
 					{
-						ptr += 4;
+						auto r = *(float*)(ptr);
+						ptr++;
+						auto g = *(float*)(ptr);
+						ptr++;
+						auto b = *(float*)(ptr);
+						ptr++;
+						auto a = *(float*)(ptr);
+						ptr++;
+						m_FeedbackRes[i] = {r,g,b,a};
 					}
-
 					device->GetDevice().unmapMemory(color->GetMemory());
+					// load tiles
+					
+					std::string path1 = BASE_VIRT_PATH+ "/0_0.png";
+					std::string path2 = BASE_VIRT_PATH + "/0_1.png";;
+					Image::UpdateRegionWithImage(path2, m_WorkingSet, {pageWidth,0,0});
+					Image::UpdateRegionWithImage(path1, m_WorkingSet, { pageWidth*2,0,0});
+					//m_WorkingSet->UpdateRegion();
+
 					auto vkCommandBuffer = commandBuffer.GetCommandBuffer();
 					Renderer::Instance()->BeginBatch(); 
 					auto pipeline = Renderer::Instance()->GetPipeline(BASIC_RENDER_PASS);
 					vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 0, m_DescriptorSets[frameIndex], nullptr); 
-					vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 1, m_DescriptorSetTex, nullptr); 
+					//vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 1, m_DescriptorSetTex, nullptr); 
 					vkCommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline->GetPipeline()); 
 					vk::Viewport viewport; 
 					viewport.x = 0.0f; 
@@ -315,7 +328,7 @@ public:
 					vkCommandBuffer.setScissor(0, 1, &scissors); 
 					Renderer::Instance()->Draw(m_Sphere);
 					Renderer::Instance()->DrawSphereInstance(vkCommandBuffer);
-
+					Renderer::Instance()->DrawQuadScreen(vkCommandBuffer);
 				};
 
 				m_RenderPass = builder.Build(BASIC_RENDER_PASS, m_AttachmentManager, actualFrameAmount, extent, clearValues, exe);
@@ -345,7 +358,7 @@ public:
 			};
 
 			{
-				auto pipelineLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutTex->GetLayout() };
+				auto pipelineLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout()/*,m_DescriptorSetLayoutTex->GetLayout() */};
 				PipelineBuilder builder;
 				builder.SetDevice(device->GetDevice());
 				builder.SetSamples(samples);
@@ -371,6 +384,102 @@ public:
 				builder.SetPolygoneMode(vk::PolygonMode::eFill);
 				builder.Build(BASIC_RENDER_PASS);
 			}
+			// debug render pass
+			{
+
+				auto samples = RenderContext::GetDevice()->GetSamples();
+				RenderPassBuilder builder;
+				//Define a general attachment, with its load/store operations
+
+				builder.ColorOutput("Default", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
+				builder.SetLoadOp(vk::AttachmentLoadOp::eLoad);
+				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
+				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
+				builder.SetInitialLayout(vk::ImageLayout::eColorAttachmentOptimal);
+				builder.SetFinalLayout(vk::ImageLayout::ePresentSrcKHR);
+				auto resolve = builder.BuildAttachmentDesc();
+
+
+
+
+
+
+				vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0,
+					vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests, vk::AccessFlagBits::eColorAttachmentWrite,
+					vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests, vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eDepthStencilAttachmentWrite);
+
+
+
+				builder.AddSubpass({ 0 }, { 1 }, { 2 });
+
+				builder.AddSubpassDependency(dependency0);
+
+				auto exe = [this ](CommandBuffer& commandBuffer, size_t frameIndex)
+					{
+
+						auto device = RenderContext::GetDevice();
+
+						if (m_WorkingSet->GetLayout() != vk::ImageLayout::eShaderReadOnlyOptimal)
+						{
+							auto transferCommandBuffer = Renderer::Instance()->GetTransferCommandBuffer(frameIndex);
+							auto cmdBuffer = transferCommandBuffer.BeginTransfering();
+							transferCommandBuffer.ChangeImageLayout(m_WorkingSet.get(), m_WorkingSet->GetLayout(), vk::ImageLayout::eShaderReadOnlyOptimal);
+							transferCommandBuffer.EndTransfering();
+							transferCommandBuffer.SubmitSingle();
+						}
+						auto vkCommandBuffer = commandBuffer.GetCommandBuffer();
+						Renderer::Instance()->BeginBatch();
+						auto pipeline = Renderer::Instance()->GetPipeline(DEBUG_RENDER_PASS);
+						vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 0, m_DescriptorSets[frameIndex], nullptr);
+						vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 1, m_DescriptorSetDebug, nullptr); 
+						vkCommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline->GetPipeline());
+						vk::Viewport viewport;
+						viewport.x = 0.0f;
+						viewport.y = 0.0f;
+						viewport.minDepth = 0;
+						viewport.maxDepth = 1;
+						viewport.width = Application::GetScreenWidth();
+						viewport.height = Application::GetScreenHeight();
+						vk::Rect2D scissors;
+						scissors.offset = vk::Offset2D{ (uint32_t)0,(uint32_t)0 };
+						scissors.extent = vk::Extent2D{ (uint32_t)viewport.width,(uint32_t)viewport.height };
+						vkCommandBuffer.setViewport(0, 1, &viewport);
+						vkCommandBuffer.setScissor(0, 1, &scissors);
+						Renderer::Instance()->DrawQuadScreen(vkCommandBuffer);
+					};
+
+				m_DebugRenderPass = builder.Build(DEBUG_RENDER_PASS, m_AttachmentManager, actualFrameAmount, extent, clearValues, exe);
+			}
+
+			{
+				auto pipelineLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetDebugLayout->GetLayout() };
+				PipelineBuilder builder;
+				builder.SetDevice(device->GetDevice());
+				builder.SetSamples(vk::SampleCountFlagBits::e1);
+				builder.AddDescriptorLayouts(pipelineLayouts);
+				builder.AddAttributeDescription(std::vector<vk::VertexInputAttributeDescription>{});
+				builder.AddBindingDescription(std::vector<vk::VertexInputBindingDescription>{});
+				builder.SetPolygoneMode(Renderer::Instance()->GetPolygonMode());
+				builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
+				Renderer::Instance()->CompileShader("debug.spvV", ShaderType::VERTEX);
+				Renderer::Instance()->CompileShader("debug.spvF", ShaderType::FRAGMENT);
+				builder.AddShader(BASE_SPIRV_OUTPUT + "debug.spvV", vk::ShaderStageFlagBits::eVertex);
+				builder.AddShader(BASE_SPIRV_OUTPUT + "debug.spvF", vk::ShaderStageFlagBits::eFragment);
+				builder.SetSubpassAmount(0);
+				builder.AddExtent(extent);
+				builder.AddImageFormat(vk::Format::eB8G8R8A8Unorm);
+				builder.EnableStencilTest(false);
+				builder.SetDepthTest(false);
+				builder.WriteToDepthBuffer(false);
+				builder.SetRenderPass(m_DebugRenderPass->GetRaw());
+				builder.SetStencilRefNumber(2);
+				builder.StencilTestOp(vk::CompareOp::eAlways, vk::StencilOp::eReplace, vk::StencilOp::eReplace, vk::StencilOp::eReplace);
+				builder.SetMasks(0xff, 0xff);
+				builder.SetPolygoneMode(vk::PolygonMode::eFill);
+				builder.Build(DEBUG_RENDER_PASS);
+			}
+
 			// feedbackPass
 			{
 
@@ -406,7 +515,7 @@ public:
 						Renderer::Instance()->BeginBatch();
 						auto pipeline = Renderer::Instance()->GetPipeline(FEEDBACK_RENDER_PASS);
 						vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 0, m_DescriptorSets[frameIndex], nullptr);
-						vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 1, m_DescriptorSetTex, nullptr);
+						//vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 1, m_DescriptorSetTex, nullptr);
 						vkCommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline->GetPipeline());
 						vk::Viewport viewport;
 						viewport.x = 0.0f;
@@ -427,7 +536,7 @@ public:
 			}
 
 			{
-				auto pipelineLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetLayoutTex->GetLayout() };
+				auto pipelineLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout()/*,m_DescriptorSetLayoutTex->GetLayout()*/ };
 				PipelineBuilder builder;
 				builder.SetDevice(device->GetDevice());
 				builder.SetSamples(vk::SampleCountFlagBits::e1);
@@ -567,9 +676,11 @@ public:
 			auto graph = CreateUPtr<RenderPassGraph>();
 			graph->AddRenderPass(std::move(m_FeedbackRenderPass));
 			graph->AddRenderPass(std::move(m_RenderPass));
+			graph->AddRenderPass(std::move(m_DebugRenderPass));
 			graph->AddRenderPass(std::move(m_ImGuiRenderPass));
 			graph->AddExec(FEEDBACK_RENDER_PASS);
 			graph->AddExec(BASIC_RENDER_PASS);
+			graph->AddExec(DEBUG_RENDER_PASS);
 
 			Renderer::Instance()->AddRenderGraph("",std::move(graph));
 
@@ -586,11 +697,9 @@ public:
 
 				auto device = RenderContext::GetDevice()->GetDevice();
 				device.waitIdle();
-				m_ShaderStorageBuffer.reset();
 				m_MouseInfo.clear();
-				m_Image.reset();
-				m_ImageSelected.reset();
-				m_FontAtlas.reset();
+				m_PageTable.reset();
+				m_WorkingSet.reset();
 				m_AttachmentManager.Destroy();
 				CleanUpImGui();
 				Renderer::Instance()->Shutdown();
@@ -616,30 +725,15 @@ public:
 	{
 		callables.cleanUp();
 	}
-	void UpdateBuffer(Device& device, vk::DescriptorSet set, void* cpuBuffer, Buffer& gpuBuffer, int size )
-	{
-			SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(size);
-
-
-			auto transferCommandBuffer = Renderer::Instance()->GetTransferCommandBuffer(0);
-
-			transferCommandBuffer.BeginTransfering();
-			transferCommandBuffer.Transfer(stagingBuffer.get(), m_ShaderStorageBuffer.get(), (void*)m_ClickPoints.data(), size);
-			transferCommandBuffer.EndTransfering();
-			transferCommandBuffer.SubmitSingle();
-
-
-			device.UpdateDescriptorSet(m_DescriptorSetSelected, 1, 1, *m_ShaderStorageBuffer, vk::DescriptorType::eStorageBuffer);
-	}
-
+	
 	
 	void UpdateTexture(size_t frameIndex)
 	{
 		/*auto device = RenderContext::GetDevice()->GetDevice();
 		auto currentFrame = frameIndex;
-		auto computeCommandBuffer = Renderer::Instance()->GetComputeCommandBuffer(frameIndex);
 		if (m_ImageSelected->GetLayout() != vk::ImageLayout::eGeneral)
 		{
+			auto computeCommandBuffer = Renderer::Instance()->GetComputeCommandBuffer(frameIndex);
 			auto cmdBuffer = computeCommandBuffer.BeginTransfering();
 
 
@@ -671,7 +765,7 @@ public:
 	}
 
 
-	void LoadFont(std::string_view str)
+	void LoadFont(std::string_view str, SPtr<Image> fontAtlas)
 	{
 
 
@@ -728,12 +822,12 @@ public:
 		maxWidthTexture  = (maxWidthTexture + charactersPerRow * padding) + 10;
 		//maxHeight = 590;
 		auto usage = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled;
-		m_FontAtlas = Image::CreateEmptyImage(maxWidthTexture, maxHeight, vk::Format::eR8Unorm, usage);
+		fontAtlas = Image::CreateEmptyImage(maxWidthTexture, maxHeight, vk::Format::eR8Unorm, usage);
 
 		auto computeCommandBuffer = Renderer::Instance()->GetComputeCommandBuffer(0);
 
 		computeCommandBuffer.BeginTransfering();
-		computeCommandBuffer.ChangeImageLayout(m_FontAtlas.get(), vk::ImageLayout::eGeneral, vk::ImageLayout::eTransferDstOptimal);
+		computeCommandBuffer.ChangeImageLayout(fontAtlas.get(), vk::ImageLayout::eGeneral, vk::ImageLayout::eTransferDstOptimal);
 		computeCommandBuffer.EndTransfering();
 		computeCommandBuffer.SubmitSingle();
 		
@@ -772,7 +866,7 @@ public:
 			RenderContext::GetDevice()->GetDevice().unmapMemory(buffer->GetMemory());
 			//glTexSubImage2D(GL_TEXTURE_2D, 0, increment_x, increment_y, glyph->bitmap.width, glyph->bitmap.rows, GL_RED, GL_UNSIGNED_BYTE, glyph->bitmap.buffer); 
 			computeCommandBuffer.BeginTransfering();
-			computeCommandBuffer.CopyBufferToImage(*buffer.get(), m_FontAtlas->GetImage(), face->glyph->bitmap.width, face->glyph->bitmap.rows, { increment_x,increment_y,0 });
+			computeCommandBuffer.CopyBufferToImage(*buffer.get(), fontAtlas->GetImage(), face->glyph->bitmap.width, face->glyph->bitmap.rows, { increment_x,increment_y,0 });
 			computeCommandBuffer.EndTransfering();
 			computeCommandBuffer.SubmitSingle();
 
@@ -804,7 +898,7 @@ public:
 		FT_Done_Face(face);
 		FT_Done_FreeType(ft);
 		computeCommandBuffer.BeginTransfering();
-		computeCommandBuffer.ChangeImageLayout(m_FontAtlas.get(), vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal);
+		computeCommandBuffer.ChangeImageLayout(fontAtlas.get(), vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal);
 		computeCommandBuffer.EndTransfering();
 		computeCommandBuffer.SubmitSingle();
 
@@ -875,40 +969,28 @@ private:
 		glm::vec2 mouseFollow;
 	};
 	int m_BaseDesc = 0;
-	int m_TexDesc = 0;
-	int m_Compute = 0;
-	int m_TexAtlas = 0;
+	int m_DebugTexturesDesc = 0;
 	const uint32_t MAX_POINTS = 20;
 	int nextPoint = 0;
 	std::vector<vk::DescriptorSet> m_DescriptorSets;
-	vk::DescriptorSet m_DescriptorSetTex;
-	vk::DescriptorSet m_DescriptorSetSelected;
-	vk::DescriptorSet m_DescriptorSetFont;
-	glm::vec2 m_Follow;
-
-	
 	std::vector<UPtr<Buffer>> m_MouseInfo;
-	UPtr<Buffer> m_ShaderStorageBuffer;
+	vk::DescriptorSet m_DescriptorSetDebug;
+	glm::vec2 m_Follow;
 	SPtr<Image> m_Image;
-	SPtr<Image> m_ImageSelected;
-	SPtr<Image> m_FontAtlas;
-	
+	SPtr<Image> m_WorkingSet;
+	SPtr<Image> m_PageTable;
+
+
 	std::vector<glm::vec2> m_ClickPoints;
 
 
 	bool isClicked = false;
 	bool isDragged = false;
-	glm::vec4 whiteColor = { 0.2,0.7,0.2,1 }; // left
-	glm::vec4 redColor = { 0.6,0,0,1 }; // right
-	glm::vec4 greyColor = { 0.7,0.4,0.7,1 }; // new left
-	glm::vec4 blueColor = { 0.2,0.2,0.7,1 }; // new right
-
-	std::string PageStr1= "Hello, traveller!\nHow is it going?\nHave you found\nwhat you seek?\n\nAnyway...";
-	std::string PageStr2 = "Here is page\ncurl rendering\n with Vulkan!\nThe text is rendered\nwith Vulkan too!";
-	std::string PageStr3 = "This page rendering\nwas inspired by\nsimiliar effect in\n beloved\nDivinity: Original\n Sin Games";
-	std::string PageStr4 = "May the force\nbe with you!\nHopefully this book\nenriched your\n potential!";
-	std::vector<std::string> txt = { PageStr1,PageStr2,PageStr3,PageStr4 };
-	std::vector<float> textureIndicies = { 0,1,2,3};
+	struct FeedbackRes
+	{
+		float r, g, b, a;
+	};
+	std::vector<FeedbackRes> m_FeedbackRes;
 	Callables callables;
 	AttachmentManager m_AttachmentManager;
 	Sphere m_Sphere;

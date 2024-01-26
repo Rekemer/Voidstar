@@ -24,12 +24,15 @@ float tex_mip_level(vec2 coord, vec2 tex_size)
 }
 
 
-
-
+const float pageWidth = 128;
+const float pageHeight= 64;
 void main() 
 {
     outColor = color;  
     float miplevel = tex_mip_level(uv,vec2(128,64));
-    outColor = vec4(uv,miplevel,1);
+    //  log returns amount of tile on the mip level
+    vec2 pageNumber = floor(pow(2,(8-miplevel)) * uv);
+    outColor = vec4(pageNumber,miplevel,1);
+    
    //outColor = vec4(0.2,0.3,3.4,1);
 }

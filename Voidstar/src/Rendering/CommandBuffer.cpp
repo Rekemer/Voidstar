@@ -187,6 +187,7 @@ namespace Voidstar
 					uint32_t              layerCount;
 				} VkImageSubresourceRange;
 				*/
+		if (oldLayout == newLayout) return;
 		vk::ImageSubresourceRange access;
 		access.aspectMask = vk::ImageAspectFlagBits::eColor;
 		access.baseMipLevel = 0;
@@ -249,6 +250,7 @@ namespace Voidstar
 			sourceStage = vk::PipelineStageFlagBits::eTransfer;
 			destinationStage = vk::PipelineStageFlagBits::eFragmentShader;
 		}
+		
 
 		m_CommandBuffer.pipelineBarrier(sourceStage, destinationStage, vk::DependencyFlags(), nullptr, nullptr, barrier);
 	}

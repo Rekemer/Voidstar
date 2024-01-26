@@ -104,6 +104,42 @@ namespace Voidstar
 		return imageMemory;
 		
 	}
+	void Image::UpdateRegionWithImage(std::string& path, SPtr<Image> parentImage, vk::Offset3D offset )
+	{
+		stbi_set_flip_vertically_on_load(true);
+		int width = 0, height = 0, channels = 0;
+		auto pixels = stbi_load(path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
+		if (!pixels) {
+			Log::GetLog()->error("Unable to load: {0}", path);
+		}
+		auto device = RenderContext::GetDevice();
+	
+		auto imageSize = width * height * 4;
+		auto buffer = Buffer::CreateStagingBuffer(imageSize);
+
+		//...then fill it,
+		void* writeLocation = device->GetDevice().mapMemory(buffer->GetMemory(), 0, imageSize);
+		memcpy(writeLocation, pixels, imageSize);
+		device->GetDevice().unmapMemory(buffer->GetMemory());
+
+		auto commandBuffer = CommandBuffer::CreateBuffer(parentImage->m_CommandPool, vk::CommandBufferLevel::ePrimary);
+
+		commandBuffer.BeginTransfering();
+		commandBuffer.ChangeImageLayout(parentImage.get(), parentImage->m_ImageLayout, vk::ImageLayout::eTransferDstOptimal, 1);
+		commandBuffer.EndTransfering();
+		commandBuffer.SubmitSingle();
+
+		commandBuffer.BeginTransfering();
+		commandBuffer.CopyBufferToImage(*buffer.get(), parentImage->m_Image,width, height, offset);
+		commandBuffer.EndTransfering();
+		commandBuffer.SubmitSingle();
+
+		commandBuffer.Free();
+		free(pixels);
+
+
+	}
+
 	SPtr<Image> Image::CreateImage(std::string path)
 	{
 		
@@ -405,7 +441,7 @@ namespace Voidstar
 
 		return image;
 	}
-	SPtr<Image> Image::CreateEmptyImage(int width, int height, vk::Format format, vk::ImageUsageFlags usage,vk::SampleCountFlagBits samples, vk::Filter minFilter, vk::Filter magFilter)
+	SPtr<Image> Image::CreateEmptyImage(int width, int height, vk::Format format, vk::ImageUsageFlags usage,int mipLevels, vk::SampleCountFlagBits samples, vk::Filter minFilter, vk::Filter magFilter)
 	{
 		auto image = CreateUPtr<Image>();
 		image->m_CommandPool = Renderer::Instance()->GetCommandPoolManager()->GetFreePool();
@@ -423,7 +459,7 @@ namespace Voidstar
 		specs.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
 		image->m_Format = specs.format;
 		try {
-			image->m_Image = CreateVKImage(specs, samples);
+			image->m_Image = CreateVKImage(specs, samples, mipLevels);
 		}
 		catch (vk::SystemError err)
 		{
@@ -699,6 +735,12 @@ namespace Voidstar
 
 			std::runtime_error("Unable to find suitable format");
 		}
+	}
+	void Image::GenerateMipmaps(uint32_t mipLevels)
+	{
+		
+		GenerateMipmaps(m_Image, (VkFormat)m_Format, (int32_t)m_Width, (int32_t)m_Height, mipLevels);
+
 	}
 	void Image::GenerateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels)
 	{

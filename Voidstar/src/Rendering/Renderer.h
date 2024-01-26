@@ -36,6 +36,7 @@ namespace Voidstar
 
 	inline std::string BASE_SHADER_PATH = "../Shaders/";
 	inline std::string BASE_RES_PATH = "res";
+	inline std::string BASE_VIRT_PATH = "../../mipMaps_virtualTex4.tiff/pages_1024_512";
 	//const std::string SPIRV_COMPILER_PATH = "C:/VulkanSDK/1.3.216.0/Bin/glslangvalidator.exe";
 	const std::string SPIRV_COMPILER_PATH = "C:/VulkanSDK/1.3.268.0/Bin/glslangvalidator.exe";
 	inline std::string BASE_SPIRV_OUTPUT = BASE_SHADER_PATH + "Binary/";
@@ -142,6 +143,7 @@ namespace Voidstar
 		CommandBuffer& GetComputeCommandBuffer(size_t frameindex);
 		CommandBuffer& GetTransferCommandBuffer(size_t frameindex);
 		
+		// position 0 0 is center of screen
 		void DrawQuadScreen(vk::CommandBuffer commandBuffer);
 		void DrawQuad(glm::mat4& world, glm::vec4 color);
 		void DrawQuad(std::vector<Vertex>& verticies);

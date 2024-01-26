@@ -164,6 +164,7 @@ namespace Voidstar
 			BASE_SHADER_PATH = executablePath.parent_path().string() + "../../../Shaders/";
 			BASE_RES_PATH = executablePath.parent_path().string() + "../../../res/";
 			BASE_SPIRV_OUTPUT = BASE_SHADER_PATH + "Binary/";
+			BASE_VIRT_PATH = executablePath.parent_path().string() + "../../../../mipMaps_virtualTex4.tiff/pages_1024_512";
 		}
 
 		return baseShaderPath;
@@ -334,16 +335,14 @@ namespace Voidstar
 	}
 	void Renderer::DrawQuadScreen(vk::CommandBuffer commandBuffer)
 	{
-		assert(false);
-		vk::DeviceSize offsets[] = { 0 };
-
-		{
-			vk::Buffer vertexBuffers[] = { m_QuadBufferBatch->GetBuffer() };
-			commandBuffer.bindVertexBuffers(0, 1, vertexBuffers, offsets);
-
-		}
-		commandBuffer.bindIndexBuffer(m_QuadBufferBatchIndex->GetBuffer(), 0, m_QuadBufferBatchIndex->GetIndexType());
-		commandBuffer.drawIndexed(5*6, 1, 0, 0,0);
+		//vk::DeviceSize offsets[] = { 0 };
+		//{
+		//	vk::Buffer vertexBuffers[] = { m_QuadBufferBatch->GetBuffer() };
+		//	commandBuffer.bindVertexBuffers(0, 1, vertexBuffers, offsets);
+		//
+		//}
+		//commandBuffer.bindIndexBuffer(m_QuadBufferBatchIndex->GetBuffer(), 0, m_QuadBufferBatchIndex->GetIndexType());
+		commandBuffer.draw(6, 1, 0, 0);
 	}
 
 	void Renderer::Draw(Sphere& sphere)
