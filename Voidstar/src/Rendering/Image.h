@@ -4,6 +4,7 @@
 #include "RenderContext.h"
 #include "Device.h"
 #include "../Types.h"
+#include <vector>
 namespace Voidstar
 {
 	struct ImageSpecs
@@ -45,9 +46,8 @@ namespace Voidstar
 			vk::Filter minFilter = vk::Filter::eNearest, vk::Filter magFilter = vk::Filter::eNearest);
 		static SPtr<Image> CreateEmpty3DImage(int width, int height, int depth, vk::Format format);
 		~Image();
-		void Bind();
 		void static UpdateRegionWithImage(std::string& path, SPtr<Image> image, vk::Offset3D offset);
-		
+		//void UpdateRegionWithVector(std::vector<std::pair<int, int>> texels)
 
 		
 		vk::Sampler  GetSampler() { return m_Sampler; }

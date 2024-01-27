@@ -34,6 +34,8 @@ void CleanUpImGui()
 std::map<unsigned char, Character> Characters;
 const int pageWidth = 128;
 const int pageHeight = 64;
+const int workingSetWidth = pageWidth * 10;
+const int workingSetHeight = pageHeight * 10;
 std::string_view BASIC_RENDER_PASS = "Basic";
 std::string_view DEBUG_RENDER_PASS = "Debug";
 std::string_view FEEDBACK_RENDER_PASS = "Feedback";
@@ -93,27 +95,21 @@ public:
 			m_BaseDesc = binderRender.BeginBind(3);
 			binderRender.Bind(0, 1, vk::DescriptorType::eUniformBuffer, vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eTessellationControl
 				| vk::ShaderStageFlagBits::eTessellationEvaluation | vk::ShaderStageFlagBits::eFragment);
-			binderRender.Bind(1, 1, vk::DescriptorType::eUniformBuffer,  vk::ShaderStageFlagBits::eFragment);
 			m_DebugTexturesDesc= binderRender.BeginBind();
-			binderRender.Bind(0,1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment);
+			binderRender.Bind(0, 1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment);
+			binderRender.Bind(1, 1, vk::DescriptorType::eUniformBuffer,  vk::ShaderStageFlagBits::eFragment);
 
 		};
 
 		auto createResources= [this]()
 		{
 			
-			m_MouseInfo.resize(RenderContext::GetFrameAmount());
-			for (int i = 0; i < RenderContext::GetFrameAmount(); i++)
-			{
-				BufferInputChunk inputBuffer;
-				inputBuffer.size = sizeof glm::vec2;
-				inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
-				inputBuffer.usage = vk::BufferUsageFlagBits::eUniformBuffer;
-				m_MouseInfo[i] = CreateUPtr<Buffer>(inputBuffer);
-			}
+			BufferInputChunk inputBuffer;
+			inputBuffer.size = sizeof(AdditionalData);
+			inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+			inputBuffer.usage = vk::BufferUsageFlagBits::eUniformBuffer;
+			m_AddInfo = CreateUPtr<Buffer>(inputBuffer);
 
-			const int workingSetWidth = pageWidth * 10;
-			const int workingSetHeight = pageHeight* 10;
 			auto usage =  vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst;
 
 			m_WorkingSet = Image::CreateEmptyImage(workingSetWidth, workingSetHeight, vk::Format::eR8G8B8A8Unorm, usage);
@@ -149,6 +145,13 @@ public:
 				device->UpdateDescriptorSet(m_DescriptorSets[i], 0, 1, *Renderer::Instance()->m_UniformBuffers[i], vk::DescriptorType::eUniformBuffer);
 			}
 
+			auto ptr = RenderContext::GetDevice()->GetDevice().mapMemory(m_AddInfo->GetMemory(), 0, sizeof AdditionalData);
+			memcpy(ptr, &m_AddData, sizeof AdditionalData);
+			RenderContext::GetDevice()->GetDevice().unmapMemory(m_AddInfo->GetMemory());
+			device->UpdateDescriptorSet(m_DescriptorSetDebug, 1, 1,
+				*m_AddInfo, vk::DescriptorType::eUniformBuffer);
+
+			
 
 
 			vk::DescriptorImageInfo imageDescriptor;
@@ -302,10 +305,73 @@ public:
 					device->GetDevice().unmapMemory(color->GetMemory());
 					// load tiles
 					
-					std::string path1 = BASE_VIRT_PATH+ "/0_0.png";
-					std::string path2 = BASE_VIRT_PATH + "/0_1.png";;
-					Image::UpdateRegionWithImage(path2, m_WorkingSet, {pageWidth,0,0});
-					Image::UpdateRegionWithImage(path1, m_WorkingSet, { pageWidth*2,0,0});
+					//
+					std::unordered_map<int,std::vector<std::pair<int,int>>> tilesPerMip;
+					static std::unordered_map<int, std::string_view> mipTiles = 
+					{
+						{0,"pages_4096_2048/"},
+						{1,"pages_2048_1024/"},
+						{2,"pages_1024_512/"},
+						{3,"pages_512_256/"},
+						{4,"pages_256_128/"},
+						{5,"pages_128_64/"},
+					};
+					static std::unordered_map< std::string, bool> isLoaded;
+
+
+
+					for (auto& feedback : m_FeedbackRes)
+					{
+
+
+						// there is feedback
+						if (feedback.a > 0)
+						{	
+							std::stringstream ss;
+							ss << feedback.r << "_" << feedback.g << ".png";
+							std::string path= BASE_VIRT_PATH + mipTiles[feedback.a].data() + ss.str();
+							if (!isLoaded[path])
+							{
+								isLoaded[path] = true;
+								Image::UpdateRegionWithImage(path, m_WorkingSet, {m_WorkingSetPtr[0],m_WorkingSetPtr[1],0});
+								Log::GetLog()->info("Loaded tile {0}",path);
+								if (workingSetWidth <= m_WorkingSetPtr[0] + pageWidth)
+								{
+									m_WorkingSetPtr[0] = 0;
+									if (workingSetHeight <= m_WorkingSetPtr[1] + pageHeight)
+									{
+										// we don;t have enough space, must overwrite something
+										assert(false);
+									}
+									else
+									{
+										m_WorkingSetPtr[1] += pageHeight;
+									}
+
+								}
+								else
+								{
+									m_WorkingSetPtr[0] += pageWidth;
+								}
+							}
+							
+							
+
+
+							//auto mipLevel = feedback.b;
+							//auto x = feedback.r;
+							//auto y = feedback.g;
+							//tilesPerMip[mipLevel].push_back({ x,y });
+						}
+					}
+					 //update mip levels of page table
+
+					for (auto [k, v] : tilesPerMip)
+					{
+						//m_PageTable->UpdateRegionWithVector(v,k);
+					}
+
+					
 					//m_WorkingSet->UpdateRegion();
 
 					auto vkCommandBuffer = commandBuffer.GetCommandBuffer();
@@ -697,7 +763,7 @@ public:
 
 				auto device = RenderContext::GetDevice()->GetDevice();
 				device.waitIdle();
-				m_MouseInfo.clear();
+				m_AddInfo.reset();
 				m_PageTable.reset();
 				m_WorkingSet.reset();
 				m_AttachmentManager.Destroy();
@@ -907,8 +973,19 @@ public:
 
 	void PreRender(Camera& camera) override
 	{
+		static size_t currentFrame = 0;
+
 		const auto scale = glm::vec3(glm::vec3(400, 512, 0));
-	
+		if (Input::IsKeyTyped(VS_KEY_I))
+		{
+			m_AddData.Debug  = !m_AddData.Debug;
+			auto ptr = RenderContext::GetDevice()->GetDevice().mapMemory(m_AddInfo->GetMemory(), 0, sizeof (AdditionalData));
+			memcpy(ptr, &m_AddData, sizeof (AdditionalData));
+			RenderContext::GetDevice()->GetDevice().unmapMemory(m_AddInfo->GetMemory());
+			RenderContext::GetDevice()->GetDevice().waitIdle();
+			RenderContext::GetDevice()->UpdateDescriptorSet(m_DescriptorSetDebug, 1, 1,
+				*m_AddInfo, vk::DescriptorType::eUniformBuffer);
+		}
 		auto mousePos = Input::GetMousePos();
 		glm::vec2 currentPos = { std::get<0>(mousePos),std::get<1>(mousePos) };
 		static glm::vec2 prevPos;
@@ -947,15 +1024,8 @@ public:
 		}
 		m_Sphere.Rot = m_SphereRot;
 		
-		static size_t currentFrame = 0;
-		AdditionalData data;
-		data.mouseFollow = m_Follow;
-		auto ptr = RenderContext::GetDevice()->GetDevice().mapMemory(m_MouseInfo[currentFrame]->GetMemory(), 0, sizeof AdditionalData);
-		memcpy(ptr,&data,sizeof AdditionalData);
-		RenderContext::GetDevice()->GetDevice().unmapMemory(m_MouseInfo[currentFrame]->GetMemory());
-
-		RenderContext::GetDevice()->UpdateDescriptorSet(m_DescriptorSets[currentFrame],1,1,
-			*m_MouseInfo[currentFrame], vk::DescriptorType::eUniformBuffer);
+		
+		
 		currentFrame++;
 		currentFrame %= RenderContext::GetFrameAmount();
 		
@@ -966,17 +1036,19 @@ public:
 private:
 	struct AdditionalData
 	{
-		glm::vec2 mouseFollow;
+		bool Debug = false;
 	};
+	AdditionalData m_AddData;
 	int m_BaseDesc = 0;
 	int m_DebugTexturesDesc = 0;
 	const uint32_t MAX_POINTS = 20;
 	int nextPoint = 0;
 	std::vector<vk::DescriptorSet> m_DescriptorSets;
-	std::vector<UPtr<Buffer>> m_MouseInfo;
+	UPtr<Buffer> m_AddInfo;
 	vk::DescriptorSet m_DescriptorSetDebug;
 	glm::vec2 m_Follow;
 	SPtr<Image> m_Image;
+	int m_WorkingSetPtr[2] = {0,0};
 	SPtr<Image> m_WorkingSet;
 	SPtr<Image> m_PageTable;
 
@@ -995,7 +1067,6 @@ private:
 	AttachmentManager m_AttachmentManager;
 	Sphere m_Sphere;
 	glm::vec3  m_SphereRot = {0,0,0};
-
 };
 
 

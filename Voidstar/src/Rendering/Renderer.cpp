@@ -164,7 +164,7 @@ namespace Voidstar
 			BASE_SHADER_PATH = executablePath.parent_path().string() + "../../../Shaders/";
 			BASE_RES_PATH = executablePath.parent_path().string() + "../../../res/";
 			BASE_SPIRV_OUTPUT = BASE_SHADER_PATH + "Binary/";
-			BASE_VIRT_PATH = executablePath.parent_path().string() + "../../../../mipMaps_virtualTex4.tiff/pages_1024_512";
+			BASE_VIRT_PATH = executablePath.parent_path().string() + "../../../../mipMaps_virtualTex4.tiff/";
 		}
 
 		return baseShaderPath;
