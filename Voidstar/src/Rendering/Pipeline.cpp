@@ -12,7 +12,7 @@ namespace Voidstar
 	static vk::PipelineLayout MakePipelineLayout(vk::Device device, std::vector<vk::DescriptorSetLayout> layout);
 
 	
-	UPtr<Pipeline> Pipeline::CreateComputePipeline(std::string_view computeShader, std::vector<vk::DescriptorSetLayout>& layouts)
+	void  Pipeline::CreateComputePipeline(std::string_view pipelineName,std::string_view computeShader, std::vector<vk::DescriptorSetLayout>& layouts)
 	{
 		UPtr<Pipeline> pipeline = CreateUPtr<Pipeline>();
 
@@ -46,8 +46,7 @@ namespace Voidstar
 		vkDestroyShaderModule(device->GetDevice(), computeShaderModule, nullptr);
 
 
-
-		return pipeline;
+		Renderer::Instance()->AddPipeline(pipelineName,std::move(pipeline));
 	}
 	Pipeline::~Pipeline()
 	{

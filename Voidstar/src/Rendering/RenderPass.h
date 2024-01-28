@@ -6,10 +6,11 @@
 #include "RenderContext.h"
 #include "Device.h"
 #include <utility>
+#include "IExecute.h"
 namespace Voidstar
 {
 	class CommandBuffer;
-	using Func = std::function<void(CommandBuffer& cmd,size_t frameIndex)>;
+	
 	enum class OutputType
 	{
 		COLOR,
@@ -48,7 +49,7 @@ namespace Voidstar
 		void AddSubpassDependency(vk::SubpassDependency subpassDependency);
 
 		template<typename Func>
-		UPtr<RenderPass> Build(std::string_view name,
+		UPtr<IExecute> Build(std::string_view name,
 			AttachmentManager& manager,
 			size_t framebufferAmount,
 			vk::Extent2D extent,
@@ -72,11 +73,11 @@ namespace Voidstar
 			renderpassInfo.dependencyCount = m_Dependencies.size();
 			renderpassInfo.pDependencies = m_Dependencies.data();
 
+				std::vector<vk::Framebuffer> framebuffers (framebufferAmount);
 			try
 			{
 				auto vkRenderPass = device->GetDevice().createRenderPass(renderpassInfo);
-				UPtr<RenderPass> renderPass = CreateUPtr<RenderPass>(name, vkRenderPass, extent,clearValues,execute);
-				renderPass->m_Framebuffers.resize(framebufferAmount);
+				
 				for (int i = 0; i < framebufferAmount; i++)
 				{
 					int colorOutputOverall = 0;
@@ -99,9 +100,10 @@ namespace Voidstar
 						}
 					}
 					// width and height for all images are supposed to be equal to each other
-					renderPass->m_Framebuffers[i] = CreateFramebuffer(views, vkRenderPass, m_Color[0][0]->GetWidth(), m_Color[0][0]->GetHeight());
+					framebuffers[i] = CreateFramebuffer(views, vkRenderPass, m_Color[0][0]->GetWidth(), m_Color[0][0]->GetHeight());
 				}
 
+				UPtr<IExecute> renderPass = CreateUPtr<RenderPass>(name, vkRenderPass, extent, clearValues, execute, framebuffers);
 				m_DepthReferences.clear();
 				m_ColorReferences.clear();
 				m_ResolveReferences.clear();
@@ -143,16 +145,18 @@ namespace Voidstar
 		std::vector<vk::SubpassDependency> m_Dependencies;
 	};
 	
-	class RenderPass
+	class RenderPass : public IExecute
 	{
 	public:
 		RenderPass(std::string_view name, vk::RenderPass renderPass,
 			vk::Extent2D extent, std::vector<vk::ClearValue> clearValues,
-			Func execute) : m_Name{name.data()},
+			Func execute,
+			std::vector<vk::Framebuffer>& frameBuffers) : m_Name{name.data()},
 			m_Extent{extent},
 			m_ClearValues{ clearValues },
 			m_RenderPass{ renderPass },
-			m_Execute{execute}
+			m_Execute{execute},
+			m_Framebuffers{ frameBuffers }
 
 		{
 
@@ -168,7 +172,7 @@ namespace Voidstar
 		{
 
 		}
-		void Execute(CommandBuffer& cmd, size_t frameIndex);
+		void Execute(CommandBuffer& cmd, size_t frameIndex) override;
 		
 		vk::RenderPass GetRaw()
 		{

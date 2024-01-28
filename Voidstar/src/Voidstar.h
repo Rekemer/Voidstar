@@ -16,6 +16,7 @@
 #include "Rendering/Pipeline.h"
 #include "Rendering/Swapchain.h"
 #include "Rendering/RenderPass.h"
+#include "Rendering/ComputePass.h"
 #include "Rendering/AttachmentManager.h"
 #include  "Rendering/Settings.h"
 #include "Input.h"

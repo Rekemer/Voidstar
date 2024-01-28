@@ -156,12 +156,14 @@
     <ClInclude Include="src\Rendering\Camera.h" />
     <ClInclude Include="src\Rendering\CommandBuffer.h" />
     <ClInclude Include="src\Rendering\CommandPoolManager.h" />
+    <ClInclude Include="src\Rendering\ComputePass.h" />
     <ClInclude Include="src\Rendering\DescriptorPool.h" />
     <ClInclude Include="src\Rendering\DescriptorSetLayout.h" />
     <ClInclude Include="src\Rendering\Device.h" />
     <ClInclude Include="src\Rendering\Drawables.h" />
     <ClInclude Include="src\Rendering\Font.h" />
     <ClInclude Include="src\Rendering\Generation.h" />
+    <ClInclude Include="src\Rendering\IExecute.h" />
     <ClInclude Include="src\Rendering\Image.h" />
     <ClInclude Include="src\Rendering\IndexBuffer.h" />
     <ClInclude Include="src\Rendering\Initializers.h" />
@@ -199,6 +201,7 @@
     <ClCompile Include="src\Rendering\Camera.cpp" />
     <ClCompile Include="src\Rendering\CommandBuffer.cpp" />
     <ClCompile Include="src\Rendering\CommandPoolManager.cpp" />
+    <ClCompile Include="src\Rendering\ComputePass.cpp" />
     <ClCompile Include="src\Rendering\DescriptorPool.cpp" />
     <ClCompile Include="src\Rendering\DescriptorSetLayout.cpp" />
     <ClCompile Include="src\Rendering\Device.cpp" />

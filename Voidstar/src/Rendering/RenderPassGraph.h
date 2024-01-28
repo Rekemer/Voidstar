@@ -7,12 +7,7 @@
 #include "Sync.h"
 namespace Voidstar
 {
-	struct Transition
-	{
-		
-		RenderPass* Current;
-		Transition* Next;
-	};
+	struct IExecute;
 	class RenderPassGraph;
 	class CommandBuffer;
 	class Pipeline;
@@ -23,14 +18,11 @@ namespace Voidstar
 		RenderPassGraph() = default;
 		RenderPassGraph(const RenderPassGraph& ) = delete;
 		RenderPassGraph& operator=(const RenderPassGraph& ) = delete;
-		void AddRenderPass(UPtr<RenderPass> renderPass);
-		void AddExec(std::string_view renderPassName );
+		void AddExec(UPtr<IExecute> pass);
 		vk::Semaphore  Execute(CommandBuffer& cmd, size_t frameIndex, Semaphore& imageIsAvailable);
-		void ExecuteOffline();
 		void Destroy();
 	private:
-		std::unordered_map<std::string,UPtr<RenderPass>> m_RenderPasses;
-		std::vector<RenderPass*> m_Transitions;
+		std::vector<UPtr<IExecute>> m_Transitions;
 		Fence m_Fence;
 		std::vector<Semaphore> m_Semaphores;
 	};

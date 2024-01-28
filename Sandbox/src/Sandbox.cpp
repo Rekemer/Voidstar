@@ -36,8 +36,9 @@ const int pageWidth = 128;
 const int pageHeight = 64;
 const int workingSetWidth = pageWidth * 10;
 const int workingSetHeight = pageHeight * 10;
-std::string_view BASIC_RENDER_PASS = "Basic";
-std::string_view DEBUG_RENDER_PASS = "Debug";
+std::string_view RENDER_BASIC_PASS = "Basic";
+std::string_view RENDER_DEBUG_PASS = "Debug";
+std::string_view COMPUTE_PAGE_TABLE_PASS = "PageTable";
 std::string_view FEEDBACK_RENDER_PASS = "Feedback";
 std::string_view IMGUI_RENDER_PASS = "ImGui";
 
@@ -98,26 +99,41 @@ public:
 			m_DebugTexturesDesc= binderRender.BeginBind();
 			binderRender.Bind(0, 1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment);
 			binderRender.Bind(1, 1, vk::DescriptorType::eUniformBuffer,  vk::ShaderStageFlagBits::eFragment);
+			m_PageTableDescRender = binderRender.BeginBind();
+			binderRender.Bind(0, 1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment);
 
+			auto binderCompute = Binder<COMPUTE>();
+			m_PageTableDescCompute = binderCompute.BeginBind();
+			binderCompute.Bind(0, 1, vk::DescriptorType::eStorageImage, vk::ShaderStageFlagBits::eCompute);
+			binderCompute.Bind(1, 1, vk::DescriptorType::eStorageBuffer, vk::ShaderStageFlagBits::eCompute);
 		};
 
 		auto createResources= [this]()
 		{
 			
-			BufferInputChunk inputBuffer;
-			inputBuffer.size = sizeof(AdditionalData);
-			inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
-			inputBuffer.usage = vk::BufferUsageFlagBits::eUniformBuffer;
-			m_AddInfo = CreateUPtr<Buffer>(inputBuffer);
-
+			{
+				BufferInputChunk inputBuffer;
+				inputBuffer.size = sizeof(AdditionalData);
+				inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+				inputBuffer.usage = vk::BufferUsageFlagBits::eUniformBuffer;
+				m_AddInfo = CreateUPtr<Buffer>(inputBuffer);
+			}
+			
+			{
+				BufferInputChunk inputBuffer;
+				inputBuffer.size = sizeof(FeedbackRes) * 100;
+				inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+				inputBuffer.usage = vk::BufferUsageFlagBits::eStorageBuffer;
+				m_StorageBuffers = CreateUPtr<Buffer>(inputBuffer);
+			}
 			auto usage =  vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst;
 
 			m_WorkingSet = Image::CreateEmptyImage(workingSetWidth, workingSetHeight, vk::Format::eR8G8B8A8Unorm, usage);
 			const int pageTableWidth = 32768/pageWidth;
 			const int pageTableHeight = 16384/pageHeight;
 			uint32_t mipLevels = std::log2(std::max(pageTableWidth, pageTableHeight));
-			m_PageTable = Image::CreateEmptyImage(pageTableWidth, pageTableHeight, vk::Format::eR8G8B8A8Unorm, usage 
-				| vk::ImageUsageFlagBits::eTransferSrc| vk::ImageUsageFlagBits::eTransferDst, mipLevels);
+			m_PageTable = Image::CreateEmptyImage(pageTableWidth, pageTableHeight, vk::Format::eR8Unorm, usage
+				| vk::ImageUsageFlagBits::eTransferSrc| vk::ImageUsageFlagBits::eStorage |vk::ImageUsageFlagBits::eTransferDst, mipLevels);
 			auto commandBuffer = Renderer::Instance()->GetTransferCommandBuffer(0);
 			commandBuffer.BeginTransfering();
 			commandBuffer.ChangeImageLayout(m_PageTable.get(), vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal, mipLevels);
@@ -125,17 +141,28 @@ public:
 			commandBuffer.SubmitSingle();
 
 			m_PageTable->GenerateMipmaps(mipLevels);
+
+			commandBuffer.BeginTransfering();
+			commandBuffer.ChangeImageLayout(m_PageTable.get(), vk::ImageLayout::eShaderReadOnlyOptimal, vk::ImageLayout::eTransferDstOptimal, mipLevels);
+			commandBuffer.EndTransfering();
+			commandBuffer.SubmitSingle();
+
 		};
 
 
 		auto bindResources = [this]()
 		{
+			auto device = RenderContext::GetDevice();
 			
+			m_PageTableDescriptorSet = Renderer::Instance()->GetSet<vk::DescriptorSet>(m_PageTableDescCompute, PipelineType::COMPUTE);
+			vk::DescriptorImageInfo imageDescriptor1;
+			imageDescriptor1.imageLayout = vk::ImageLayout::eGeneral;
+			imageDescriptor1.imageView = m_PageTable->GetImageView();
+			imageDescriptor1.sampler = m_PageTable->GetSampler();
+			device->UpdateDescriptorSet(m_PageTableDescriptorSet, 0, 1, imageDescriptor1, vk::DescriptorType::eStorageImage);
 
 
 			m_DescriptorSetDebug = Renderer::Instance()->GetSet<vk::DescriptorSet>(m_DebugTexturesDesc, PipelineType::RENDER);
-
-			auto device = RenderContext::GetDevice();
 
 			auto bufferPerFrame = Renderer::Instance()->GetSet<std::vector<vk::DescriptorSet>>(m_BaseDesc, PipelineType::RENDER);
 			m_DescriptorSets = bufferPerFrame;
@@ -162,11 +189,11 @@ public:
 			device->UpdateDescriptorSet(m_DescriptorSetDebug, 0,1, imageDescriptor , vk::DescriptorType::eCombinedImageSampler);
 
 
-		//	vk::DescriptorImageInfo imageDescriptor1;
-		//	imageDescriptor1.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-		//	imageDescriptor1.imageView = m_Image->GetImageView();
-		//	imageDescriptor1.sampler = m_Image->GetSampler();
-		//	device->UpdateDescriptorSet(m_DescriptorSetSelected, 0, 1, imageDescriptor, vk::DescriptorType::eStorageImage);
+		//	
+		//	
+		//	
+		//	
+		//	
 		//	device->UpdateDescriptorSet(m_DescriptorSetSelected, 2, 1, *m_Image, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
 		//
 		//
@@ -174,11 +201,11 @@ public:
 		//	LoadFont(BASE_RES_PATH + "fonts/CrimsonText-Regular.ttf");
 		//	device->UpdateDescriptorSet(m_DescriptorSetFont, 0, 1, *m_FontAtlas, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eCombinedImageSampler);
 		};
-
 		auto createPipelines = [this]()
 		{
 			auto m_DescriptorSetLayout = Renderer::Instance()->GetSetLayout(m_BaseDesc, PipelineType::RENDER);
 			auto m_DescriptorSetDebugLayout = Renderer::Instance()->GetSetLayout(m_DebugTexturesDesc, PipelineType::RENDER);
+			auto m_DescriptorSetPageTableCompLayout = Renderer::Instance()->GetSetLayout(m_PageTableDescCompute, PipelineType::COMPUTE);
 			
 			
 			
@@ -216,9 +243,145 @@ public:
 
 			Renderer::Instance()->CreateSyncObjects();
 
-			UPtr<RenderPass> m_RenderPass;
-			UPtr<RenderPass> m_DebugRenderPass;
-			UPtr<RenderPass> m_FeedbackRenderPass;
+			UPtr<IExecute> m_RenderPass;
+			UPtr<IExecute> m_DebugRenderPass;
+			UPtr<IExecute> m_FeedbackRenderPass;
+			UPtr<IExecute> m_UpdatePageTablePass;
+
+			std::vector<vk::DescriptorSetLayout> layouts = { m_DescriptorSetPageTableCompLayout->GetLayout()};
+			Renderer::Instance()->CompileShader("pageTable.comp", ShaderType::COMPUTE);
+			Pipeline::CreateComputePipeline(COMPUTE_PAGE_TABLE_PASS, BASE_SPIRV_OUTPUT +"pageTable.spvCmp", layouts);
+
+			uint64_t bufferSize = 4 * Application::GetScreenWidth() / 10 * Application::GetScreenHeight() / 10;
+			m_FeedbackRes.resize(bufferSize);
+
+			Func exe = [=](CommandBuffer& cmd, size_t frameIndex)
+				{
+					auto color = m_AttachmentManager.GetColor({ "FeedbackBuffer" })[frameIndex];
+					auto device = RenderContext::GetDevice();
+					auto ptr = (float*)device->GetDevice().mapMemory(color->GetMemory(), (uint64_t)0, bufferSize);
+
+					//memcpy(m_FeedbackRes.data(), ptr, bufferSize);
+					//std::copy(m_FeedbackRes.begin(), m_FeedbackRes.end(), ptr);
+
+					for (int i = 0, memoryRead = 0; memoryRead < bufferSize; memoryRead += 4, i++)
+					{
+						auto r = *(float*)(ptr);
+						ptr++;
+						auto g = *(float*)(ptr);
+						ptr++;
+						auto b = *(float*)(ptr);
+						ptr++;
+						auto a = *(float*)(ptr);
+						ptr++;
+						m_FeedbackRes[i] = { r,g,b,a };
+					}
+					device->GetDevice().unmapMemory(color->GetMemory());
+					// load tiles
+
+					// key is mip level of page table 
+					// first 2 values of tuple are coordinates of texel
+					// next int is - is the index of loaded tile in working set
+					std::vector<int> tilesToLoadToPageTable;
+					static std::unordered_map<int, std::string_view> mipTiles =
+					{
+						{0,"pages_4096_2048/"},
+						{1,"pages_2048_1024/"},
+						{2,"pages_1024_512/"},
+						{3,"pages_512_256/"},
+						{4,"pages_256_128/"},
+						{5,"pages_128_64/"},
+					};
+					static std::unordered_map< std::string, bool> isLoaded;
+
+
+
+					for (auto& feedback : m_FeedbackRes)
+					{
+						//continue;
+						static int index = 0;
+						// there is feedback
+						if (feedback.a > 0)
+						{
+							std::stringstream ss;
+							ss << feedback.r << "_" << feedback.g << ".png";
+							std::string path = BASE_VIRT_PATH + mipTiles[feedback.a].data() + ss.str();
+							if (!isLoaded[path])
+							{
+								isLoaded[path] = true;
+								Image::UpdateRegionWithImage(path, m_WorkingSet, { m_WorkingSetPtr[0],m_WorkingSetPtr[1],0 });
+								Log::GetLog()->info("Loaded tile {0}", path);
+								if (workingSetWidth <= m_WorkingSetPtr[0] + pageWidth)
+								{
+									m_WorkingSetPtr[0] = 0;
+									if (workingSetHeight <= m_WorkingSetPtr[1] + pageHeight)
+									{
+										// we don;t have enough space, must overwrite something
+										assert(false);
+									}
+									else
+									{
+										m_WorkingSetPtr[1] += pageHeight;
+									}
+								}
+								else
+								{
+									m_WorkingSetPtr[0] += pageWidth;
+								}
+								auto mipLevel = feedback.b;
+								auto x = feedback.r;
+								auto y = feedback.g;
+								tilesToLoadToPageTable.push_back(mipLevel);
+								tilesToLoadToPageTable.push_back(x);
+								tilesToLoadToPageTable.push_back(y);
+								tilesToLoadToPageTable.push_back(index++);
+							}
+						}
+					}
+					if (tilesToLoadToPageTable.size() > 0)
+					{
+						ptr = (float*)device->GetDevice().mapMemory(m_StorageBuffers->GetMemory(), (uint64_t)0, tilesToLoadToPageTable.size()* sizeof(tilesToLoadToPageTable[0]));
+						memcpy(ptr, tilesToLoadToPageTable.data(), tilesToLoadToPageTable.size() * sizeof(tilesToLoadToPageTable[0]));
+						device->GetDevice().unmapMemory(m_StorageBuffers->GetMemory());
+						device->UpdateDescriptorSet(m_PageTableDescriptorSet,1,1, *m_StorageBuffers,vk::DescriptorType::eStorageBuffer);
+							//update mip levels of page table
+						device->GetDevice().waitIdle();
+					}
+
+				auto currentFrame = frameIndex;
+				auto cmdBuffer = Renderer::Instance()->GetTransferCommandBuffer(frameIndex);
+				if (m_PageTable->GetLayout() != vk::ImageLayout::eGeneral)
+				{
+					cmdBuffer.BeginTransfering();
+					cmdBuffer.ChangeImageLayout(m_PageTable.get(), m_PageTable->GetLayout(), vk::ImageLayout::eGeneral);
+					cmdBuffer.EndTransfering();
+					cmdBuffer.SubmitSingle();
+
+				}
+
+
+				auto pipeline = Renderer::Instance()->GetPipeline(COMPUTE_PAGE_TABLE_PASS);
+				cmd.BeginTransfering();
+				vkCmdBindPipeline(cmd.GetCommandBuffer(), VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->GetPipeline());
+				cmd.GetCommandBuffer().bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipeline->GetLayout(), 0, 1, &m_PageTableDescriptorSet, 0, 0);
+				float invocations = 256;
+				int localSize = 8;
+
+				
+				vkCmdDispatch(cmd.GetCommandBuffer(), (Application::GetScreenWidth() / 10 )/ localSize, (Application::GetScreenHeight() / 10 )/ localSize, 1);
+				cmd.ChangeImageLayout(m_PageTable.get(), vk::ImageLayout::eGeneral, vk::ImageLayout::eShaderReadOnlyOptimal);
+				cmd.EndTransfering();
+				cmd.SubmitSingle();
+
+
+				device->GetDevice().waitIdle();
+
+
+
+				   //m_WorkingSet->UpdateRegion();
+				};
+			m_UpdatePageTablePass = CreateUPtr<ComputePass>(exe);
+
 
 			vk::ClearValue clearColor = { std::array<float, 4>{137.f / 255.f, 189.f / 255.f, 199.f / 255.f, 1.0f} };
 			vk::Extent2D extent = { (uint32_t)Application::GetScreenWidth(),(uint32_t)Application::GetScreenHeight() };
@@ -265,7 +428,7 @@ public:
 
 
 
-
+				
 
 
 				vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0,
@@ -278,105 +441,15 @@ public:
 				
 				builder.AddSubpassDependency(dependency0);
 
-				uint64_t bufferSize = 4 * Application::GetScreenWidth() / 10 * Application::GetScreenHeight() / 10;
-				m_FeedbackRes.resize(bufferSize);
-				auto exe = [this, bufferSize](CommandBuffer& commandBuffer, size_t frameIndex)
+				
+				auto exe = [this](CommandBuffer& commandBuffer, size_t frameIndex)
 				{
 
-					auto color = m_AttachmentManager.GetColor({ "FeedbackBuffer" })[frameIndex];
-					auto device = RenderContext::GetDevice();
-					auto ptr = (float*)device->GetDevice().mapMemory(color->GetMemory(),(uint64_t)0, bufferSize);
-
-					//memcpy(m_FeedbackRes.data(), ptr, bufferSize);
-					//std::copy(m_FeedbackRes.begin(), m_FeedbackRes.end(), ptr);
 					
-					for (int i = 0, memoryRead = 0; memoryRead < bufferSize; memoryRead += 4, i++)
-					{
-						auto r = *(float*)(ptr);
-						ptr++;
-						auto g = *(float*)(ptr);
-						ptr++;
-						auto b = *(float*)(ptr);
-						ptr++;
-						auto a = *(float*)(ptr);
-						ptr++;
-						m_FeedbackRes[i] = {r,g,b,a};
-					}
-					device->GetDevice().unmapMemory(color->GetMemory());
-					// load tiles
-					
-					//
-					std::unordered_map<int,std::vector<std::pair<int,int>>> tilesPerMip;
-					static std::unordered_map<int, std::string_view> mipTiles = 
-					{
-						{0,"pages_4096_2048/"},
-						{1,"pages_2048_1024/"},
-						{2,"pages_1024_512/"},
-						{3,"pages_512_256/"},
-						{4,"pages_256_128/"},
-						{5,"pages_128_64/"},
-					};
-					static std::unordered_map< std::string, bool> isLoaded;
-
-
-
-					for (auto& feedback : m_FeedbackRes)
-					{
-
-
-						// there is feedback
-						if (feedback.a > 0)
-						{	
-							std::stringstream ss;
-							ss << feedback.r << "_" << feedback.g << ".png";
-							std::string path= BASE_VIRT_PATH + mipTiles[feedback.a].data() + ss.str();
-							if (!isLoaded[path])
-							{
-								isLoaded[path] = true;
-								Image::UpdateRegionWithImage(path, m_WorkingSet, {m_WorkingSetPtr[0],m_WorkingSetPtr[1],0});
-								Log::GetLog()->info("Loaded tile {0}",path);
-								if (workingSetWidth <= m_WorkingSetPtr[0] + pageWidth)
-								{
-									m_WorkingSetPtr[0] = 0;
-									if (workingSetHeight <= m_WorkingSetPtr[1] + pageHeight)
-									{
-										// we don;t have enough space, must overwrite something
-										assert(false);
-									}
-									else
-									{
-										m_WorkingSetPtr[1] += pageHeight;
-									}
-
-								}
-								else
-								{
-									m_WorkingSetPtr[0] += pageWidth;
-								}
-							}
-							
-							
-
-
-							//auto mipLevel = feedback.b;
-							//auto x = feedback.r;
-							//auto y = feedback.g;
-							//tilesPerMip[mipLevel].push_back({ x,y });
-						}
-					}
-					 //update mip levels of page table
-
-					for (auto [k, v] : tilesPerMip)
-					{
-						//m_PageTable->UpdateRegionWithVector(v,k);
-					}
-
-					
-					//m_WorkingSet->UpdateRegion();
 
 					auto vkCommandBuffer = commandBuffer.GetCommandBuffer();
 					Renderer::Instance()->BeginBatch(); 
-					auto pipeline = Renderer::Instance()->GetPipeline(BASIC_RENDER_PASS);
+					auto pipeline = Renderer::Instance()->GetPipeline(RENDER_BASIC_PASS);
 					vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 0, m_DescriptorSets[frameIndex], nullptr); 
 					//vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 1, m_DescriptorSetTex, nullptr); 
 					vkCommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline->GetPipeline()); 
@@ -397,7 +470,7 @@ public:
 					Renderer::Instance()->DrawQuadScreen(vkCommandBuffer);
 				};
 
-				m_RenderPass = builder.Build(BASIC_RENDER_PASS, m_AttachmentManager, actualFrameAmount, extent, clearValues, exe);
+				m_RenderPass = builder.Build(RENDER_BASIC_PASS, m_AttachmentManager, actualFrameAmount, extent, clearValues, exe);
 
 				m_Sphere.Pos = { 0,0,0 };
 				GetCamera()->LookAt(m_Sphere.Pos);
@@ -443,12 +516,12 @@ public:
 				builder.EnableStencilTest(false);
 				builder.SetDepthTest(true);
 				builder.WriteToDepthBuffer(true);
-				builder.SetRenderPass(m_RenderPass->GetRaw());
+				builder.SetRenderPass(static_cast<RenderPass*>(m_RenderPass.get())->GetRaw());
 				builder.SetStencilRefNumber(2);
 				builder.StencilTestOp(vk::CompareOp::eAlways, vk::StencilOp::eReplace, vk::StencilOp::eReplace, vk::StencilOp::eReplace);
 				builder.SetMasks(0xff, 0xff);
 				builder.SetPolygoneMode(vk::PolygonMode::eFill);
-				builder.Build(BASIC_RENDER_PASS);
+				builder.Build(RENDER_BASIC_PASS);
 			}
 			// debug render pass
 			{
@@ -496,7 +569,7 @@ public:
 						}
 						auto vkCommandBuffer = commandBuffer.GetCommandBuffer();
 						Renderer::Instance()->BeginBatch();
-						auto pipeline = Renderer::Instance()->GetPipeline(DEBUG_RENDER_PASS);
+						auto pipeline = Renderer::Instance()->GetPipeline(RENDER_DEBUG_PASS);
 						vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 0, m_DescriptorSets[frameIndex], nullptr);
 						vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 1, m_DescriptorSetDebug, nullptr); 
 						vkCommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline->GetPipeline());
@@ -515,7 +588,7 @@ public:
 						Renderer::Instance()->DrawQuadScreen(vkCommandBuffer);
 					};
 
-				m_DebugRenderPass = builder.Build(DEBUG_RENDER_PASS, m_AttachmentManager, actualFrameAmount, extent, clearValues, exe);
+				m_DebugRenderPass = builder.Build(RENDER_DEBUG_PASS, m_AttachmentManager, actualFrameAmount, extent, clearValues, exe);
 			}
 
 			{
@@ -538,12 +611,12 @@ public:
 				builder.EnableStencilTest(false);
 				builder.SetDepthTest(false);
 				builder.WriteToDepthBuffer(false);
-				builder.SetRenderPass(m_DebugRenderPass->GetRaw());
+				builder.SetRenderPass(static_cast<RenderPass*>(m_DebugRenderPass.get())->GetRaw());
 				builder.SetStencilRefNumber(2);
 				builder.StencilTestOp(vk::CompareOp::eAlways, vk::StencilOp::eReplace, vk::StencilOp::eReplace, vk::StencilOp::eReplace);
 				builder.SetMasks(0xff, 0xff);
 				builder.SetPolygoneMode(vk::PolygonMode::eFill);
-				builder.Build(DEBUG_RENDER_PASS);
+				builder.Build(RENDER_DEBUG_PASS);
 			}
 
 			// feedbackPass
@@ -622,7 +695,7 @@ public:
 				builder.SetDepthTest(true);
 				builder.EnableBlend(false);
 				builder.WriteToDepthBuffer(true);
-				builder.SetRenderPass(m_FeedbackRenderPass->GetRaw());
+				builder.SetRenderPass(static_cast<RenderPass*>(m_FeedbackRenderPass.get())->GetRaw());
 				builder.SetPolygoneMode(vk::PolygonMode::eFill);
 				builder.Build(FEEDBACK_RENDER_PASS);
 			}
@@ -648,7 +721,7 @@ public:
 				vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
 			builder.AddSubpassDependency(dependency0);
 
-			UPtr<RenderPass> m_ImGuiRenderPass = builder.Build(IMGUI_RENDER_PASS, m_AttachmentManager,
+			UPtr<IExecute> m_ImGuiRenderPass = builder.Build(IMGUI_RENDER_PASS, m_AttachmentManager,
 				RenderContext::GetFrameAmount(),
 				extent, clearValues, [this](CommandBuffer& commandBuffer, size_t frameIndex)
 				{
@@ -730,7 +803,7 @@ public:
 			init_info.MinImageCount = 2;
 			init_info.ImageCount = RenderContext::GetFrameAmount();
 			init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
-			result = ImGui_ImplVulkan_Init(&init_info, m_ImGuiRenderPass->GetRaw());
+			result = ImGui_ImplVulkan_Init(&init_info, static_cast<RenderPass*>(m_ImGuiRenderPass.get())->GetRaw());
 			auto commandBuffer = Renderer::Instance()->GetTransferCommandBuffer(0);
 			commandBuffer.BeginTransfering();
 			result = ImGui_ImplVulkan_CreateFontsTexture((VkCommandBuffer)commandBuffer.GetCommandBuffer());
@@ -740,13 +813,11 @@ public:
 
 
 			auto graph = CreateUPtr<RenderPassGraph>();
-			graph->AddRenderPass(std::move(m_FeedbackRenderPass));
-			graph->AddRenderPass(std::move(m_RenderPass));
-			graph->AddRenderPass(std::move(m_DebugRenderPass));
-			graph->AddRenderPass(std::move(m_ImGuiRenderPass));
-			graph->AddExec(FEEDBACK_RENDER_PASS);
-			graph->AddExec(BASIC_RENDER_PASS);
-			graph->AddExec(DEBUG_RENDER_PASS);
+			graph->AddExec(std::move(m_FeedbackRenderPass));
+			graph->AddExec(std::move(m_UpdatePageTablePass));
+			graph->AddExec(std::move(m_RenderPass));
+			graph->AddExec(std::move(m_DebugRenderPass));
+			//graph->AddExec(std::move(m_ImGuiRenderPass));
 
 			Renderer::Instance()->AddRenderGraph("",std::move(graph));
 
@@ -764,6 +835,7 @@ public:
 				auto device = RenderContext::GetDevice()->GetDevice();
 				device.waitIdle();
 				m_AddInfo.reset();
+				m_StorageBuffers.reset();
 				m_PageTable.reset();
 				m_WorkingSet.reset();
 				m_AttachmentManager.Destroy();
@@ -795,39 +867,7 @@ public:
 	
 	void UpdateTexture(size_t frameIndex)
 	{
-		/*auto device = RenderContext::GetDevice()->GetDevice();
-		auto currentFrame = frameIndex;
-		if (m_ImageSelected->GetLayout() != vk::ImageLayout::eGeneral)
-		{
-			auto computeCommandBuffer = Renderer::Instance()->GetComputeCommandBuffer(frameIndex);
-			auto cmdBuffer = computeCommandBuffer.BeginTransfering();
-
-
-			computeCommandBuffer.ChangeImageLayout(m_ImageSelected.get(), vk::ImageLayout::eShaderReadOnlyOptimal, vk::ImageLayout::eGeneral);
-			computeCommandBuffer.EndTransfering();
-			computeCommandBuffer.SubmitSingle();
-
-		}
-		auto cmdBuffer = computeCommandBuffer.BeginTransfering();
-
-
-
-
-		vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_ComputePipeline->GetPipeline());
-		cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_ComputePipeline->GetLayout(), 0, 1, &m_DescriptorSets[currentFrame], 0, 0);
-		cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_ComputePipeline->GetLayout(), 1, 1, &m_DescriptorSetSelected, 0, 0);
-		float invocations = 256;
-		int localSize = 8;
-
-
-		vkCmdDispatch(cmdBuffer, invocations / localSize, invocations / localSize, 1);
-
-		computeCommandBuffer.ChangeImageLayout(m_ImageSelected.get(), vk::ImageLayout::eGeneral, vk::ImageLayout::eShaderReadOnlyOptimal);
-		computeCommandBuffer.EndTransfering();
-		computeCommandBuffer.SubmitSingle();
-
-
-		device.waitIdle();*/
+		
 	}
 
 
@@ -1040,11 +1080,15 @@ private:
 	};
 	AdditionalData m_AddData;
 	int m_BaseDesc = 0;
+	int m_PageTableDescCompute = 0;
+	int m_PageTableDescRender = 0;
 	int m_DebugTexturesDesc = 0;
 	const uint32_t MAX_POINTS = 20;
 	int nextPoint = 0;
 	std::vector<vk::DescriptorSet> m_DescriptorSets;
+	vk::DescriptorSet  m_PageTableDescriptorSet;
 	UPtr<Buffer> m_AddInfo;
+	UPtr<Buffer> m_StorageBuffers;
 	vk::DescriptorSet m_DescriptorSetDebug;
 	glm::vec2 m_Follow;
 	SPtr<Image> m_Image;

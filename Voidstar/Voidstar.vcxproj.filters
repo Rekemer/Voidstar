@@ -144,6 +144,8 @@
     <ClInclude Include="src\Window.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="src\Rendering\ComputePass.h" />
+    <ClInclude Include="src\Rendering\IExecute.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Dependencies\Tracy\public\TracyClient.cpp">
@@ -224,5 +226,6 @@
     <ClCompile Include="src\Window.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="src\Rendering\ComputePass.cpp" />
   </ItemGroup>
 </Project>

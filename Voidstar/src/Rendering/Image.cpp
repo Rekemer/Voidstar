@@ -709,6 +709,7 @@ namespace Voidstar
 		logicalDevice.destroyImageView(m_ImageView);
 		Renderer::Instance()->GetCommandPoolManager()->FreePool(m_CommandPool);
 	}
+	
 	vk::Format Image::GetFormat(vk::PhysicalDevice physicalDevice, const std::vector<vk::Format>& candidates, vk::ImageTiling tiling, vk::FormatFeatureFlags features)
 	{
 		for (vk::Format format : candidates) {

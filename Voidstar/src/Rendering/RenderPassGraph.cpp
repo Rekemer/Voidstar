@@ -5,23 +5,19 @@ namespace Voidstar
 {
 	void RenderPassGraph::Destroy()
 	{
-		for (auto& e : m_RenderPasses)
+		for (auto& e : m_Transitions)
 		{
-			e.second.reset();
+			e.reset();
 		}
+		
 		m_Semaphores.clear();
 		m_Fence.~Fence();
 	}
-	void RenderPassGraph::AddRenderPass(UPtr<RenderPass> renderPass)
-	{
-
-		m_RenderPasses[renderPass->GetName().data()] = std::move(renderPass);
-	}
-	void RenderPassGraph::AddExec(std::string_view from)
+	void RenderPassGraph::AddExec(UPtr<IExecute> pass)
 	{
 		Semaphore semaphore;
 		m_Semaphores.push_back(std::move(semaphore));
-		m_Transitions.push_back(m_RenderPasses.at(from.data()).get());
+		m_Transitions.push_back(std::move(pass));
 	}
 	vk::Semaphore RenderPassGraph::Execute(CommandBuffer& cmd, size_t frameIndex, Semaphore& imageIsAvailable)
 	{
@@ -29,11 +25,15 @@ namespace Voidstar
 		{
 			Renderer::Instance()->Wait(m_Fence.GetFence());
 			Renderer::Instance()->Reset(m_Fence.GetFence());
-			m_Transitions[i]->Execute(cmd, frameIndex);
+			if (m_Transitions[i]->IsCompute())
+			{
+				m_Transitions[i]->Execute(Renderer::Instance()->GetComputeCommandBuffer(frameIndex), frameIndex);
+			}
+			else m_Transitions[i]->Execute(cmd, frameIndex);
 			
 			if (i == 0)
 			{
-			cmd.Submit(&imageIsAvailable.GetSemaphore(),
+				cmd.Submit(&imageIsAvailable.GetSemaphore(),
 				&m_Semaphores[i].GetSemaphore(), &m_Fence.GetFence());
 			}
 			else

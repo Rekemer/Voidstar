@@ -47,7 +47,6 @@ namespace Voidstar
 		static SPtr<Image> CreateEmpty3DImage(int width, int height, int depth, vk::Format format);
 		~Image();
 		void static UpdateRegionWithImage(std::string& path, SPtr<Image> image, vk::Offset3D offset);
-		//void UpdateRegionWithVector(std::vector<std::pair<int, int>> texels)
 
 		
 		vk::Sampler  GetSampler() { return m_Sampler; }

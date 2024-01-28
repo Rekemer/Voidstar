@@ -1,0 +1,13 @@
+#version 450
+layout(binding = 0, r8) uniform writeonly image2D storageImage;
+layout(std140, binding = 1) buffer ParticleSSBOOut {
+   vec4 particlesOut[ ];
+};
+
+void main() 
+{
+   // Get the image coordinates
+   ivec2 coords = ivec2(gl_GlobalInvocationID.xy);
+   imageStore(storageImage, coords,  vec4(0.3,1,0,1));
+}
+

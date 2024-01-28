@@ -7,10 +7,11 @@ namespace Voidstar
 	class Pipeline
 	{
 	public:
-		static UPtr<Pipeline> CreateComputePipeline(std::string_view computeShader, std::vector<vk::DescriptorSetLayout>& layouts);
+		static void CreateComputePipeline(std::string_view pipelineName,std::string_view computeShader, std::vector<vk::DescriptorSetLayout>& layouts);
 		vk::PipelineLayout GetLayout() const  { return m_PipelineLayout; }
 		vk::Pipeline GetPipeline() const  { return m_Pipeline; }
-		
+		Pipeline(const Pipeline& pipeline) = delete;
+		Pipeline() = default;
 		~Pipeline();
 
 	private:
