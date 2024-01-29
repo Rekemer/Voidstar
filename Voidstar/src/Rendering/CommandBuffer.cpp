@@ -278,11 +278,30 @@ namespace Voidstar
 			buffer.GetBuffer(), image, vk::ImageLayout::eTransferDstOptimal, copy
 		);
 	}
+	void CommandBuffer::CopyImageToBuffer(SPtr<Image> image, SPtr<Buffer> buffer)
+	{
+		vk::BufferImageCopy copy;
+		copy.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
+		copy.imageSubresource.layerCount= 1;
+		copy.imageExtent = vk::Extent3D{ (uint32_t)image->GetWidth(), (uint32_t)image->GetHeight(), 1};
+		m_CommandBuffer.copyImageToBuffer(image->GetImage(), vk::ImageLayout::eTransferSrcOptimal, buffer->GetBuffer(), copy);
+	}
 	void CommandBuffer::EndTransfering()
 	{
 		m_CommandBuffer.end();
 		
 
+	}
+	void CommandBuffer::SubmitSingle(vk::Fence fence)
+	{
+		auto device = RenderContext::GetDevice();
+
+		vk::SubmitInfo submitInfo;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &m_CommandBuffer;
+		device->GetGraphicsQueue().submit(1, &submitInfo, fence);
+
+		
 	}
 	void CommandBuffer::SubmitSingle()
 	{
@@ -292,8 +311,8 @@ namespace Voidstar
 		submitInfo.commandBufferCount = 1;
 		submitInfo.pCommandBuffers = &m_CommandBuffer;
 		device->GetGraphicsQueue().submit(1, &submitInfo, nullptr);
-
 		device->GetGraphicsQueue().waitIdle();
+
 	}
 	CommandBuffer::~CommandBuffer()
 	{

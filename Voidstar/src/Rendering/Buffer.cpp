@@ -96,7 +96,7 @@ namespace Voidstar
 		BufferInputChunk inputBuffer;
 		inputBuffer.size = dataSize;
 		inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
-		inputBuffer.usage = vk::BufferUsageFlagBits::eTransferSrc;
+		inputBuffer.usage = vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst;
 
 		SPtr<Buffer> buffer =CreateSPtr<Buffer>(inputBuffer);
 		return buffer;

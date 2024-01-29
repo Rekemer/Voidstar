@@ -108,6 +108,7 @@ namespace Voidstar
 			const std::vector<vk::Format>& candidates,
 			vk::ImageTiling tiling, vk::FormatFeatureFlags features);
 		void GenerateMipmaps(uint32_t mipLevels);
+		
 	private:
 		void GenerateMipmaps(VkImage image,VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
 		void* LoadImageRaw();
