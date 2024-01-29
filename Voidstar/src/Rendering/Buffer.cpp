@@ -2,6 +2,7 @@
 #include "Buffer.h"
 #include "Device.h"
 #include "RenderContext.h"
+#include "../Log.h"
 namespace Voidstar
 {
 	uint32_t findMemoryTypeIndex(vk::PhysicalDevice physicalDevice, uint32_t supportedMemoryIndices, vk::MemoryPropertyFlags requestedProperties) {
@@ -87,9 +88,16 @@ namespace Voidstar
 		bufferInfo.sharingMode = vk::SharingMode::eExclusive;
 		auto device = RenderContext::GetDevice();
 		m_Size = input.size;
-		m_Buffer = device->GetDevice().createBuffer(bufferInfo);
-
-		AllocateBufferMemory(input,device);
+		// could be better
+		try
+		{
+			m_Buffer = device->GetDevice().createBuffer(bufferInfo);
+			AllocateBufferMemory(input,device);
+		}
+		catch (vk::SystemError err)
+		{
+			Log::GetLog()->error("Failed to allocate buffer");
+		}
 	}
 	SPtr<Buffer> Buffer::CreateStagingBuffer(size_t dataSize)
 	{

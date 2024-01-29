@@ -36,7 +36,6 @@ namespace Voidstar
         {
 
             m_Fov -= delta;
-            std::cout << m_Fov << std::endl;
             UpdateProj();
         }
         if (Input::IsKeyPressed(VS_KEY_G))

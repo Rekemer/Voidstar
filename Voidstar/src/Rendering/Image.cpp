@@ -743,6 +743,18 @@ namespace Voidstar
 		GenerateMipmaps(m_Image, (VkFormat)m_Format, (int32_t)m_Width, (int32_t)m_Height, mipLevels);
 
 	}
+	std::vector<UPtr<Image>> Image::GenerateMipmapsAsImages(uint32_t mipLevels)
+	{
+		std::vector<UPtr<Image>> images(mipLevels);
+		int32_t mipWidth = m_Width;
+		int32_t mipHeight = m_Height;
+
+		for (uint32_t i = 1; i < mipLevels; i++)
+		{
+
+		}
+		return images;
+	}
 	void Image::GenerateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels)
 	{
 		

@@ -39,16 +39,17 @@ float tex_mip_level(vec2 coord, vec2 tex_size)
 }
 
 vec2 pageSize = vec2(128,64);
-vec2 megatextureSize = vec2(2048,1024);
+vec2 megatextureSize = vec2(1024,512);
 void main() 
 {
     outColor = color;  
-    float miplevel = tex_mip_level(uv,megatextureSize);
+    float mipLevel =  clamp(floor(tex_mip_level(uv,megatextureSize)),0,3);
+    //mipLevel = 3- clamp(mipLevel,0,3);
     //mipLevel = 3;
     //  log returns amount of tile on the mip level
-    float amountOfTiles = pow(2,(3-miplevel));
+    float amountOfTiles = pow(2,(3-mipLevel));
     vec2 pageNumber = floor(amountOfTiles * uv);
-    outColor = vec4(pageNumber,miplevel,1);
+    outColor = vec4(pageNumber,mipLevel,1);
     
    //outColor = vec4(0.2,0.3,3.4,1);
 }
