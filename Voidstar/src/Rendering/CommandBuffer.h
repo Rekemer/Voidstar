@@ -57,7 +57,22 @@ namespace Voidstar
 		vk::CommandBuffer BeginTransfering();
 		
 		void Transfer(Buffer* src, Buffer* target, void* data, size_t  dataSize);
-		
+		void MemBufferBarrier(vk::Buffer& buffer,size_t size, 
+			vk::PipelineStageFlags srcPip,
+			vk::AccessFlags src,
+			vk::PipelineStageFlags dstPip,
+			vk::AccessFlags dst)
+		{
+			vk::BufferMemoryBarrier barrier{};
+			barrier.buffer= buffer;
+			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			barrier.srcAccessMask = src;
+			barrier.dstAccessMask = dst;
+			barrier.size = size;
+			m_CommandBuffer.pipelineBarrier(srcPip, dstPip, vk::DependencyFlags(),nullptr, barrier,nullptr);
+			
+		}
 		void ChangeImageLayout(Image* image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout, int mipMap = 1, int layers = 1);
 		void ChangeImageLayoutRaw(vk::Image& image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout, int mipMap = 1, int layers = 1);
 

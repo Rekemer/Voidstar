@@ -24,7 +24,7 @@ namespace Voidstar
 		vk::ImageType imageType = vk::ImageType::e2D;
 	};
 
-
+	
 	class Image 
 	{
 	public:
@@ -33,20 +33,20 @@ namespace Voidstar
 		//Image(Image&& image);
 		// create image
 		static VkImageView CreateImageView(vk::Image& image, vk::Format format, vk::ImageAspectFlags aspect, vk::ImageViewType viewType =  vk::ImageViewType::e2D, int mipmap = 1, int layers = 1);
-		static vk::Sampler CreateSampler();
+		static vk::Sampler CreateSampler(vk::Filter min, vk::Filter mag);
 		static vk::Image CreateVKImage(ImageSpecs& specs, vk::SampleCountFlagBits samples = vk::SampleCountFlagBits::e1, int mipmap = 1);
 		static vk::DeviceMemory CreateMemory(vk::Image& image, ImageSpecs& specs);
 		static SPtr<Image> CreateImage(std::string path);
 		static SPtr<Image> CreateCubemap(std::vector<std::string> pathes);
-
+		void Fill(int8_t  value, CommandBuffer& cmd);
 		static SPtr<Image> CreateEmptyImage( int width, int height,vk::Format format,
 			vk::ImageUsageFlags usage,
 			int mipLevels = 1,
 			vk::SampleCountFlagBits samples = vk::SampleCountFlagBits::e1,
 			vk::Filter minFilter = vk::Filter::eNearest, vk::Filter magFilter = vk::Filter::eNearest);
 		static SPtr<Image> CreateEmpty3DImage(int width, int height, int depth, vk::Format format);
-		~Image();
 		void static UpdateRegionWithImage(std::string& path, SPtr<Image> image, vk::Offset3D offset);
+		~Image();
 
 		
 		vk::Sampler  GetSampler() { return m_Sampler; }
@@ -108,7 +108,7 @@ namespace Voidstar
 			const std::vector<vk::Format>& candidates,
 			vk::ImageTiling tiling, vk::FormatFeatureFlags features);
 		void GenerateMipmaps(uint32_t mipLevels);
-		std::vector<UPtr<Image>> GenerateMipmapsAsImages(uint32_t mipLevels);
+		std::vector<SPtr<Image>> GenerateEmptyMipmapsAsImages(uint32_t mipLevels);
 		
 	private:
 		void GenerateMipmaps(VkImage image,VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
@@ -119,6 +119,7 @@ namespace Voidstar
 		friend class CommandBuffer;
 		friend class Device;
 		friend class AttachmentManager;
+		int m_Size = -1;
 		int m_Depth = 0, m_Channels;
 		int m_MipMapLevels;
 		int m_Width, m_Height;

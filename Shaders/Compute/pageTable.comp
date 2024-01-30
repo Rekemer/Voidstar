@@ -1,13 +1,19 @@
 #version 450
-layout(binding = 0, r8) uniform writeonly image2D storageImage;
-layout(std140, binding = 1) buffer ParticleSSBOOut {
-   vec4 particlesOut[ ];
-};
+layout(binding = 0, r8i) uniform iimage2D  storageImage[4];
+
+#define LOCALSIZE 1
+layout (local_size_x = LOCALSIZE, local_size_y = LOCALSIZE, local_size_z = LOCALSIZE) in;
+
 
 void main() 
 {
-   // Get the image coordinates
-   ivec2 coords = ivec2(gl_GlobalInvocationID.xy);
-   imageStore(storageImage, coords,  vec4(0.3,1,0,1));
+    // Get the global ID of the thread in the workgroup
+    uvec2 globalID = uvec2(gl_GlobalInvocationID.xy);
+   // ivec4 pixelValue = imageLoad(storageImage[0], ivec2(globalID));
+   imageStore(storageImage[0], ivec2(0,0), ivec4(1.0, 0.0, 0.0, 1.0));
+   imageStore(storageImage[1], ivec2(1,1), ivec4(1.0, 0.0, 0.0, 1.0));
+   imageStore(storageImage[2], ivec2(1,1), ivec4(1.0, 0.0, 0.0, 1.0));
+
+    
 }
 

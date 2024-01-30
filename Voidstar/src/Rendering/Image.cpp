@@ -11,6 +11,91 @@
 #include "Renderer.h"
 namespace Voidstar
 {
+	int FormatToSize(vk::Format format)
+	{
+		switch (format)
+		{
+			// 8-bit formats
+		case vk::Format::eR8Unorm:
+		case vk::Format::eR8Snorm:
+		case vk::Format::eR8Uscaled:
+		case vk::Format::eR8Sscaled:
+		case vk::Format::eR8Uint:
+		case vk::Format::eR8Sint:
+			return 1;
+
+			// 16-bit formats
+		case vk::Format::eR16Unorm:
+		case vk::Format::eR16Snorm:
+		case vk::Format::eR16Uscaled:
+		case vk::Format::eR16Sscaled:
+		case vk::Format::eR16Uint:
+		case vk::Format::eR16Sint:
+		case vk::Format::eR16Sfloat:
+		case vk::Format::eD16Unorm:
+		case vk::Format::eR8G8Unorm:
+		case vk::Format::eR8G8Snorm:
+		case vk::Format::eR8G8Uscaled:
+		case vk::Format::eR8G8Sscaled:
+		case vk::Format::eR8G8Uint:
+		case vk::Format::eR8G8Sint:
+			return 2;
+
+			// 32-bit formats
+		case vk::Format::eR32Uint:
+		case vk::Format::eR32Sint:
+		case vk::Format::eR32Sfloat:
+		case vk::Format::eD32Sfloat:
+		case vk::Format::eS8Uint:
+		case vk::Format::eR16G16Unorm:
+		case vk::Format::eR16G16Snorm:
+		case vk::Format::eR16G16Uscaled:
+		case vk::Format::eR16G16Sscaled:
+		case vk::Format::eR16G16Uint:
+		case vk::Format::eR16G16Sint:
+		case vk::Format::eR16G16Sfloat:
+			return 4;
+
+			// 64-bit formats
+		case vk::Format::eR64Uint:
+		case vk::Format::eR64Sint:
+		case vk::Format::eR64Sfloat:
+		case vk::Format::eR32G32Uint:
+		case vk::Format::eR32G32Sint:
+		case vk::Format::eR32G32Sfloat:
+		case vk::Format::eR16G16B16A16Unorm:
+		case vk::Format::eR16G16B16A16Snorm:
+		case vk::Format::eR16G16B16A16Uscaled:
+		case vk::Format::eR16G16B16A16Sscaled:
+		case vk::Format::eR16G16B16A16Uint:
+		case vk::Format::eR16G16B16A16Sint:
+		case vk::Format::eR16G16B16A16Sfloat:
+			return 8;
+
+			// 96-bit formats
+		case vk::Format::eR32G32B32Uint:
+		case vk::Format::eR32G32B32Sint:
+		case vk::Format::eR32G32B32Sfloat:
+			return 12;
+
+			// 128-bit formats
+		case vk::Format::eR32G32B32A32Uint:
+		case vk::Format::eR32G32B32A32Sint:
+		case vk::Format::eR32G32B32A32Sfloat:
+			return 16;
+
+			// Depth/stencil formats
+		case vk::Format::eD16UnormS8Uint:
+		case vk::Format::eD24UnormS8Uint:
+		case vk::Format::eD32SfloatS8Uint:
+			return 4;
+
+
+		default:
+			return -1; // Unsupported format
+		}
+	}
+
 	//Image::Image(Image&& image)
 	//{
 	//	m_Image = image.m_Image ;
@@ -45,13 +130,15 @@ namespace Voidstar
 		auto device = RenderContext::GetDevice();
 		return device->GetDevice().createImageView(createInfo);
 	}
-	vk::Sampler Image::CreateSampler()
+	
+
+	vk::Sampler Image::CreateSampler(vk::Filter min, vk::Filter mag)
 	{
 		auto device = RenderContext::GetDevice();
 		vk::SamplerCreateInfo samplerInfo;
 		samplerInfo.flags = vk::SamplerCreateFlags();
-		samplerInfo.minFilter = vk::Filter::eLinear;
-		samplerInfo.magFilter = vk::Filter::eLinear;
+		samplerInfo.minFilter = min;
+		samplerInfo.magFilter = mag;
 		samplerInfo.addressModeU = vk::SamplerAddressMode::eClampToEdge;
 		samplerInfo.addressModeV = vk::SamplerAddressMode::eClampToEdge;
 		samplerInfo.addressModeW = vk::SamplerAddressMode::eRepeat;
@@ -70,6 +157,7 @@ namespace Voidstar
 		samplerInfo.maxLod = (float)0;
 		return  device->GetDevice().createSampler(samplerInfo);
 	}
+
 	vk::Image Image::CreateVKImage(ImageSpecs& specs, vk::SampleCountFlagBits samples, int mipmap )
 	{
 		auto device = RenderContext::GetDevice();
@@ -154,7 +242,7 @@ namespace Voidstar
 
 		auto mipMaps = static_cast<uint32_t>(std::floor(std::log2(std::max(image->m_Width, image->m_Height)))) + 1;
 	
-
+		image->m_Size = image->m_Width * image->m_Height * FormatToSize(vk::Format::eR8G8B8A8Unorm);
 		auto device = RenderContext::GetDevice();
 		ImageSpecs specs;
 		specs.width = image->m_Width;
@@ -304,7 +392,7 @@ namespace Voidstar
 
 		auto mipMaps = static_cast<uint32_t>(std::floor(std::log2(std::max(image->m_Width, image->m_Height)))) + 1;
 		mipMaps = 1;
-
+		image->m_Size = image->m_Width * image->m_Height * FormatToSize(vk::Format::eR8G8B8A8Unorm);
 		auto device = RenderContext::GetDevice();
 		ImageSpecs specs;
 		specs.width = image->m_Width;
@@ -448,7 +536,7 @@ namespace Voidstar
 		image->m_Width = width;
 		image->m_Height = height;
 
-
+		image->m_Size = image->m_Width * image->m_Height * FormatToSize(format);
 		auto device = RenderContext::GetDevice();
 		ImageSpecs specs;
 		specs.width = image->m_Width;
@@ -476,8 +564,6 @@ namespace Voidstar
 		}
 
 		// populate memory with data
-		auto imageSize = image->m_Width * image->m_Height * 4;
-		auto buffer = Buffer::CreateStagingBuffer(imageSize);
 
 
 
@@ -563,6 +649,26 @@ namespace Voidstar
 
 		return image;
 	}
+	void Image::Fill(int8_t value, CommandBuffer& cmd)
+	{
+		cmd.BeginTransfering();
+		auto buffer = Buffer::CreateStagingBuffer(m_Size);
+		auto ptr = RenderContext::GetDevice()->GetDevice().mapMemory(buffer->GetMemory(), 0, m_Size);
+		std::vector<int> values(m_Width*m_Height,value);
+		memcpy(ptr, values.data(), m_Size);
+		RenderContext::GetDevice()->GetDevice().unmapMemory(buffer->GetMemory());
+
+		cmd.MemBufferBarrier(buffer->GetBuffer(), buffer->GetSize(),
+			vk::PipelineStageFlagBits::eTopOfPipe,
+			vk::AccessFlagBits::eNone,
+			vk::PipelineStageFlagBits::eComputeShader,
+			vk::AccessFlagBits::eShaderWrite);
+		cmd.ChangeImageLayout(this,m_ImageLayout,vk::ImageLayout::eTransferDstOptimal);
+		cmd.CopyBufferToImage(*buffer,m_Image,m_Width, m_Height);
+		cmd.EndTransfering();
+		cmd.SubmitSingle();
+		
+	}
 	SPtr<Image> Image::CreateEmpty3DImage(int width, int height,int depth, vk::Format format)
 	{
 		auto image = CreateUPtr<Image>();
@@ -571,7 +677,7 @@ namespace Voidstar
 		image->m_Width = width;
 		image->m_Height = height;
 		image->m_Depth = depth;
-
+		image->m_Size = image->m_Width * image->m_Height * FormatToSize(format);
 
 		auto device = RenderContext::GetDevice();
 		ImageSpecs specs;
@@ -743,16 +849,50 @@ namespace Voidstar
 		GenerateMipmaps(m_Image, (VkFormat)m_Format, (int32_t)m_Width, (int32_t)m_Height, mipLevels);
 
 	}
-	std::vector<UPtr<Image>> Image::GenerateMipmapsAsImages(uint32_t mipLevels)
+	std::vector<SPtr<Image>> Image::GenerateEmptyMipmapsAsImages(uint32_t mipLevels)
 	{
-		std::vector<UPtr<Image>> images(mipLevels);
+		std::vector<SPtr<Image>> images;
 		int32_t mipWidth = m_Width;
 		int32_t mipHeight = m_Height;
-
-		for (uint32_t i = 1; i < mipLevels; i++)
+		auto transfer = Renderer::Instance()->GetTransferCommandBuffer(0);
+		transfer.BeginTransfering();
+		for (uint32_t i = 0; i < mipLevels; i++)
 		{
+			mipHeight /= 2;
+			mipWidth /= 2;
+			// create image
+			ImageSpecs specs;
+			specs.width = mipWidth;
+			specs.height = mipHeight;
+			specs.format = m_Format;
+			specs.tiling = vk::ImageTiling::eOptimal;
+			specs.usage =  vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eTransferDst;
+			specs.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
 
+			auto vkImage = CreateVKImage(specs,vk::SampleCountFlagBits::e1);
+			//create memory
+			
+			auto memory = CreateMemory(vkImage, specs);
+
+
+			//  create view
+			auto view = CreateImageView(vkImage, m_Format, vk::ImageAspectFlagBits::eColor, vk::ImageViewType::e2D);
+			// create sampler
+
+			auto image = CreateSPtr<Image>();
+			image->SetFormat(m_Format);
+			image->SetMemory(memory);
+			image->SetView(view);
+			image->SetImage(vkImage);
+			image->m_Width = mipWidth;
+			image->m_Height = mipHeight;
+			image->m_Size = image->m_Width * image->m_Height * FormatToSize(m_Format);
+			image->m_Sampler  = CreateSampler(vk::Filter::eNearest, vk::Filter::eNearest);
+			transfer.ChangeImageLayout(image.get(), vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral);
+			images.push_back(image);
 		}
+		transfer.EndTransfering();
+		transfer.SubmitSingle();
 		return images;
 	}
 	void Image::GenerateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels)

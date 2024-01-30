@@ -105,11 +105,7 @@ public:
 
 			auto binderCompute = Binder<COMPUTE>();
 			m_PageTableDescCompute = binderCompute.BeginBind();
-			for (int i = 0; i < pageTableMipLevels; i++)
-			{
-				binderCompute.Bind(0, i, vk::DescriptorType::eStorageImage, vk::ShaderStageFlagBits::eCompute);
-
-			}
+			binderCompute.Bind(0, pageTableMipLevels+1, vk::DescriptorType::eStorageImage, vk::ShaderStageFlagBits::eCompute);
 			binderCompute.Bind(1, 1, vk::DescriptorType::eStorageBuffer, vk::ShaderStageFlagBits::eCompute);
 		};
 
@@ -138,20 +134,26 @@ public:
 			m_WorkingSet = Image::CreateEmptyImage(workingSetWidth, workingSetHeight, vk::Format::eR8G8B8A8Unorm, usage);
 			
 			
-			m_PageTable = Image::CreateEmptyImage(pageTableWidth, pageTableHeight, vk::Format::eR8Unorm, usage
+			m_PageTable = Image::CreateEmptyImage(pageTableWidth, pageTableHeight, vk::Format::eR8Sint, usage
 				| vk::ImageUsageFlagBits::eTransferSrc| vk::ImageUsageFlagBits::eStorage |vk::ImageUsageFlagBits::eTransferDst, pageTableMipLevels);
+			
+			
 			auto commandBuffer = Renderer::Instance()->GetTransferCommandBuffer(0);
-			commandBuffer.BeginTransfering();
-			commandBuffer.ChangeImageLayout(m_PageTable.get(), vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal, pageTableMipLevels);
-			commandBuffer.EndTransfering();
-			commandBuffer.SubmitSingle();
+			//commandBuffer.BeginTransfering();
+			//commandBuffer.ChangeImageLayout(m_PageTable.get(), vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal, pageTableMipLevels);
+			//commandBuffer.EndTransfering();
+			//commandBuffer.SubmitSingle();
 
-			m_PageTable->GenerateMipmapsAsImages(pageTableMipLevels);
-
-			commandBuffer.BeginTransfering();
-			commandBuffer.ChangeImageLayout(m_PageTable.get(), vk::ImageLayout::eShaderReadOnlyOptimal, vk::ImageLayout::eTransferDstOptimal, pageTableMipLevels);
-			commandBuffer.EndTransfering();
-			commandBuffer.SubmitSingle();
+			m_PageTableMipMaps = m_PageTable->GenerateEmptyMipmapsAsImages(pageTableMipLevels);
+			m_PageTable->Fill(-1,commandBuffer);
+			for (auto mipMaps : m_PageTableMipMaps)
+			{
+				 mipMaps->Fill(-1, commandBuffer);
+				commandBuffer.BeginTransfering();
+				commandBuffer.ChangeImageLayout(mipMaps.get(), mipMaps->GetLayout(), vk::ImageLayout::eGeneral, 1);
+				commandBuffer.EndTransfering();
+				commandBuffer.SubmitSingle();
+			}
 
 		};
 
@@ -161,11 +163,19 @@ public:
 			auto device = RenderContext::GetDevice();
 			
 			m_PageTableDescriptorSet = Renderer::Instance()->GetSet<vk::DescriptorSet>(m_PageTableDescCompute, PipelineType::COMPUTE);
+			std::vector<vk::DescriptorImageInfo> imageInfos;
 			vk::DescriptorImageInfo imageDescriptor1;
 			imageDescriptor1.imageLayout = vk::ImageLayout::eGeneral;
 			imageDescriptor1.imageView = m_PageTable->GetImageView();
 			imageDescriptor1.sampler = m_PageTable->GetSampler();
-			device->UpdateDescriptorSet(m_PageTableDescriptorSet, 0, 1, imageDescriptor1, vk::DescriptorType::eStorageImage);
+			imageInfos.push_back(imageDescriptor1);
+			for (int i = 0; i < m_PageTableMipMaps.size(); i++)
+			{
+				imageDescriptor1.imageView = m_PageTableMipMaps[i]->GetImageView();
+				imageDescriptor1.sampler = m_PageTableMipMaps[i]->GetSampler();
+				imageInfos.push_back(imageDescriptor1);
+			}
+			device->UpdateDescriptorSet(m_PageTableDescriptorSet, 0, imageInfos, vk::DescriptorType::eStorageImage);
 
 
 			m_DescriptorSetDebug = Renderer::Instance()->GetSet<vk::DescriptorSet>(m_DebugTexturesDesc, PipelineType::RENDER);
@@ -361,15 +371,15 @@ public:
 							}
 						}
 					}
-					if (tilesToLoadToPageTable.size() > 0)
-					{
-						ptr = (float*)device->GetDevice().mapMemory(m_StorageBuffers->GetMemory(), (uint64_t)0, tilesToLoadToPageTable.size()* sizeof(tilesToLoadToPageTable[0]));
-						memcpy(ptr, tilesToLoadToPageTable.data(), tilesToLoadToPageTable.size() * sizeof(tilesToLoadToPageTable[0]));
-						device->GetDevice().unmapMemory(m_StorageBuffers->GetMemory());
-						device->UpdateDescriptorSet(m_PageTableDescriptorSet,1,1, *m_StorageBuffers,vk::DescriptorType::eStorageBuffer);
-							//update mip levels of page table
-						device->GetDevice().waitIdle();
-					}
+				//	if (tilesToLoadToPageTable.size() > 0)
+				//	{
+				//		ptr = (float*)device->GetDevice().mapMemory(m_StorageBuffers->GetMemory(), (uint64_t)0, tilesToLoadToPageTable.size()* sizeof(tilesToLoadToPageTable[0]));
+				//		memcpy(ptr, tilesToLoadToPageTable.data(), tilesToLoadToPageTable.size() * sizeof(tilesToLoadToPageTable[0]));
+				//		device->GetDevice().unmapMemory(m_StorageBuffers->GetMemory());
+				//		device->UpdateDescriptorSet(m_PageTableDescriptorSet,1,1, *m_StorageBuffers,vk::DescriptorType::eStorageBuffer);
+				//			//update mip levels of page table
+				//		device->GetDevice().waitIdle();
+				//	}
 
 				auto currentFrame = frameIndex;
 				auto cmdBuffer = Renderer::Instance()->GetTransferCommandBuffer(frameIndex);
@@ -386,12 +396,14 @@ public:
 				cmd.BeginTransfering();
 				vkCmdBindPipeline(cmd.GetCommandBuffer(), VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->GetPipeline());
 				cmd.GetCommandBuffer().bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipeline->GetLayout(), 0, 1, &m_PageTableDescriptorSet, 0, 0);
-				float invocations = 256;
-				int localSize = 8;
+				float invocations = 8;
+				int localSize = 1;
 				
 				
-				vkCmdDispatch(cmd.GetCommandBuffer(), (Application::GetScreenWidth() / 10 )/ localSize, (Application::GetScreenHeight() / 10 )/ localSize, 1);
-				cmd.ChangeImageLayout(m_PageTable.get(), vk::ImageLayout::eGeneral, vk::ImageLayout::eShaderReadOnlyOptimal);
+				vkCmdDispatch(cmd.GetCommandBuffer(), pageTableWidth / localSize, pageTableHeight/ localSize, 1);
+
+
+				//cmd.ChangeImageLayout(m_PageTable.get(), vk::ImageLayout::eGeneral, vk::ImageLayout::eShaderReadOnlyOptimal);
 				cmd.EndTransfering();
 				cmd.SubmitSingle();
 
@@ -856,6 +868,7 @@ public:
 				m_PageTable.reset();
 				m_WorkingSet.reset();
 				m_StageBuffers.clear();
+				m_PageTableMipMaps.clear();
 				m_AttachmentManager.Destroy();
 				CleanUpImGui();
 				Renderer::Instance()->Shutdown();
@@ -1115,6 +1128,7 @@ private:
 	int m_WorkingSetPtr[2] = {0,0};
 	SPtr<Image> m_WorkingSet;
 	SPtr<Image> m_PageTable;
+	std::vector<SPtr<Image>> m_PageTableMipMaps;
 
 
 	std::vector<glm::vec2> m_ClickPoints;

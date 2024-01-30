@@ -28,6 +28,7 @@ namespace Voidstar
 		void SetData(void* data);
 		vk::Buffer& GetBuffer() { return m_Buffer; }
 		vk::DeviceMemory& GetMemory() { return m_BufferMemory; }
+		uint32_t GetSize() { return m_Size; }
 		void Free();
 		~Buffer();	
 	private:

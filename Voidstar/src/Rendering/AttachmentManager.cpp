@@ -35,7 +35,7 @@ namespace Voidstar
 			images[i] = CreateSPtr<Image>();
 			if (usage & vk::ImageUsageFlagBits::eSampled)
 			{
-				images[i]->m_Sampler = Image::CreateSampler();
+				images[i]->m_Sampler = Image::CreateSampler(vk::Filter::eLinear, vk::Filter::eLinear);
 			}
 			images[i]->SetFormat(specs.format);
 			images[i]->SetSample(msaa.Samples);
