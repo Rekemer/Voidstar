@@ -25,19 +25,27 @@ namespace Voidstar
 		{
 			Renderer::Instance()->Wait(m_Fence.GetFence());
 			Renderer::Instance()->Reset(m_Fence.GetFence());
+			auto compute = Renderer::Instance()->GetComputeCommandBuffer(frameIndex);
 			if (m_Transitions[i]->IsCompute())
 			{
-				m_Transitions[i]->Execute(Renderer::Instance()->GetComputeCommandBuffer(frameIndex), frameIndex);
+				m_Transitions[i]->Execute(compute, frameIndex);
 			}
 			else m_Transitions[i]->Execute(cmd, frameIndex);
 			
 			if (i == 0)
 			{
+				
 				cmd.Submit(&imageIsAvailable.GetSemaphore(),
 				&m_Semaphores[i].GetSemaphore(), &m_Fence.GetFence());
 			}
 			else
 			{
+				if (m_Transitions[i]->IsCompute())
+				{
+					compute.Submit(&m_Semaphores[i - 1].GetSemaphore(),
+						&m_Semaphores[i].GetSemaphore(), &m_Fence.GetFence());
+				}
+				else
 				cmd.Submit(&m_Semaphores[i-1].GetSemaphore(),
 					&m_Semaphores[i ].GetSemaphore(), &m_Fence.GetFence());
 			}

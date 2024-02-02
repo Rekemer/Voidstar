@@ -31,7 +31,7 @@ namespace Voidstar
         //{
         //    m_IsControlEnabled = !m_IsControlEnabled;
         //}
-        auto delta = .125;
+        auto delta = .125/4;
         if (Input::IsKeyPressed(VS_KEY_F))
         {
 

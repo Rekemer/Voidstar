@@ -151,7 +151,7 @@ namespace Voidstar
 		samplerInfo.compareEnable = false;
 		samplerInfo.compareOp = vk::CompareOp::eAlways;
 
-		samplerInfo.mipmapMode = vk::SamplerMipmapMode::eLinear;
+		samplerInfo.mipmapMode = vk::SamplerMipmapMode::eNearest;
 		samplerInfo.mipLodBias = 0.0f;
 		samplerInfo.minLod = 0.0f;
 		samplerInfo.maxLod = (float)0;
@@ -618,7 +618,7 @@ namespace Voidstar
 		samplerInfo.compareEnable = false;
 		samplerInfo.compareOp = vk::CompareOp::eAlways;
 
-		samplerInfo.mipmapMode = vk::SamplerMipmapMode::eLinear;
+		samplerInfo.mipmapMode = vk::SamplerMipmapMode::eNearest;
 		samplerInfo.mipLodBias = 0.0f;
 		samplerInfo.minLod = 0.0f;
 		samplerInfo.maxLod = 0.0f;
@@ -668,6 +668,27 @@ namespace Voidstar
 		cmd.EndTransfering();
 		cmd.SubmitSingle();
 		
+	}
+
+	void Image::Fill(glm::vec2 value, CommandBuffer& cmd)
+	{
+		cmd.BeginTransfering();
+		auto buffer = Buffer::CreateStagingBuffer(m_Size);
+		auto ptr = RenderContext::GetDevice()->GetDevice().mapMemory(buffer->GetMemory(), 0, m_Size);
+		std::vector<glm::vec2> values(m_Width * m_Height, value);
+		memcpy(ptr, values.data(), m_Size);
+		RenderContext::GetDevice()->GetDevice().unmapMemory(buffer->GetMemory());
+
+		cmd.MemBufferBarrier(buffer->GetBuffer(), buffer->GetSize(),
+			vk::PipelineStageFlagBits::eTopOfPipe,
+			vk::AccessFlagBits::eNone,
+			vk::PipelineStageFlagBits::eComputeShader,
+			vk::AccessFlagBits::eShaderWrite);
+		cmd.ChangeImageLayout(this, m_ImageLayout, vk::ImageLayout::eTransferDstOptimal);
+		cmd.CopyBufferToImage(*buffer, m_Image, m_Width, m_Height);
+		cmd.EndTransfering();
+		cmd.SubmitSingle();
+
 	}
 	SPtr<Image> Image::CreateEmpty3DImage(int width, int height,int depth, vk::Format format)
 	{
@@ -866,7 +887,7 @@ namespace Voidstar
 			specs.height = mipHeight;
 			specs.format = m_Format;
 			specs.tiling = vk::ImageTiling::eOptimal;
-			specs.usage =  vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eTransferDst;
+			specs.usage =  vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled;
 			specs.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
 
 			auto vkImage = CreateVKImage(specs,vk::SampleCountFlagBits::e1);

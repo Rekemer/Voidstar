@@ -1,5 +1,6 @@
 #include"Prereq.h"
 #include"ComputePass.h"
+#include"CommandBuffer.h"
 #include"Pipeline.h"
 namespace Voidstar
 {

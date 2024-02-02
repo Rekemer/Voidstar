@@ -39,6 +39,7 @@ namespace Voidstar
 		static SPtr<Image> CreateImage(std::string path);
 		static SPtr<Image> CreateCubemap(std::vector<std::string> pathes);
 		void Fill(int8_t  value, CommandBuffer& cmd);
+		void Fill(glm::vec2  value, CommandBuffer& cmd);
 		static SPtr<Image> CreateEmptyImage( int width, int height,vk::Format format,
 			vk::ImageUsageFlags usage,
 			int mipLevels = 1,
@@ -54,6 +55,10 @@ namespace Voidstar
 		void SetFormat(vk::Format format)
 		{
 			m_Format = format;
+		}
+		void SetLayout(vk::ImageLayout layout)
+		{
+			m_ImageLayout= layout;
 		}
 		void SetView(vk::ImageView view)
 		{

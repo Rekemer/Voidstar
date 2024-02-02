@@ -44,11 +44,9 @@ void main()
 {
     outColor = color;  
     float mipLevel =  clamp(floor(tex_mip_level(uv,megatextureSize)),0,3);
-    //mipLevel = 3- clamp(mipLevel,0,3);
-    //mipLevel = 3;
-    //  log returns amount of tile on the mip level
-    float amountOfTiles = pow(2,(3-mipLevel));
-    vec2 pageNumber = floor(amountOfTiles * uv);
+    
+    float amountOfTiles = pow(2,(mod(3-mipLevel,3)));
+    vec2 pageNumber = max(floor(amountOfTiles *pageSize* uv / pageSize),0);
     outColor = vec4(pageNumber,mipLevel,1);
     
    //outColor = vec4(0.2,0.3,3.4,1);
