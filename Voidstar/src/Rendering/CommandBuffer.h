@@ -73,6 +73,33 @@ namespace Voidstar
 			m_CommandBuffer.pipelineBarrier(srcPip, dstPip, vk::DependencyFlags(),nullptr, barrier,nullptr);
 			
 		}
+
+		void ImageBufferBarrier(std::vector<vk::Image>& images, 
+			vk::PipelineStageFlags srcPip,
+			vk::AccessFlags src,
+			vk::PipelineStageFlags dstPip,
+			vk::AccessFlags dst)
+		{
+			std::vector<vk::ImageMemoryBarrier> barriers;
+			for (auto& image : images)
+			{
+				vk::ImageMemoryBarrier barrier{};
+				barrier.image = image;
+				barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				barrier.srcAccessMask = src;
+				barrier.dstAccessMask = dst;
+				barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+				barrier.subresourceRange.baseMipLevel = 0;
+				barrier.subresourceRange.layerCount = 1;
+				barrier.subresourceRange.levelCount= 1;
+				barriers.push_back(barrier);
+
+			}
+			m_CommandBuffer.pipelineBarrier(srcPip, dstPip, vk::DependencyFlags(), nullptr, nullptr,  barriers);
+
+		}
+
 		void ChangeImageLayout(Image* image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout, int mipMap = 1, int layers = 1);
 		void ChangeImageLayoutRaw(vk::Image& image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout, int mipMap = 1, int layers = 1);
 

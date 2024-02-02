@@ -42,6 +42,7 @@ uint32_t pageTableMipLevels = std::log2(std::max(pageTableWidth, pageTableHeight
 std::string_view RENDER_BASIC_PASS = "Basic";
 std::string_view RENDER_DEBUG_PASS = "Debug";
 std::string_view COMPUTE_PAGE_TABLE_PASS = "PageTable";
+std::string_view COMPUTE_PAGE_TABLE_FINAL_PASS = "PageTableFinal";
 std::string_view FEEDBACK_RENDER_PASS = "Feedback";
 std::string_view IMGUI_RENDER_PASS = "ImGui";
 
@@ -102,12 +103,15 @@ public:
 			binderRender.Bind(1, 1, vk::DescriptorType::eUniformBuffer,  vk::ShaderStageFlagBits::eFragment);
 			m_WorkingSetDesc = binderRender.BeginBind();
 			binderRender.Bind(0, 1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment);
-			binderRender.Bind(1, pageTableMipLevels + 1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment);
+			binderRender.Bind(1, 1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment);
 
 			auto binderCompute = Binder<COMPUTE>();
 			m_PageTableDescCompute = binderCompute.BeginBind();
 			binderCompute.Bind(0, pageTableMipLevels+1, vk::DescriptorType::eStorageImage, vk::ShaderStageFlagBits::eCompute);
 			binderCompute.Bind(1, 1, vk::DescriptorType::eStorageBuffer, vk::ShaderStageFlagBits::eCompute);
+			m_PageTableDescFinalCompute = binderCompute.BeginBind();
+			binderCompute.Bind(0, pageTableMipLevels, vk::DescriptorType::eStorageImage, vk::ShaderStageFlagBits::eCompute);
+			binderCompute.Bind(1, 1, vk::DescriptorType::eStorageImage, vk::ShaderStageFlagBits::eCompute);
 		};
 
 		auto createResources= [this]()
@@ -135,7 +139,7 @@ public:
 			m_WorkingSet = Image::CreateEmptyImage(workingSetWidth, workingSetHeight, vk::Format::eR8G8B8A8Unorm, usage);
 			
 			
-			m_PageTable = Image::CreateEmptyImage(pageTableWidth, pageTableHeight, vk::Format::eR32G32Sfloat, usage
+			m_PageTable = Image::CreateEmptyImage(pageTableWidth, pageTableHeight, vk::Format::eR32G32B32A32Sfloat, usage
 				| vk::ImageUsageFlagBits::eTransferSrc| vk::ImageUsageFlagBits::eStorage |vk::ImageUsageFlagBits::eTransferDst, pageTableMipLevels);
 			
 			
@@ -146,10 +150,10 @@ public:
 			//commandBuffer.SubmitSingle();
 
 			m_PageTableMipMaps = m_PageTable->GenerateEmptyMipmapsAsImages(pageTableMipLevels);
-			m_PageTable->Fill(glm::vec2(-1,-1) , commandBuffer);
+			m_PageTable->Fill(glm::vec4(-1, -1, -1, -1), commandBuffer);
 			for (auto mipMaps : m_PageTableMipMaps)
 			{
-				 mipMaps->Fill(glm::vec2(-1, -1), commandBuffer);
+				mipMaps->Fill(glm::vec4(-1, -1,-1,-1), commandBuffer);
 				commandBuffer.BeginTransfering();
 				commandBuffer.ChangeImageLayout(mipMaps.get(), mipMaps->GetLayout(), vk::ImageLayout::eGeneral, 1);
 				commandBuffer.EndTransfering();
@@ -164,8 +168,10 @@ public:
 			auto device = RenderContext::GetDevice();
 			
 			m_PageTableDescriptorSet = Renderer::Instance()->GetSet<vk::DescriptorSet>(m_PageTableDescCompute, PipelineType::COMPUTE);
+			m_PageTableFinalDescriptorSet = Renderer::Instance()->GetSet<vk::DescriptorSet>(m_PageTableDescFinalCompute, PipelineType::COMPUTE);
 			m_DescriptorSetWorkingSet = Renderer::Instance()->GetSet<vk::DescriptorSet>(m_WorkingSetDesc, PipelineType::RENDER);
 			std::vector<vk::DescriptorImageInfo> imageInfos;
+
 			vk::DescriptorImageInfo imageDescriptor1;
 			imageDescriptor1.imageLayout = vk::ImageLayout::eGeneral;
 			imageDescriptor1.imageView = m_PageTable->GetImageView();
@@ -178,7 +184,6 @@ public:
 				imageInfos.push_back(imageDescriptor1);
 			}
 			device->UpdateDescriptorSet(m_PageTableDescriptorSet, 0, imageInfos, vk::DescriptorType::eStorageImage);
-			device->UpdateDescriptorSet(m_DescriptorSetWorkingSet, 1, imageInfos, vk::DescriptorType::eCombinedImageSampler);
 
 			m_DescriptorSetDebug = Renderer::Instance()->GetSet<vk::DescriptorSet>(m_DebugTexturesDesc, PipelineType::RENDER);
 
@@ -217,6 +222,7 @@ public:
 			auto m_DescriptorSetWorkingSetLayout = Renderer::Instance()->GetSetLayout(m_WorkingSetDesc, PipelineType::RENDER);
 			auto m_DescriptorSetDebugLayout = Renderer::Instance()->GetSetLayout(m_DebugTexturesDesc, PipelineType::RENDER);
 			auto m_DescriptorSetPageTableCompLayout = Renderer::Instance()->GetSetLayout(m_PageTableDescCompute, PipelineType::COMPUTE);
+			auto m_DescriptorSetPageTableCompFinalLayout = Renderer::Instance()->GetSetLayout(m_PageTableDescFinalCompute, PipelineType::COMPUTE);
 			
 			
 			
@@ -265,9 +271,17 @@ public:
 			UPtr<IExecute> m_FeedbackRenderPass;
 			UPtr<IExecute> m_UpdatePageTablePass;
 
-			std::vector<vk::DescriptorSetLayout> layouts = { m_DescriptorSetPageTableCompLayout->GetLayout()};
-			Renderer::Instance()->CompileShader("pageTable.comp", ShaderType::COMPUTE);
-			Pipeline::CreateComputePipeline(COMPUTE_PAGE_TABLE_PASS, BASE_SPIRV_OUTPUT +"pageTable.spvCmp", layouts);
+			{
+				std::vector<vk::DescriptorSetLayout> layouts = { m_DescriptorSetPageTableCompLayout->GetLayout()};
+				Renderer::Instance()->CompileShader("pageTable.comp", ShaderType::COMPUTE);
+				Pipeline::CreateComputePipeline(COMPUTE_PAGE_TABLE_PASS, BASE_SPIRV_OUTPUT +"pageTable.spvCmp", layouts);
+			}
+			{
+				std::vector<vk::DescriptorSetLayout> layouts = { m_DescriptorSetPageTableCompFinalLayout->GetLayout()};
+				Renderer::Instance()->CompileShader("pageTableFinal.comp", ShaderType::COMPUTE);
+				Pipeline::CreateComputePipeline(COMPUTE_PAGE_TABLE_FINAL_PASS, BASE_SPIRV_OUTPUT +"pageTableFinal.spvCmp", layouts);
+			
+			}
 
 			uint64_t bufferSize = sizeof(FeedbackRes)*feedbackSize.x* feedbackSize.y;
 			m_FeedbackRes.resize(feedbackSize.x* feedbackSize.y);
@@ -408,11 +422,49 @@ public:
 						int localSize = 4;
 						
 						
-						vkCmdDispatch(cmd.GetCommandBuffer(), invocations / localSize, 1, 1);
+						vkCmdDispatch(cmd.GetCommandBuffer(), invocations /localSize, 1, 1);
+
+						std::vector<vk::Image> images{ m_PageTable->GetImage() };
+						for (auto mipMaps : m_PageTableMipMaps)
+						{
+							images.push_back(mipMaps->GetImage());
+						}
+						// sync problem
+						device->GetDevice().waitIdle();
+						//cmd.ImageBufferBarrier(images, vk::PipelineStageFlagBits::eTopOfPipe,
+						//	vk::AccessFlagBits::eNone,
+						//	vk::PipelineStageFlagBits::eComputeShader,
+						//	vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
 
 
-						//cmd.ChangeImageLayout(m_PageTable.get(), m_PageTable->GetLayout(), vk::ImageLayout::eShaderReadOnlyOptimal);
-						
+						auto pipelineFinal = Renderer::Instance()->GetPipeline(COMPUTE_PAGE_TABLE_FINAL_PASS);
+
+						std::vector<vk::DescriptorImageInfo> imageInfos;
+						vk::DescriptorImageInfo imageDescriptor1;
+						imageDescriptor1.imageLayout = vk::ImageLayout::eGeneral;
+						imageDescriptor1.imageView = m_PageTable->GetImageView();
+						imageDescriptor1.sampler = m_PageTable->GetSampler();
+						device->UpdateDescriptorSet(m_PageTableFinalDescriptorSet, 1, 1, imageDescriptor1, vk::DescriptorType::eStorageImage);
+						for (int i = 0; i < m_PageTableMipMaps.size(); i++)
+						{
+							imageDescriptor1.imageView = m_PageTableMipMaps[i]->GetImageView();
+							imageDescriptor1.sampler = m_PageTableMipMaps[i]->GetSampler();
+							imageInfos.push_back(imageDescriptor1);
+						}
+
+						device->UpdateDescriptorSet(m_PageTableFinalDescriptorSet, 0, imageInfos, vk::DescriptorType::eStorageImage);
+
+						vkCmdBindPipeline(cmd.GetCommandBuffer(), VK_PIPELINE_BIND_POINT_COMPUTE, pipelineFinal->GetPipeline());
+						cmd.GetCommandBuffer().bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipelineFinal->GetLayout(), 0, 1, &m_PageTableFinalDescriptorSet, 0, 0);
+						vkCmdDispatch(cmd.GetCommandBuffer(), pageTableWidth, pageTableHeight, 1);
+						cmd.ChangeImageLayout(m_PageTable.get(), m_PageTable->GetLayout(), vk::ImageLayout::eShaderReadOnlyOptimal);
+						{
+							vk::DescriptorImageInfo imageDescriptor1;
+							imageDescriptor1.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+							imageDescriptor1.imageView = m_PageTable->GetImageView();
+							imageDescriptor1.sampler = m_PageTable->GetSampler();
+							device->UpdateDescriptorSet(m_DescriptorSetWorkingSet, 1,1, imageDescriptor1, vk::DescriptorType::eCombinedImageSampler);
+						}
 						/*
 						std::vector<vk::DescriptorImageInfo> imageInfos;
 						vk::DescriptorImageInfo imageDescriptor1;
@@ -1135,12 +1187,14 @@ private:
 	AdditionalData m_AddData;
 	int m_BaseDesc = 0;
 	int m_PageTableDescCompute = 0;
+	int m_PageTableDescFinalCompute= 0;
 	int m_WorkingSetDesc = 0;
 	int m_DebugTexturesDesc = 0;
 	const uint32_t MAX_POINTS = 20;
 	int nextPoint = 0;
 	std::vector<vk::DescriptorSet> m_DescriptorSets;
 	vk::DescriptorSet  m_PageTableDescriptorSet;
+	vk::DescriptorSet  m_PageTableFinalDescriptorSet;
 
 	UPtr<Buffer> m_AddInfo;
 	UPtr<Buffer> m_StorageBuffers;

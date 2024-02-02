@@ -20,7 +20,7 @@ float tex_mip_level(vec2 coord, vec2 tex_size)
 
 #define mipMaps 4
 layout(set = 1, binding = 0) uniform sampler2D WorkingSet;
-layout(set = 1, binding = 1) uniform sampler2D  PageTable[mipMaps];
+layout(set = 1, binding = 1) uniform sampler2D  PageTable;
 layout(location = 1) in vec2 uv;
 layout(location = 0) out vec4 outColor;
 vec2 pageSize = vec2(128,64);
@@ -32,9 +32,9 @@ void main ()
 {
     int mipLevel =  int(clamp(floor(tex_mip_level(uv,megatextureSize)),0,3));
     vec2 workingSetSize =  textureSize(WorkingSet, 0);
-    mipLevel = 0;
+    //mipLevel = 0;
     // we missing at level 0 with current uv 
-    vec4 index = texture(PageTable[int(mod(3-mipLevel,3))],uv) ;
+    vec4 index = texture(PageTable,uv) ;
     index = vec4(0,0,0,0);
     ivec2 i =ivec2(index.xy* workingSetSize);
     int amountOfTiles = int(exp2(mod(3-mipLevel,3)));

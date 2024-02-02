@@ -670,12 +670,12 @@ namespace Voidstar
 		
 	}
 
-	void Image::Fill(glm::vec2 value, CommandBuffer& cmd)
+	void Image::Fill(glm::vec4 value, CommandBuffer& cmd)
 	{
 		cmd.BeginTransfering();
 		auto buffer = Buffer::CreateStagingBuffer(m_Size);
 		auto ptr = RenderContext::GetDevice()->GetDevice().mapMemory(buffer->GetMemory(), 0, m_Size);
-		std::vector<glm::vec2> values(m_Width * m_Height, value);
+		std::vector<glm::vec4> values(m_Width * m_Height, value);
 		memcpy(ptr, values.data(), m_Size);
 		RenderContext::GetDevice()->GetDevice().unmapMemory(buffer->GetMemory());
 
@@ -688,7 +688,6 @@ namespace Voidstar
 		cmd.CopyBufferToImage(*buffer, m_Image, m_Width, m_Height);
 		cmd.EndTransfering();
 		cmd.SubmitSingle();
-
 	}
 	SPtr<Image> Image::CreateEmpty3DImage(int width, int height,int depth, vk::Format format)
 	{

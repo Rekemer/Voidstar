@@ -1,5 +1,6 @@
 #version 450
-layout(binding = 0, rgba16f) uniform image2D  storageImage[4];
+#define mipMaps 4
+layout(binding = 0, rgba32f) uniform image2D  storageImage[mipMaps];
 //  x,y,mipLevel,index in working set
 
 struct PageTableUpdate {
