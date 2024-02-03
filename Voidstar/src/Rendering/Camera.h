@@ -43,17 +43,17 @@ namespace Voidstar
 	private:
 		glm::vec3 m_Up {0.0f, 1.0f, 0.0f};
 		glm::vec3 m_Front{ 0.0f, 0.0f, 1.0f };
-		glm::vec3 m_Position{0,0,-5};
+		glm::vec3 m_Position{0,0,-45};
 		glm::mat4 m_Proj;
 		glm::mat4 m_View;
 		float m_Fov = glm::radians(45.f);;
 		float m_Yaw = 90.0f; // around y axis
 		float m_Pitch = 0.f; // around x axis
-		float speed = 10.f;
-		bool m_IsControlEnabled = false;
+		float speed = 20.f;
+		bool m_IsControlEnabled = true;
 		float width;
 		float height;
-		const float farPlane = 10;
-		const float nearPlane = 1.0;
+		const float farPlane = 100;
+		const float nearPlane = 0.00001;
 	};
 }

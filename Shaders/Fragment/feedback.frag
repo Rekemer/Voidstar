@@ -22,7 +22,7 @@ mip_map_level(in vec2 texture_coordinate)
     return 0.5 * log2(delta_max_sqr); // == log2(sqrt(delta_max_sqr));
 }
 
-
+#define maxMipLevel 3
 float tex_mip_level(vec2 coord, vec2 tex_size)
 {
    vec2 dx_scaled, dy_scaled;
@@ -30,24 +30,23 @@ float tex_mip_level(vec2 coord, vec2 tex_size)
 
    dx_scaled = dFdx(coord_scaled);
    dy_scaled = dFdy(coord_scaled);
-
-   vec2 dtex = dx_scaled*dx_scaled + dy_scaled*dy_scaled;
-   float min_delta = max(dtex.x,dtex.y);
-   float miplevel = max(0.5 * log2(min_delta), 0.0);
-
+   float d = max(dot(dx_scaled, dx_scaled),dot(dy_scaled, dy_scaled));
+   float miplevel = log2(sqrt(d)); 
+   miplevel = clamp(miplevel,0,maxMipLevel); 
+   miplevel = maxMipLevel  - miplevel;
    return miplevel;
 }
 
 vec2 pageSize = vec2(128,64);
 vec2 megatextureSize = vec2(1024,512);
+vec2 downscale = vec2(28,16) / vec2(1440,810);
 void main() 
 {
-    outColor = color;  
-    float mipLevel =  clamp(floor(tex_mip_level(uv,megatextureSize)),0,3);
-    
-    float amountOfTiles = pow(2,(mod(3-mipLevel,3)));
-    vec2 pageNumber = max(floor(amountOfTiles *pageSize* uv / pageSize),0);
+    float mipLevel =  tex_mip_level(uv,megatextureSize*downscale);
+    mipLevel = floor(mipLevel);
+    float amountOfTiles = exp2(maxMipLevel-mipLevel);
+    vec2 pageNumber = amountOfTiles * uv;
+    pageNumber.x = clamp(pageNumber.x,0,exp2(mipLevel)-1);
+    pageNumber.y = clamp(pageNumber.y,0,exp2(mipLevel)-1);
     outColor = vec4(pageNumber,mipLevel,1);
-    
-   //outColor = vec4(0.2,0.3,3.4,1);
 }

@@ -145,9 +145,9 @@ namespace Voidstar
 		void DrawQuad(std::vector<Vertex>& verticies);
 		void DrawTxt(vk::CommandBuffer commandBuffer, std::string_view str,glm::vec2 pos, std::map<unsigned char, Character> &Characters);
 		void Draw(Drawable& drawable);
-		void Renderer::DrawSphere(glm::vec3 pos, glm::vec3 scale,
+		void DrawSphere(glm::vec3 pos, glm::vec3 scale,
 			glm::vec4 color, glm::vec3 rot);
-		void Renderer::DrawSphereInstance(vk::CommandBuffer& commandBuffer);
+		void DrawSphereInstance(vk::CommandBuffer& commandBuffer);
 		void BeginBatch();
 		void DrawBatch(vk::CommandBuffer& commandBuffer,size_t offset = 0, int index = 0);
 		void DrawBatchCustom(vk::CommandBuffer& commandBuffer, size_t indexAmount, size_t offset = 0, int index = 0);
@@ -200,7 +200,7 @@ namespace Voidstar
 			return drawables;
 		}
 		std::vector<UPtr<Buffer>> m_UniformBuffers;
-		void Draw(Quad& drawable);
+		void Draw(Quad& quad, glm::mat4& world);
 		void Draw(Sphere& drawable);
 		void Draw(QuadRangle& drawable);
 	private:
@@ -227,6 +227,8 @@ namespace Voidstar
 
 		UPtr<IndexBuffer> m_SphereIndexBuffer;
 		UPtr<Buffer> m_SphereBuffer{ nullptr };
+
+
 
 		SPtr<DescriptorPool> m_UniversalPool;
 		// can be in one buffer?

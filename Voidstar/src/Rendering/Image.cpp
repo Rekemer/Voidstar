@@ -872,14 +872,13 @@ namespace Voidstar
 	std::vector<SPtr<Image>> Image::GenerateEmptyMipmapsAsImages(uint32_t mipLevels)
 	{
 		std::vector<SPtr<Image>> images;
-		int32_t mipWidth = m_Width;
-		int32_t mipHeight = m_Height;
+		int32_t mipWidth = 1;
+		int32_t mipHeight = 1;
 		auto transfer = Renderer::Instance()->GetTransferCommandBuffer(0);
 		transfer.BeginTransfering();
 		for (uint32_t i = 0; i < mipLevels; i++)
 		{
-			mipHeight /= 2;
-			mipWidth /= 2;
+			
 			// create image
 			ImageSpecs specs;
 			specs.width = mipWidth;
@@ -910,6 +909,8 @@ namespace Voidstar
 			image->m_Sampler  = CreateSampler(vk::Filter::eNearest, vk::Filter::eNearest);
 			transfer.ChangeImageLayout(image.get(), vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral);
 			images.push_back(image);
+			mipHeight *= 2;
+			mipWidth *= 2;
 		}
 		transfer.EndTransfering();
 		transfer.SubmitSingle();

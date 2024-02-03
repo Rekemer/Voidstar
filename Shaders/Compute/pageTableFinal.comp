@@ -1,6 +1,6 @@
 #version 450
-#define mipMaps 4
-layout(binding = 0, rgba32f) uniform image2D  storageImage[mipMaps - 1];
+#define mipMaps 3
+layout(binding = 0, rgba32f) uniform image2D  storageImage[mipMaps];
 layout(binding = 1, rgba32f) uniform image2D  final;
 
 
@@ -21,27 +21,33 @@ void main()
     vec2 uv = globalID / imageSize(final);
     ivec2 finalCoords = ivec2(uv * imageSize(final));
 
-    for (int i = mipMaps - 2; i > 0; i--)
+    for (int i = 0; i < mipMaps; i++)
     {
       ivec2 finalCoords1 = ivec2(uv * imageSize(storageImage[i]));
-      ivec2 finalCoords12 = ivec2(uv * imageSize(storageImage[i-1]));
+
+      ivec2 finalCoords12 = ivec2(uv * imageSize(storageImage[i+1]));
       vec4 texel = imageLoad(storageImage[i],finalCoords1);
-      vec4 texel1 = imageLoad(storageImage[i-1],finalCoords12 );
+      vec4 texel1 = imageLoad(storageImage[i+1],finalCoords12 );
+      vec4 texelFinal = imageLoad(final,finalCoords );
       if(texel1.x != -1)
       {
-            imageStore(final, finalCoords, vec4(texel1.xy,0,1));
+            if (texelFinal.x  < texel1.x)
+            imageStore(final, finalCoords, vec4(texel1.xyz,1));
       }
       else if (texel.x != -1)
       {
-            imageStore(final, finalCoords, vec4(texel.xy,0,1));
+          if (texelFinal.x  < texel.x)
+            imageStore(final, finalCoords, vec4(texel.xyz,1));
       }
-
     }
-    
-    
 
 
-
-    
 }
+
+    
+    
+
+
+
+    
 

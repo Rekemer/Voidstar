@@ -23,7 +23,7 @@ void main()
     uvec2 globalID = uvec2(gl_GlobalInvocationID.xy);
     PageTableUpdate update = tiles[globalID.x];
     
-    imageStore(storageImage[int(update.mipMap)], ivec2(update.x,update.y), vec4(update.xCoord,update.yCoord,0,1));
+    imageStore(storageImage[int(update.mipMap)], ivec2(update.x,update.y), vec4(update.xCoord,update.yCoord,int(update.mipMap),1));
 
     
 }

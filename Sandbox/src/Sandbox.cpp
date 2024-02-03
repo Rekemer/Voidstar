@@ -166,23 +166,28 @@ public:
 		auto bindResources = [this]()
 		{
 			auto device = RenderContext::GetDevice();
-			
+			iden = glm::scale(iden,  glm::vec3{ 10,10,1 });
 			m_PageTableDescriptorSet = Renderer::Instance()->GetSet<vk::DescriptorSet>(m_PageTableDescCompute, PipelineType::COMPUTE);
 			m_PageTableFinalDescriptorSet = Renderer::Instance()->GetSet<vk::DescriptorSet>(m_PageTableDescFinalCompute, PipelineType::COMPUTE);
 			m_DescriptorSetWorkingSet = Renderer::Instance()->GetSet<vk::DescriptorSet>(m_WorkingSetDesc, PipelineType::RENDER);
 			std::vector<vk::DescriptorImageInfo> imageInfos;
 
+			
+			
+			for (int i = 0; i < m_PageTableMipMaps.size(); i++)
+			{
+				vk::DescriptorImageInfo imageDescriptor1;
+				imageDescriptor1.imageLayout = vk::ImageLayout::eGeneral;
+				imageDescriptor1.imageView = m_PageTableMipMaps[i]->GetImageView();
+				imageDescriptor1.sampler = m_PageTableMipMaps[i]->GetSampler();
+				imageInfos.push_back(imageDescriptor1);
+			}
 			vk::DescriptorImageInfo imageDescriptor1;
 			imageDescriptor1.imageLayout = vk::ImageLayout::eGeneral;
 			imageDescriptor1.imageView = m_PageTable->GetImageView();
 			imageDescriptor1.sampler = m_PageTable->GetSampler();
 			imageInfos.push_back(imageDescriptor1);
-			for (int i = 0; i < m_PageTableMipMaps.size(); i++)
-			{
-				imageDescriptor1.imageView = m_PageTableMipMaps[i]->GetImageView();
-				imageDescriptor1.sampler = m_PageTableMipMaps[i]->GetSampler();
-				imageInfos.push_back(imageDescriptor1);
-			}
+
 			device->UpdateDescriptorSet(m_PageTableDescriptorSet, 0, imageInfos, vk::DescriptorType::eStorageImage);
 
 			m_DescriptorSetDebug = Renderer::Instance()->GetSet<vk::DescriptorSet>(m_DebugTexturesDesc, PipelineType::RENDER);
@@ -326,10 +331,10 @@ public:
 					{
 						//{0,"pages_4096_2048/"},
 						//{0,"pages_2048_1024/"},
-						{0,"pages_1024_512/"},
-						{1,"pages_512_256/"},
-						{2,"pages_256_128/"},
-						{3,"pages_128_64/"},
+						{3,"pages_1024_512/"},
+						{2,"pages_512_256/"},
+						{1,"pages_256_128/"},
+						{0,"pages_128_64/"},
 					};
 					static std::unordered_map< std::string, bool> isLoaded;
 					std::vector<float> tilesToLoadToPageTable;
@@ -338,13 +343,12 @@ public:
 
 					for (auto& feedback : m_FeedbackRes)
 					{
-						//continue;
 						// there is feedback
 						if (feedback.a > 0)
 						{
 							std::stringstream ss;
 
-							ss << feedback.r << "_" << feedback.g << ".png";
+							ss << (int)feedback.r << "_" << (int)feedback.g << ".png";
 							std::string path = BASE_VIRT_PATH + mipTiles[feedback.b].data() + ss.str();
 							if (!isLoaded[path])
 							{
@@ -570,20 +574,20 @@ public:
 					scissors.extent = vk::Extent2D{ (uint32_t)viewport.width,(uint32_t)viewport.height }; 
 					vkCommandBuffer.setViewport(0, 1, &viewport);
 					vkCommandBuffer.setScissor(0, 1, &scissors); 
-					Renderer::Instance()->Draw(m_Sphere);
-					Renderer::Instance()->DrawSphereInstance(vkCommandBuffer);
+					
+					Renderer::Instance()->Draw(m_Plane, iden);
+					Renderer::Instance()->DrawBatch(vkCommandBuffer);
 					//Renderer::Instance()->DrawQuadScreen(vkCommandBuffer);
 				};
 
 				m_FinalRenderPass = builder.Build(RENDER_BASIC_PASS, m_AttachmentManager, actualFrameAmount, extent, clearValues, exe);
 
-				m_Sphere.Pos = { 0,0,0 };
-				GetCamera()->LookAt(m_Sphere.Pos);
+				m_Plane.Pos = { 0,0,0 };
+				//GetCamera()->LookAt(m_Plane.Pos);
 			}
 			std::vector<vk::VertexInputBindingDescription> bindings
 			{
 				VertexBindingDescription(0,sizeof(Vertex),vk::VertexInputRate::eVertex),
-				VertexBindingDescription(1,sizeof(InstanceData),vk::VertexInputRate::eInstance)
 			};
 
 
@@ -593,12 +597,6 @@ public:
 				VertexInputAttributeDescription(0,1,vk::Format::eR32G32Sfloat,offsetof(Vertex, UV)),
 				VertexInputAttributeDescription(0,2,vk::Format::eR32G32B32A32Sfloat,offsetof(Vertex, Color)),
 				VertexInputAttributeDescription(0,3,vk::Format::eR32Sfloat,offsetof(Vertex, textureID)),
-
-				VertexInputAttributeDescription(1,4,vk::Format::eR32G32B32A32Sfloat,offsetof(InstanceData, Color)),
-				VertexInputAttributeDescription(1,5,vk::Format::eR32G32B32A32Sfloat,offsetof(InstanceData, WorldMatrix)),
-				VertexInputAttributeDescription(1,6,vk::Format::eR32G32B32A32Sfloat,offsetof(InstanceData, WorldMatrix) + sizeof(float) * 4),
-				VertexInputAttributeDescription(1,7,vk::Format::eR32G32B32A32Sfloat,offsetof(InstanceData, WorldMatrix) + sizeof(float) * 8),
-				VertexInputAttributeDescription(1,8,vk::Format::eR32G32B32A32Sfloat,offsetof(InstanceData, WorldMatrix) + sizeof(float) * 12),
 			};
 
 			{
@@ -771,8 +769,8 @@ public:
 						scissors.extent = vk::Extent2D{ (uint32_t)viewport.width,(uint32_t)viewport.height };
 						vkCommandBuffer.setViewport(0, 1, &viewport);
 						vkCommandBuffer.setScissor(0, 1, &scissors);
-						Renderer::Instance()->Draw(m_Sphere);
-						Renderer::Instance()->DrawSphereInstance(vkCommandBuffer);
+						Renderer::Instance()->Draw(m_Plane, iden);
+						Renderer::Instance()->DrawBatch(vkCommandBuffer);
 					};
 				m_FeedbackRenderPass = builder.Build(FEEDBACK_RENDER_PASS, m_AttachmentManager, actualFrameAmount, feedbackExtent, { {std::array<float, 4>{137.f / 255.f, 189.f / 255.f, 199.f / 255.f, 0.0f} }, depthClear }, exe1);
 			}
@@ -1148,7 +1146,7 @@ public:
 
 		float speed = 50;
 
-		if (Input::IsKeyPressed(VS_KEY_W))
+		/*if (Input::IsKeyPressed(VS_KEY_W))
 		{
 			m_SphereRot.x += 0.01f * speed;
 		}
@@ -1168,7 +1166,7 @@ public:
 		{
 			m_SphereRot.y+= 0.01f * speed;
 		}
-		m_Sphere.Rot = m_SphereRot;
+		m_Sphere.Rot = m_SphereRot;*/
 		
 		
 		
@@ -1221,7 +1219,8 @@ private:
 	std::vector<FeedbackRes> m_FeedbackRes;
 	Callables callables;
 	AttachmentManager m_AttachmentManager;
-	Sphere m_Sphere;
+	Quad m_Plane;
+	glm::mat4 iden{ 1 };
 	glm::vec3  m_SphereRot = {0,0,0};
 };
 

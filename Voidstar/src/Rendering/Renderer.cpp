@@ -349,6 +349,12 @@ namespace Voidstar
 	{
 		DrawSphere(sphere.Pos,sphere.Scale,sphere.Color,sphere.Rot);
 	}
+	
+	void Renderer::Draw(Quad& quad, glm::mat4& world)
+	{
+		DrawQuad(world, glm::vec4{1,0,1,1});
+	}
+
 	void Renderer::Draw(QuadRangle& quadrangle)
 	{
 		DrawQuad(quadrangle.Verticies);
@@ -365,6 +371,7 @@ namespace Voidstar
 		m_BatchInstance->WorldMatrix= transpose;
 		m_BatchInstance++;
 	}
+
 	void Renderer::DrawSphereInstance(vk::CommandBuffer& commandBuffer)
 	{
 		vk::DeviceSize offsets[] = { 0 };
