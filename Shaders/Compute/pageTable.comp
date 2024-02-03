@@ -14,7 +14,7 @@ layout(binding = 1 ) buffer StorageBuffer
 };
 
 #define LOCALSIZE 4
-layout (local_size_x = LOCALSIZE, local_size_y = LOCALSIZE, local_size_z = LOCALSIZE) in;
+layout (local_size_x = LOCALSIZE, local_size_y = 1, local_size_z = 1) in;
 
 
 void main() 

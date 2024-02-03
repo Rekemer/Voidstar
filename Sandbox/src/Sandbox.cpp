@@ -356,13 +356,15 @@ public:
 								isLoaded[path] = true;
 								Image::UpdateRegionWithImage(path, m_WorkingSet, { m_WorkingSetPtr[0],m_WorkingSetPtr[1],0 });
 								Log::GetLog()->info("Loaded tile {0}", path);
+								float workingSetCoordX = (float)(m_WorkingSetPtr[0]) / workingSetWidth;
+								float workingSetCoordY = (float)m_WorkingSetPtr[1] / workingSetHeight;
 								if (workingSetWidth <= m_WorkingSetPtr[0] + pageWidth)
 								{
 									m_WorkingSetPtr[0] = 0;
 									if (workingSetHeight <= m_WorkingSetPtr[1] + pageHeight)
 									{
-										// we don;t have enough space, must overwrite something
-										//assert(false);
+										// we dont have enough space, must overwrite something
+										assert(false);
 									}
 									else
 									{
@@ -376,11 +378,19 @@ public:
 								auto mipLevel = feedback.b;
 								auto x = feedback.r;
 								auto y = feedback.g;
+								//float workingSetCoordX = 0;
+								//if (m_WorkingSetPtr[0] > pageWidth)
+								//{
+								//	workingSetCoordX = (float)(m_WorkingSetPtr[0] - pageWidth) / workingSetWidth;
+								//}
+								//float workingSetCoordY = (float)m_WorkingSetPtr[1] / workingSetHeight;
+								assert(workingSetCoordX >= 0);
+								assert(workingSetCoordY >= 0);
 								tilesToLoadToPageTable.push_back(x);
 								tilesToLoadToPageTable.push_back(y);
 								tilesToLoadToPageTable.push_back(mipLevel);
-								tilesToLoadToPageTable.push_back((float)(m_WorkingSetPtr[0] - pageWidth) / workingSetWidth);
-								tilesToLoadToPageTable.push_back((float)m_WorkingSetPtr[1] / workingSetHeight);
+								tilesToLoadToPageTable.push_back(workingSetCoordX);
+								tilesToLoadToPageTable.push_back(workingSetCoordY);
 							}
 						}
 					}
@@ -427,7 +437,7 @@ public:
 						int localSize = 4;
 						
 						
-						vkCmdDispatch(cmd.GetCommandBuffer(), invocations /localSize, 1, 1);
+						vkCmdDispatch(cmd.GetCommandBuffer(), (pageTableWidth*pageTableHeight) /localSize, 1, 1);
 
 						std::vector<vk::Image> images{ m_PageTable->GetImage() };
 						for (auto mipMaps : m_PageTableMipMaps)

@@ -1,6 +1,6 @@
 #version 450
 #define mipMaps 3
-layout(binding = 0, rgba32f) uniform image2D  storageImage[mipMaps];
+layout(binding = 0, rgba32f) uniform readonly image2D  storageImage[mipMaps];
 layout(binding = 1, rgba32f) uniform image2D  final;
 
 
@@ -31,12 +31,12 @@ void main()
       vec4 texelFinal = imageLoad(final,finalCoords );
       if(texel1.x != -1)
       {
-            if (texelFinal.x  < texel1.x)
+            if (texelFinal.z  < texel1.z)
             imageStore(final, finalCoords, vec4(texel1.xyz,1));
       }
       else if (texel.x != -1)
       {
-          if (texelFinal.x  < texel.x)
+            if (texelFinal.z  < texel.z)
             imageStore(final, finalCoords, vec4(texel.xyz,1));
       }
     }
