@@ -43,7 +43,7 @@ namespace Voidstar
 	private:
 		glm::vec3 m_Up {0.0f, 1.0f, 0.0f};
 		glm::vec3 m_Front{ 0.0f, 0.0f, 1.0f };
-		glm::vec3 m_Position{0,0,-45};
+		glm::vec3 m_Position{0,0,-35};
 		glm::mat4 m_Proj;
 		glm::mat4 m_View;
 		float m_Fov = glm::radians(45.f);;

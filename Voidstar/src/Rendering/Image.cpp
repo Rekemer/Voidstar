@@ -194,7 +194,7 @@ namespace Voidstar
 	}
 	void Image::UpdateRegionWithImage(std::string& path, SPtr<Image> parentImage, vk::Offset3D offset )
 	{
-		stbi_set_flip_vertically_on_load(true);
+		stbi_set_flip_vertically_on_load(false);
 		int width = 0, height = 0, channels = 0;
 		auto pixels = stbi_load(path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
 		if (!pixels) {

@@ -167,6 +167,7 @@ public:
 		{
 			auto device = RenderContext::GetDevice();
 			iden = glm::scale(iden,  glm::vec3{ 10,10,1 });
+			iden = glm::rotate(iden, glm::radians(180.f), glm::vec3{ 0,1,0 }); 
 			m_PageTableDescriptorSet = Renderer::Instance()->GetSet<vk::DescriptorSet>(m_PageTableDescCompute, PipelineType::COMPUTE);
 			m_PageTableFinalDescriptorSet = Renderer::Instance()->GetSet<vk::DescriptorSet>(m_PageTableDescFinalCompute, PipelineType::COMPUTE);
 			m_DescriptorSetWorkingSet = Renderer::Instance()->GetSet<vk::DescriptorSet>(m_WorkingSetDesc, PipelineType::RENDER);
@@ -1180,7 +1181,7 @@ public:
 private:
 	struct AdditionalData
 	{
-		bool Debug = false;
+		bool Debug = true;
 	};
 	AdditionalData m_AddData;
 	int m_BaseDesc = 0;

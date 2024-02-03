@@ -34,5 +34,5 @@ void main()
     //clipSpace /=clipSpace.w;
     
     gl_Position = clipSpace;
-    out_uv = in_uv;
+    out_uv = vec2(in_uv.x,1-in_uv.y);
 }
