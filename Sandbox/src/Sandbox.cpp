@@ -154,10 +154,6 @@ public:
 			for (auto mipMaps : m_PageTableMipMaps)
 			{
 				mipMaps->Fill(glm::vec4(-1, -1,-1,-1), commandBuffer);
-				commandBuffer.BeginTransfering();
-				commandBuffer.ChangeImageLayout(mipMaps.get(), mipMaps->GetLayout(), vk::ImageLayout::eGeneral, 1);
-				commandBuffer.EndTransfering();
-				commandBuffer.SubmitSingle();
 			}
 
 		};
@@ -338,26 +334,44 @@ public:
 						{0,"pages_128_64/"},
 					};
 					static std::unordered_map< std::string, bool> isLoaded;
-					std::vector<float> tilesToLoadToPageTable;
+					std::vector<UpdatePagetable> tilesToLoadToPageTable;
 					
-
+					static  std::unordered_map< std::string, UpdatePagetable> cachedCoords;
+					std::vector<std::string> tilesWeSee;
 
 					for (auto& feedback : m_FeedbackRes)
 					{
 						// there is feedback
-						if (feedback.a > 0)
+						if (feedback.isValid > 0)
 						{
 							std::stringstream ss;
 
-							ss << (int)feedback.r << "_" << (int)feedback.g << ".png";
-							std::string path = BASE_VIRT_PATH + mipTiles[feedback.b].data() + ss.str();
+							ss << (int)feedback.pageX << "_" << (int)feedback.pageY << ".png";
+							std::string path = BASE_VIRT_PATH + mipTiles[feedback.mipMap].data() + ss.str();
+							if (std::find(tilesWeSee.begin(), tilesWeSee.end(), path.c_str()) == tilesWeSee.end())
+							{
+								tilesWeSee.push_back(path);
+							}
 							if (!isLoaded[path])
 							{
 								isLoaded[path] = true;
 								Image::UpdateRegionWithImage(path, m_WorkingSet, { m_WorkingSetPtr[0],m_WorkingSetPtr[1],0 });
 								Log::GetLog()->info("Loaded tile {0}", path);
-								float workingSetCoordX = (float)(m_WorkingSetPtr[0]) / workingSetWidth;
-								float workingSetCoordY = (float)m_WorkingSetPtr[1] / workingSetHeight;
+								float workingSetCoordX = 0;
+								float workingSetCoordY = 0;
+								if (cachedCoords.find(path) == cachedCoords.end())
+								{
+									 cachedCoords[path].texelValue[0] = workingSetCoordX = (float)(m_WorkingSetPtr[0]) / workingSetWidth;
+									 cachedCoords[path].texelValue[1] = workingSetCoordY = (float)m_WorkingSetPtr[1] / workingSetHeight;
+								}
+								else
+								{
+									workingSetCoordX = cachedCoords[path].texelValue[0];
+									workingSetCoordY = cachedCoords[path].texelValue[1];
+								}
+								cachedCoords[path].texelCoord = { feedback.pageX ,feedback.pageY};
+								cachedCoords[path].mipMap= feedback.mipMap;
+
 								if (workingSetWidth <= m_WorkingSetPtr[0] + pageWidth)
 								{
 									m_WorkingSetPtr[0] = 0;
@@ -375,29 +389,21 @@ public:
 								{
 									m_WorkingSetPtr[0] += pageWidth;
 								}
-								auto mipLevel = feedback.b;
-								auto x = feedback.r;
-								auto y = feedback.g;
-								//float workingSetCoordX = 0;
-								//if (m_WorkingSetPtr[0] > pageWidth)
-								//{
-								//	workingSetCoordX = (float)(m_WorkingSetPtr[0] - pageWidth) / workingSetWidth;
-								//}
-								//float workingSetCoordY = (float)m_WorkingSetPtr[1] / workingSetHeight;
-								assert(workingSetCoordX >= 0);
-								assert(workingSetCoordY >= 0);
-								tilesToLoadToPageTable.push_back(x);
-								tilesToLoadToPageTable.push_back(y);
-								tilesToLoadToPageTable.push_back(mipLevel);
-								tilesToLoadToPageTable.push_back(workingSetCoordX);
-								tilesToLoadToPageTable.push_back(workingSetCoordY);
+								
+								
 							}
 						}
 					}
 					//std::cout << m_WorkingSetPtr[0] << " " << m_WorkingSetPtr[1] << std::endl;
-					if (tilesToLoadToPageTable.size() > 0)
+					if (tilesWeSee.size() > 0)
 					{
-						ptr = (float*)device->GetDevice().mapMemory(m_StorageBuffers->GetMemory(), (uint64_t)0, tilesToLoadToPageTable.size()* sizeof(tilesToLoadToPageTable[0]));
+						for (auto tile : tilesWeSee)
+						{
+							tilesToLoadToPageTable.push_back(cachedCoords[tile.data()]) ;
+						}
+						std::vector<UpdatePagetable> clear(100);
+						m_StorageBuffers->SetData(clear.data());
+						auto ptr = (UpdatePagetable*)device->GetDevice().mapMemory(m_StorageBuffers->GetMemory(), (uint64_t)0, tilesToLoadToPageTable.size()* sizeof(tilesToLoadToPageTable[0]));
 						memcpy(ptr, tilesToLoadToPageTable.data(), tilesToLoadToPageTable.size() * sizeof(tilesToLoadToPageTable[0]));
 						device->GetDevice().unmapMemory(m_StorageBuffers->GetMemory());
 						device->UpdateDescriptorSet(m_PageTableDescriptorSet,1,1, *m_StorageBuffers,vk::DescriptorType::eStorageBuffer);
@@ -412,6 +418,12 @@ public:
 						device->GetDevice().waitIdle();
 						auto cmdBuffer = Renderer::Instance()->GetTransferCommandBuffer(frameIndex);
 						device->UpdateDescriptorSet(m_DescriptorSetWorkingSet, 0, 1, imageDescriptor, vk::DescriptorType::eCombinedImageSampler);
+
+						m_PageTable->Fill({ -1,-1,-1,-1 }, cmdBuffer);
+						for (auto mipMaps : m_PageTableMipMaps)
+						{
+							mipMaps->Fill(glm::vec4(-1, -1, -1, -1), cmdBuffer);
+						}
 
 						cmdBuffer.BeginTransfering();
 						cmdBuffer.ChangeImageLayout(m_WorkingSet.get(), m_WorkingSet->GetLayout(), vk::ImageLayout::eShaderReadOnlyOptimal);
@@ -1193,6 +1205,12 @@ private:
 	{
 		bool Debug = true;
 	};
+	struct UpdatePagetable
+	{
+		glm::vec2 texelCoord = {-1,-1};
+		float mipMap = -1;
+		glm::vec2 texelValue = { -1,-1 };
+	};
 	AdditionalData m_AddData;
 	int m_BaseDesc = 0;
 	int m_PageTableDescCompute = 0;
@@ -1225,7 +1243,7 @@ private:
 	bool isDragged = false;
 	struct FeedbackRes
 	{
-		float r, g, b, a;
+		float pageX, pageY, mipMap, isValid;
 	};
 	std::vector<FeedbackRes> m_FeedbackRes;
 	Callables callables;

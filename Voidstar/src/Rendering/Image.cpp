@@ -678,7 +678,7 @@ namespace Voidstar
 		std::vector<glm::vec4> values(m_Width * m_Height, value);
 		memcpy(ptr, values.data(), m_Size);
 		RenderContext::GetDevice()->GetDevice().unmapMemory(buffer->GetMemory());
-
+		auto prevLayout = m_ImageLayout;
 		cmd.MemBufferBarrier(buffer->GetBuffer(), buffer->GetSize(),
 			vk::PipelineStageFlagBits::eTopOfPipe,
 			vk::AccessFlagBits::eNone,
@@ -686,6 +686,7 @@ namespace Voidstar
 			vk::AccessFlagBits::eShaderWrite);
 		cmd.ChangeImageLayout(this, m_ImageLayout, vk::ImageLayout::eTransferDstOptimal);
 		cmd.CopyBufferToImage(*buffer, m_Image, m_Width, m_Height);
+		cmd.ChangeImageLayout(this, m_ImageLayout, prevLayout);
 		cmd.EndTransfering();
 		cmd.SubmitSingle();
 	}
