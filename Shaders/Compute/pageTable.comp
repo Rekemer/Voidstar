@@ -1,5 +1,5 @@
 #version 450
-#define mipMaps 4
+#define mipMaps 9
 layout(binding = 0, rgba32f) uniform image2D  storageImage[mipMaps];
 //  x,y,mipLevel,index in working set
 
@@ -13,7 +13,7 @@ layout(binding = 1 ) buffer StorageBuffer
     PageTableUpdate tiles[];
 };
 
-#define LOCALSIZE 4
+#define LOCALSIZE 1
 layout (local_size_x = LOCALSIZE, local_size_y = 1, local_size_z = 1) in;
 
 
@@ -22,7 +22,7 @@ void main()
     // Get the global ID of the thread in the workgroup
     uvec2 globalID = uvec2(gl_GlobalInvocationID.xy);
     PageTableUpdate update = tiles[globalID.x];
-    
+
     imageStore(storageImage[int(update.mipMap)], ivec2(update.x,update.y), vec4(update.xCoord,update.yCoord,int(update.mipMap),1));
 
     

@@ -37,7 +37,9 @@ constexpr int pageHeight = 64;
 constexpr int workingSetWidth = pageWidth * 10;
 constexpr int workingSetHeight = pageHeight * 10;
 constexpr int workingSetPageAmount = workingSetWidth / pageWidth * workingSetHeight / pageHeight;
-constexpr glm::vec2 virtualTextureSize = { 2048,1024 };
+constexpr float low = 16384;
+constexpr glm::vec2 virtualTextureSize = { low*2,low};
+constexpr glm::vec2 virtualTextureTiles = virtualTextureSize / glm::vec2{pageWidth,pageHeight};
 //constexpr glm::vec2 virtualTextureSize = { 1024,512 };
 constexpr int pageTableWidth = virtualTextureSize.x/ pageWidth;
 constexpr int pageTableHeight = virtualTextureSize.y / pageHeight;
@@ -130,7 +132,7 @@ public:
 			
 			{
 				BufferInputChunk inputBuffer;
-				inputBuffer.size = sizeof(FeedbackRes) * 100;
+				inputBuffer.size = sizeof(FeedbackRes) * virtualTextureTiles.x*virtualTextureTiles.y;
 				inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
 				inputBuffer.usage = vk::BufferUsageFlagBits::eStorageBuffer;
 				m_StorageBuffers = CreateUPtr<Buffer>(inputBuffer);
@@ -329,7 +331,10 @@ public:
 
 					static std::unordered_map<int, std::string_view> mipTiles =
 					{
-						//{0,"pages_4096_2048/"},
+						{8,"pages_32768_16384/"},
+						{7,"pages_16384_8192/"},
+						{6,"pages_8192_4096/"},
+						{5,"pages_4096_2048/"},
 						{4,"pages_2048_1024/"},
 						{3,"pages_1024_512/"},
 						{2,"pages_512_256/"},
@@ -357,37 +362,52 @@ public:
 							
 							if (!cachedPage)
 							{
-								Image::UpdateRegionWithImage(path, m_WorkingSet, { m_WorkingSetPtr[0],m_WorkingSetPtr[1],0 });
+								
+								if (m_Overload)
+								{
+									auto coords = m_Cache.GetLUPage(mipTiles, BASE_VIRT_PATH);
+									m_WorkingSetPtr[0] = coords.x * workingSetWidth;
+									m_WorkingSetPtr[1] = coords.y * workingSetHeight;
+								}
+								else
+								{
+									if (workingSetWidth <= m_WorkingSetPtr[0] + pageWidth)
+									{
+										m_WorkingSetPtr[0] = 0;
+										if (workingSetHeight <= m_WorkingSetPtr[1] + pageHeight)
+										{
+											// we dont have enough space, must overwrite something
+											m_Overload = true;
+											auto coords = m_Cache.GetLUPage(mipTiles, BASE_VIRT_PATH);
+											m_WorkingSetPtr[0] = coords.x * workingSetWidth;
+											m_WorkingSetPtr[1] = coords.y * workingSetHeight;
+										}
+										else
+										{
+											m_WorkingSetPtr[1] += pageHeight;
+										}
+									}
+									else
+									{
+										m_WorkingSetPtr[0] += pageWidth;
+									}
+								}
 								
 
+								Image::UpdateRegionWithImage(path, m_WorkingSet, { m_WorkingSetPtr[0],m_WorkingSetPtr[1],0 });
+
+
 								Log::GetLog()->info("Loaded tile {0}", path);
-								
+
 								float workingSetCoordX = (float)(m_WorkingSetPtr[0]) / workingSetWidth;
 								float workingSetCoordY = (float)m_WorkingSetPtr[1] / workingSetHeight;
 								glm::vec2 physCoord = { workingSetCoordX,workingSetCoordY };
 								auto mipMap = feedback.mipMap;
 								glm::vec2 pageCoord = { feedback.pageX ,feedback.pageY };
-								PageEntry page{mipMap,pageCoord,physCoord};
-								
-								m_Cache.Add(page,path);
+								PageEntry page{ mipMap,pageCoord,physCoord };
+
+								m_Cache.Add(page, path);
 								tilesWeSee.push_back(page);
-								if (workingSetWidth <= m_WorkingSetPtr[0] + pageWidth)
-								{
-									m_WorkingSetPtr[0] = 0;
-									if (workingSetHeight <= m_WorkingSetPtr[1] + pageHeight)
-									{
-										// we dont have enough space, must overwrite something
-										assert(false);
-									}
-									else
-									{
-										m_WorkingSetPtr[1] += pageHeight;
-									}
-								}
-								else
-								{
-									m_WorkingSetPtr[0] += pageWidth;
-								}
 							}
 							else
 							{
@@ -400,13 +420,17 @@ public:
 						}
 					}
 
+					if (tilesWeSee.size() == 1)
+					{
+						std::cout << "as";
+					}
 					
 					if (tilesWeSee.size() > 0)
 					{
 						
 
 						
-						std::vector<PageEntry> clear(100);
+						std::vector<PageEntry> clear(virtualTextureTiles.x* virtualTextureTiles.y);
 						m_StorageBuffers->SetData(clear.data());
 						auto ptr = (PageEntry*)device->GetDevice().mapMemory(m_StorageBuffers->GetMemory(), (uint64_t)0, tilesWeSee.size()* sizeof(tilesWeSee[0]));
 						memcpy(ptr, tilesWeSee.data(), tilesWeSee.size() * sizeof(tilesWeSee[0]));
@@ -451,10 +475,9 @@ public:
 						vkCmdBindPipeline(cmd.GetCommandBuffer(), VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->GetPipeline());
 						cmd.GetCommandBuffer().bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipeline->GetLayout(), 0, 1, &m_PageTableDescriptorSet, 0, 0);
 						float invocations = 8;
-						int localSize = 4;
+						int localSize = 1;
 						
-						
-						vkCmdDispatch(cmd.GetCommandBuffer(), (pageTableWidth*pageTableHeight) /localSize, 1, 1);
+						vkCmdDispatch(cmd.GetCommandBuffer(), tilesWeSee.size()/ localSize, 1, 1);
 
 						std::vector<vk::Image> images{ m_PageTable->GetImage() };
 						for (auto mipMaps : m_PageTableMipMaps)
@@ -1230,7 +1253,8 @@ private:
 	vk::DescriptorSet m_DescriptorSetWorkingSet;
 	glm::vec2 m_Follow;
 	SPtr<Image> m_Image;
-	int m_WorkingSetPtr[2] = {0,0};
+	int m_WorkingSetPtr[2] = {-pageWidth,0};
+	bool m_Overload = false;
 	SPtr<Image> m_WorkingSet;
 	SPtr<Image> m_PageTable;
 	std::vector<SPtr<Image>> m_PageTableMipMaps;

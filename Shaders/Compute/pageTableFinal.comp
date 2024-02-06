@@ -1,5 +1,5 @@
 #version 450
-#define mipMaps 4
+#define mipMaps 8
 layout(binding = 0, rgba32f) uniform readonly image2D  storageImage[mipMaps];
 layout(binding = 1, rgba32f) uniform image2D  final;
 
