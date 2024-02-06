@@ -27,3 +27,4 @@
 #include "Application.h"
 #include "Window.h"
 #include "Log.h"
+#include "Cache.h"

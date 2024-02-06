@@ -141,6 +141,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="src\Application.h" />
+    <ClInclude Include="src\Cache.h" />
     <ClInclude Include="src\Input.h" />
     <ClInclude Include="src\Keys.h" />
     <ClInclude Include="src\Log.h" />

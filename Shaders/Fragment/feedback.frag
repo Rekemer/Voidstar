@@ -6,7 +6,7 @@ layout(location = 0) in vec4 color;
 layout(location = 1) in vec2 uv;
 
 
-#define maxMipLevel 3
+#define maxMipLevel 4
 float
 mip_map_level(in vec2 texture_coordinate)
 {
@@ -40,7 +40,7 @@ float tex_mip_level(vec2 coord, vec2 tex_size)
 }
 
 vec2 pageSize = vec2(128,64);
-vec2 megatextureSize = vec2(1024,512);
+vec2 megatextureSize = vec2(2048,1024);
 vec2 downscale = vec2(28,16) / vec2(1440,810);
 void main() 
 {

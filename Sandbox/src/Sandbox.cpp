@@ -36,8 +36,11 @@ constexpr int pageWidth = 128;
 constexpr int pageHeight = 64;
 constexpr int workingSetWidth = pageWidth * 10;
 constexpr int workingSetHeight = pageHeight * 10;
-constexpr int pageTableWidth = 1024/ pageWidth;
-constexpr int pageTableHeight = 512/ pageHeight;
+constexpr int workingSetPageAmount = workingSetWidth / pageWidth * workingSetHeight / pageHeight;
+constexpr glm::vec2 virtualTextureSize = { 2048,1024 };
+//constexpr glm::vec2 virtualTextureSize = { 1024,512 };
+constexpr int pageTableWidth = virtualTextureSize.x/ pageWidth;
+constexpr int pageTableHeight = virtualTextureSize.y / pageHeight;
 uint32_t pageTableMipLevels = std::log2(std::max(pageTableWidth, pageTableHeight));
 std::string_view RENDER_BASIC_PASS = "Basic";
 std::string_view RENDER_DEBUG_PASS = "Debug";
@@ -327,17 +330,17 @@ public:
 					static std::unordered_map<int, std::string_view> mipTiles =
 					{
 						//{0,"pages_4096_2048/"},
-						//{0,"pages_2048_1024/"},
+						{4,"pages_2048_1024/"},
 						{3,"pages_1024_512/"},
 						{2,"pages_512_256/"},
 						{1,"pages_256_128/"},
 						{0,"pages_128_64/"},
 					};
-					static std::unordered_map< std::string, bool> isLoaded;
-					std::vector<UpdatePagetable> tilesToLoadToPageTable;
 					
-					static  std::unordered_map< std::string, UpdatePagetable> cachedCoords;
-					std::vector<std::string> tilesWeSee;
+					
+					// so we can go back to low res mip level
+					// have tiles that
+					std::vector<PageEntry> tilesWeSee;
 
 					for (auto& feedback : m_FeedbackRes)
 					{
@@ -348,30 +351,26 @@ public:
 
 							ss << (int)feedback.pageX << "_" << (int)feedback.pageY << ".png";
 							std::string path = BASE_VIRT_PATH + mipTiles[feedback.mipMap].data() + ss.str();
-							if (std::find(tilesWeSee.begin(), tilesWeSee.end(), path.c_str()) == tilesWeSee.end())
+							// check cache instead
+							auto cachedPage = m_Cache.Get(path);
+							
+							
+							if (!cachedPage)
 							{
-								tilesWeSee.push_back(path);
-							}
-							if (!isLoaded[path])
-							{
-								isLoaded[path] = true;
 								Image::UpdateRegionWithImage(path, m_WorkingSet, { m_WorkingSetPtr[0],m_WorkingSetPtr[1],0 });
-								Log::GetLog()->info("Loaded tile {0}", path);
-								float workingSetCoordX = 0;
-								float workingSetCoordY = 0;
-								if (cachedCoords.find(path) == cachedCoords.end())
-								{
-									 cachedCoords[path].texelValue[0] = workingSetCoordX = (float)(m_WorkingSetPtr[0]) / workingSetWidth;
-									 cachedCoords[path].texelValue[1] = workingSetCoordY = (float)m_WorkingSetPtr[1] / workingSetHeight;
-								}
-								else
-								{
-									workingSetCoordX = cachedCoords[path].texelValue[0];
-									workingSetCoordY = cachedCoords[path].texelValue[1];
-								}
-								cachedCoords[path].texelCoord = { feedback.pageX ,feedback.pageY};
-								cachedCoords[path].mipMap= feedback.mipMap;
+								
 
+								Log::GetLog()->info("Loaded tile {0}", path);
+								
+								float workingSetCoordX = (float)(m_WorkingSetPtr[0]) / workingSetWidth;
+								float workingSetCoordY = (float)m_WorkingSetPtr[1] / workingSetHeight;
+								glm::vec2 physCoord = { workingSetCoordX,workingSetCoordY };
+								auto mipMap = feedback.mipMap;
+								glm::vec2 pageCoord = { feedback.pageX ,feedback.pageY };
+								PageEntry page{mipMap,pageCoord,physCoord};
+								
+								m_Cache.Add(page,path);
+								tilesWeSee.push_back(page);
 								if (workingSetWidth <= m_WorkingSetPtr[0] + pageWidth)
 								{
 									m_WorkingSetPtr[0] = 0;
@@ -389,22 +388,28 @@ public:
 								{
 									m_WorkingSetPtr[0] += pageWidth;
 								}
-								
-								
 							}
+							else
+							{
+								if (std::find(tilesWeSee.begin(), tilesWeSee.end(), *cachedPage) == tilesWeSee.end())
+								{
+									tilesWeSee.push_back(*cachedPage);
+								}
+							}
+						
 						}
 					}
-					//std::cout << m_WorkingSetPtr[0] << " " << m_WorkingSetPtr[1] << std::endl;
+
+					
 					if (tilesWeSee.size() > 0)
 					{
-						for (auto tile : tilesWeSee)
-						{
-							tilesToLoadToPageTable.push_back(cachedCoords[tile.data()]) ;
-						}
-						std::vector<UpdatePagetable> clear(100);
+						
+
+						
+						std::vector<PageEntry> clear(100);
 						m_StorageBuffers->SetData(clear.data());
-						auto ptr = (UpdatePagetable*)device->GetDevice().mapMemory(m_StorageBuffers->GetMemory(), (uint64_t)0, tilesToLoadToPageTable.size()* sizeof(tilesToLoadToPageTable[0]));
-						memcpy(ptr, tilesToLoadToPageTable.data(), tilesToLoadToPageTable.size() * sizeof(tilesToLoadToPageTable[0]));
+						auto ptr = (PageEntry*)device->GetDevice().mapMemory(m_StorageBuffers->GetMemory(), (uint64_t)0, tilesWeSee.size()* sizeof(tilesWeSee[0]));
+						memcpy(ptr, tilesWeSee.data(), tilesWeSee.size() * sizeof(tilesWeSee[0]));
 						device->GetDevice().unmapMemory(m_StorageBuffers->GetMemory());
 						device->UpdateDescriptorSet(m_PageTableDescriptorSet,1,1, *m_StorageBuffers,vk::DescriptorType::eStorageBuffer);
 
@@ -418,7 +423,7 @@ public:
 						device->GetDevice().waitIdle();
 						auto cmdBuffer = Renderer::Instance()->GetTransferCommandBuffer(frameIndex);
 						device->UpdateDescriptorSet(m_DescriptorSetWorkingSet, 0, 1, imageDescriptor, vk::DescriptorType::eCombinedImageSampler);
-
+						 
 						m_PageTable->Fill({ -1,-1,-1,-1 }, cmdBuffer);
 						for (auto mipMaps : m_PageTableMipMaps)
 						{
@@ -1205,12 +1210,7 @@ private:
 	{
 		bool Debug = true;
 	};
-	struct UpdatePagetable
-	{
-		glm::vec2 texelCoord = {-1,-1};
-		float mipMap = -1;
-		glm::vec2 texelValue = { -1,-1 };
-	};
+	
 	AdditionalData m_AddData;
 	int m_BaseDesc = 0;
 	int m_PageTableDescCompute = 0;
@@ -1251,6 +1251,7 @@ private:
 	Quad m_Plane;
 	glm::mat4 iden{ 1 };
 	glm::vec3  m_SphereRot = {0,0,0};
+	Cache<workingSetPageAmount> m_Cache;
 };
 
 

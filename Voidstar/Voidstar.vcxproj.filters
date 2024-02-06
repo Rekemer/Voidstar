@@ -146,6 +146,7 @@
     </ClInclude>
     <ClInclude Include="src\Rendering\ComputePass.h" />
     <ClInclude Include="src\Rendering\IExecute.h" />
+    <ClInclude Include="src\Cache.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Dependencies\Tracy\public\TracyClient.cpp">
