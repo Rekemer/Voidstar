@@ -718,11 +718,11 @@ public:
 				//Define a general attachment, with its load/store operations
 
 				builder.ColorOutput("Default", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
-				builder.SetLoadOp(vk::AttachmentLoadOp::eLoad);
+				builder.SetLoadOp(vk::AttachmentLoadOp::eDontCare);
 				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
 				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
 				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
-				builder.SetInitialLayout(vk::ImageLayout::eColorAttachmentOptimal);
+				builder.SetInitialLayout(vk::ImageLayout::eUndefined);
 				builder.SetFinalLayout(vk::ImageLayout::ePresentSrcKHR);
 				auto resolve = builder.BuildAttachmentDesc();
 
@@ -749,9 +749,8 @@ public:
 						//tracyCmd.BeginRendering();
 						auto vkCommandBuffer = commandBuffer.GetCommandBuffer();
 
-						tracyCmd.BeginRendering();
-						TracyVkZone(tracyContext, tracyCmd.GetCommandBuffer(), "Debug render pass ");
-						tracyCmd.EndRendering();
+						TracyVkZone(tracyContext, vkCommandBuffer, "Debug render pass ");
+						
 						auto device = RenderContext::GetDevice();
 						
 						if (m_WorkingSet->GetLayout() != vk::ImageLayout::eShaderReadOnlyOptimal)
@@ -1013,9 +1012,9 @@ public:
 
 
 			auto graph = CreateUPtr<RenderPassGraph>();
-			graph->AddExec(std::move(m_FeedbackRenderPass));
-			graph->AddExec(std::move(m_UpdatePageTablePass));
-			graph->AddExec(std::move(m_FinalRenderPass));
+			//graph->AddExec(std::move(m_FeedbackRenderPass));
+			//graph->AddExec(std::move(m_UpdatePageTablePass));
+			//graph->AddExec(std::move(m_FinalRenderPass));
 			graph->AddExec(std::move(m_DebugRenderPass));
 			//graph->AddExec(std::move(m_ImGuiRenderPass));
 
