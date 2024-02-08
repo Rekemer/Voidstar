@@ -38,15 +38,14 @@ namespace Voidstar
 		static vk::DeviceMemory CreateMemory(vk::Image& image, ImageSpecs& specs);
 		static SPtr<Image> CreateImage(std::string path);
 		static SPtr<Image> CreateCubemap(std::vector<std::string> pathes);
-		void Fill(int8_t  value, CommandBuffer& cmd);
-		void Fill(glm::vec4  value, CommandBuffer& cmd);
+		void Fill(glm::vec4  value, CommandBuffer& cmd, SPtr<Buffer> stageBuffer, int bufferOffset);
 		static SPtr<Image> CreateEmptyImage( int width, int height,vk::Format format,
 			vk::ImageUsageFlags usage,
 			int mipLevels = 1,
 			vk::SampleCountFlagBits samples = vk::SampleCountFlagBits::e1,
 			vk::Filter minFilter = vk::Filter::eNearest, vk::Filter magFilter = vk::Filter::eNearest);
 		static SPtr<Image> CreateEmpty3DImage(int width, int height, int depth, vk::Format format);
-		void static UpdateRegionWithImage(std::string& path, SPtr<Image> image, vk::Offset3D offset);
+		static void UpdateRegionWithImage(std::string& path, SPtr<Image> image, vk::Offset3D offset);
 		~Image();
 
 		
@@ -114,7 +113,11 @@ namespace Voidstar
 			vk::ImageTiling tiling, vk::FormatFeatureFlags features);
 		void GenerateMipmaps(uint32_t mipLevels);
 		std::vector<SPtr<Image>> GenerateEmptyMipmapsAsImages(uint32_t mipLevels);
-		
+		int GetSize()
+		{
+			assert(m_Size != -1);
+			return m_Size;
+		}
 	private:
 		void GenerateMipmaps(VkImage image,VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
 		void* LoadImageRaw();

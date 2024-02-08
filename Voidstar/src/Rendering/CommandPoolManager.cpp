@@ -46,7 +46,7 @@ namespace Voidstar
     vk::CommandPool CommandPoolManager::CreatePool() const {
         vk::CommandPoolCreateInfo cmdPoolInfo;
         cmdPoolInfo.queueFamilyIndex = RenderContext::GetDevice()->GetGraphicsIndex();
-         cmdPoolInfo.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
+        cmdPoolInfo.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
         const auto res = RenderContext::GetDevice()->GetDevice().createCommandPool(cmdPoolInfo);
         return res;
     }

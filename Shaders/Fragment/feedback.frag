@@ -33,7 +33,7 @@ float tex_mip_level(vec2 coord, vec2 tex_size)
    dx_scaled = dFdx(coord_scaled);
    dy_scaled = dFdy(coord_scaled);
    float d = max(dot(dx_scaled, dx_scaled),dot(dy_scaled, dy_scaled));
-   float miplevel = log2(sqrt(d)) +0.5; 
+   float miplevel = log2(sqrt(d)) -.25; 
    miplevel = clamp(miplevel,0,maxMipLevel); 
    miplevel = maxMipLevel  - miplevel;
    return miplevel;

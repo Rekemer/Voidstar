@@ -79,7 +79,7 @@ namespace Voidstar
 		device->GetGraphicsQueue().submit(submitInfo, *fence);
 	}
 	void CommandBuffer::EndRendering()
-	{
+		{
 		m_CommandBuffer.end();
 	}
 
@@ -254,10 +254,10 @@ namespace Voidstar
 
 		m_CommandBuffer.pipelineBarrier(sourceStage, destinationStage, vk::DependencyFlags(), nullptr, nullptr, barrier);
 	}
-	void CommandBuffer::CopyBufferToImage(Buffer& buffer, vk::Image& image, int width, int height, vk::Offset3D offset,int layers)
+	void CommandBuffer::CopyBufferToImage(Buffer& buffer, vk::Image& image, int width, int height, int bufferOffset,vk::Offset3D offset,int layers)
 	{
 		vk::BufferImageCopy copy;
-		copy.bufferOffset = 0;
+		copy.bufferOffset = bufferOffset;
 		copy.bufferRowLength = 0;
 		copy.bufferImageHeight = 0;
 		copy.imageOffset = offset;

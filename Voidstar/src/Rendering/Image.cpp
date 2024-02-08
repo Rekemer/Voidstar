@@ -212,13 +212,10 @@ namespace Voidstar
 
 		auto commandBuffer = CommandBuffer::CreateBuffer(parentImage->m_CommandPool, vk::CommandBufferLevel::ePrimary);
 
-		commandBuffer.BeginTransfering();
-		commandBuffer.ChangeImageLayout(parentImage.get(), parentImage->m_ImageLayout, vk::ImageLayout::eTransferDstOptimal, 1);
-		commandBuffer.EndTransfering();
-		commandBuffer.SubmitSingle();
+		
 
 		commandBuffer.BeginTransfering();
-		commandBuffer.CopyBufferToImage(*buffer.get(), parentImage->m_Image,width, height, offset);
+		commandBuffer.CopyBufferToImage(*buffer.get(), parentImage->m_Image,width, height, 0, offset);
 		commandBuffer.EndTransfering();
 		commandBuffer.SubmitSingle();
 
@@ -447,7 +444,7 @@ namespace Voidstar
 		commandBuffer.SubmitSingle();
 
 		commandBuffer.BeginTransfering();
-		commandBuffer.CopyBufferToImage(*buffer.get(), image->m_Image, image->m_Width, image->m_Height, 6);
+		commandBuffer.CopyBufferToImage(*buffer.get(), image->m_Image, image->m_Width, image->m_Height, 0, vk::Offset3D{ 0,0,0 }, 6);
 		commandBuffer.EndTransfering();
 		commandBuffer.SubmitSingle();
 
@@ -649,46 +646,22 @@ namespace Voidstar
 
 		return image;
 	}
-	void Image::Fill(int8_t value, CommandBuffer& cmd)
-	{
-		cmd.BeginTransfering();
-		auto buffer = Buffer::CreateStagingBuffer(m_Size);
-		auto ptr = RenderContext::GetDevice()->GetDevice().mapMemory(buffer->GetMemory(), 0, m_Size);
-		std::vector<int> values(m_Width*m_Height,value);
-		memcpy(ptr, values.data(), m_Size);
-		RenderContext::GetDevice()->GetDevice().unmapMemory(buffer->GetMemory());
 
-		cmd.MemBufferBarrier(buffer->GetBuffer(), buffer->GetSize(),
-			vk::PipelineStageFlagBits::eTopOfPipe,
-			vk::AccessFlagBits::eNone,
-			vk::PipelineStageFlagBits::eComputeShader,
-			vk::AccessFlagBits::eShaderWrite);
-		cmd.ChangeImageLayout(this,m_ImageLayout,vk::ImageLayout::eTransferDstOptimal);
-		cmd.CopyBufferToImage(*buffer,m_Image,m_Width, m_Height);
-		cmd.EndTransfering();
-		cmd.SubmitSingle();
-		
-	}
-
-	void Image::Fill(glm::vec4 value, CommandBuffer& cmd)
+	void Image::Fill(glm::vec4 value, CommandBuffer& cmd, SPtr<Buffer> stageBuffer, int bufferOffset)
 	{
-		cmd.BeginTransfering();
-		auto buffer = Buffer::CreateStagingBuffer(m_Size);
-		auto ptr = RenderContext::GetDevice()->GetDevice().mapMemory(buffer->GetMemory(), 0, m_Size);
+		auto ptr = RenderContext::GetDevice()->GetDevice().mapMemory(stageBuffer->GetMemory(), 0, m_Size);
 		std::vector<glm::vec4> values(m_Width * m_Height, value);
 		memcpy(ptr, values.data(), m_Size);
-		RenderContext::GetDevice()->GetDevice().unmapMemory(buffer->GetMemory());
+		RenderContext::GetDevice()->GetDevice().unmapMemory(stageBuffer->GetMemory());
 		auto prevLayout = m_ImageLayout;
-		cmd.MemBufferBarrier(buffer->GetBuffer(), buffer->GetSize(),
+		cmd.MemBufferBarrier(stageBuffer->GetBuffer(), stageBuffer->GetSize(),
 			vk::PipelineStageFlagBits::eTopOfPipe,
 			vk::AccessFlagBits::eNone,
 			vk::PipelineStageFlagBits::eComputeShader,
 			vk::AccessFlagBits::eShaderWrite);
 		cmd.ChangeImageLayout(this, m_ImageLayout, vk::ImageLayout::eTransferDstOptimal);
-		cmd.CopyBufferToImage(*buffer, m_Image, m_Width, m_Height);
+		cmd.CopyBufferToImage(*stageBuffer, m_Image, m_Width, m_Height, bufferOffset);
 		cmd.ChangeImageLayout(this, m_ImageLayout, prevLayout);
-		cmd.EndTransfering();
-		cmd.SubmitSingle();
 	}
 	SPtr<Image> Image::CreateEmpty3DImage(int width, int height,int depth, vk::Format format)
 	{
@@ -836,6 +809,9 @@ namespace Voidstar
 		logicalDevice.destroyImageView(m_ImageView);
 		Renderer::Instance()->GetCommandPoolManager()->FreePool(m_CommandPool);
 	}
+
+	
+
 	
 	vk::Format Image::GetFormat(vk::PhysicalDevice physicalDevice, const std::vector<vk::Format>& candidates, vk::ImageTiling tiling, vk::FormatFeatureFlags features)
 	{

@@ -22,8 +22,7 @@
 #include "../Application.h"
 #include <random>
 #include "CommandPoolManager.h"
-#include"tracy/Tracy.hpp"
-#include"tracy/TracyVulkan.hpp"
+
 #include <filesystem>
 #include <cstdlib>
 #include <algorithm>
@@ -63,7 +62,7 @@ namespace Voidstar
 	QuadData quad;
 	std::vector<Vertex> sphere;
 	std::vector<IndexType> sphereIndicies;
-	TracyVkCtx ctx;
+	
 	const int QUAD_AMOUNT = 700;
 
 
@@ -638,7 +637,7 @@ namespace Voidstar
 		PFN_vkGetPhysicalDeviceCalibrateableTimeDomainsEXT vkGetPhysicalDeviceCalibrateableTimeDomainsEXT = reinterpret_cast<PFN_vkGetPhysicalDeviceCalibrateableTimeDomainsEXT>(vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceCalibrateableTimeDomainsEXT"));
 		PFN_vkGetCalibratedTimestampsEXT vkGetCalibratedTimestampsEXT = reinterpret_cast<PFN_vkGetCalibratedTimestampsEXT>(vkGetDeviceProcAddr(dev, "vkGetCalibratedTimestampsEXT"));
 
-		ctx = TracyVkContextCalibrated(physDev,dev,queue, m_TracyCommandBuffer.GetCommandBuffer(),
+		m_TracyContext = TracyVkContextCalibrated(physDev,dev,queue, m_TracyCommandBuffer.GetCommandBuffer(),
 			vkGetPhysicalDeviceCalibrateableTimeDomainsEXT, vkGetCalibratedTimestampsEXT);
 
 
@@ -778,7 +777,7 @@ namespace Voidstar
 
 
 
-			TracyVkDestroy(ctx)
+			TracyVkDestroy(m_TracyContext)
 
 			m_CommandPoolManager->FreePool(m_TracyCommandPool);
 
@@ -874,7 +873,6 @@ namespace Voidstar
 			ZoneScopedN("Presenting");
 			present = m_Device->GetPresentQueue().presentKHR(presentInfo);
 		}
-
 		catch (vk::OutOfDateKHRError error) {
 			present = vk::Result::eErrorOutOfDateKHR;
 		}
@@ -883,7 +881,9 @@ namespace Voidstar
 			ZoneScopedN("Recreating swapchain");
 			RecreateSwapchain();
 		}
-
+		m_TracyCommandBuffer.BeginRendering();
+		TracyVkCollect(m_TracyContext, m_TracyCommandBuffer.GetCommandBuffer());
+		m_TracyCommandBuffer.EndRendering();
 		m_CurrentFrame = (m_CurrentFrame + 1) % RenderContext::GetFrameAmount();
 
 		

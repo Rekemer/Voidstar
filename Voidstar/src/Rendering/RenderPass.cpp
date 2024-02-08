@@ -9,6 +9,7 @@
 #include "AttachmentManager.h"
 #include "Image.h"
 #include<algorithm>
+#include "Renderer.h"
 namespace Voidstar
 {
 
@@ -140,6 +141,7 @@ namespace Voidstar
 		cmd.BeginRenderPass(m_RenderPass, m_Framebuffers[frameIndex], m_Extent, m_ClearValues);
 		m_Execute(cmd, frameIndex);
 		cmd.EndRenderPass();
+		
 		cmd.EndRendering();
 	}
 

@@ -11,6 +11,7 @@
 #include <map>
 #include <utility>
 #include <functional>
+#include <future>
 #include "gtx/compatibility.hpp"
 using namespace Voidstar;
 
@@ -93,7 +94,7 @@ public:
 		Settings params{3};
 		m_ClickPoints.resize(MAX_POINTS, glm::vec2(-1, -1));
 
-		feedbackSize = { Application::GetScreenWidth() / 50 ,Application::GetScreenHeight() / 50 };
+		feedbackSize = { Application::GetScreenWidth() / 70 ,Application::GetScreenHeight() / 70 };
 
 		auto bindingsInit = [this]()
 		{
@@ -153,13 +154,23 @@ public:
 			//commandBuffer.ChangeImageLayout(m_PageTable.get(), vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal, pageTableMipLevels);
 			//commandBuffer.EndTransfering();
 			//commandBuffer.SubmitSingle();
-
 			m_PageTableMipMaps = m_PageTable->GenerateEmptyMipmapsAsImages(pageTableMipLevels);
-			m_PageTable->Fill(glm::vec4(-1, -1, -1, -1), commandBuffer);
+			auto mipMapSize = 0;
+			for (auto mipMap : m_PageTableMipMaps)
+			{
+				mipMapSize += mipMap->GetSize();
+			}
+			m_FillBuffer = Buffer::CreateStagingBuffer(m_PageTable->GetSize() + mipMapSize);
+			int bufferOffset = 0;
+			commandBuffer.BeginTransfering();
+			m_PageTable->Fill(glm::vec4(-1, -1, -1, -1), commandBuffer, m_FillBuffer, bufferOffset);
 			for (auto mipMaps : m_PageTableMipMaps)
 			{
-				mipMaps->Fill(glm::vec4(-1, -1,-1,-1), commandBuffer);
+				bufferOffset += mipMaps->GetSize();
+				mipMaps->Fill(glm::vec4(-1, -1,-1,-1), commandBuffer, m_FillBuffer, bufferOffset);
 			}
+			commandBuffer.EndTransfering();
+			commandBuffer.SubmitSingle();
 
 		};
 
@@ -296,18 +307,23 @@ public:
 			
 			Func exe = [=](CommandBuffer& cmd, size_t frameIndex)
 				{
+					ZoneScopedN("Feedback Reading Pass");
 					auto device = RenderContext::GetDevice();
 					auto color = m_AttachmentManager.GetColor({ "FeedbackBuffer" })[frameIndex];
+					auto tracyContext = Renderer::Instance()->GetTracyCtx();
+					auto tracyCmd = Renderer::Instance()->GetTracyCmd();
+					//tracyCmd.BeginRendering();
 					auto transferBuffer = Renderer::Instance()->GetTransferCommandBuffer(frameIndex);
 					Fence fence;
-					device->GetDevice().resetFences(fence.GetFence());
+					Renderer::Instance()->Reset(fence.GetFence());
 					
 					transferBuffer.BeginTransfering();
 					transferBuffer.CopyImageToBuffer(color, m_StageBuffers[frameIndex]);
+					transferBuffer.ChangeImageLayout(m_WorkingSet.get(), m_WorkingSet->GetLayout(), vk::ImageLayout::eTransferDstOptimal);
 					transferBuffer.EndTransfering();
 					//vk::PipelineStageFlagBits::eTransfer
 					transferBuffer.SubmitSingle(fence.GetFence());
-					device->GetDevice().waitForFences(fence.GetFence(), VK_TRUE, std::numeric_limits<uint64_t>::max());
+					Renderer::Instance()->Wait(fence.GetFence());
 
 					auto ptr = (float*)device->GetDevice().mapMemory(m_StageBuffers[frameIndex]->GetMemory(), (uint64_t)0, bufferSize);
 					//tilesToLoadToPageTable.clear();
@@ -315,7 +331,7 @@ public:
 					//std::copy(m_FeedbackRes.begin(), m_FeedbackRes.end(), ptr);
 
 					for (int i = 0, memoryRead = 0; memoryRead < bufferSize; memoryRead += sizeof(FeedbackRes), i++)
-					{
+					{	
 						auto r = *(float*)(ptr);
 						ptr++;
 						auto g = *(float*)(ptr);
@@ -346,89 +362,92 @@ public:
 					// so we can go back to low res mip level
 					// have tiles that
 					std::vector<PageEntry> tilesWeSee;
-
-					for (auto& feedback : m_FeedbackRes)
+					std::vector<std::future<void>> tilesToLoad;
 					{
-						// there is feedback
-						if (feedback.isValid > 0)
+						ZoneScopedN("Reading Feedback Buffer");
+						for (auto& feedback : m_FeedbackRes)
 						{
-							std::stringstream ss;
-
-							ss << (int)feedback.pageX << "_" << (int)feedback.pageY << ".png";
-							std::string path = BASE_VIRT_PATH + mipTiles[feedback.mipMap].data() + ss.str();
-							// check cache instead
-							auto cachedPage = m_Cache.Get(path);
-							
-							
-							if (!cachedPage)
+							// there is feedback
+							if (feedback.isValid > 0)
 							{
-								
-								if (m_Overload)
+								std::stringstream ss;
+
+								ss << (int)feedback.pageX << "_" << (int)feedback.pageY << ".png";
+								std::string path = BASE_VIRT_PATH + mipTiles[feedback.mipMap].data() + ss.str();
+								// check cache instead
+								auto cachedPage = m_Cache.Get(path);
+
+
+								if (!cachedPage)
 								{
-									auto coords = m_Cache.GetLUPage(mipTiles, BASE_VIRT_PATH);
-									m_WorkingSetPtr[0] = coords.x * workingSetWidth;
-									m_WorkingSetPtr[1] = coords.y * workingSetHeight;
-								}
-								else
-								{
-									if (workingSetWidth <= m_WorkingSetPtr[0] + pageWidth)
+
+									if (m_Overload)
 									{
-										m_WorkingSetPtr[0] = 0;
-										if (workingSetHeight <= m_WorkingSetPtr[1] + pageHeight)
-										{
-											// we dont have enough space, must overwrite something
-											m_Overload = true;
-											auto coords = m_Cache.GetLUPage(mipTiles, BASE_VIRT_PATH);
-											m_WorkingSetPtr[0] = coords.x * workingSetWidth;
-											m_WorkingSetPtr[1] = coords.y * workingSetHeight;
-										}
-										else
-										{
-											m_WorkingSetPtr[1] += pageHeight;
-										}
+										auto coords = m_Cache.GetLUPage(mipTiles, BASE_VIRT_PATH);
+										m_WorkingSetPtr[0] = coords.x * workingSetWidth;
+										m_WorkingSetPtr[1] = coords.y * workingSetHeight;
 									}
 									else
 									{
-										m_WorkingSetPtr[0] += pageWidth;
+										if (workingSetWidth <= m_WorkingSetPtr[0] + pageWidth)
+										{
+											m_WorkingSetPtr[0] = 0;
+											if (workingSetHeight <= m_WorkingSetPtr[1] + pageHeight)
+											{
+												// we dont have enough space, must overwrite something
+												m_Overload = true;
+												auto coords = m_Cache.GetLUPage(mipTiles, BASE_VIRT_PATH);
+												m_WorkingSetPtr[0] = coords.x * workingSetWidth;
+												m_WorkingSetPtr[1] = coords.y * workingSetHeight;
+											}
+											else
+											{
+												m_WorkingSetPtr[1] += pageHeight;
+											}
+										}
+										else
+										{
+											m_WorkingSetPtr[0] += pageWidth;
+										}
+									}
+
+									vk::Offset3D offset{ m_WorkingSetPtr[0],m_WorkingSetPtr[1],0 };
+
+
+									std::async(std::launch::async, &Image::UpdateRegionWithImage, std::ref(path), m_WorkingSet, offset);
+									//Image::UpdateRegionWithImage(path, m_WorkingSet, { m_WorkingSetPtr[0],m_WorkingSetPtr[1],0 });
+
+
+									//Log::GetLog()->info("Loaded tile {0}", path);
+
+									float workingSetCoordX = (float)(m_WorkingSetPtr[0]) / workingSetWidth;
+									float workingSetCoordY = (float)m_WorkingSetPtr[1] / workingSetHeight;
+									glm::vec2 physCoord = { workingSetCoordX,workingSetCoordY };
+									auto mipMap = feedback.mipMap;
+									glm::vec2 pageCoord = { feedback.pageX ,feedback.pageY };
+									PageEntry page{ mipMap,pageCoord,physCoord };
+
+									m_Cache.Add(page, path);
+									tilesWeSee.push_back(page);
+								}
+								else
+								{
+									if (std::find(tilesWeSee.begin(), tilesWeSee.end(), *cachedPage) == tilesWeSee.end())
+									{
+										tilesWeSee.push_back(*cachedPage);
 									}
 								}
-								
 
-								Image::UpdateRegionWithImage(path, m_WorkingSet, { m_WorkingSetPtr[0],m_WorkingSetPtr[1],0 });
-
-
-								Log::GetLog()->info("Loaded tile {0}", path);
-
-								float workingSetCoordX = (float)(m_WorkingSetPtr[0]) / workingSetWidth;
-								float workingSetCoordY = (float)m_WorkingSetPtr[1] / workingSetHeight;
-								glm::vec2 physCoord = { workingSetCoordX,workingSetCoordY };
-								auto mipMap = feedback.mipMap;
-								glm::vec2 pageCoord = { feedback.pageX ,feedback.pageY };
-								PageEntry page{ mipMap,pageCoord,physCoord };
-
-								m_Cache.Add(page, path);
-								tilesWeSee.push_back(page);
 							}
-							else
-							{
-								if (std::find(tilesWeSee.begin(), tilesWeSee.end(), *cachedPage) == tilesWeSee.end())
-								{
-									tilesWeSee.push_back(*cachedPage);
-								}
-							}
-						
 						}
 					}
+					
 
-					if (tilesWeSee.size() == 1)
-					{
-						std::cout << "as";
-					}
 					
 					if (tilesWeSee.size() > 0)
 					{
 						
-
+						ZoneScopedN("Update visible pages");
 						
 						std::vector<PageEntry> clear(virtualTextureTiles.x* virtualTextureTiles.y);
 						m_StorageBuffers->SetData(clear.data());
@@ -444,99 +463,105 @@ public:
 						imageDescriptor.imageView = m_WorkingSet->GetImageView();
 						imageDescriptor.sampler = m_WorkingSet->GetSampler();
 						
-						device->GetDevice().waitIdle();
-						auto cmdBuffer = Renderer::Instance()->GetTransferCommandBuffer(frameIndex);
+						//device->GetDevice().waitIdle();
 						device->UpdateDescriptorSet(m_DescriptorSetWorkingSet, 0, 1, imageDescriptor, vk::DescriptorType::eCombinedImageSampler);
-						 
-						m_PageTable->Fill({ -1,-1,-1,-1 }, cmdBuffer);
-						for (auto mipMaps : m_PageTableMipMaps)
-						{
-							mipMaps->Fill(glm::vec4(-1, -1, -1, -1), cmdBuffer);
-						}
-
-						cmdBuffer.BeginTransfering();
-						cmdBuffer.ChangeImageLayout(m_WorkingSet.get(), m_WorkingSet->GetLayout(), vk::ImageLayout::eShaderReadOnlyOptimal);
-						cmdBuffer.EndTransfering();
-						cmdBuffer.SubmitSingle();
 						
-						//update mip levels of page table
-						auto currentFrame = frameIndex;
-						if (m_PageTable->GetLayout() != vk::ImageLayout::eGeneral)
+
 						{
-							cmdBuffer.BeginTransfering();
-							cmdBuffer.ChangeImageLayout(m_PageTable.get(), m_PageTable->GetLayout(), vk::ImageLayout::eGeneral);
-							cmdBuffer.EndTransfering();
-							cmdBuffer.SubmitSingle();
+							ZoneScopedN("Init page table");
+							int bufferOffset = 0;
+							transferBuffer.BeginTransfering();
+							m_PageTable->Fill(glm::vec4(-1, -1, -1, -1), transferBuffer, m_FillBuffer, bufferOffset);
+							for (auto mipMaps : m_PageTableMipMaps)
+							{
+								bufferOffset += mipMaps->GetSize();
+								mipMaps->Fill(glm::vec4(-1, -1, -1, -1), transferBuffer, m_FillBuffer, bufferOffset);
+							}
+							transferBuffer.ChangeImageLayout(m_WorkingSet.get(), m_WorkingSet->GetLayout(), vk::ImageLayout::eShaderReadOnlyOptimal);
+							if (m_PageTable->GetLayout() != vk::ImageLayout::eGeneral)
+							{
+								transferBuffer.ChangeImageLayout(m_PageTable.get(), m_PageTable->GetLayout(), vk::ImageLayout::eGeneral);
+							
+							}
+							transferBuffer.EndTransfering();
+							transferBuffer.SubmitSingle();
+
+						}
+
+						{
+							ZoneScopedN("Fill page table");
+							//update mip levels of page table
+							auto currentFrame = frameIndex;
+							// we need to insert a barrier to make memory available
+							auto pipeline = Renderer::Instance()->GetPipeline(COMPUTE_PAGE_TABLE_PASS);
+							cmd.BeginTransfering();
+							vkCmdBindPipeline(cmd.GetCommandBuffer(), VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->GetPipeline());
+							cmd.GetCommandBuffer().bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipeline->GetLayout(), 0, 1, &m_PageTableDescriptorSet, 0, 0);
+							float invocations = 8;
+							int localSize = 1;
+							tracyCmd.BeginRendering();
+							TracyVkZone(tracyContext, tracyCmd.GetCommandBuffer(), "Update tables");
+							tracyCmd.EndRendering();
+							vkCmdDispatch(cmd.GetCommandBuffer(), tilesWeSee.size() / localSize, 1, 1);
+							cmd.EndTransfering();
+
+							std::vector<vk::Image> images{ m_PageTable->GetImage() };
+							for (auto mipMaps : m_PageTableMipMaps)
+							{
+								images.push_back(mipMaps->GetImage());
+							}
+							// sync problem
+							device->GetDevice().waitIdle();
+							/*cmd.ImageBufferBarrier(images, vk::PipelineStageFlagBits::eTopOfPipe,
+								vk::AccessFlagBits::eNone,
+								vk::PipelineStageFlagBits::eComputeShader,
+								vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);*/
+
+
+							
+							{
+								auto pipelineFinal = Renderer::Instance()->GetPipeline(COMPUTE_PAGE_TABLE_FINAL_PASS);
+								tracyCmd.BeginRendering();
+								TracyVkZone(tracyContext, tracyCmd.GetCommandBuffer(), "merge tables");
+								tracyCmd.EndRendering();
+
+
+								std::vector<vk::DescriptorImageInfo> imageInfos;
+								vk::DescriptorImageInfo imageDescriptor1;
+								imageDescriptor1.imageLayout = vk::ImageLayout::eGeneral;
+								imageDescriptor1.imageView = m_PageTable->GetImageView();
+								imageDescriptor1.sampler = m_PageTable->GetSampler();
+								device->UpdateDescriptorSet(m_PageTableFinalDescriptorSet, 1, 1, imageDescriptor1, vk::DescriptorType::eStorageImage);
+								for (int i = 0; i < m_PageTableMipMaps.size(); i++)
+								{
+									imageDescriptor1.imageView = m_PageTableMipMaps[i]->GetImageView();
+									imageDescriptor1.sampler = m_PageTableMipMaps[i]->GetSampler();
+									imageInfos.push_back(imageDescriptor1);
+								}
+
+								device->UpdateDescriptorSet(m_PageTableFinalDescriptorSet, 0, imageInfos, vk::DescriptorType::eStorageImage);
+
+								vkCmdBindPipeline(cmd.GetCommandBuffer(), VK_PIPELINE_BIND_POINT_COMPUTE, pipelineFinal->GetPipeline());
+								cmd.GetCommandBuffer().bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipelineFinal->GetLayout(), 0, 1, &m_PageTableFinalDescriptorSet, 0, 0);
+
+
+								vkCmdDispatch(cmd.GetCommandBuffer(), pageTableWidth, pageTableHeight, 1);
+								cmd.ChangeImageLayout(m_PageTable.get(), m_PageTable->GetLayout(), vk::ImageLayout::eShaderReadOnlyOptimal);
+								{
+									vk::DescriptorImageInfo imageDescriptor1;
+									imageDescriptor1.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+									imageDescriptor1.imageView = m_PageTable->GetImageView();
+									imageDescriptor1.sampler = m_PageTable->GetSampler();
+									device->UpdateDescriptorSet(m_DescriptorSetWorkingSet, 1, 1, imageDescriptor1, vk::DescriptorType::eCombinedImageSampler);
+								}
+
+							}
+							
+
+							//tracyCmd.EndRendering();
+							
+						}
 						
-						}
-						// we need to insert a barrier to make memory available
-						auto pipeline = Renderer::Instance()->GetPipeline(COMPUTE_PAGE_TABLE_PASS);
-						cmd.BeginTransfering();
-						vkCmdBindPipeline(cmd.GetCommandBuffer(), VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->GetPipeline());
-						cmd.GetCommandBuffer().bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipeline->GetLayout(), 0, 1, &m_PageTableDescriptorSet, 0, 0);
-						float invocations = 8;
-						int localSize = 1;
-						
-						vkCmdDispatch(cmd.GetCommandBuffer(), tilesWeSee.size()/ localSize, 1, 1);
-
-						std::vector<vk::Image> images{ m_PageTable->GetImage() };
-						for (auto mipMaps : m_PageTableMipMaps)
-						{
-							images.push_back(mipMaps->GetImage());
-						}
-						// sync problem
-						device->GetDevice().waitIdle();
-						//cmd.ImageBufferBarrier(images, vk::PipelineStageFlagBits::eTopOfPipe,
-						//	vk::AccessFlagBits::eNone,
-						//	vk::PipelineStageFlagBits::eComputeShader,
-						//	vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
-
-
-						auto pipelineFinal = Renderer::Instance()->GetPipeline(COMPUTE_PAGE_TABLE_FINAL_PASS);
-
-						std::vector<vk::DescriptorImageInfo> imageInfos;
-						vk::DescriptorImageInfo imageDescriptor1;
-						imageDescriptor1.imageLayout = vk::ImageLayout::eGeneral;
-						imageDescriptor1.imageView = m_PageTable->GetImageView();
-						imageDescriptor1.sampler = m_PageTable->GetSampler();
-						device->UpdateDescriptorSet(m_PageTableFinalDescriptorSet, 1, 1, imageDescriptor1, vk::DescriptorType::eStorageImage);
-						for (int i = 0; i < m_PageTableMipMaps.size(); i++)
-						{
-							imageDescriptor1.imageView = m_PageTableMipMaps[i]->GetImageView();
-							imageDescriptor1.sampler = m_PageTableMipMaps[i]->GetSampler();
-							imageInfos.push_back(imageDescriptor1);
-						}
-
-						device->UpdateDescriptorSet(m_PageTableFinalDescriptorSet, 0, imageInfos, vk::DescriptorType::eStorageImage);
-
-						vkCmdBindPipeline(cmd.GetCommandBuffer(), VK_PIPELINE_BIND_POINT_COMPUTE, pipelineFinal->GetPipeline());
-						cmd.GetCommandBuffer().bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipelineFinal->GetLayout(), 0, 1, &m_PageTableFinalDescriptorSet, 0, 0);
-						vkCmdDispatch(cmd.GetCommandBuffer(), pageTableWidth, pageTableHeight, 1);
-						cmd.ChangeImageLayout(m_PageTable.get(), m_PageTable->GetLayout(), vk::ImageLayout::eShaderReadOnlyOptimal);
-						{
-							vk::DescriptorImageInfo imageDescriptor1;
-							imageDescriptor1.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-							imageDescriptor1.imageView = m_PageTable->GetImageView();
-							imageDescriptor1.sampler = m_PageTable->GetSampler();
-							device->UpdateDescriptorSet(m_DescriptorSetWorkingSet, 1,1, imageDescriptor1, vk::DescriptorType::eCombinedImageSampler);
-						}
-						/*
-						std::vector<vk::DescriptorImageInfo> imageInfos;
-						vk::DescriptorImageInfo imageDescriptor1;
-						imageDescriptor1.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-						imageDescriptor1.imageView = m_PageTable->GetImageView();
-						imageDescriptor1.sampler = m_PageTable->GetSampler();
-						imageInfos.push_back(imageDescriptor1);
-						for (int i = 0; i < m_PageTableMipMaps.size(); i++)
-						{
-							imageDescriptor1.imageView = m_PageTableMipMaps[i]->GetImageView();
-							imageDescriptor1.sampler = m_PageTableMipMaps[i]->GetSampler();
-							imageInfos.push_back(imageDescriptor1);
-						}
-						device->UpdateDescriptorSet(m_DescriptorSetWorkingSet, 1, imageInfos, vk::DescriptorType::eCombinedImageSampler);*/
-
-						
-						cmd.EndTransfering();
 
 
 				};
@@ -605,9 +630,16 @@ public:
 				auto exe = [this](CommandBuffer& commandBuffer, size_t frameIndex)
 				{
 
-					
-
+					ZoneScopedN("Final render pass");
+					auto tracyContext = Renderer::Instance()->GetTracyCtx();
+					auto tracyCmd = Renderer::Instance()->GetTracyCmd();
+					//tracyCmd.BeginRendering();
 					auto vkCommandBuffer = commandBuffer.GetCommandBuffer();
+
+					tracyCmd.BeginRendering();
+					TracyVkZone(tracyContext, tracyCmd.GetCommandBuffer(), "Final render pass");
+					tracyCmd.EndRendering();
+
 					Renderer::Instance()->BeginBatch(); 
 					auto pipeline = Renderer::Instance()->GetPipeline(RENDER_BASIC_PASS);
 					vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 0, m_DescriptorSets[frameIndex], nullptr); 
@@ -628,6 +660,7 @@ public:
 					
 					Renderer::Instance()->Draw(m_Plane, iden);
 					Renderer::Instance()->DrawBatch(vkCommandBuffer);
+					//tracyCmd.EndRendering();
 					//Renderer::Instance()->DrawQuadScreen(vkCommandBuffer);
 				};
 
@@ -710,7 +743,15 @@ public:
 
 				auto exe = [this ](CommandBuffer& commandBuffer, size_t frameIndex)
 					{
+						ZoneScopedN("debug render pass");
+						auto tracyContext = Renderer::Instance()->GetTracyCtx();
+						auto tracyCmd = Renderer::Instance()->GetTracyCmd();
+						//tracyCmd.BeginRendering();
+						auto vkCommandBuffer = commandBuffer.GetCommandBuffer();
 
+						tracyCmd.BeginRendering();
+						TracyVkZone(tracyContext, tracyCmd.GetCommandBuffer(), "Debug render pass ");
+						tracyCmd.EndRendering();
 						auto device = RenderContext::GetDevice();
 						
 						if (m_WorkingSet->GetLayout() != vk::ImageLayout::eShaderReadOnlyOptimal)
@@ -721,7 +762,6 @@ public:
 							transferCommandBuffer.EndTransfering();
 							transferCommandBuffer.SubmitSingle();
 						}
-						auto vkCommandBuffer = commandBuffer.GetCommandBuffer();
 						Renderer::Instance()->BeginBatch();
 						auto pipeline = Renderer::Instance()->GetPipeline(RENDER_DEBUG_PASS);
 						vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 0, m_DescriptorSets[frameIndex], nullptr);
@@ -740,6 +780,7 @@ public:
 						vkCommandBuffer.setViewport(0, 1, &viewport);
 						vkCommandBuffer.setScissor(0, 1, &scissors);
 						Renderer::Instance()->DrawQuadScreen(vkCommandBuffer);
+						//tracyCmd.EndRendering();
 					};
 
 				m_DebugRenderPass = builder.Build(RENDER_DEBUG_PASS, m_AttachmentManager, actualFrameAmount, extent, clearValues, exe);
@@ -802,7 +843,13 @@ public:
 				builder.AddSubpassDependency(dependency0);
 				Func exe1 = [this](CommandBuffer& commandBuffer, size_t frameIndex)
 					{
+						ZoneScopedN("feedback pass ");
 						auto vkCommandBuffer = commandBuffer.GetCommandBuffer();
+						auto tracyCmd = Renderer::Instance()->GetTracyCmd();
+						auto tracyContext = Renderer::Instance()->GetTracyCtx();
+						tracyCmd.BeginRendering();
+						TracyVkZone(tracyContext, tracyCmd.GetCommandBuffer(), "feedback pass ");
+						//tracyCmd.EndRendering();
 						Renderer::Instance()->BeginBatch();
 						auto pipeline = Renderer::Instance()->GetPipeline(FEEDBACK_RENDER_PASS);
 						vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 0, m_DescriptorSets[frameIndex], nullptr);
@@ -822,6 +869,7 @@ public:
 						vkCommandBuffer.setScissor(0, 1, &scissors);
 						Renderer::Instance()->Draw(m_Plane, iden);
 						Renderer::Instance()->DrawBatch(vkCommandBuffer);
+						
 					};
 				m_FeedbackRenderPass = builder.Build(FEEDBACK_RENDER_PASS, m_AttachmentManager, actualFrameAmount, feedbackExtent, { {std::array<float, 4>{137.f / 255.f, 189.f / 255.f, 199.f / 255.f, 0.0f} }, depthClear }, exe1);
 			}
@@ -988,6 +1036,7 @@ public:
 				device.waitIdle();
 				m_AddInfo.reset();
 				m_StorageBuffers.reset();
+				m_FillBuffer.reset();
 				m_PageTable.reset();
 				m_WorkingSet.reset();
 				m_StageBuffers.clear();
@@ -1126,7 +1175,7 @@ public:
 			RenderContext::GetDevice()->GetDevice().unmapMemory(buffer->GetMemory());
 			//glTexSubImage2D(GL_TEXTURE_2D, 0, increment_x, increment_y, glyph->bitmap.width, glyph->bitmap.rows, GL_RED, GL_UNSIGNED_BYTE, glyph->bitmap.buffer); 
 			computeCommandBuffer.BeginTransfering();
-			computeCommandBuffer.CopyBufferToImage(*buffer.get(), fontAtlas->GetImage(), face->glyph->bitmap.width, face->glyph->bitmap.rows, { increment_x,increment_y,0 });
+			computeCommandBuffer.CopyBufferToImage(*buffer.get(), fontAtlas->GetImage(), face->glyph->bitmap.width, face->glyph->bitmap.rows, 0,{ increment_x,increment_y,0 });
 			computeCommandBuffer.EndTransfering();
 			computeCommandBuffer.SubmitSingle();
 
@@ -1233,7 +1282,7 @@ private:
 	{
 		bool Debug = true;
 	};
-	
+	SPtr<Buffer> m_FillBuffer;
 	AdditionalData m_AddData;
 	int m_BaseDesc = 0;
 	int m_PageTableDescCompute = 0;

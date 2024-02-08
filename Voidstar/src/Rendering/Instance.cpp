@@ -5,7 +5,8 @@
 #if 0
 #define BEST_PRACTISES
 #else 
-
+#
+#define VALIDATION 1 
 #endif // 1
 
 namespace Voidstar
@@ -29,13 +30,18 @@ namespace Voidstar
 
 
 		std::vector<const char*> extensions;
+		std::vector<const char*> layers;
 
 
 		for (auto i = 0; i < glfwExtensionCount; i++) {
 			extensions.emplace_back(glfwExtensions[i]);
 		}
+#if VALIDATION
 
 		extensions.push_back("VK_EXT_debug_utils");
+		layers.push_back("VK_LAYER_KHRONOS_validation");
+#endif // 0
+
 
 		VkValidationFeatureEnableEXT enables[] = { VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT };
 		VkValidationFeaturesEXT features = {};
@@ -43,9 +49,7 @@ namespace Voidstar
 		features.enabledValidationFeatureCount = 1;
 		features.pEnabledValidationFeatures = enables;
 
-		std::vector<const char*> layers;
 
-		layers.push_back("VK_LAYER_KHRONOS_validation");
 
 
 
@@ -89,6 +93,8 @@ namespace Voidstar
 	}
 	void Instance::CreateDebugMessenger()
 	{
+#if VALIDATION
+
 		m_Dldi = vk::DispatchLoaderDynamic(m_Instance, vkGetInstanceProcAddr);
 
 
@@ -99,7 +105,6 @@ namespace Voidstar
 			debugCallback,
 			nullptr
 		);
-
 		try
 		{
 			m_DebugMessenger = m_Instance.createDebugUtilsMessengerEXT(createInfo, nullptr, m_Dldi);
@@ -109,11 +114,16 @@ namespace Voidstar
 		{
 			Log::GetLog()->error("Falied to create m_DebugMessenger!");
 		}
+#endif 
+
 	}
 	void Instance::DestroyInstance(vk::SurfaceKHR& surface)
 	{
 		m_Instance.destroySurfaceKHR(surface);
+#if VALIDATION
+
 		m_Instance.destroyDebugUtilsMessengerEXT(m_DebugMessenger, nullptr, m_Dldi);
+#endif 
 		m_Instance.destroy();
 	}
 }

@@ -15,7 +15,8 @@
 #include "Pipeline.h"
 #include "RenderPassGraph.h"
 #include "Drawables.h"
-
+#include"tracy/Tracy.hpp"
+#include"tracy/TracyVulkan.hpp"
 
 
 
@@ -203,6 +204,14 @@ namespace Voidstar
 		void Draw(Quad& quad, glm::mat4& world);
 		void Draw(Sphere& drawable);
 		void Draw(QuadRangle& drawable);
+		TracyVkCtx GetTracyCtx()
+		{
+			return m_TracyContext;
+		}
+		CommandBuffer& GetTracyCmd()
+		{
+			return m_TracyCommandBuffer;
+		}
 	private:
 		void UpdateUniformBuffer(const glm::mat4& proj, Camera& camera);
 		void CreateInstance();
@@ -227,7 +236,7 @@ namespace Voidstar
 
 		UPtr<IndexBuffer> m_SphereIndexBuffer;
 		UPtr<Buffer> m_SphereBuffer{ nullptr };
-
+		TracyVkCtx m_TracyContext;
 
 
 		SPtr<DescriptorPool> m_UniversalPool;
