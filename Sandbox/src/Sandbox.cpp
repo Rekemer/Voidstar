@@ -362,8 +362,8 @@ public:
 					// so we can go back to low res mip level
 					// have tiles that
 					std::vector<PageEntry> tilesWeSee;
-					std::vector<std::future<void>> tilesToLoad;
 					{
+						std::vector<std::future<void>> tilesToLoad;
 						ZoneScopedN("Reading Feedback Buffer");
 						for (auto& feedback : m_FeedbackRes)
 						{
@@ -380,20 +380,22 @@ public:
 
 								if (!cachedPage)
 								{
-
 									if (m_Overload)
 									{
+										ZoneScopedN("Replace old page");
 										auto coords = m_Cache.GetLUPage(mipTiles, BASE_VIRT_PATH);
 										m_WorkingSetPtr[0] = coords.x * workingSetWidth;
 										m_WorkingSetPtr[1] = coords.y * workingSetHeight;
 									}
 									else
 									{
+										ZoneScopedN("Add new page");
 										if (workingSetWidth <= m_WorkingSetPtr[0] + pageWidth)
 										{
 											m_WorkingSetPtr[0] = 0;
 											if (workingSetHeight <= m_WorkingSetPtr[1] + pageHeight)
 											{
+												ZoneScopedN("Replace old page first time");
 												// we dont have enough space, must overwrite something
 												m_Overload = true;
 												auto coords = m_Cache.GetLUPage(mipTiles, BASE_VIRT_PATH);
@@ -414,7 +416,8 @@ public:
 									vk::Offset3D offset{ m_WorkingSetPtr[0],m_WorkingSetPtr[1],0 };
 
 
-									std::async(std::launch::async, &Image::UpdateRegionWithImage, std::ref(path), m_WorkingSet, offset);
+									auto future = std::async(std::launch::async, &Image::UpdateRegionWithImage,path, m_WorkingSet, offset);
+									tilesToLoad.push_back(std::move(future));
 									//Image::UpdateRegionWithImage(path, m_WorkingSet, { m_WorkingSetPtr[0],m_WorkingSetPtr[1],0 });
 
 
@@ -432,6 +435,7 @@ public:
 								}
 								else
 								{
+									ZoneScopedN("Add exisiting page");
 									if (std::find(tilesWeSee.begin(), tilesWeSee.end(), *cachedPage) == tilesWeSee.end())
 									{
 										tilesWeSee.push_back(*cachedPage);
@@ -488,22 +492,19 @@ public:
 
 						}
 
+						cmd.BeginTransfering();
 						{
 							ZoneScopedN("Fill page table");
 							//update mip levels of page table
 							auto currentFrame = frameIndex;
 							// we need to insert a barrier to make memory available
 							auto pipeline = Renderer::Instance()->GetPipeline(COMPUTE_PAGE_TABLE_PASS);
-							cmd.BeginTransfering();
 							vkCmdBindPipeline(cmd.GetCommandBuffer(), VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->GetPipeline());
 							cmd.GetCommandBuffer().bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipeline->GetLayout(), 0, 1, &m_PageTableDescriptorSet, 0, 0);
 							float invocations = 8;
 							int localSize = 1;
-							tracyCmd.BeginRendering();
-							TracyVkZone(tracyContext, tracyCmd.GetCommandBuffer(), "Update tables");
-							tracyCmd.EndRendering();
+							TracyVkZone(tracyContext, cmd.GetCommandBuffer(), "Update tables");
 							vkCmdDispatch(cmd.GetCommandBuffer(), tilesWeSee.size() / localSize, 1, 1);
-							cmd.EndTransfering();
 
 							std::vector<vk::Image> images{ m_PageTable->GetImage() };
 							for (auto mipMaps : m_PageTableMipMaps)
@@ -511,19 +512,17 @@ public:
 								images.push_back(mipMaps->GetImage());
 							}
 							// sync problem
-							device->GetDevice().waitIdle();
-							/*cmd.ImageBufferBarrier(images, vk::PipelineStageFlagBits::eTopOfPipe,
+							//device->GetDevice().waitIdle();
+							cmd.ImageBufferBarrier(images, vk::PipelineStageFlagBits::eTopOfPipe,
 								vk::AccessFlagBits::eNone,
 								vk::PipelineStageFlagBits::eComputeShader,
-								vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);*/
+								vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
 
 
 							
 							{
 								auto pipelineFinal = Renderer::Instance()->GetPipeline(COMPUTE_PAGE_TABLE_FINAL_PASS);
-								tracyCmd.BeginRendering();
-								TracyVkZone(tracyContext, tracyCmd.GetCommandBuffer(), "merge tables");
-								tracyCmd.EndRendering();
+								TracyVkZone(tracyContext, cmd.GetCommandBuffer(), "merge tables");
 
 
 								std::vector<vk::DescriptorImageInfo> imageInfos;
@@ -557,10 +556,8 @@ public:
 
 							}
 							
-
-							//tracyCmd.EndRendering();
-							
 						}
+						cmd.EndTransfering();
 						
 
 
@@ -636,9 +633,7 @@ public:
 					//tracyCmd.BeginRendering();
 					auto vkCommandBuffer = commandBuffer.GetCommandBuffer();
 
-					tracyCmd.BeginRendering();
-					TracyVkZone(tracyContext, tracyCmd.GetCommandBuffer(), "Final render pass");
-					tracyCmd.EndRendering();
+					TracyVkZone(tracyContext, vkCommandBuffer, "Final render pass");
 
 					Renderer::Instance()->BeginBatch(); 
 					auto pipeline = Renderer::Instance()->GetPipeline(RENDER_BASIC_PASS);
@@ -660,7 +655,6 @@ public:
 					
 					Renderer::Instance()->Draw(m_Plane, iden);
 					Renderer::Instance()->DrawBatch(vkCommandBuffer);
-					//tracyCmd.EndRendering();
 					//Renderer::Instance()->DrawQuadScreen(vkCommandBuffer);
 				};
 
@@ -718,11 +712,11 @@ public:
 				//Define a general attachment, with its load/store operations
 
 				builder.ColorOutput("Default", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
-				builder.SetLoadOp(vk::AttachmentLoadOp::eDontCare);
+				builder.SetLoadOp(vk::AttachmentLoadOp::eLoad);
 				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
 				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
 				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
-				builder.SetInitialLayout(vk::ImageLayout::eUndefined);
+				builder.SetInitialLayout(vk::ImageLayout::eColorAttachmentOptimal);
 				builder.SetFinalLayout(vk::ImageLayout::ePresentSrcKHR);
 				auto resolve = builder.BuildAttachmentDesc();
 
@@ -844,10 +838,8 @@ public:
 					{
 						ZoneScopedN("feedback pass ");
 						auto vkCommandBuffer = commandBuffer.GetCommandBuffer();
-						auto tracyCmd = Renderer::Instance()->GetTracyCmd();
 						auto tracyContext = Renderer::Instance()->GetTracyCtx();
-						tracyCmd.BeginRendering();
-						TracyVkZone(tracyContext, tracyCmd.GetCommandBuffer(), "feedback pass ");
+						TracyVkZone(tracyContext, vkCommandBuffer, "feedback pass ");
 						//tracyCmd.EndRendering();
 						Renderer::Instance()->BeginBatch();
 						auto pipeline = Renderer::Instance()->GetPipeline(FEEDBACK_RENDER_PASS);
@@ -1012,9 +1004,9 @@ public:
 
 
 			auto graph = CreateUPtr<RenderPassGraph>();
-			//graph->AddExec(std::move(m_FeedbackRenderPass));
-			//graph->AddExec(std::move(m_UpdatePageTablePass));
-			//graph->AddExec(std::move(m_FinalRenderPass));
+			graph->AddExec(std::move(m_FeedbackRenderPass));
+			graph->AddExec(std::move(m_UpdatePageTablePass));
+			graph->AddExec(std::move(m_FinalRenderPass));
 			graph->AddExec(std::move(m_DebugRenderPass));
 			//graph->AddExec(std::move(m_ImGuiRenderPass));
 

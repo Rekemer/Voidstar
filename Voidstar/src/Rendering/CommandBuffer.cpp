@@ -91,6 +91,7 @@ namespace Voidstar
 		}
 	}
 
+
 	CommandBuffer CommandBuffer::CreateBuffer(vk::CommandPool commandPool, vk::CommandBufferLevel level)
 	{
 		CommandBuffer cmdBuffer;
@@ -101,6 +102,7 @@ namespace Voidstar
 		cmdBufAllocateInfo.commandBufferCount = 1;
 		try
 		{
+			
 			cmdBuffer.m_CommandBuffer = RenderContext::GetDevice()->GetDevice().allocateCommandBuffers(cmdBufAllocateInfo)[0];
 			return cmdBuffer;
 		}

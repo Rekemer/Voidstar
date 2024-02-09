@@ -45,7 +45,7 @@ namespace Voidstar
 			vk::SampleCountFlagBits samples = vk::SampleCountFlagBits::e1,
 			vk::Filter minFilter = vk::Filter::eNearest, vk::Filter magFilter = vk::Filter::eNearest);
 		static SPtr<Image> CreateEmpty3DImage(int width, int height, int depth, vk::Format format);
-		static void UpdateRegionWithImage(std::string& path, SPtr<Image> image, vk::Offset3D offset);
+		static void UpdateRegionWithImage(std::string path, SPtr<Image> image, vk::Offset3D offset);
 		~Image();
 
 		

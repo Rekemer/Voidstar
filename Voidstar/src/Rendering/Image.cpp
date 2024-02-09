@@ -9,6 +9,8 @@
 #include "CommandBuffer.h"
 #include "CommandPoolManager.h"
 #include "Renderer.h"
+#include"tracy/Tracy.hpp"
+#include <mutex>
 namespace Voidstar
 {
 	int FormatToSize(vk::Format format)
@@ -192,13 +194,18 @@ namespace Voidstar
 		return imageMemory;
 		
 	}
-	void Image::UpdateRegionWithImage(std::string& path, SPtr<Image> parentImage, vk::Offset3D offset )
+	std::mutex mutex;
+
+	void Image::UpdateRegionWithImage(std::string path, SPtr<Image> parentImage, vk::Offset3D offset )
 	{
+		ZoneScopedN("UpdateRegionWithImage");
 		stbi_set_flip_vertically_on_load(false);
 		int width = 0, height = 0, channels = 0;
 		auto pixels = stbi_load(path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
+		assert(width != 0 && height != 0);
 		if (!pixels) {
 			Log::GetLog()->error("Unable to load: {0}", path);
+			return;
 		}
 		auto device = RenderContext::GetDevice();
 	
@@ -210,9 +217,10 @@ namespace Voidstar
 		memcpy(writeLocation, pixels, imageSize);
 		device->GetDevice().unmapMemory(buffer->GetMemory());
 
-		auto commandBuffer = CommandBuffer::CreateBuffer(parentImage->m_CommandPool, vk::CommandBufferLevel::ePrimary);
 
-		
+
+		std::lock_guard<std::mutex> guard{ mutex };
+		auto commandBuffer = CommandBuffer::CreateBuffer(parentImage->m_CommandPool, vk::CommandBufferLevel::ePrimary);
 
 		commandBuffer.BeginTransfering();
 		commandBuffer.CopyBufferToImage(*buffer.get(), parentImage->m_Image,width, height, 0, offset);
