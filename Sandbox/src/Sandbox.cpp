@@ -38,7 +38,7 @@ constexpr int pageHeight = 64;
 constexpr int workingSetWidth = pageWidth * 10;
 constexpr int workingSetHeight = pageHeight * 10;
 constexpr int workingSetPageAmount = workingSetWidth / pageWidth * workingSetHeight / pageHeight;
-constexpr float low = 16384;
+constexpr float low = 32768;
 constexpr glm::vec2 virtualTextureSize = { low*2,low};
 constexpr glm::vec2 virtualTextureTiles = virtualTextureSize / glm::vec2{pageWidth,pageHeight};
 //constexpr glm::vec2 virtualTextureSize = { 1024,512 };
@@ -347,6 +347,7 @@ public:
 
 					static std::unordered_map<int, std::string_view> mipTiles =
 					{
+						{9,"pages_65536_32768/"},
 						{8,"pages_32768_16384/"},
 						{7,"pages_16384_8192/"},
 						{6,"pages_8192_4096/"},
@@ -415,7 +416,10 @@ public:
 
 									vk::Offset3D offset{ m_WorkingSetPtr[0],m_WorkingSetPtr[1],0 };
 
-
+									//if (feedback.mipMap == 9)
+									//{
+									//	std::cout << "as";
+									//}
 									auto future = std::async(std::launch::async, &Image::UpdateRegionWithImage,path, m_WorkingSet, offset);
 									tilesToLoad.push_back(std::move(future));
 									//Image::UpdateRegionWithImage(path, m_WorkingSet, { m_WorkingSetPtr[0],m_WorkingSetPtr[1],0 });

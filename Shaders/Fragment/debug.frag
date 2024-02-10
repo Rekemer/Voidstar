@@ -18,6 +18,6 @@ void main()
     {
         color.a = 0;
     }
-    color = vec4(1,0,1,1);
+    //color = vec4(1,0,1,1);
     //color = vec4(addData.debug,addData.debug,addData.debug,1);
 }

@@ -46,27 +46,89 @@ def GeneratePages(page_size_x,page_size_y,mip_maps,max_x,max_y):
 
 tiles_x = 64
 tiles_y = 32
+page_size_x  = 128
+page_size_y  = 64
+
 tile_size = (1024,1024)
 virtual_texture_size = (tile_size[0] * tiles_x,tile_size[1] * tiles_y)
 images_path ="JestrEarth JPG/textures/hires/JestrMarble JPG/level5/"
-# virtual_image = Image.new('RGB', (virtual_texture_size[0], virtual_texture_size[1]))
+virtual_image = Image.new('RGB', (tile_size[0]*2, tile_size[1]*2))
 
+tile = (2,4)
+file_path00 = images_path + tx_name(tile[0],tile[1])
+file_path01 = images_path + tx_name(tile[0],tile[1]+1)
+file_path11 = images_path + tx_name(tile[0]+1,tile[1]+1)
+file_path10 = images_path + tx_name(tile[0]+1,tile[1])
+image00 = Image.open(file_path00)
+image01 = Image.open(file_path01)
+image10 = Image.open(file_path10)
+image11 = Image.open(file_path11)
+ptr_paste = [0,0]
+virtual_image.paste(im=image00, box=(ptr_paste[0],ptr_paste[1]))
+ptr_paste[0] +=tile_size[0]
+virtual_image.paste(im=image10, box=(ptr_paste[0],ptr_paste[1]))
+ptr_paste[1] +=tile_size[1]
+virtual_image.paste(im=image11, box=(ptr_paste[0],ptr_paste[1]))
+ptr_paste[0] -=tile_size[0]
+virtual_image.paste(im=image01, box=(ptr_paste[0],ptr_paste[1]))
+#virtual_image.show()
+pagesPerTile = (int(tile_size[0]/page_size_x),int(tile_size[1]/page_size_y))
+print(pagesPerTile)
+coords = [0,0]
+MAX_TILES_5_LEVEL = [1024* 64 / 128,1024* 32 / 64];
+tlieCoords = [0,0]  
+for x in range(tiles_x):
+    for y in range(tiles_y):
+        tlieCoords[0] = x*pagesPerTile[0]
+        file_path = images_path + tx_name(x,y)
+        image = Image.open(file_path)
+        print("Loading: " + file_path)
+        for xx in range(pagesPerTile[0]):
+            tlieCoords[1] = y*pagesPerTile[1]
+            for yy in range(pagesPerTile[1]):
+                coords = [xx*page_size_x,yy*  page_size_y] 
+                left = coords[0] 
+                top = coords[1] 
+                right =  coords[0] + page_size_x
+                bottom =  coords[1] + page_size_y
+                subimage = image.crop((left, top, right, bottom))
+                pages_dir=os.path.join("virt5" , "pages_")
+                if not os.path.isdir(pages_dir):
+                    os.makedirs(pages_dir)
+                
+                savePath  = pages_dir + "/"+str(tlieCoords[0]) +"_"+ str(tlieCoords[1]) +".png"
+                tlieCoords[1]+=1
+                #print(savePath)
+                subimage.save(savePath)
+            tlieCoords[0]+=1
+        
+# image00.show()
+# image01.show()
+# image10.show()
+# image11.show()
 # for x in range(tiles_x):
 #     for y in range(tiles_y-1):
 #         ptr_paste = [tile_size[0]*x,tile_size[1]*y]
 #         file_path = images_path + tx_name(x,y)
-#         file_path1 = images_path + tx_name(x,y+1)
+#         file_path1 = images_path + tx_name(x+1,y+1)
+#         file_path2 = images_path + tx_name(x+1,y)
 #         image1 = Image.open(file_path)
 #         image2 = Image.open(file_path1)
+#         image3 = Image.open(file_path2)
+
+#         image01.paste(im=image1, box=(ptr_paste[0],ptr_paste[1]))
 #         virtual_image.paste(im=image1, box=(ptr_paste[0],ptr_paste[1]))
-#         print("x"+str(x))
-#         print("y"+str(y))
+#         virtual_image.paste(im=image1, box=(ptr_paste[0],ptr_paste[1]))
+#         #print("x"+str(x))
+#         #print("y"+str(y))
 #         ptr_paste[1] +=tile_size[0]
 #         virtual_image.paste(im=image2, box=(ptr_paste[0],ptr_paste[1]))
-# imageio.imwrite("virtualTex5.dds", virtual_image)
+#imageio.imwrite("virtualTex5.dds", virtual_image)
 #virtual_image.save("virtualTex4.tiff", format='TIFF', bigtiff=True)
-page_size_x  = 128
-page_size_y  = 64
+
+
+
+
 path = "virtualTex4.tiff"
 virtual_texture= Image.open(path)
 
@@ -74,5 +136,5 @@ width, height = virtual_texture.size
 
 mipMaps = "mipMaps_"+str(path)
 
-GeneratePages(page_size_x,page_size_y,mipMaps,width,height)
+#GeneratePages(page_size_x,page_size_y,mipMaps,width,height)
 #GenerateMipMaps(path,mipMaps)
