@@ -32,10 +32,11 @@ namespace Voidstar
 		glm::vec3 GetPosition() { return m_Position; }
 		void SetPosition(glm::vec3 pos) { m_Position = pos; }
 		void SetUp(glm::vec3 up) { m_Up= up; }
+		float GetFov() { return m_Fov; }
+		void UpdateProj(float width,float height, float fov);
 	private:
 		void UpdateProj();
 		void UpdateView();
-		void UpdateProj(float width,float height);
 		void ProcessInput(float deltaTime);
 		void ProcessMouse();
 		friend class Application;
@@ -43,7 +44,7 @@ namespace Voidstar
 	private:
 		glm::vec3 m_Up {0.0f, 1.0f, 0.0f};
 		glm::vec3 m_Front{ 0.0f, 0.0f, 1.0f };
-		glm::vec3 m_Position{0,0,-35};
+		glm::vec3 m_Position{0,0,-10};
 		glm::mat4 m_Proj;
 		glm::mat4 m_View;
 		float m_Fov = glm::radians(45.f);;

@@ -24,6 +24,9 @@
     <ClInclude Include="src\Application.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="src\Cache.h">
+      <Filter>src</Filter>
+    </ClInclude>
     <ClInclude Include="src\Input.h">
       <Filter>src</Filter>
     </ClInclude>
@@ -69,6 +72,9 @@
     <ClInclude Include="src\Rendering\CommandPoolManager.h">
       <Filter>src\Rendering</Filter>
     </ClInclude>
+    <ClInclude Include="src\Rendering\ComputePass.h">
+      <Filter>src\Rendering</Filter>
+    </ClInclude>
     <ClInclude Include="src\Rendering\DescriptorPool.h">
       <Filter>src\Rendering</Filter>
     </ClInclude>
@@ -87,7 +93,7 @@
     <ClInclude Include="src\Rendering\Generation.h">
       <Filter>src\Rendering</Filter>
     </ClInclude>
-    <ClInclude Include="src\Rendering\Image.h">
+    <ClInclude Include="src\Rendering\IExecute.h">
       <Filter>src\Rendering</Filter>
     </ClInclude>
     <ClInclude Include="src\Rendering\IndexBuffer.h">
@@ -144,9 +150,6 @@
     <ClInclude Include="src\Window.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="src\Rendering\ComputePass.h" />
-    <ClInclude Include="src\Rendering\IExecute.h" />
-    <ClInclude Include="src\Cache.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Dependencies\Tracy\public\TracyClient.cpp">
@@ -183,6 +186,9 @@
       <Filter>src\Rendering</Filter>
     </ClCompile>
     <ClCompile Include="src\Rendering\CommandPoolManager.cpp">
+      <Filter>src\Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Rendering\ComputePass.cpp">
       <Filter>src\Rendering</Filter>
     </ClCompile>
     <ClCompile Include="src\Rendering\DescriptorPool.cpp">
@@ -227,6 +233,5 @@
     <ClCompile Include="src\Window.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="src\Rendering\ComputePass.cpp" />
   </ItemGroup>
 </Project>

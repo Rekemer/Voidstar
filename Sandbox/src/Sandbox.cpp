@@ -142,7 +142,9 @@ public:
 			
 			auto usage =  vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst;
 
-			m_WorkingSet = Image::CreateEmptyImage(workingSetWidth, workingSetHeight, vk::Format::eR8G8B8A8Unorm, usage);
+			m_WorkingSet = Image::CreateEmptyImage(workingSetWidth, workingSetHeight, vk::Format::eR8G8B8A8Unorm, usage,1,
+				vk::SampleCountFlagBits::e1,vk::Filter::eNearest, vk::Filter::eNearest);
+			//m_WorkingSet = Image::CreateEmptyImage(workingSetWidth, workingSetHeight, vk::Format::eR8G8B8A8Unorm, usage,1);
 			
 			
 			m_PageTable = Image::CreateEmptyImage(pageTableWidth, pageTableHeight, vk::Format::eR32G32B32A32Sfloat, usage
@@ -414,7 +416,7 @@ public:
 										}
 									}
 
-									vk::Offset3D offset{ m_WorkingSetPtr[0],m_WorkingSetPtr[1],0 };
+									vk::Offset3D offset{ m_WorkingSetPtr[0],m_WorkingSetPtr[1] ,0};
 
 									//if (feedback.mipMap == 9)
 									//{
@@ -515,12 +517,13 @@ public:
 							{
 								images.push_back(mipMaps->GetImage());
 							}
+							
 							// sync problem
-							//device->GetDevice().waitIdle();
-							cmd.ImageBufferBarrier(images, vk::PipelineStageFlagBits::eTopOfPipe,
-								vk::AccessFlagBits::eNone,
-								vk::PipelineStageFlagBits::eComputeShader,
-								vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+							device->GetDevice().waitIdle();
+							//cmd.ImageBufferBarrier(images, vk::PipelineStageFlagBits::eTopOfPipe,
+							//	vk::AccessFlagBits::eNone,
+							//	vk::PipelineStageFlagBits::eComputeShader,
+							//	vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
 
 
 							
@@ -636,7 +639,10 @@ public:
 					auto tracyCmd = Renderer::Instance()->GetTracyCmd();
 					//tracyCmd.BeginRendering();
 					auto vkCommandBuffer = commandBuffer.GetCommandBuffer();
-
+					auto camera = GetCamera();
+					camera->UpdateProj(Application::GetScreenWidth(),
+						Application::GetScreenHeight(), glm::radians(45.f));
+					Renderer::Instance()->UpdateUniformBuffer(camera->GetProj(), *camera);
 					TracyVkZone(tracyContext, vkCommandBuffer, "Final render pass");
 
 					Renderer::Instance()->BeginBatch(); 
@@ -841,6 +847,9 @@ public:
 				Func exe1 = [this](CommandBuffer& commandBuffer, size_t frameIndex)
 					{
 						ZoneScopedN("feedback pass ");
+						auto camera = GetCamera();
+						camera->UpdateProj(feedbackSize.x, feedbackSize.y,glm::radians(55.f));
+						Renderer::Instance()->UpdateUniformBuffer(camera->GetProj(), *camera);
 						auto vkCommandBuffer = commandBuffer.GetCommandBuffer();
 						auto tracyContext = Renderer::Instance()->GetTracyCtx();
 						TracyVkZone(tracyContext, vkCommandBuffer, "feedback pass ");

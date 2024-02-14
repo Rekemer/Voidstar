@@ -212,8 +212,8 @@ namespace Voidstar
 		{
 			return m_TracyCommandBuffer;
 		}
-	private:
 		void UpdateUniformBuffer(const glm::mat4& proj, Camera& camera);
+	private:
 		void CreateInstance();
 		void CreateSurface();
 		void RecordCommandBuffer(uint32_t imageIndex, vk::RenderPass& renderPass, vk::Pipeline& pipeline, vk::PipelineLayout& pipelineLayout, int instances);

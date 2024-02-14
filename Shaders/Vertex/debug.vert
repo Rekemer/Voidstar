@@ -28,7 +28,7 @@ layout(location = 0) out vec2 uv;
 void main() 
 {
     
-    uv = screen_corners_uv[gl_VertexIndex];
+    uv = 1 - screen_corners_uv[gl_VertexIndex];
     vec2 pos = screen_corners[gl_VertexIndex];
 	gl_Position = vec4(pos, 0.0, 1.0);
 

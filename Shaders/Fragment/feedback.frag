@@ -33,13 +33,12 @@ float tex_mip_level(vec2 coord, vec2 tex_size)
    dx_scaled = dFdx(coord_scaled);
    dy_scaled = dFdy(coord_scaled);
    float d = max(dot(dx_scaled, dx_scaled),dot(dy_scaled, dy_scaled));
-   float miplevel = log2(sqrt(d)) -.25; 
+   float miplevel = log2(sqrt(d)) -.55; 
    miplevel = clamp(miplevel,0,maxMipLevel); 
    miplevel = maxMipLevel  - miplevel;
    return miplevel;
 }
 
-vec2 pageSize = vec2(128,64);
 vec2 megatextureSize = vec2(32768*2,32768);
 vec2 downscale = vec2(28,16) / vec2(1440,810);
 void main() 

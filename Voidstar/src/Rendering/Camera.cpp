@@ -31,7 +31,7 @@ namespace Voidstar
         //{
         //    m_IsControlEnabled = !m_IsControlEnabled;
         //}
-        auto delta = .125/4;
+        auto delta = .125/6;
         if (Input::IsKeyPressed(VS_KEY_F))
         {
 
@@ -68,10 +68,11 @@ namespace Voidstar
 
 
 
-    void Camera::UpdateProj(float width, float height)
+    void Camera::UpdateProj(float width, float height, float fov)
     {
         this->width = width;
         this->height= height;
+        m_Fov = fov;
         float aspect = width / height;
         float inverseAspect = 1.f / aspect;
         float tan = glm::tan(m_Fov /2);
@@ -97,17 +98,17 @@ namespace Voidstar
     void Camera::ProcessInput(float deltaTime)
 	{
             const float cameraSpeed = speed;
-           deltaTime = 0.01f;
+           deltaTime = 0.01f/2;
            if (Input::IsKeyPressed(VS_KEY_W))
            {
-               auto pos = m_Position + cameraSpeed * m_Front * deltaTime;
+               auto pos = m_Position + cameraSpeed * m_Front * deltaTime/2.f;
              
                m_Position = pos;
            }
            
            if (Input::IsKeyPressed(VS_KEY_S))
            {
-               auto pos = m_Position - cameraSpeed * m_Front * deltaTime;
+               auto pos = m_Position - cameraSpeed * m_Front * deltaTime / 2.f;
                m_Position = pos;
            }
            

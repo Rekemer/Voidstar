@@ -165,7 +165,6 @@
     <ClInclude Include="src\Rendering\Font.h" />
     <ClInclude Include="src\Rendering\Generation.h" />
     <ClInclude Include="src\Rendering\IExecute.h" />
-    <ClInclude Include="src\Rendering\Image.h" />
     <ClInclude Include="src\Rendering\IndexBuffer.h" />
     <ClInclude Include="src\Rendering\Initializers.h" />
     <ClInclude Include="src\Rendering\Instance.h" />

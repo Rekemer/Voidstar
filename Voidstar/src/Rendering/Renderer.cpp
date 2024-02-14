@@ -762,7 +762,7 @@ namespace Voidstar
 		RenderContext::RecreateSwapchain(support);
 		
 		auto& camera = m_App->GetCamera();
-		camera->UpdateProj(m_ViewportWidth, m_ViewportHeight);
+		camera->UpdateProj(m_ViewportWidth, m_ViewportHeight, camera->GetFov());
 	}
 
 	void Renderer::Shutdown()

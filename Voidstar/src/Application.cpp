@@ -15,8 +15,8 @@ namespace Voidstar
 		// init Window
 		m_Window = CreateSPtr<Window>(appName, screenWidth, screenHeight);
 		// init Renderer
-		m_Camera = CreateUPtr<Camera>();
-		m_Camera->UpdateProj(screenWidth, screenHeight);
+		m_Camera = CreateSPtr<Camera>();
+		m_Camera->UpdateProj(screenWidth, screenHeight,m_Camera->GetFov());
 		Input::Init(m_Window);
 		Renderer::Instance()->Init(screenWidth, screenHeight, m_Window, this);
 
