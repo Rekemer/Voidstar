@@ -98,7 +98,7 @@ namespace Voidstar
     void Camera::ProcessInput(float deltaTime)
 	{
             const float cameraSpeed = speed;
-           deltaTime = 0.01f/2;
+           deltaTime = 0.01f;
            if (Input::IsKeyPressed(VS_KEY_W))
            {
                auto pos = m_Position + cameraSpeed * m_Front * deltaTime/2.f;

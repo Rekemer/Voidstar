@@ -37,7 +37,9 @@ constexpr int pageWidth = 128;
 constexpr int pageHeight = 64;
 constexpr int workingSetWidth = pageWidth * 10;
 constexpr int workingSetHeight = pageHeight * 10;
-constexpr int workingSetPageAmount = workingSetWidth / pageWidth * workingSetHeight / pageHeight;
+constexpr int workingSetPageAmountX = workingSetWidth / pageWidth ;
+constexpr int workingSetPageAmountY = workingSetHeight / pageHeight;
+constexpr int workingSetPageAmount = workingSetPageAmountX * workingSetPageAmountY;
 constexpr float low = 32768;
 constexpr glm::vec2 virtualTextureSize = { low*2,low};
 constexpr glm::vec2 virtualTextureTiles = virtualTextureSize / glm::vec2{pageWidth,pageHeight};
@@ -142,16 +144,31 @@ public:
 			
 			auto usage =  vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst;
 
-			m_WorkingSet = Image::CreateEmptyImage(workingSetWidth, workingSetHeight, vk::Format::eR8G8B8A8Unorm, usage,1,
-				vk::SampleCountFlagBits::e1,vk::Filter::eNearest, vk::Filter::eNearest);
-			//m_WorkingSet = Image::CreateEmptyImage(workingSetWidth, workingSetHeight, vk::Format::eR8G8B8A8Unorm, usage,1);
-			
-			
-			m_PageTable = Image::CreateEmptyImage(pageTableWidth, pageTableHeight, vk::Format::eR32G32B32A32Sfloat, usage
-				| vk::ImageUsageFlagBits::eTransferSrc| vk::ImageUsageFlagBits::eStorage |vk::ImageUsageFlagBits::eTransferDst, pageTableMipLevels);
-			
+			m_WorkingSet = Image::CreateEmptyImage(pageWidth, pageHeight, vk::Format::eR8G8B8A8Unorm, usage,1,
+				vk::SampleCountFlagBits::e1,vk::Filter::eLinear, vk::Filter::eLinear, workingSetPageAmount, vk::ImageViewType::e2DArray);
+
 			
 			auto commandBuffer = Renderer::Instance()->GetTransferCommandBuffer(0);
+
+
+			commandBuffer.BeginTransfering();
+			commandBuffer.ChangeImageLayout(m_WorkingSet.get(), vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral,1,workingSetPageAmount);
+			commandBuffer.EndTransfering();
+			commandBuffer.SubmitSingle();
+
+
+			
+			m_PageTable = Image::CreateEmptyImage(pageTableWidth, pageTableHeight, vk::Format::eR32G32B32A32Sfloat, usage
+				| vk::ImageUsageFlagBits::eTransferSrc| vk::ImageUsageFlagBits::eStorage |vk::ImageUsageFlagBits::eTransferDst);
+			
+
+			commandBuffer.BeginTransfering();
+			commandBuffer.ChangeImageLayout(m_PageTable.get(), vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral);
+			commandBuffer.EndTransfering();
+			commandBuffer.SubmitSingle();
+
+			commandBuffer.Free();
+			
 			//commandBuffer.BeginTransfering();
 			//commandBuffer.ChangeImageLayout(m_PageTable.get(), vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal, pageTableMipLevels);
 			//commandBuffer.EndTransfering();
@@ -321,9 +338,8 @@ public:
 					
 					transferBuffer.BeginTransfering();
 					transferBuffer.CopyImageToBuffer(color, m_StageBuffers[frameIndex]);
-					transferBuffer.ChangeImageLayout(m_WorkingSet.get(), m_WorkingSet->GetLayout(), vk::ImageLayout::eTransferDstOptimal);
+					transferBuffer.ChangeImageLayout(m_WorkingSet.get(), m_WorkingSet->GetLayout(), vk::ImageLayout::eTransferDstOptimal,1,workingSetPageAmount);
 					transferBuffer.EndTransfering();
-					//vk::PipelineStageFlagBits::eTransfer
 					transferBuffer.SubmitSingle(fence.GetFence());
 					Renderer::Instance()->Wait(fence.GetFence());
 
@@ -387,50 +403,43 @@ public:
 									{
 										ZoneScopedN("Replace old page");
 										auto coords = m_Cache.GetLUPage(mipTiles, BASE_VIRT_PATH);
-										m_WorkingSetPtr[0] = coords.x * workingSetWidth;
-										m_WorkingSetPtr[1] = coords.y * workingSetHeight;
+										m_WorkingSetPtr[0] = coords.x ;
+										m_WorkingSetPtr[1] = coords.y ;
 									}
 									else
 									{
 										ZoneScopedN("Add new page");
-										if (workingSetWidth <= m_WorkingSetPtr[0] + pageWidth)
+										if (workingSetPageAmountX <= m_WorkingSetPtr[0] + 1)
 										{
 											m_WorkingSetPtr[0] = 0;
-											if (workingSetHeight <= m_WorkingSetPtr[1] + pageHeight)
+											if (workingSetPageAmountY <= m_WorkingSetPtr[1] + 1)
 											{
 												ZoneScopedN("Replace old page first time");
 												// we dont have enough space, must overwrite something
 												m_Overload = true;
 												auto coords = m_Cache.GetLUPage(mipTiles, BASE_VIRT_PATH);
-												m_WorkingSetPtr[0] = coords.x * workingSetWidth;
-												m_WorkingSetPtr[1] = coords.y * workingSetHeight;
+												m_WorkingSetPtr[0] = coords.x ;
+												m_WorkingSetPtr[1] = coords.y ;
 											}
 											else
 											{
-												m_WorkingSetPtr[1] += pageHeight;
+												m_WorkingSetPtr[1] += 1;
 											}
 										}
 										else
 										{
-											m_WorkingSetPtr[0] += pageWidth;
+											m_WorkingSetPtr[0] += 1;
 										}
 									}
 
 									vk::Offset3D offset{ m_WorkingSetPtr[0],m_WorkingSetPtr[1] ,0};
-
-									//if (feedback.mipMap == 9)
-									//{
-									//	std::cout << "as";
-									//}
-									auto future = std::async(std::launch::async, &Image::UpdateRegionWithImage,path, m_WorkingSet, offset);
+									int layer = m_WorkingSetPtr[1] * workingSetPageAmountX + m_WorkingSetPtr[0];
+									assert(layer < workingSetPageAmount);
+									auto future = std::async(std::launch::async, &Image::UpdateRegionWithImage, path, m_WorkingSet, vk::Offset3D{0,0,0}, layer);
 									tilesToLoad.push_back(std::move(future));
-									//Image::UpdateRegionWithImage(path, m_WorkingSet, { m_WorkingSetPtr[0],m_WorkingSetPtr[1],0 });
 
-
-									//Log::GetLog()->info("Loaded tile {0}", path);
-
-									float workingSetCoordX = (float)(m_WorkingSetPtr[0]) / workingSetWidth;
-									float workingSetCoordY = (float)m_WorkingSetPtr[1] / workingSetHeight;
+									float workingSetCoordX = (float)(m_WorkingSetPtr[0]) ;
+									float workingSetCoordY = (float)m_WorkingSetPtr[1] ;
 									glm::vec2 physCoord = { workingSetCoordX,workingSetCoordY };
 									auto mipMap = feedback.mipMap;
 									glm::vec2 pageCoord = { feedback.pageX ,feedback.pageY };
@@ -487,7 +496,7 @@ public:
 								bufferOffset += mipMaps->GetSize();
 								mipMaps->Fill(glm::vec4(-1, -1, -1, -1), transferBuffer, m_FillBuffer, bufferOffset);
 							}
-							transferBuffer.ChangeImageLayout(m_WorkingSet.get(), m_WorkingSet->GetLayout(), vk::ImageLayout::eShaderReadOnlyOptimal);
+							transferBuffer.ChangeImageLayout(m_WorkingSet.get(), m_WorkingSet->GetLayout(), vk::ImageLayout::eShaderReadOnlyOptimal,1,workingSetPageAmount);
 							if (m_PageTable->GetLayout() != vk::ImageLayout::eGeneral)
 							{
 								transferBuffer.ChangeImageLayout(m_PageTable.get(), m_PageTable->GetLayout(), vk::ImageLayout::eGeneral);
@@ -761,7 +770,7 @@ public:
 						{
 							auto transferCommandBuffer = Renderer::Instance()->GetTransferCommandBuffer(frameIndex);
 							auto cmdBuffer = transferCommandBuffer.BeginTransfering();
-							transferCommandBuffer.ChangeImageLayout(m_WorkingSet.get(), m_WorkingSet->GetLayout(), vk::ImageLayout::eShaderReadOnlyOptimal);
+							transferCommandBuffer.ChangeImageLayout(m_WorkingSet.get(), m_WorkingSet->GetLayout(), vk::ImageLayout::eShaderReadOnlyOptimal,1, workingSetPageAmount);
 							transferCommandBuffer.EndTransfering();
 							transferCommandBuffer.SubmitSingle();
 						}
@@ -1306,7 +1315,7 @@ private:
 	vk::DescriptorSet m_DescriptorSetWorkingSet;
 	glm::vec2 m_Follow;
 	SPtr<Image> m_Image;
-	int m_WorkingSetPtr[2] = {-pageWidth,0};
+	int m_WorkingSetPtr[2] = {-1,0};
 	bool m_Overload = false;
 	SPtr<Image> m_WorkingSet;
 	SPtr<Image> m_PageTable;

@@ -104,7 +104,7 @@ namespace Voidstar
 		void ChangeImageLayoutRaw(vk::Image& image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout, int mipMap = 1, int layers = 1);
 
 		void CopyBufferToImage(Buffer& buffer, vk::Image& image, int width, int height, 
-			int bufferOffset = 0, vk::Offset3D offset = {0,0,0}, int layers = 1);
+			int bufferOffset = 0, vk::Offset3D offset = {0,0,0}, int baseLayer = 0,int layerCount = 1);
 		void CopyImageToBuffer(SPtr<Image> image, SPtr<Buffer> buffer);
 		void EndTransfering();
 		void SubmitSingle(vk::Fence fence);

@@ -168,7 +168,7 @@ namespace Voidstar
 		imageInfo.imageType = specs.imageType;
 		imageInfo.extent = vk::Extent3D(specs.width, specs.height, specs.depth);
 		imageInfo.mipLevels = mipmap;
-		imageInfo.arrayLayers = 1;
+		imageInfo.arrayLayers = specs.arrayCount;
 		imageInfo.format = specs.format;
 		imageInfo.tiling = specs.tiling;
 		imageInfo.initialLayout = vk::ImageLayout::eUndefined;
@@ -196,9 +196,9 @@ namespace Voidstar
 	}
 	std::mutex mutex;
 
-	void Image::UpdateRegionWithImage(std::string path, SPtr<Image> parentImage, vk::Offset3D offset )
+	void Image::UpdateRegionWithImage(std::string path, SPtr<Image> parentImage, vk::Offset3D offset, int layer)
 	{
-		ZoneScopedN("UpdateRegionWithImage");
+		ZoneScopedN("UpdateRegionWithImage");	
 		stbi_set_flip_vertically_on_load(false);
 		int width = 0, height = 0, channels = 0;
 		auto pixels = stbi_load(path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
@@ -223,7 +223,7 @@ namespace Voidstar
 		auto commandBuffer = CommandBuffer::CreateBuffer(parentImage->m_CommandPool, vk::CommandBufferLevel::ePrimary);
 
 		commandBuffer.BeginTransfering();
-		commandBuffer.CopyBufferToImage(*buffer.get(), parentImage->m_Image,width, height, 0, offset);
+		commandBuffer.CopyBufferToImage(*buffer.get(), parentImage->m_Image,width, height, 0, offset, layer);
 		commandBuffer.EndTransfering();
 		commandBuffer.SubmitSingle();
 
@@ -534,7 +534,10 @@ namespace Voidstar
 
 		return image;
 	}
-	SPtr<Image> Image::CreateEmptyImage(int width, int height, vk::Format format, vk::ImageUsageFlags usage,int mipLevels, vk::SampleCountFlagBits samples, vk::Filter minFilter, vk::Filter magFilter)
+	SPtr<Image> Image::CreateEmptyImage(int width, int height, vk::Format format, vk::ImageUsageFlags usage,
+		int mipLevels, vk::SampleCountFlagBits samples,
+		vk::Filter minFilter, vk::Filter magFilter, int layers,
+	vk::ImageViewType viewType)
 	{
 		auto image = CreateUPtr<Image>();
 		image->m_CommandPool = Renderer::Instance()->GetCommandPoolManager()->GetFreePool();
@@ -549,6 +552,7 @@ namespace Voidstar
 		specs.format = format;
 		specs.tiling = vk::ImageTiling::eOptimal;
 		specs.usage = usage;
+		specs.arrayCount = layers;
 		specs.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
 		image->m_Format = specs.format;
 		try {
@@ -582,7 +586,7 @@ namespace Voidstar
 
 
 
-		image->m_ImageView = CreateImageView(image->m_Image, format, vk::ImageAspectFlagBits::eColor);
+		image->m_ImageView = CreateImageView(image->m_Image, format, vk::ImageAspectFlagBits::eColor, viewType,mipLevels, layers);
 
 
 		/*
@@ -638,7 +642,6 @@ namespace Voidstar
 
 		}
 
-		//then transfer it to image memory
 		auto commandBuffer = CommandBuffer::CreateBuffer(image->m_CommandPool, vk::CommandBufferLevel::ePrimary);
 
 

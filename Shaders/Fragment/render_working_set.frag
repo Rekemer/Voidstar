@@ -4,7 +4,7 @@
 
 
 
-layout(set = 1, binding = 0) uniform sampler2D WorkingSet;
+layout(set = 1, binding = 0) uniform sampler2DArray WorkingSet;
 layout(set = 1, binding = 1) uniform sampler2D  PageTable;
 layout(location = 1) in vec2 uv;
 layout(location = 0) out vec4 outColor;
@@ -16,23 +16,17 @@ vec2 pageSizeMod = pageSize - borderWidth;
 
 void main ()
 {
-    vec2 workingSetSize =  textureSize(WorkingSet, 0);
+    vec2 workingSetSize =  vec2(1024,512);
+    vec2 rescale =  pageSize/workingSetSize;
     vec4 index = texture(PageTable,uv);
     float amountOfTiles =exp2(index.b);
-    vec2 rescale =  pageSize/workingSetSize;
-    vec2 rescale2 =  pageSizeMod/workingSetSize;
-    vec2 ratio=  pageSizeMod/pageSize;
-    vec2 contract = (pageSize - 2*borderWidth)/(pageSize) ;
-    vec2 off = (borderWidth) /(pageSize);
-    off = vec2(borderWidth * 0.0008,borderWidth * 0.0016) ;
-    vec2 offset = (fract(uv * amountOfTiles)) * rescale ;
+    vec2 offset = (fract(uv * amountOfTiles))  ;
     
-    vec2 offsetLinear =  offset* contract + off; 
 
-    vec2 workingSetUvLinear = index.xy+offsetLinear;
-    vec2 workingSetUv = index.xy+offset;
+    vec2 workingSetUv = offset;
 
-    vec4 tex = texture(WorkingSet,workingSetUv ) ;
+    int layer  = int(index.y * 10+ index.x); 
+    vec4 tex = texture(WorkingSet,vec3(workingSetUv ,layer)) ;
     
     
     outColor.xyzw =tex.xyzw;
@@ -68,6 +62,6 @@ void main ()
        outColor = vec4(0,0,0,1);
    }
    #endif
-    //outColor.xyzw =vec4(offset,0,1);
+    //outColor.xyzw =vec4(1,1,0,1);
     outColor.a =1;
 }

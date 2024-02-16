@@ -256,7 +256,8 @@ namespace Voidstar
 
 		m_CommandBuffer.pipelineBarrier(sourceStage, destinationStage, vk::DependencyFlags(), nullptr, nullptr, barrier);
 	}
-	void CommandBuffer::CopyBufferToImage(Buffer& buffer, vk::Image& image, int width, int height, int bufferOffset,vk::Offset3D offset,int layers)
+	void CommandBuffer::CopyBufferToImage(Buffer& buffer, vk::Image& image, int width, int height, int bufferOffset,vk::Offset3D offset,
+		int baseLayer , int layerCount)
 	{
 		vk::BufferImageCopy copy;
 		copy.bufferOffset = bufferOffset;
@@ -271,8 +272,8 @@ namespace Voidstar
 		vk::ImageSubresourceLayers access;
 		access.aspectMask = vk::ImageAspectFlagBits::eColor;
 		access.mipLevel = 0;
-		access.baseArrayLayer = 0;
-		access.layerCount = layers;
+		access.baseArrayLayer = baseLayer;
+		access.layerCount = layerCount;
 		copy.imageSubresource = access;
 
 
