@@ -35,8 +35,8 @@ void CleanUpImGui()
 std::map<unsigned char, Character> Characters;
 constexpr int pageWidth = 128;
 constexpr int pageHeight = 64;
-constexpr int workingSetWidth = pageWidth * 10;
-constexpr int workingSetHeight = pageHeight * 10;
+constexpr int workingSetWidth = pageWidth * 20;
+constexpr int workingSetHeight = pageHeight * 20;
 constexpr int workingSetPageAmountX = workingSetWidth / pageWidth ;
 constexpr int workingSetPageAmountY = workingSetHeight / pageHeight;
 constexpr int workingSetPageAmount = workingSetPageAmountX * workingSetPageAmountY;
@@ -435,6 +435,7 @@ public:
 									vk::Offset3D offset{ m_WorkingSetPtr[0],m_WorkingSetPtr[1] ,0};
 									int layer = m_WorkingSetPtr[1] * workingSetPageAmountX + m_WorkingSetPtr[0];
 									assert(layer < workingSetPageAmount);
+									//std::cout << path << std::endl;
 									auto future = std::async(std::launch::async, &Image::UpdateRegionWithImage, path, m_WorkingSet, vk::Offset3D{0,0,0}, layer);
 									tilesToLoad.push_back(std::move(future));
 
@@ -1346,8 +1347,8 @@ Voidstar::Application* Voidstar::CreateApplication()
 	auto str = std::string("Example");
 	// 120 -> 1920 * 1080
 	// 110
-	const int res = 90;
-	return new ExampleApplication(str, 16 * res, 9 * res);
+	const int res = 120;
+	return new ExampleApplication(str, std::min(16 * res,1920), std::min(9 * res, 1061));
 }
 int main()
 {

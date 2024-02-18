@@ -6,7 +6,7 @@
 #define BEST_PRACTISES
 #else 
 #
-#define VALIDATION 0 
+#define VALIDATION 1 
 #endif // 1
 
 namespace Voidstar

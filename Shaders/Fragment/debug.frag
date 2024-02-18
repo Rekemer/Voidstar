@@ -18,9 +18,9 @@ void main()
     vec2 workingSetSize =  vec2(1280,640);
     vec2 rescale =  pageSize/workingSetSize;
 
-    vec2 grid = fract(uv*10)*rescale * 10;
-    vec2 index = floor(uv*10);
-    int layer = int(index.y * 10.f + index.x);
+    vec2 grid = fract(uv*20)*rescale * 10;
+    vec2 index = floor(uv*20);
+    int layer = int(index.y * 20.f + index.x);
     color = texture(u_Tex,vec3(grid,layer));
     if (!addData.debug)
     {
