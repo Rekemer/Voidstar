@@ -50,7 +50,7 @@ namespace Voidstar
 		float m_Fov = glm::radians(45.f);;
 		float m_Yaw = 90.0f; // around y axis
 		float m_Pitch = 0.f; // around x axis
-		float speed = 20.f;
+		float speed = 10.f;
 		bool m_IsControlEnabled = true;
 		float width;
 		float height;

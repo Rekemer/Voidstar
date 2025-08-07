@@ -108,7 +108,7 @@ namespace Voidstar
 		}
 		vk::DeviceMemory GetMemory()
 		{
-			assert(m_ImageMemory != VK_NULL_HANDLE);
+			assert(m_ImageMemory.operator!=(VK_NULL_HANDLE));
 			return m_ImageMemory;
 		}
 		static vk::Format GetFormat(vk::PhysicalDevice physicalDevice,

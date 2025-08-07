@@ -96,6 +96,9 @@
     <ClInclude Include="src\Rendering\IExecute.h">
       <Filter>src\Rendering</Filter>
     </ClInclude>
+    <ClInclude Include="src\Rendering\Image.h">
+      <Filter>src\Rendering</Filter>
+    </ClInclude>
     <ClInclude Include="src\Rendering\IndexBuffer.h">
       <Filter>src\Rendering</Filter>
     </ClInclude>

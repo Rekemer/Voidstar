@@ -1,6 +1,6 @@
 [submodule "Dependencies/ImGui"]
 	path = Dependencies/ImGui
-	url = https://github.com/ocornut/imgui.git
+	url = https://github.com/Rekemer/imgui.git
 	branch = docking
 [submodule "Dependencies/glm"]
 	path = Dependencies/glm
