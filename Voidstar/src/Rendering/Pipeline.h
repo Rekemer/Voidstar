@@ -7,7 +7,7 @@ namespace Voidstar
 	class Pipeline
 	{
 	public:
-		static void CreateComputePipeline(std::string_view pipelineName,std::string_view computeShader, std::vector<vk::DescriptorSetLayout>& layouts);
+		static void CreateComputePipeline(std::string_view pipelineName,std::string_view computeShader, const std::vector<vk::DescriptorSetLayout>& layouts);
 		vk::PipelineLayout GetLayout() const  { return m_PipelineLayout; }
 		vk::Pipeline GetPipeline() const  { return m_Pipeline; }
 		Pipeline(const Pipeline& pipeline) = delete;
@@ -26,6 +26,7 @@ namespace Voidstar
 	public:
 		void SetDevice(vk::Device);
 		void AddShader(std::string_view path, vk::ShaderStageFlagBits type);
+		void AddBindingDescription(vk::VertexInputBindingDescription& bindings);
 		void AddBindingDescription(std::vector<vk::VertexInputBindingDescription>& bindings);
 		void AddAttributeDescription(std::vector<vk::VertexInputAttributeDescription>& attributes);
 		void AddDescriptorLayouts(std::vector<vk::DescriptorSetLayout>& layouts);

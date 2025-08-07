@@ -22,6 +22,8 @@ namespace Voidstar
 		size_t GetScreenHeight() { return m_ScreenHeight; }
 		SPtr<Window> GetWindow() { return m_Window; }
 		
+	protected:
+		size_t m_ActualFrameAmount;
 	private:
 		friend class Renderer;
 		size_t m_ScreenWidth, m_ScreenHeight;

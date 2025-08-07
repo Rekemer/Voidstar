@@ -12,7 +12,7 @@ namespace Voidstar
 	static vk::PipelineLayout MakePipelineLayout(vk::Device device, std::vector<vk::DescriptorSetLayout> layout);
 
 	
-	void  Pipeline::CreateComputePipeline(std::string_view pipelineName,std::string_view computeShader, std::vector<vk::DescriptorSetLayout>& layouts)
+	void  Pipeline::CreateComputePipeline(std::string_view pipelineName,std::string_view computeShader, const std::vector<vk::DescriptorSetLayout>& layouts)
 	{
 		UPtr<Pipeline> pipeline = CreateUPtr<Pipeline>();
 
@@ -137,11 +137,14 @@ namespace Voidstar
 	}
 
 
+	void PipelineBuilder::AddBindingDescription(vk::VertexInputBindingDescription& bindings)
+	{
+		m_Bindings.push_back(bindings);
+	}
 	void PipelineBuilder::AddBindingDescription(std::vector<vk::VertexInputBindingDescription>& bindings)
 	{
-		m_Bindings = bindings;
+		m_Bindings.insert(m_Bindings.end(), bindings.begin(), bindings.end());
 	}
-
 	void PipelineBuilder::AddAttributeDescription(std::vector<vk::VertexInputAttributeDescription>& attributes)
 	{
 		m_Attributes = attributes;

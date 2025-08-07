@@ -111,6 +111,9 @@ namespace Voidstar
 		void BeginFrame(Camera& camera, size_t viewportWidth, 
 			size_t viewportHeight);
 		void Render(float deltaTime,Camera& camera);
+
+		
+		
 		void EndFrame();
 		void UserInit();
 		void CompileShader(std::string_view path, ShaderType type);

@@ -90,6 +90,354 @@ class ExampleApplication : public Voidstar::Application
 public:
 
 	glm::vec2 feedbackSize;
+
+
+	UPtr<IExecute> CreateFeedbackRenderPass()
+	{
+		UPtr<IExecute> m_FeedbackRenderPass;
+		vk::Extent2D feedbackExtent = { (uint32_t)feedbackSize.x,(uint32_t)feedbackSize.y };
+
+		// feedbackPass
+		{
+
+			auto samples = RenderContext::GetDevice()->GetSamples();
+			RenderPassBuilder builder;
+			builder.ColorOutput("FeedbackBuffer", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
+			builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
+			builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
+			builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+			builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
+			builder.SetInitialLayout(vk::ImageLayout::eUndefined);
+			builder.SetFinalLayout(vk::ImageLayout::eTransferSrcOptimal);
+			builder.BuildAttachmentDesc();
+
+			builder.DepthStencilOutput("FeedbackDepthStencil", m_AttachmentManager, vk::ImageLayout::eDepthStencilAttachmentOptimal);
+			builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
+			builder.SetSaveOp(vk::AttachmentStoreOp::eDontCare);
+			builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+			builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
+			builder.SetInitialLayout(vk::ImageLayout::eUndefined);
+			builder.SetFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+			auto depth = builder.BuildAttachmentDesc();
+			vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0,
+				vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite,
+				vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
+			builder.AddSubpass({ 0 }, { 1 }, { 2 });
+			builder.AddSubpassDependency(dependency0);
+			Func exe1 = [this](CommandBuffer& commandBuffer, size_t frameIndex)
+				{
+					ZoneScopedN("feedback pass ");
+					auto camera = GetCamera();
+					camera->UpdateProj(feedbackSize.x, feedbackSize.y, glm::radians(55.f));
+					Renderer::Instance()->UpdateUniformBuffer(camera->GetProj(), *camera);
+					auto vkCommandBuffer = commandBuffer.GetCommandBuffer();
+					auto tracyContext = Renderer::Instance()->GetTracyCtx();
+					TracyVkZone(tracyContext, vkCommandBuffer, "feedback pass ");
+					//tracyCmd.EndRendering();
+					Renderer::Instance()->BeginBatch();
+					auto pipeline = Renderer::Instance()->GetPipeline(FEEDBACK_RENDER_PASS);
+					vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 0, m_DescriptorSets[frameIndex], nullptr);
+					//vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 1, m_DescriptorSetTex, nullptr);
+					vkCommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline->GetPipeline());
+					vk::Viewport viewport;
+					viewport.x = 0.0f;
+					viewport.y = 0.0f;
+					viewport.minDepth = 0;
+					viewport.maxDepth = 1;
+					viewport.width = feedbackSize.x;
+					viewport.height = feedbackSize.y;
+					vk::Rect2D scissors;
+					scissors.offset = vk::Offset2D{ (uint32_t)0,(uint32_t)0 };
+					scissors.extent = vk::Extent2D{ (uint32_t)viewport.width,(uint32_t)viewport.height };
+					vkCommandBuffer.setViewport(0, 1, &viewport);
+					vkCommandBuffer.setScissor(0, 1, &scissors);
+					Renderer::Instance()->Draw(m_Plane, iden);
+					Renderer::Instance()->DrawBatch(vkCommandBuffer);
+
+				};
+			m_FeedbackRenderPass = builder.Build(FEEDBACK_RENDER_PASS, m_AttachmentManager, m_ActualFrameAmount, feedbackExtent, { {std::array<float, 4>{137.f / 255.f, 189.f / 255.f, 199.f / 255.f, 0.0f} }, depthClear }, exe1);
+		}
+
+
+		auto m_DescriptorSetLayout = Renderer::Instance()->GetSetLayout(m_BaseDesc, PipelineType::RENDER);
+		{
+			auto pipelineLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout()/*,m_DescriptorSetLayoutTex->GetLayout()*/ };
+			PipelineBuilder builder;
+			builder.SetDevice(RenderContext::GetDevice()->GetDevice());
+			builder.SetSamples(vk::SampleCountFlagBits::e1);
+			builder.AddDescriptorLayouts(pipelineLayouts);
+			
+	
+
+			builder.AddAttributeDescription(StandardAttributes());
+			builder.AddBindingDescription(StandardBinding());
+			builder.SetPolygoneMode(Renderer::Instance()->GetPolygonMode());
+			builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
+			Renderer::Instance()->CompileShader("feedback.spvV", ShaderType::VERTEX);
+			Renderer::Instance()->CompileShader("feedback.spvF", ShaderType::FRAGMENT);
+			builder.AddShader(BASE_SPIRV_OUTPUT + "feedback.spvV", vk::ShaderStageFlagBits::eVertex);
+			builder.AddShader(BASE_SPIRV_OUTPUT + "feedback.spvF", vk::ShaderStageFlagBits::eFragment);
+			builder.SetSubpassAmount(0);
+			builder.AddExtent(feedbackExtent);
+			builder.AddImageFormat(vk::Format::eR8G8B8A8Uint);
+			builder.EnableStencilTest(false);
+			builder.SetDepthTest(true);
+			builder.EnableBlend(false);
+			builder.WriteToDepthBuffer(true);
+			builder.SetRenderPass(static_cast<RenderPass*>(m_FeedbackRenderPass.get())->GetRaw());
+			builder.SetPolygoneMode(vk::PolygonMode::eFill);
+			builder.Build(FEEDBACK_RENDER_PASS);
+		}
+
+		return m_FeedbackRenderPass;
+	}
+
+
+	UPtr<IExecute> CreateFinalRenderPass()
+	{
+		UPtr<IExecute> m_FinalRenderPass;
+		vk::Extent2D extent = { (uint32_t)Application::GetScreenWidth(),(uint32_t)Application::GetScreenHeight() };
+		// final render pass
+		{
+
+			auto samples = RenderContext::GetDevice()->GetSamples();
+			RenderPassBuilder builder;
+			//Define a general attachment, with its load/store operations
+			builder.ColorOutput("MSAA", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
+			builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
+			builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
+			builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+			builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
+			builder.SetInitialLayout(vk::ImageLayout::eUndefined);
+			builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
+			auto msaaDecs = builder.BuildAttachmentDesc();
+
+			builder.DepthStencilOutput("DepthStencil", m_AttachmentManager, vk::ImageLayout::eDepthStencilAttachmentOptimal);
+			builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
+			builder.SetSaveOp(vk::AttachmentStoreOp::eDontCare);
+			builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+			builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
+			builder.SetInitialLayout(vk::ImageLayout::eUndefined);
+			builder.SetFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+			auto depth = builder.BuildAttachmentDesc();
+
+			builder.ResolveOutput("Default", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
+			builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
+			builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
+			builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+			builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
+			builder.SetInitialLayout(vk::ImageLayout::eUndefined);
+			builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
+			//builder.SetFinalLayout(vk::ImageLayout::ePresentSrcKHR);
+			auto resolve = builder.BuildAttachmentDesc();
+
+
+
+
+
+
+			vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0,
+				vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests, vk::AccessFlagBits::eColorAttachmentWrite,
+				vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests, vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eDepthStencilAttachmentWrite);
+
+
+
+			builder.AddSubpass({ 0 }, { 1 }, { 2 });
+
+			builder.AddSubpassDependency(dependency0);
+
+
+			auto exe = [this](CommandBuffer& commandBuffer, size_t frameIndex)
+				{
+
+					ZoneScopedN("Final render pass");
+					auto tracyContext = Renderer::Instance()->GetTracyCtx();
+					auto tracyCmd = Renderer::Instance()->GetTracyCmd();
+					//tracyCmd.BeginRendering();
+					auto vkCommandBuffer = commandBuffer.GetCommandBuffer();
+					auto camera = GetCamera();
+					camera->UpdateProj(Application::GetScreenWidth(),
+						Application::GetScreenHeight(), glm::radians(45.f));
+					Renderer::Instance()->UpdateUniformBuffer(camera->GetProj(), *camera);
+					TracyVkZone(tracyContext, vkCommandBuffer, "Final render pass");
+
+					Renderer::Instance()->BeginBatch();
+					auto pipeline = Renderer::Instance()->GetPipeline(RENDER_BASIC_PASS);
+					vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 0, m_DescriptorSets[frameIndex], nullptr);
+					vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 1, m_DescriptorSetWorkingSet, nullptr);
+					vkCommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline->GetPipeline());
+					vk::Viewport viewport;
+					viewport.x = 0.0f;
+					viewport.y = 0.0f;
+					viewport.minDepth = 0;
+					viewport.maxDepth = 1;
+					viewport.width = Application::GetScreenWidth();
+					viewport.height = Application::GetScreenHeight();
+					vk::Rect2D scissors;
+					scissors.offset = vk::Offset2D{ (uint32_t)0,(uint32_t)0 };
+					scissors.extent = vk::Extent2D{ (uint32_t)viewport.width,(uint32_t)viewport.height };
+					vkCommandBuffer.setViewport(0, 1, &viewport);
+					vkCommandBuffer.setScissor(0, 1, &scissors);
+
+					Renderer::Instance()->Draw(m_Plane, iden);
+					Renderer::Instance()->DrawBatch(vkCommandBuffer);
+					//Renderer::Instance()->DrawQuadScreen(vkCommandBuffer);
+				};
+			
+			m_FinalRenderPass = builder.Build(RENDER_BASIC_PASS, m_AttachmentManager, m_ActualFrameAmount, extent, clearValues, exe);
+
+			m_Plane.Pos = { 0,0,0 };
+			//GetCamera()->LookAt(m_Plane.Pos);
+		}
+		std::vector<vk::VertexInputBindingDescription> bindings
+		{
+			VertexBindingDescription(0,sizeof(Vertex),vk::VertexInputRate::eVertex),
+		};
+
+		auto m_DescriptorSetLayout = Renderer::Instance()->GetSetLayout(m_BaseDesc, PipelineType::RENDER);
+		auto m_DescriptorSetWorkingSetLayout = Renderer::Instance()->GetSetLayout(m_WorkingSetDesc, PipelineType::RENDER);
+		{
+			auto pipelineLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetWorkingSetLayout->GetLayout() };
+			PipelineBuilder builder;
+			builder.SetDevice(RenderContext::GetDevice()->GetDevice());
+			builder.SetSamples(RenderContext::GetDevice()->GetSamples());
+			builder.AddDescriptorLayouts(pipelineLayouts);
+			builder.AddAttributeDescription(StandardAttributes());
+			builder.AddBindingDescription(bindings);
+			builder.SetPolygoneMode(Renderer::Instance()->GetPolygonMode());
+			builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
+			Renderer::Instance()->CompileShader("feedback.spvV", ShaderType::VERTEX);
+			Renderer::Instance()->CompileShader("render_working_set.spvF", ShaderType::FRAGMENT);
+			builder.AddShader(BASE_SPIRV_OUTPUT + "feedback.spvV", vk::ShaderStageFlagBits::eVertex);
+			builder.AddShader(BASE_SPIRV_OUTPUT + "render_working_set.spvF", vk::ShaderStageFlagBits::eFragment);
+			builder.SetSubpassAmount(0);
+			builder.AddExtent(extent);
+			builder.AddImageFormat(vk::Format::eB8G8R8A8Unorm);
+			builder.EnableStencilTest(false);
+			builder.SetDepthTest(true);
+			builder.WriteToDepthBuffer(true);
+			builder.SetRenderPass(static_cast<RenderPass*>(m_FinalRenderPass.get())->GetRaw());
+			builder.SetStencilRefNumber(2);
+			builder.StencilTestOp(vk::CompareOp::eAlways, vk::StencilOp::eReplace, vk::StencilOp::eReplace, vk::StencilOp::eReplace);
+			builder.SetMasks(0xff, 0xff);
+			builder.SetPolygoneMode(vk::PolygonMode::eFill);
+			builder.Build(RENDER_BASIC_PASS);
+		}
+
+		return m_FinalRenderPass;
+	}
+
+	UPtr<IExecute> CreateDebugRenderPass()
+	{
+		UPtr<IExecute> m_DebugRenderPass;
+		vk::Extent2D extent = { (uint32_t)Application::GetScreenWidth(),(uint32_t)Application::GetScreenHeight() };
+		// debug render pass
+		{
+
+			auto samples = RenderContext::GetDevice()->GetSamples();
+			RenderPassBuilder builder;
+			//Define a general attachment, with its load/store operations
+
+			builder.ColorOutput("Default", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
+			builder.SetLoadOp(vk::AttachmentLoadOp::eLoad);
+			builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
+			builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+			builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
+			builder.SetInitialLayout(vk::ImageLayout::eColorAttachmentOptimal);
+			builder.SetFinalLayout(vk::ImageLayout::ePresentSrcKHR);
+			auto resolve = builder.BuildAttachmentDesc();
+
+
+
+
+
+
+			vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0,
+				vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests, vk::AccessFlagBits::eColorAttachmentWrite,
+				vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests, vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eDepthStencilAttachmentWrite);
+
+
+
+			builder.AddSubpass({ 0 }, { 1 }, { 2 });
+
+			builder.AddSubpassDependency(dependency0);
+
+			auto exe = [this](CommandBuffer& commandBuffer, size_t frameIndex)
+				{
+					ZoneScopedN("debug render pass");
+					auto tracyContext = Renderer::Instance()->GetTracyCtx();
+					auto tracyCmd = Renderer::Instance()->GetTracyCmd();
+					//tracyCmd.BeginRendering();
+					auto vkCommandBuffer = commandBuffer.GetCommandBuffer();
+
+					TracyVkZone(tracyContext, vkCommandBuffer, "Debug render pass ");
+
+					auto device = RenderContext::GetDevice();
+
+					if (m_WorkingSet->GetLayout() != vk::ImageLayout::eShaderReadOnlyOptimal)
+					{
+						auto transferCommandBuffer = Renderer::Instance()->GetTransferCommandBuffer(frameIndex);
+						auto cmdBuffer = transferCommandBuffer.BeginTransfering();
+						transferCommandBuffer.ChangeImageLayout(m_WorkingSet.get(), m_WorkingSet->GetLayout(), vk::ImageLayout::eShaderReadOnlyOptimal, 1, workingSetPageAmount);
+						transferCommandBuffer.EndTransfering();
+						transferCommandBuffer.SubmitSingle();
+					}
+					Renderer::Instance()->BeginBatch();
+					auto pipeline = Renderer::Instance()->GetPipeline(RENDER_DEBUG_PASS);
+					vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 0, m_DescriptorSets[frameIndex], nullptr);
+					vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 1, m_DescriptorSetDebug, nullptr);
+					vkCommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline->GetPipeline());
+					vk::Viewport viewport;
+					viewport.x = 0.0f;
+					viewport.y = 0.0f;
+					viewport.minDepth = 0;
+					viewport.maxDepth = 1;
+					viewport.width = Application::GetScreenWidth();
+					viewport.height = Application::GetScreenHeight();
+					vk::Rect2D scissors;
+					scissors.offset = vk::Offset2D{ (uint32_t)0,(uint32_t)0 };
+					scissors.extent = vk::Extent2D{ (uint32_t)viewport.width,(uint32_t)viewport.height };
+					vkCommandBuffer.setViewport(0, 1, &viewport);
+					vkCommandBuffer.setScissor(0, 1, &scissors);
+					Renderer::Instance()->DrawQuadScreen(vkCommandBuffer);
+					//tracyCmd.EndRendering();
+				};
+
+			m_DebugRenderPass = builder.Build(RENDER_DEBUG_PASS, m_AttachmentManager, m_ActualFrameAmount, extent, clearValues, exe);
+		}
+		auto m_DescriptorSetLayout = Renderer::Instance()->GetSetLayout(m_BaseDesc, PipelineType::RENDER);
+		auto m_DescriptorSetDebugLayout = Renderer::Instance()->GetSetLayout(m_DebugTexturesDesc, PipelineType::RENDER);
+
+		{
+			auto pipelineLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetDebugLayout->GetLayout() };
+			PipelineBuilder builder;
+			builder.SetDevice(RenderContext::GetDevice()->GetDevice());
+			builder.SetSamples(vk::SampleCountFlagBits::e1);
+			builder.AddDescriptorLayouts(pipelineLayouts);
+			builder.AddAttributeDescription(std::vector<vk::VertexInputAttributeDescription>{});
+			builder.AddBindingDescription(std::vector<vk::VertexInputBindingDescription>{});
+			builder.SetPolygoneMode(Renderer::Instance()->GetPolygonMode());
+			builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
+			Renderer::Instance()->CompileShader("debug.spvV", ShaderType::VERTEX);
+			Renderer::Instance()->CompileShader("debug.spvF", ShaderType::FRAGMENT);
+			builder.AddShader(BASE_SPIRV_OUTPUT + "debug.spvV", vk::ShaderStageFlagBits::eVertex);
+			builder.AddShader(BASE_SPIRV_OUTPUT + "debug.spvF", vk::ShaderStageFlagBits::eFragment);
+			builder.SetSubpassAmount(0);
+			builder.AddExtent(extent);
+			builder.AddImageFormat(vk::Format::eB8G8R8A8Unorm);
+			builder.EnableStencilTest(false);
+			builder.SetDepthTest(false);
+			builder.WriteToDepthBuffer(false);
+			builder.SetRenderPass(static_cast<RenderPass*>(m_DebugRenderPass.get())->GetRaw());
+			builder.SetStencilRefNumber(2);
+			builder.StencilTestOp(vk::CompareOp::eAlways, vk::StencilOp::eReplace, vk::StencilOp::eReplace, vk::StencilOp::eReplace);
+			builder.SetMasks(0xff, 0xff);
+			builder.SetPolygoneMode(vk::PolygonMode::eFill);
+			builder.Build(RENDER_DEBUG_PASS);
+		}
+		return m_DebugRenderPass;
+	}
+
 	ExampleApplication(std::string appName, size_t screenWidth, size_t screenHeight) : Voidstar::Application(appName, screenWidth, screenHeight)
 	{
 		
@@ -255,37 +603,31 @@ public:
 
 		auto createPipelines = [this]()
 		{
-			auto m_DescriptorSetLayout = Renderer::Instance()->GetSetLayout(m_BaseDesc, PipelineType::RENDER);
-			auto m_DescriptorSetWorkingSetLayout = Renderer::Instance()->GetSetLayout(m_WorkingSetDesc, PipelineType::RENDER);
-			auto m_DescriptorSetDebugLayout = Renderer::Instance()->GetSetLayout(m_DebugTexturesDesc, PipelineType::RENDER);
+			
+			
+			
 			auto m_DescriptorSetPageTableCompLayout = Renderer::Instance()->GetSetLayout(m_PageTableDescCompute, PipelineType::COMPUTE);
 			auto m_DescriptorSetPageTableCompFinalLayout = Renderer::Instance()->GetSetLayout(m_PageTableDescFinalCompute, PipelineType::COMPUTE);
 			
-			
-			
-
-
-
 			auto device = RenderContext::GetDevice();
-
 			// render pass
 			auto samples = RenderContext::GetDevice()->GetSamples();
-			samples = vk::SampleCountFlagBits::e2;
-			size_t actualFrameAmount = RenderContext::GetFrameAmount();
+			
+			m_ActualFrameAmount = RenderContext::GetFrameAmount();
 		
 
 			m_AttachmentManager.CreateColor("MSAA", m_AttachmentManager, vk::Format::eB8G8R8A8Unorm,
 				Application::GetScreenWidth(), Application::GetScreenHeight(), 
 				samples, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransientAttachment,
-				actualFrameAmount);
+				m_ActualFrameAmount);
 
 			m_AttachmentManager.CreateColor("FeedbackBuffer", m_AttachmentManager, vk::Format::eR32G32B32A32Sfloat,
 				feedbackSize.x, feedbackSize.y,
 				vk::SampleCountFlagBits::e1, vk::ImageUsageFlagBits::eColorAttachment| vk::ImageUsageFlagBits::eSampled| vk::ImageUsageFlagBits::eTransferSrc,
-				actualFrameAmount, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+				m_ActualFrameAmount, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
 			auto stageSize = feedbackSize.x * feedbackSize.y * sizeof(FeedbackRes);
-			m_StageBuffers.resize(actualFrameAmount);
-			for (int i = 0; i < actualFrameAmount; i++)
+			m_StageBuffers.resize(m_ActualFrameAmount);
+			for (int i = 0; i < m_ActualFrameAmount; i++)
 			{
 				m_StageBuffers[i] = Buffer::CreateStagingBuffer(stageSize);
 			}
@@ -303,20 +645,18 @@ public:
 
 			Renderer::Instance()->CreateSyncObjects();
 
-			UPtr<IExecute> m_FinalRenderPass;
-			UPtr<IExecute> m_DebugRenderPass;
-			UPtr<IExecute> m_FeedbackRenderPass;
+			
+			
+			
 			UPtr<IExecute> m_UpdatePageTablePass;
 
 			{
-				std::vector<vk::DescriptorSetLayout> layouts = { m_DescriptorSetPageTableCompLayout->GetLayout()};
 				Renderer::Instance()->CompileShader("pageTable.comp", ShaderType::COMPUTE);
-				Pipeline::CreateComputePipeline(COMPUTE_PAGE_TABLE_PASS, BASE_SPIRV_OUTPUT +"pageTable.spvCmp", layouts);
+				Pipeline::CreateComputePipeline(COMPUTE_PAGE_TABLE_PASS, BASE_SPIRV_OUTPUT +"pageTable.spvCmp", { m_DescriptorSetPageTableCompLayout->GetLayout() });
 			}
 			{
-				std::vector<vk::DescriptorSetLayout> layouts = { m_DescriptorSetPageTableCompFinalLayout->GetLayout()};
 				Renderer::Instance()->CompileShader("pageTableFinal.comp", ShaderType::COMPUTE);
-				Pipeline::CreateComputePipeline(COMPUTE_PAGE_TABLE_FINAL_PASS, BASE_SPIRV_OUTPUT +"pageTableFinal.spvCmp", layouts);
+				Pipeline::CreateComputePipeline(COMPUTE_PAGE_TABLE_FINAL_PASS, BASE_SPIRV_OUTPUT + "pageTableFinal.spvCmp", { m_DescriptorSetPageTableCompFinalLayout->GetLayout() });
 			
 			}
 
@@ -582,341 +922,17 @@ public:
 			m_UpdatePageTablePass = CreateUPtr<ComputePass>(exe);
 
 
-			vk::ClearValue clearColor = { std::array<float, 4>{137.f / 255.f, 189.f / 255.f, 199.f / 255.f, 1.0f} };
-			vk::Extent2D extent = { (uint32_t)Application::GetScreenWidth(),(uint32_t)Application::GetScreenHeight() };
-			vk::Extent2D feedbackExtent = { (uint32_t)feedbackSize.x,(uint32_t)feedbackSize.y };
-			vk::ClearValue depthClear;
-			uint32_t stencil0 = 3;
-			depthClear.depthStencil = vk::ClearDepthStencilValue({ 1.0f, 0 });
-			std::vector<vk::ClearValue> clearValues = { {clearColor, depthClear,clearColor} };
-
-		
-			// final render pass
-			{
-
-				auto samples = RenderContext::GetDevice()->GetSamples();
-				RenderPassBuilder builder;
-				//Define a general attachment, with its load/store operations
-				builder.ColorOutput("MSAA", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
-				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
-				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
-				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
-				builder.SetInitialLayout(vk::ImageLayout::eUndefined);
-				builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
-				auto msaaDecs = builder.BuildAttachmentDesc();
-
-				builder.DepthStencilOutput("DepthStencil", m_AttachmentManager, vk::ImageLayout::eDepthStencilAttachmentOptimal);
-				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
-				builder.SetSaveOp(vk::AttachmentStoreOp::eDontCare);
-				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
-				builder.SetInitialLayout(vk::ImageLayout::eUndefined);
-				builder.SetFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
-				auto depth = builder.BuildAttachmentDesc();
-
-				builder.ResolveOutput("Default", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
-				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
-				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
-				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
-				builder.SetInitialLayout(vk::ImageLayout::eUndefined);
-				builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
-				//builder.SetFinalLayout(vk::ImageLayout::ePresentSrcKHR);
-				auto resolve = builder.BuildAttachmentDesc();
-
-
-
-				
-
-
-				vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0,
-					vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests, vk::AccessFlagBits::eColorAttachmentWrite,
-					vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests , vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eDepthStencilAttachmentWrite);
-				
-
-
-				builder.AddSubpass({ 0 }, { 1 }, { 2 });
-				
-				builder.AddSubpassDependency(dependency0);
-
-				
-				auto exe = [this](CommandBuffer& commandBuffer, size_t frameIndex)
-				{
-
-					ZoneScopedN("Final render pass");
-					auto tracyContext = Renderer::Instance()->GetTracyCtx();
-					auto tracyCmd = Renderer::Instance()->GetTracyCmd();
-					//tracyCmd.BeginRendering();
-					auto vkCommandBuffer = commandBuffer.GetCommandBuffer();
-					auto camera = GetCamera();
-					camera->UpdateProj(Application::GetScreenWidth(),
-						Application::GetScreenHeight(), glm::radians(45.f));
-					Renderer::Instance()->UpdateUniformBuffer(camera->GetProj(), *camera);
-					TracyVkZone(tracyContext, vkCommandBuffer, "Final render pass");
-
-					Renderer::Instance()->BeginBatch(); 
-					auto pipeline = Renderer::Instance()->GetPipeline(RENDER_BASIC_PASS);
-					vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 0, m_DescriptorSets[frameIndex], nullptr); 
-					vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 1, m_DescriptorSetWorkingSet, nullptr);
-					vkCommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline->GetPipeline()); 
-					vk::Viewport viewport; 
-					viewport.x = 0.0f; 
-					viewport.y = 0.0f; 
-					viewport.minDepth = 0; 
-					viewport.maxDepth = 1; 
-					viewport.width = Application::GetScreenWidth(); 
-					viewport.height = Application::GetScreenHeight(); 
-					vk::Rect2D scissors; 
-					scissors.offset = vk::Offset2D{ (uint32_t)0,(uint32_t)0 }; 
-					scissors.extent = vk::Extent2D{ (uint32_t)viewport.width,(uint32_t)viewport.height }; 
-					vkCommandBuffer.setViewport(0, 1, &viewport);
-					vkCommandBuffer.setScissor(0, 1, &scissors); 
-					
-					Renderer::Instance()->Draw(m_Plane, iden);
-					Renderer::Instance()->DrawBatch(vkCommandBuffer);
-					//Renderer::Instance()->DrawQuadScreen(vkCommandBuffer);
-				};
-
-				m_FinalRenderPass = builder.Build(RENDER_BASIC_PASS, m_AttachmentManager, actualFrameAmount, extent, clearValues, exe);
-
-				m_Plane.Pos = { 0,0,0 };
-				//GetCamera()->LookAt(m_Plane.Pos);
-			}
-			std::vector<vk::VertexInputBindingDescription> bindings
-			{
-				VertexBindingDescription(0,sizeof(Vertex),vk::VertexInputRate::eVertex),
-			};
-
-
-			std::vector<vk::VertexInputAttributeDescription> attributeDescriptions =
-			{
-				VertexInputAttributeDescription(0,0,vk::Format::eR32G32B32Sfloat,offsetof(Vertex, Position)),
-				VertexInputAttributeDescription(0,1,vk::Format::eR32G32Sfloat,offsetof(Vertex, UV)),
-				VertexInputAttributeDescription(0,2,vk::Format::eR32G32B32A32Sfloat,offsetof(Vertex, Color)),
-				VertexInputAttributeDescription(0,3,vk::Format::eR32Sfloat,offsetof(Vertex, textureID)),
-			};
-
-			{
-				auto pipelineLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetWorkingSetLayout->GetLayout()};
-				PipelineBuilder builder;
-				builder.SetDevice(device->GetDevice());
-				builder.SetSamples(samples);
-				builder.AddDescriptorLayouts(pipelineLayouts);
-				builder.AddAttributeDescription(attributeDescriptions);
-				builder.AddBindingDescription(bindings);
-				builder.SetPolygoneMode(Renderer::Instance()->GetPolygonMode());
-				builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
-				Renderer::Instance()->CompileShader("feedback.spvV", ShaderType::VERTEX);
-				Renderer::Instance()->CompileShader("render_working_set.spvF", ShaderType::FRAGMENT);
-				builder.AddShader(BASE_SPIRV_OUTPUT + "feedback.spvV", vk::ShaderStageFlagBits::eVertex);
-				builder.AddShader(BASE_SPIRV_OUTPUT + "render_working_set.spvF", vk::ShaderStageFlagBits::eFragment);
-				builder.SetSubpassAmount(0);
-				builder.AddExtent(extent);
-				builder.AddImageFormat(vk::Format::eB8G8R8A8Unorm);
-				builder.EnableStencilTest(false);
-				builder.SetDepthTest(true);
-				builder.WriteToDepthBuffer(true);
-				builder.SetRenderPass(static_cast<RenderPass*>(m_FinalRenderPass.get())->GetRaw());
-				builder.SetStencilRefNumber(2);
-				builder.StencilTestOp(vk::CompareOp::eAlways, vk::StencilOp::eReplace, vk::StencilOp::eReplace, vk::StencilOp::eReplace);
-				builder.SetMasks(0xff, 0xff);
-				builder.SetPolygoneMode(vk::PolygonMode::eFill);
-				builder.Build(RENDER_BASIC_PASS);
-			}
-			// debug render pass
-			{
-
-				auto samples = RenderContext::GetDevice()->GetSamples();
-				RenderPassBuilder builder;
-				//Define a general attachment, with its load/store operations
-
-				builder.ColorOutput("Default", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
-				builder.SetLoadOp(vk::AttachmentLoadOp::eLoad);
-				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
-				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
-				builder.SetInitialLayout(vk::ImageLayout::eColorAttachmentOptimal);
-				builder.SetFinalLayout(vk::ImageLayout::ePresentSrcKHR);
-				auto resolve = builder.BuildAttachmentDesc();
-
-
-
-
-
-
-				vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0,
-					vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests, vk::AccessFlagBits::eColorAttachmentWrite,
-					vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests, vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eDepthStencilAttachmentWrite);
-
-
-
-				builder.AddSubpass({ 0 }, { 1 }, { 2 });
-
-				builder.AddSubpassDependency(dependency0);
-
-				auto exe = [this ](CommandBuffer& commandBuffer, size_t frameIndex)
-					{
-						ZoneScopedN("debug render pass");
-						auto tracyContext = Renderer::Instance()->GetTracyCtx();
-						auto tracyCmd = Renderer::Instance()->GetTracyCmd();
-						//tracyCmd.BeginRendering();
-						auto vkCommandBuffer = commandBuffer.GetCommandBuffer();
-
-						TracyVkZone(tracyContext, vkCommandBuffer, "Debug render pass ");
-						
-						auto device = RenderContext::GetDevice();
-						
-						if (m_WorkingSet->GetLayout() != vk::ImageLayout::eShaderReadOnlyOptimal)
-						{
-							auto transferCommandBuffer = Renderer::Instance()->GetTransferCommandBuffer(frameIndex);
-							auto cmdBuffer = transferCommandBuffer.BeginTransfering();
-							transferCommandBuffer.ChangeImageLayout(m_WorkingSet.get(), m_WorkingSet->GetLayout(), vk::ImageLayout::eShaderReadOnlyOptimal,1, workingSetPageAmount);
-							transferCommandBuffer.EndTransfering();
-							transferCommandBuffer.SubmitSingle();
-						}
-						Renderer::Instance()->BeginBatch();
-						auto pipeline = Renderer::Instance()->GetPipeline(RENDER_DEBUG_PASS);
-						vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 0, m_DescriptorSets[frameIndex], nullptr);
-						vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 1, m_DescriptorSetDebug, nullptr); 
-						vkCommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline->GetPipeline());
-						vk::Viewport viewport;
-						viewport.x = 0.0f;
-						viewport.y = 0.0f;
-						viewport.minDepth = 0;
-						viewport.maxDepth = 1;
-						viewport.width = Application::GetScreenWidth();
-						viewport.height = Application::GetScreenHeight();
-						vk::Rect2D scissors;
-						scissors.offset = vk::Offset2D{ (uint32_t)0,(uint32_t)0 };
-						scissors.extent = vk::Extent2D{ (uint32_t)viewport.width,(uint32_t)viewport.height };
-						vkCommandBuffer.setViewport(0, 1, &viewport);
-						vkCommandBuffer.setScissor(0, 1, &scissors);
-						Renderer::Instance()->DrawQuadScreen(vkCommandBuffer);
-						//tracyCmd.EndRendering();
-					};
-
-				m_DebugRenderPass = builder.Build(RENDER_DEBUG_PASS, m_AttachmentManager, actualFrameAmount, extent, clearValues, exe);
-			}
-
-			{
-				auto pipelineLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout(),m_DescriptorSetDebugLayout->GetLayout() };
-				PipelineBuilder builder;
-				builder.SetDevice(device->GetDevice());
-				builder.SetSamples(vk::SampleCountFlagBits::e1);
-				builder.AddDescriptorLayouts(pipelineLayouts);
-				builder.AddAttributeDescription(std::vector<vk::VertexInputAttributeDescription>{});
-				builder.AddBindingDescription(std::vector<vk::VertexInputBindingDescription>{});
-				builder.SetPolygoneMode(Renderer::Instance()->GetPolygonMode());
-				builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
-				Renderer::Instance()->CompileShader("debug.spvV", ShaderType::VERTEX);
-				Renderer::Instance()->CompileShader("debug.spvF", ShaderType::FRAGMENT);
-				builder.AddShader(BASE_SPIRV_OUTPUT + "debug.spvV", vk::ShaderStageFlagBits::eVertex);
-				builder.AddShader(BASE_SPIRV_OUTPUT + "debug.spvF", vk::ShaderStageFlagBits::eFragment);
-				builder.SetSubpassAmount(0);
-				builder.AddExtent(extent);
-				builder.AddImageFormat(vk::Format::eB8G8R8A8Unorm);
-				builder.EnableStencilTest(false);
-				builder.SetDepthTest(false);
-				builder.WriteToDepthBuffer(false);
-				builder.SetRenderPass(static_cast<RenderPass*>(m_DebugRenderPass.get())->GetRaw());
-				builder.SetStencilRefNumber(2);
-				builder.StencilTestOp(vk::CompareOp::eAlways, vk::StencilOp::eReplace, vk::StencilOp::eReplace, vk::StencilOp::eReplace);
-				builder.SetMasks(0xff, 0xff);
-				builder.SetPolygoneMode(vk::PolygonMode::eFill);
-				builder.Build(RENDER_DEBUG_PASS);
-			}
-
-			// feedbackPass
-			{
-
-				auto samples = RenderContext::GetDevice()->GetSamples();
-				RenderPassBuilder builder;
-				builder.ColorOutput("FeedbackBuffer", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
-				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
-				builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
-				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
-				builder.SetInitialLayout(vk::ImageLayout::eUndefined);
-				builder.SetFinalLayout(vk::ImageLayout::eTransferSrcOptimal);
-				builder.BuildAttachmentDesc();
-
-				builder.DepthStencilOutput("FeedbackDepthStencil", m_AttachmentManager, vk::ImageLayout::eDepthStencilAttachmentOptimal);
-				builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
-				builder.SetSaveOp(vk::AttachmentStoreOp::eDontCare);
-				builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-				builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
-				builder.SetInitialLayout(vk::ImageLayout::eUndefined);
-				builder.SetFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
-				auto depth = builder.BuildAttachmentDesc();
-				vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0,
-					vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite,
-					vk::PipelineStageFlagBits::eColorAttachmentOutput , vk::AccessFlagBits::eColorAttachmentWrite);
-				builder.AddSubpass({ 0 }, { 1 }, { 2 });
-				builder.AddSubpassDependency(dependency0);
-				Func exe1 = [this](CommandBuffer& commandBuffer, size_t frameIndex)
-					{
-						ZoneScopedN("feedback pass ");
-						auto camera = GetCamera();
-						camera->UpdateProj(feedbackSize.x, feedbackSize.y,glm::radians(55.f));
-						Renderer::Instance()->UpdateUniformBuffer(camera->GetProj(), *camera);
-						auto vkCommandBuffer = commandBuffer.GetCommandBuffer();
-						auto tracyContext = Renderer::Instance()->GetTracyCtx();
-						TracyVkZone(tracyContext, vkCommandBuffer, "feedback pass ");
-						//tracyCmd.EndRendering();
-						Renderer::Instance()->BeginBatch();
-						auto pipeline = Renderer::Instance()->GetPipeline(FEEDBACK_RENDER_PASS);
-						vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 0, m_DescriptorSets[frameIndex], nullptr);
-						//vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 1, m_DescriptorSetTex, nullptr);
-						vkCommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline->GetPipeline());
-						vk::Viewport viewport;
-						viewport.x = 0.0f;
-						viewport.y = 0.0f;
-						viewport.minDepth = 0;
-						viewport.maxDepth = 1;
-						viewport.width = feedbackSize.x;
-						viewport.height = feedbackSize.y;
-						vk::Rect2D scissors;
-						scissors.offset = vk::Offset2D{ (uint32_t)0,(uint32_t)0 };
-						scissors.extent = vk::Extent2D{ (uint32_t)viewport.width,(uint32_t)viewport.height };
-						vkCommandBuffer.setViewport(0, 1, &viewport);
-						vkCommandBuffer.setScissor(0, 1, &scissors);
-						Renderer::Instance()->Draw(m_Plane, iden);
-						Renderer::Instance()->DrawBatch(vkCommandBuffer);
-						
-					};
-				m_FeedbackRenderPass = builder.Build(FEEDBACK_RENDER_PASS, m_AttachmentManager, actualFrameAmount, feedbackExtent, { {std::array<float, 4>{137.f / 255.f, 189.f / 255.f, 199.f / 255.f, 0.0f} }, depthClear }, exe1);
-			}
-
-			{
-				auto pipelineLayouts = std::vector<vk::DescriptorSetLayout>{ m_DescriptorSetLayout->GetLayout()/*,m_DescriptorSetLayoutTex->GetLayout()*/ };
-				PipelineBuilder builder;
-				builder.SetDevice(device->GetDevice());
-				builder.SetSamples(vk::SampleCountFlagBits::e1);
-				builder.AddDescriptorLayouts(pipelineLayouts);
-				builder.AddAttributeDescription(attributeDescriptions);
-				builder.AddBindingDescription(bindings);
-				builder.SetPolygoneMode(Renderer::Instance()->GetPolygonMode());
-				builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
-				Renderer::Instance()->CompileShader("feedback.spvV", ShaderType::VERTEX);
-				Renderer::Instance()->CompileShader("feedback.spvF", ShaderType::FRAGMENT);
-				builder.AddShader(BASE_SPIRV_OUTPUT + "feedback.spvV", vk::ShaderStageFlagBits::eVertex);
-				builder.AddShader(BASE_SPIRV_OUTPUT + "feedback.spvF", vk::ShaderStageFlagBits::eFragment);
-				builder.SetSubpassAmount(0);
-				builder.AddExtent(feedbackExtent);
-				builder.AddImageFormat(vk::Format::eR8G8B8A8Uint);
-				builder.EnableStencilTest(false);
-				builder.SetDepthTest(true);
-				builder.EnableBlend(false);
-				builder.WriteToDepthBuffer(true);
-				builder.SetRenderPass(static_cast<RenderPass*>(m_FeedbackRenderPass.get())->GetRaw());
-				builder.SetPolygoneMode(vk::PolygonMode::eFill);
-				builder.Build(FEEDBACK_RENDER_PASS);
-			}
 			
-		
+			
+			
+			uint32_t stencil0 = 3;
 
-		
+			auto m_FinalRenderPass = CreateFinalRenderPass();
+
+			auto m_DebugRenderPass = CreateDebugRenderPass();
+
+			auto m_FeedbackRenderPass = CreateFeedbackRenderPass();
+					
 			// ImGui
 			RenderPassBuilder builder;
 			builder.ColorOutput("Default", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
@@ -937,7 +953,7 @@ public:
 
 			UPtr<IExecute> m_ImGuiRenderPass = builder.Build(IMGUI_RENDER_PASS, m_AttachmentManager,
 				RenderContext::GetFrameAmount(),
-				extent, clearValues, [this](CommandBuffer& commandBuffer, size_t frameIndex)
+				{ (uint32_t)Application::GetScreenWidth(),(uint32_t)Application::GetScreenHeight() } , clearValues, [this](CommandBuffer& commandBuffer, size_t frameIndex)
 				{
 					ImGui_ImplVulkan_NewFrame();
 					ImGui_ImplGlfw_NewFrame();
@@ -1032,20 +1048,11 @@ public:
 			graph->AddExec(std::move(m_FinalRenderPass));
 			graph->AddExec(std::move(m_DebugRenderPass));
 			//graph->AddExec(std::move(m_ImGuiRenderPass));
-
-			Renderer::Instance()->AddRenderGraph("",std::move(graph));
-
-
-
-
-					
+			Renderer::Instance()->AddRenderGraph("",std::move(graph));					
 		};
 
 		auto cleanup = [this]()
 		{
-
-
-
 				auto device = RenderContext::GetDevice()->GetDevice();
 				device.waitIdle();
 				m_AddInfo.reset();
@@ -1059,7 +1066,7 @@ public:
 				CleanUpImGui();
 				Renderer::Instance()->Shutdown();
 
-			};
+		};
 
 		callables.bindingsInit = bindingsInit;
 		callables.createResources = createResources;
@@ -1073,21 +1080,10 @@ public:
 		
 	}
 
-
-
-
 	~ExampleApplication()
 	{
 		callables.cleanUp();
 	}
-	
-	
-	void UpdateTexture(size_t frameIndex)
-	{
-		
-	}
-
-
 	void LoadFont(std::string_view str, SPtr<Image> fontAtlas)
 	{
 
@@ -1292,6 +1288,11 @@ public:
 
 
 private:
+
+	vk::ClearValue clearColor = { std::array<float, 4>{137.f / 255.f, 189.f / 255.f, 199.f / 255.f, 1.0f} };
+	vk::ClearValue depthClear{ vk::ClearDepthStencilValue({ 1.0f, 0 }) };
+	std::vector<vk::ClearValue> clearValues = { {clearColor, depthClear,clearColor} };
+
 	struct AdditionalData
 	{
 		bool Debug = true;
