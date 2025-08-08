@@ -1,0 +1,122 @@
+how does he identify pipeline and how does renderer know which pipeline to bind at what command, how do resources get binded to particular pipeline? 
+
+
+
+Frame
+viewState.m_rect = _render->m_view[view].m_rect;
+Rect rect        = _render->m_view[view].m_rect;
+Rect scissorRect = _render->m_view[view].m_scissor;
+
+
+RendererContextVK
+IndexBufferVK  m_indexBuffers[BGFX_CONFIG_MAX_INDEX_BUFFERS];
+VertexBufferVK m_vertexBuffers[BGFX_CONFIG_MAX_VERTEX_BUFFERS];
+ShaderVK       m_shaders[BGFX_CONFIG_MAX_SHADERS];
+ProgramVK      m_program[BGFX_CONFIG_MAX_PROGRAMS];
+TextureVK      m_textures[BGFX_CONFIG_MAX_TEXTURES];
+VertexLayout   m_vertexLayouts[BGFX_CONFIG_MAX_VERTEX_LAYOUTS];
+FrameBufferVK  m_frameBuffers[BGFX_CONFIG_MAX_FRAME_BUFFERS];
+
+they encode all data needed to create renderpass and pipeline in one key
+uint64_t key = m_key.encodeDraw(type);
+
+
+RendererContextVK::submit
+
+VkPipeline getPipeline(ProgramHandle _program)
+
+
+
+
+
+bx::HashMurmur2A murmur;
+murmur.begin();
+murmur.add(_state);
+murmur.add(_stencil);
+murmur.add(program.m_vsh->m_hash);
+murmur.add(program.m_vsh->m_attrMask, sizeof(program.m_vsh->m_attrMask) );
+
+if (NULL != program.m_fsh)
+{
+	murmur.add(program.m_fsh->m_hash);
+}
+
+for (uint8_t ii = 0; ii < _numStreams; ++ii)
+{
+	murmur.add(_layouts[ii]->m_hash);
+}
+
+murmur.add(layout.m_attributes, sizeof(layout.m_attributes) );
+murmur.add(_numInstanceData);
+murmur.add(frameBuffer.m_renderPass);
+const uint32_t hash = murmur.end();
+
+VkPipeline pipeline = m_pipelineStateCache.find(hash);
+
+VkDescriptorSet getDescriptorSet(const ProgramVK& program, const RenderBind& renderBind, const ScratchBufferVK& scratchBuffer, const float _palette[][4])
+
+bgfx lazily initializes stuff. it analyzes render commands and conclude what we need
+
+
+void setVertexBuffer(uint8_t _stream, VertexBufferHandle _handle)
+{
+	BGFX_CHECK_ENCODER0();
+	s_ctx->m_encoder0->setVertexBuffer(_stream, _handle);
+}
+
+it is just kept in command buffer, where view id precedes all of that?
+
+
+
+it is user defined code and called in user init stage
+
+static void init()
+{
+	ms_layout
+		.begin()
+		.add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float)
+		.add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Float)
+		.end();
+};
+
+static bgfx::VertexLayout ms_layout;
+
+enum Enum
+{
+	RendererInit,
+	RendererShutdownBegin,
+	CreateVertexLayout,
+	CreateIndexBuffer,
+	CreateVertexBuffer,
+	CreateDynamicIndexBuffer,
+	UpdateDynamicIndexBuffer,
+	CreateDynamicVertexBuffer,
+	UpdateDynamicVertexBuffer,
+	CreateShader,
+	CreateProgram,
+	CreateTexture,
+	UpdateTexture,
+	ResizeTexture,
+	CreateFrameBuffer,
+	CreateUniform,
+	UpdateViewName,
+	InvalidateOcclusionQuery,
+	SetName,
+	End,
+	RendererShutdownEnd,
+	DestroyVertexLayout,
+	DestroyIndexBuffer,
+	DestroyVertexBuffer,
+	DestroyDynamicIndexBuffer,
+	DestroyDynamicVertexBuffer,
+	DestroyShader,
+	DestroyProgram,
+	DestroyTexture,
+	DestroyFrameBuffer,
+	DestroyUniform,
+	ReadTexture,
+};
+
+renderer_vk.cpp 9241
+
+so we basically before each frame read the command buffer check whether operation makes sense (like we don't have such texture created, if we do we just skip) and then we form (every frame) draw list and iterate over it and render?
