@@ -1,6 +1,6 @@
 # Voidstar
 A [project](https://www.youtube.com/playlist?list=PLF_V0mPHXtuJKMe45rwgXtpii-B2kfCOH)-driven Vulkan Renderer
-| Virtual texture|  Page rendering|
+| Virtual texture (65536x32768)|  Page rendering|
 |----|----|
 | ![](./screenshots/virt.gif) | ![](./screenshots/page.gif) |
 
