@@ -120,3 +120,148 @@ enum Enum
 renderer_vk.cpp 9241
 
 so we basically before each frame read the command buffer check whether operation makes sense (like we don't have such texture created, if we do we just skip) and then we form (every frame) draw list and iterate over it and render?
+
+
+view has framebuffer rect view and view transform
+
+
+Because there are RenderItems. Every submit(viewId, program) appended one.
+
+each RenderDraw has stream 
+
+struct Stream
+{
+	void clear()
+	{
+		m_startVertex      = 0;
+		m_handle.idx       = kInvalidHandle;
+		m_layoutHandle.idx = kInvalidHandle;
+	}
+
+	uint32_t           m_startVertex;
+	VertexBufferHandle m_handle;
+	VertexLayoutHandle m_layoutHandle;
+};
+
+how do they handle uniforms? uniforms must be available at particular stage in pipeline
+
+
+so basically it saves the state of render call in renderDraw and then in sumbit it saves the state in render array and then once we actually render we iterate over array?
+
+submit creates renderDraw
+
+const uint32_t renderItemIdx = bx::atomicFetchAndAddsat<uint32_t>(&m_frame->m_numRenderItems, 1, BGFX_CONFIG_MAX_DRAW_CALLS);
+
+
+		void setVertexBuffer(
+			  uint8_t _stream
+			, VertexBufferHandle _handle
+			, uint32_t _startVertex
+			, uint32_t _numVertices
+			, VertexLayoutHandle _layoutHandle
+			)
+		{
+			BX_ASSERT(UINT8_MAX != m_draw.m_streamMask, "bgfx::setVertexCount was already called for this draw call.");
+			BX_ASSERT(_stream < BGFX_CONFIG_MAX_VERTEX_STREAMS, "Invalid stream %d (max %d).", _stream, BGFX_CONFIG_MAX_VERTEX_STREAMS);
+			if (m_draw.setStreamBit(_stream, _handle) )
+			{
+				Stream& stream = m_draw.m_stream[_stream];
+				stream.m_startVertex   = _startVertex;
+				stream.m_handle        = _handle;
+				stream.m_layoutHandle  = _layoutHandle;
+			m_numVertices[_stream] = _numVertices;
+		}
+	}	
+
+// Set render states.
+bgfx::setState(0
+				| BGFX_STATE_WRITE_RGB
+				| BGFX_STATE_WRITE_A
+				| BGFX_STATE_WRITE_Z
+				| BGFX_STATE_DEPTH_TEST_LESS
+);
+
+
+
+so, one thread emmits actual vulkan commands and another thread reads user's render commands and creates renderDraws?
+
+multiple threads RenderFrame::Exiting
+
+
+
+so we save index buffer vertex buffer in renderDraw. command buffer takes care of initialization, and is populated(in user thread) and intepreted every frame (in render thread), what if we create and delete texture in runtime?
+
+
+Yep—creating and deleting GPU stuff “at runtime” is exactly what bgfx is built for. Here’s how it stays sane:
+
+The two tracks each frame
+Resource commands (CPU-side “setup”): create/destroy/update texture/buffer/shader… These are serialized into the frame’s command buffers (m_cmdPre for before drawing, m_cmdPost for after).
+
+Draw/dispatch commands: captured as RenderItems (RenderDraw / RenderCompute) that reference resources by handle (index into bgfx’s resource tables).
+
+At bgfx::frame():
+
+The app/submission side seals the frame (all encoders ended).
+
+It flips frames: the sealed one becomes m_render (for the backend to consume), and a fresh m_submit opens for the next frame.
+
+The render backend thread wakes up and:
+
+Runs m_cmdPre → turns “CreateTexture/UpdateBuffer/…” into real API calls (vkCreateImage, vkCmdCopyBufferToImage, …). This happens before any draw of the frame.
+
+Sorts RenderItems by view / program / depth and issues the actual Vulkan draws/dispatches.
+
+Runs m_cmdPost (readbacks/screenshots/etc.) after drawing.
+
+CommandBuffer& getCommandBuffer(CommandBuffer::Enum _cmd)
+{
+	CommandBuffer& cmdbuf = _cmd < CommandBuffer::End ? m_submit->m_cmdPre : m_submit->m_cmdPost;
+	uint8_t cmd = (uint8_t)_cmd;
+	cmdbuf.write(cmd);
+	return cmdbuf;
+}
+So they basically read data from commands buffers and if it doesn exist they create, if it exists iy puts in the queue for destroy and destroys once gpu is done?
+
+
+how handles dynamic geometry and meshes
+
+bgfx::setViewFrameBuffer(RENDER_PASS_ID, m_pickingFB);
+
+// Set up ID buffer, which has a color target and depth buffer
+m_pickingRT = bgfx::createTexture2D(ID_DIM, ID_DIM, false, 1, bgfx::TextureFormat::RGBA8, 0
+	| BGFX_TEXTURE_RT
+	| BGFX_SAMPLER_MIN_POINT
+	| BGFX_SAMPLER_MAG_POINT
+	| BGFX_SAMPLER_MIP_POINT
+	| BGFX_SAMPLER_U_CLAMP
+	| BGFX_SAMPLER_V_CLAMP
+	);
+m_pickingRTDepth = bgfx::createTexture2D(ID_DIM, ID_DIM, false, 1, bgfx::TextureFormat::D32F, 0
+	| BGFX_TEXTURE_RT
+	| BGFX_SAMPLER_MIN_POINT
+	| BGFX_SAMPLER_MAG_POINT
+	| BGFX_SAMPLER_MIP_POINT
+	| BGFX_SAMPLER_U_CLAMP
+	| BGFX_SAMPLER_V_CLAMP
+	);
+
+// CPU texture for blitting to and reading ID buffer so we can see what was clicked on.
+// Impossible to read directly from a render target, you *must* blit to a CPU texture
+// first. Algorithm Overview: Render on GPU -> Blit to CPU texture -> Read from CPU
+// texture.
+m_blitTex = bgfx::createTexture2D(ID_DIM, ID_DIM, false, 1, bgfx::TextureFormat::RGBA8, 0
+	| BGFX_TEXTURE_BLIT_DST
+	| BGFX_TEXTURE_READ_BACK
+	| BGFX_SAMPLER_MIN_POINT
+	| BGFX_SAMPLER_MAG_POINT
+	| BGFX_SAMPLER_MIP_POINT
+	| BGFX_SAMPLER_U_CLAMP
+	| BGFX_SAMPLER_V_CLAMP
+	);
+
+bgfx::TextureHandle rt[2] =
+{
+	m_pickingRT,
+	m_pickingRTDepth
+};
+m_pickingFB = bgfx::createFrameBuffer(BX_COUNTOF(rt), rt, true);
