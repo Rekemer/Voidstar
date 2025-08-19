@@ -11,3 +11,6 @@
 [submodule "Dependencies/freetype"]
 	path = Dependencies/freetype
 	url = https://github.com/Rekemer/freetype
+[submodule "Dependencies/SPIRV-Cross"]
+	path = Dependencies/SPIRV-Cross
+	url = https://github.com/KhronosGroup/SPIRV-Cross.git
