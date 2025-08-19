@@ -5,10 +5,13 @@ namespace Voidstar
 	class Buffer;
 	class IndexBuffer;
 	class Image;
-	class CommandBuffer
+	class VOIDSTAR_API CommandBuffer
 	{
 	public:
 		CommandBuffer() = default;
+		CommandBuffer(const CommandBuffer&) = delete;
+		CommandBuffer& operator=(const CommandBuffer&) = delete;
+
 		CommandBuffer(CommandBuffer& commandBuffer)
 		{
 			m_CommandPool = commandBuffer.m_CommandPool;

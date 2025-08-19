@@ -5,7 +5,7 @@
 
 namespace Voidstar
 {
-	struct SphereCoords
+	struct  VOIDSTAR_API SphereCoords
 	{
 		float pitch = 0;
 		float yaw = 0;
@@ -22,7 +22,7 @@ namespace Voidstar
 			return cart;
 		}
 	};
-	class Camera
+	class VOIDSTAR_API Camera
 	{
 	public:
 		void LookAt(glm::vec3 pos);

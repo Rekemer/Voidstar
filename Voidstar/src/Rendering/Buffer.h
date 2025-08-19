@@ -11,14 +11,14 @@ namespace Voidstar
 	}
 
 	class Device;
-	struct BufferInputChunk 
+	struct VOIDSTAR_API BufferInputChunk
 	{
 		size_t size;
 		vk::BufferUsageFlags usage;
 		vk::MemoryPropertyFlags memoryProperties;
 	};
 
-	class Buffer
+	class VOIDSTAR_API Buffer
 	{
 	public:
 		Buffer(const BufferInputChunk& input);

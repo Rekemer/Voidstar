@@ -5,7 +5,7 @@ namespace Voidstar
 	class Instance;
 	class Image;
 	class Buffer;
-	class Device
+	class VOIDSTAR_API Device
 	{
 	public:
 		static Device* Create(Instance* intsance , vk::SurfaceKHR& surface);

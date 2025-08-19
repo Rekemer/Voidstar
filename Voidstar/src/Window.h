@@ -2,7 +2,7 @@
 struct GLFWwindow;
 namespace Voidstar
 {
-	class Window
+	class VOIDSTAR_API  Window
 	{
 	public:
 		Window(std::string windowName, size_t screenWidth, size_t screenHeight);

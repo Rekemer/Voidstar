@@ -19,13 +19,17 @@
 #include"tracy/TracyVulkan.hpp"
 
 
+#include "CommandPoolManager.h"
+#include "IndexBuffer.h"
+
+
 
 struct ImGui_ImplVulkanH_Window;
 namespace Voidstar
 {
 
 
-	enum class ShaderType : uint32_t
+	enum class VOIDSTAR_API ShaderType : uint32_t
 	{
 		VERTEX,
 		FRAGMENT,
@@ -56,7 +60,7 @@ namespace Voidstar
 
 
 
-	struct Callables
+	struct VOIDSTAR_API Callables
 	{
 		std::function<void()> bindingsInit;
 		std::function<void()> createResources;
@@ -67,7 +71,7 @@ namespace Voidstar
 
 	
 
-	struct UniformBufferObject {
+	struct VOIDSTAR_API UniformBufferObject {
 		glm::mat4 view;
 		glm::mat4 proj;
 		alignas(4)float time;
@@ -75,30 +79,12 @@ namespace Voidstar
 
 
 	
-
-	struct GraphicsPipeline
-	{
-		vk::PipelineLayout layout;
-		vk::RenderPass renderpass;
-		vk::Pipeline pipeline;
-	};
-	struct ImGuiData
-	{
-		VkDescriptorPool g_DescriptorPool;
-		VkRenderPass g_RenderPass;
-		vk::CommandPool g_CommandPool;
-		std::vector<CommandBuffer> g_CommandBuffers;
-		std::vector<vk::Framebuffer> g_FrameBuffers;
-	};
-	
-
-
 	class Instance;
 	class Device;
 	class Swapchain;
 	class DescriptorSetLayout;
 	class CommandPoolManager;
-	class Renderer
+	class VOIDSTAR_API Renderer
 	{
 		typedef std::unordered_map<std::pair<int, PipelineType>, std::vector < vk::DescriptorSetLayoutBinding>, EnumClassHash>
 			Bindings;
@@ -264,7 +250,6 @@ namespace Voidstar
 
 
 
-		ImGuiData imguiData;
 		void* m_NoiseDataPtr;
 
 		bool m_IsResized, m_IsNewParametrs, m_IsPolygon;

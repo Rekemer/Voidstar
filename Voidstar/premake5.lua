@@ -1,5 +1,5 @@
 project "Voidstar"
-    kind "StaticLib"
+    kind "SharedLib"
     language "C++"
     cppdialect "C++17"
     targetdir ("%{wks.location}/bin/%{prj.name}/"..outputdir)
@@ -29,11 +29,14 @@ project "Voidstar"
     }
     libdirs { "%{wks.location}/Dependencies/GLFW/lib-vc2019", os.getenv("VULKAN_SDK") .. "/Lib" }
     
-    links { "glfw3.lib", "vulkan-1.lib"}
+    links { "glfw3dll.lib", "vulkan-1.lib", "SPIRV-Cross"}
 
     -- Exclude tracy.cpp from using precompiled headers
     filter "files:../Dependencies/Tracy/public/**.cpp"
     flags { "NoPCH" }
+    filter {}
+
+    defines {"VOIDSTAR_BUILD"}    
     
     filter "configurations:Debug"
         defines "VS_DEBUG"
@@ -42,7 +45,4 @@ project "Voidstar"
     filter "configurations:Release"
         defines "VS_RELEASE"
         defines "TRACY_ENABLE"
-        optimize "On"
-    filter "configurations:Release"
-        defines "VS_RELEASE"
         optimize "On"

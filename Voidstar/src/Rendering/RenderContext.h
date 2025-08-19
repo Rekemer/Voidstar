@@ -13,11 +13,11 @@ namespace Voidstar
 	class Instance;
 	class Image;
 	class SwapChainSupportDetails;
-	class RenderContext
+	class VOIDSTAR_API RenderContext
 	{
 	public:
 		static Device* GetDevice();
-		static Instance* GetInstance() { return m_Instance.get(); };
+		static Instance* GetInstance();
 		static vk::SurfaceKHR* GetSurface() { return m_Surface.get(); };
 		static void SetDevice(Device* device);
 		static void RecreateSwapchain(SwapChainSupportDetails& attachment);

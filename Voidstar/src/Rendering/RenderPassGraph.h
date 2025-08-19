@@ -12,7 +12,7 @@ namespace Voidstar
 	class CommandBuffer;
 	class Pipeline;
 	
-	class RenderPassGraph
+	class VOIDSTAR_API RenderPassGraph
 	{
 	public:
 		RenderPassGraph() = default;

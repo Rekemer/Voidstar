@@ -27,6 +27,9 @@
     <ClInclude Include="src\Cache.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="src\Core.h">
+      <Filter>src</Filter>
+    </ClInclude>
     <ClInclude Include="src\Input.h">
       <Filter>src</Filter>
     </ClInclude>

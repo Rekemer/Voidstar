@@ -24,7 +24,7 @@ namespace Voidstar
 	class AttachmentSpec;
 	class Image;
 	class SwapchainImage;
-	class RenderPassBuilder
+	class VOIDSTAR_API RenderPassBuilder
 	{
 	public:
 		// will get from vector
@@ -145,7 +145,7 @@ namespace Voidstar
 		std::vector<vk::SubpassDependency> m_Dependencies;
 	};
 	
-	class RenderPass : public IExecute
+	class VOIDSTAR_API RenderPass : public IExecute
 	{
 	public:
 		RenderPass(std::string_view name, vk::RenderPass renderPass,
@@ -168,10 +168,6 @@ namespace Voidstar
 		RenderPass(const RenderPass& pass) = delete;
 		RenderPass& operator=(const RenderPass& pass) = delete;
 		
-		RenderPass& operator=(RenderPass&& pass)
-		{
-
-		}
 		void Execute(CommandBuffer& cmd, size_t frameIndex) override;
 		
 		vk::RenderPass GetRaw()

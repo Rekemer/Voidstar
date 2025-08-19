@@ -4,7 +4,7 @@
 #include"Device.h"
 namespace Voidstar
 {
-	class Fence
+	class VOIDSTAR_API Fence
 	{
 	public:
 		Fence()
@@ -41,7 +41,7 @@ namespace Voidstar
 	private:
 		vk::Fence m_Fence = VK_NULL_HANDLE;
 	};
-	class Semaphore
+	class VOIDSTAR_API Semaphore
 	{
 	public:
 		Semaphore()

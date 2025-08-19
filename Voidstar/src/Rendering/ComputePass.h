@@ -7,7 +7,7 @@ namespace Voidstar
 {
 	class CommandBuffer;
 	class Pipeline;
-	class ComputePass : public IExecute
+	class VOIDSTAR_API ComputePass : public IExecute
 	{
 	public:
 		ComputePass(Func exec)  : m_Exec{ exec } {

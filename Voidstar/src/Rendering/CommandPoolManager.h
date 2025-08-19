@@ -3,7 +3,7 @@
 #include <vector>
 namespace Voidstar
 {
-    class CommandPoolManager {
+    class VOIDSTAR_API CommandPoolManager {
     public:
         CommandPoolManager() = default;
         ~CommandPoolManager() = default;

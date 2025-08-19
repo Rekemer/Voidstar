@@ -3,7 +3,7 @@
 #include "Types.h"
 namespace Voidstar
 {
-	struct InstanceInfo
+	struct VOIDSTAR_API InstanceInfo
 	{
 		vk::ApplicationInfo vkInfo;
 		uint32_t extensionCount;
@@ -12,7 +12,7 @@ namespace Voidstar
 		std::vector<const char*> layers;
 	};
 
-	class Instance
+	class VOIDSTAR_API Instance
 	{
 	public:
 		static UPtr<Instance> Create(InstanceInfo& info);

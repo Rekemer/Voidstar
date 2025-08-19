@@ -862,7 +862,7 @@ namespace Voidstar
 		std::vector<SPtr<Image>> images;
 		int32_t mipWidth = 1;
 		int32_t mipHeight = 1;
-		auto transfer = Renderer::Instance()->GetTransferCommandBuffer(0);
+		auto& transfer = Renderer::Instance()->GetTransferCommandBuffer(0);
 		transfer.BeginTransfering();
 		for (uint32_t i = 0; i < mipLevels; i++)
 		{

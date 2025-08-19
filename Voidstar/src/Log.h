@@ -3,7 +3,7 @@
 #include<spdlog/spdlog.h>
 namespace Voidstar
 {
-	class Log
+	class VOIDSTAR_API Log
 	{
 	public:
 

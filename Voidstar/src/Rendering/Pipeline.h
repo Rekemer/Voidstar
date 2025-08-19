@@ -4,7 +4,7 @@
 namespace Voidstar
 {
 
-	class Pipeline
+	class VOIDSTAR_API Pipeline
 	{
 	public:
 		static void CreateComputePipeline(std::string_view pipelineName,std::string_view computeShader, const std::vector<vk::DescriptorSetLayout>& layouts);
@@ -21,7 +21,7 @@ namespace Voidstar
 		vk::Pipeline m_Pipeline;
 		vk::PipelineLayout m_PipelineLayout;
 	};
-	class PipelineBuilder
+	class VOIDSTAR_API PipelineBuilder
 	{
 	public:
 		void SetDevice(vk::Device);

@@ -15,7 +15,7 @@ namespace Voidstar
 
 	struct SwapChainSupportDetails;
 	class Device;
-	class Swapchain
+	class VOIDSTAR_API Swapchain
 	{
 	public:
 		static UPtr<Swapchain> Create(SwapChainSupportDetails& info);

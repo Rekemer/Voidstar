@@ -18,6 +18,11 @@ namespace Voidstar
 	UPtr<Instance> RenderContext::m_Instance;
 	size_t RenderContext::m_FrameAmount;
 
+	Instance* RenderContext::GetInstance()
+	{
+		return m_Instance.get();
+	};
+
 	Device* RenderContext::GetDevice()
 	{
 		return m_Device;

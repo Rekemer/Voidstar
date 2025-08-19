@@ -3,7 +3,7 @@
 namespace Voidstar
 {
 	typedef uint32_t IndexType;
-	class IndexBuffer : public Buffer
+	class VOIDSTAR_API IndexBuffer : public Buffer
 	{
 	public:
 		IndexBuffer(BufferInputChunk& input,size_t indexAmount, vk::IndexType indexType) :

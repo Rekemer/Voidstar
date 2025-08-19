@@ -25,7 +25,7 @@ namespace Voidstar
 		{
 			Renderer::Instance()->Wait(m_Fence.GetFence());
 			Renderer::Instance()->Reset(m_Fence.GetFence());
-			auto compute = Renderer::Instance()->GetComputeCommandBuffer(frameIndex);
+			auto& compute = Renderer::Instance()->GetComputeCommandBuffer(frameIndex);
 			if (m_Transitions[i]->IsCompute())
 			{
 				m_Transitions[i]->Execute(compute, frameIndex);

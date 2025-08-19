@@ -376,7 +376,7 @@ public:
 
 					if (m_WorkingSet->GetLayout() != vk::ImageLayout::eShaderReadOnlyOptimal)
 					{
-						auto transferCommandBuffer = Renderer::Instance()->GetTransferCommandBuffer(frameIndex);
+						auto& transferCommandBuffer = Renderer::Instance()->GetTransferCommandBuffer(frameIndex);
 						auto cmdBuffer = transferCommandBuffer.BeginTransfering();
 						transferCommandBuffer.ChangeImageLayout(m_WorkingSet.get(), m_WorkingSet->GetLayout(), vk::ImageLayout::eShaderReadOnlyOptimal, 1, workingSetPageAmount);
 						transferCommandBuffer.EndTransfering();
@@ -496,7 +496,7 @@ public:
 				vk::SampleCountFlagBits::e1,vk::Filter::eLinear, vk::Filter::eLinear, workingSetPageAmount, vk::ImageViewType::e2DArray);
 
 			
-			auto commandBuffer = Renderer::Instance()->GetTransferCommandBuffer(0);
+			auto& commandBuffer = Renderer::Instance()->GetTransferCommandBuffer(0);
 
 
 			commandBuffer.BeginTransfering();
@@ -672,7 +672,7 @@ public:
 					auto tracyContext = Renderer::Instance()->GetTracyCtx();
 					auto tracyCmd = Renderer::Instance()->GetTracyCmd();
 					//tracyCmd.BeginRendering();
-					auto transferBuffer = Renderer::Instance()->GetTransferCommandBuffer(frameIndex);
+					auto& transferBuffer = Renderer::Instance()->GetTransferCommandBuffer(frameIndex);
 					Fence fence;
 					Renderer::Instance()->Reset(fence.GetFence());
 					
@@ -1034,7 +1034,7 @@ public:
 			init_info.ImageCount = RenderContext::GetFrameAmount();
 			init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 			result = ImGui_ImplVulkan_Init(&init_info, static_cast<RenderPass*>(m_ImGuiRenderPass.get())->GetRaw());
-			auto commandBuffer = Renderer::Instance()->GetTransferCommandBuffer(0);
+			auto& commandBuffer = Renderer::Instance()->GetTransferCommandBuffer(0);
 			commandBuffer.BeginTransfering();
 			result = ImGui_ImplVulkan_CreateFontsTexture((VkCommandBuffer)commandBuffer.GetCommandBuffer());
 			commandBuffer.EndTransfering();
@@ -1143,7 +1143,7 @@ public:
 		auto usage = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled;
 		fontAtlas = Image::CreateEmptyImage(maxWidthTexture, maxHeight, vk::Format::eR8Unorm, usage);
 
-		auto computeCommandBuffer = Renderer::Instance()->GetComputeCommandBuffer(0);
+		auto& computeCommandBuffer = Renderer::Instance()->GetComputeCommandBuffer(0);
 
 		computeCommandBuffer.BeginTransfering();
 		computeCommandBuffer.ChangeImageLayout(fontAtlas.get(), vk::ImageLayout::eGeneral, vk::ImageLayout::eTransferDstOptimal);
@@ -1201,7 +1201,9 @@ public:
 			character.Advance = face->glyph->advance.x;
 			character.Size = { face->glyph->bitmap.width ,face->glyph->bitmap.rows };
 			character.Bearing = { face->glyph->bitmap_left,face->glyph->bitmap_top };
-			Character::lineSpacing = face->height;
+			
+			CharacterLineSpacing = face->height;
+			
 			Characters.insert(std::make_pair(c, character));
 			
 			increment_x += face->glyph->bitmap.width+ padding;

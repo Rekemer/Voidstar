@@ -129,7 +129,7 @@ namespace Voidstar
 			{
 				commandBuffers.emplace_back(std::move(vkCommandBuffer));
 			}
-			return commandBuffers;
+			return std::move(commandBuffers);
 
 		}
 		catch (vk::SystemError err)

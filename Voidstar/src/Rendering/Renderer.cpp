@@ -37,7 +37,10 @@
 #include"Sync.h"
 #include <gtc/matrix_transform.hpp>
 #include <gtc/quaternion.hpp>
+#include <fstream>
 
+#include <spirv_cross/spirv_cross.hpp>
+#include <spirv_cross/spirv_glsl.hpp>
 
 namespace std
 {
@@ -285,7 +288,7 @@ namespace Voidstar
 			if (e == '\n')
 			{
 				offset.x = pos.x;
-				pos.y -= 3*Character::lineSpacing/64.f;
+				pos.y -= 3* CharacterLineSpacing /64.f;
 				continue;
 			}
 			else if (e == ' ')
@@ -678,13 +681,26 @@ namespace Voidstar
 		return filepath.substr(0, extensionIndex);
 	}
 
-	std::string CreateCommand(std::string_view shader, const char* binaryExtension, std::string& shaderPath)
+	// returns exe invocations and binary path
+	std::pair<std::string, std::string> CreateCommand(std::string_view shader, const char* binaryExtension, std::string& shaderPath)
 	{
 		auto name = GetFileNameWithoutExtension(shader.data());
-
 		std::string shaderOutput = BASE_SPIRV_OUTPUT + name.c_str() + binaryExtension;
 		std::string command = SPIRV_COMPILER_PATH + " -V " + shaderPath + " -o " + shaderOutput;
-		return command;
+		return { command, shaderOutput};
+	}
+
+
+	static std::vector<uint32_t> LoadSpv(const char* path)
+	{
+		std::ifstream f(path, std::ios::binary);
+		f.seekg(0, std::ios::end);
+		const size_t sz = size_t(f.tellg());
+		f.seekg(0, std::ios::beg);
+
+		std::vector<uint32_t> spirv(sz / sizeof(uint32_t));
+		f.read(reinterpret_cast<char*>(spirv.data()), sz);
+		return spirv;
 	}
 
 	void Renderer::CompileShader(std::string_view binaryShaderName, ShaderType type)
@@ -694,20 +710,31 @@ namespace Voidstar
 		shaderName += PipelineShaderExtensions[type];
 		auto path = BASE_SHADER_PATH +  folder + "/" + shaderName.data();
 		auto isExist = std::filesystem::exists(path);
-		if (isExist)
-		{
-			auto binaryExtension = PipelineShaderBinaryExtensions[type];
-			auto command = CreateCommand(shaderName, binaryExtension , path);
-			int result = std::system(command.c_str());
-			if (result != 0)
-			{
-				Log::GetLog()->error("shader {0} is not compiled! ", shaderName.data());
-			}
-		}
-		else
+		if (!isExist)
 		{
 			Log::GetLog()->error("SHADER COMPILATOIN: Path {0} is not found ", path);
+			return;
 		}
+		auto binaryExtension = PipelineShaderBinaryExtensions[type];
+		auto [command, output ]= CreateCommand(shaderName, binaryExtension , path);
+		int result = std::system(command.c_str());
+		if (result != 0)
+		{
+			Log::GetLog()->error("shader {0} is not compiled! ", shaderName.data());
+			return;
+		}
+		// reflection time, we need to figure out what resources shader needs to work
+		//auto spirv = LoadSpv(output.c_str());
+		//spirv_cross::Compiler comp(spirv);
+		//
+		//auto res = comp.get_shader_resources();
+		//
+		//
+		//for (auto& r : res.uniform_buffers)
+		//{
+		//
+		//}
+
 	}
 	void Renderer::Draw(Drawable& drawable)
 	{
@@ -976,14 +1003,8 @@ namespace Voidstar
 
 	}
 
-	
 
 
-	
-	void Renderer::CreateSurface()
-	{
-		
-	}
 	void Renderer::CreateInstance()
 	{
 		InstanceInfo info;

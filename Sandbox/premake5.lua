@@ -20,7 +20,13 @@ project "Sandbox"
         "../" .. FREE_TYPE_HEADERS,
         "../" .. SPDLOG_HEADERS
     }
-    links { "Voidstar","Freetype", "ImGui"  }
+    libdirs { os.getenv("VULKAN_SDK") .. "/Lib" }
+    links { "Voidstar","Freetype", "ImGui","vulkan-1.lib"  }
+
+    postbuildcommands {
+       ('{COPY} "%{wks.location}/bin/Voidstar/' .. outputdir .. '/Voidstar.dll" "%{cfg.targetdir}"')
+   }
+
     filter "configurations:Debug"
         defines "VS_DEBUG"
         symbols "On"
@@ -28,3 +34,4 @@ project "Sandbox"
     filter "configurations:Release"
         defines "VS_RELEASE"
         optimize "On"
+

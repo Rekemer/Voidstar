@@ -9,7 +9,7 @@
 namespace Voidstar
 {
 
-	class AttachmentManager
+	class VOIDSTAR_API AttachmentManager
 	{
 	public:
 		AttachmentManager()

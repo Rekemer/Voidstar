@@ -8,7 +8,7 @@ namespace Voidstar
 	class Renderer;
 	class Window;
 	class Camera;
-	class Application
+	class VOIDSTAR_API Application
 	{
 	public:
 		Application(std::string appName,size_t screenWidth, size_t screenHeight);

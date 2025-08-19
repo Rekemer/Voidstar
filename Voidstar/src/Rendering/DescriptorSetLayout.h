@@ -2,12 +2,12 @@
 #include"vulkan/vulkan.hpp"
 namespace Voidstar
 {
-	struct DescrriptorSetLayoutSpec
+	struct VOIDSTAR_API DescrriptorSetLayoutSpec
 	{
 		vk::DescriptorType type;
 		vk::ShaderStageFlags stages;
 	};
-	class DescriptorSetLayout
+	class VOIDSTAR_API DescriptorSetLayout
 	{
 	public:
 		static DescriptorSetLayout* Create(std::vector<vk::DescriptorSetLayoutBinding>& bindings);

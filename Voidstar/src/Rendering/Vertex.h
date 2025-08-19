@@ -3,7 +3,7 @@
 #include "glm.hpp"
 namespace Voidstar
 {
-	struct Vertex
+	struct VOIDSTAR_API Vertex
 	{
 		glm::vec3 Position;
 		glm::vec4 Color;
@@ -11,7 +11,7 @@ namespace Voidstar
 		alignas(4)
 		float textureID;
 	};
-	struct InstanceData
+	struct VOIDSTAR_API InstanceData
 	{
 		glm::vec4 Color;
 		alignas(16)glm::mat4 WorldMatrix;

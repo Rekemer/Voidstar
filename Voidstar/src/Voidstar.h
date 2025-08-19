@@ -1,4 +1,7 @@
 #pragma once
+
+#include "Core.h"
+
 #include "Main.h"
 #include "Rendering/Binder.h"
 #include "Rendering/Buffer.h"
@@ -18,7 +21,6 @@
 #include "Rendering/RenderPass.h"
 #include "Rendering/ComputePass.h"
 #include "Rendering/AttachmentManager.h"
-#include  "Rendering/Settings.h"
 #include "Input.h"
 #include "Types.h"
 #include "Rendering/Sync.h"

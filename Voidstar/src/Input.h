@@ -10,7 +10,7 @@ namespace Voidstar
 		class Renderer2D;
 		class Application;
 		class Window;
-		class  Input {
+		class VOIDSTAR_API Input {
 		public:
 			static void Init(std::shared_ptr<Window> window);
 			static bool IsKeyPressed(int keycode);

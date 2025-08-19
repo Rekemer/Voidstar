@@ -4,7 +4,7 @@
 #include "IndexBuffer.h"
 namespace Voidstar
 {
-	struct QuadData
+	struct VOIDSTAR_API QuadData
 	{
 		std::vector<Vertex> verticies;
 		std::vector<IndexType> indicies;

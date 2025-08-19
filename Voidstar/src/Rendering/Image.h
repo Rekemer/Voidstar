@@ -7,7 +7,7 @@
 #include <vector>
 namespace Voidstar
 {
-	struct ImageSpecs
+	struct VOIDSTAR_API  ImageSpecs
 	{
 		int width, height, depth = 1;
 		
@@ -25,7 +25,7 @@ namespace Voidstar
 	};
 
 	
-	class Image 
+	class VOIDSTAR_API Image
 	{
 	public:
 		Image() = default;

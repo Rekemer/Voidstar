@@ -1,4 +1,5 @@
 #pragma once
+#include"Core.h"
 #include"MemoryTracker.h"
 #include <memory>
 #include <string>

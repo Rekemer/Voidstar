@@ -1,6 +1,6 @@
 #pragma once
 
-struct Settings
+struct VOIDSTAR_API Settings
 {
 	int frameAmount = 2;
 };
