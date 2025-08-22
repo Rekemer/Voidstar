@@ -23,9 +23,10 @@ project "Sandbox"
     libdirs { os.getenv("VULKAN_SDK") .. "/Lib" }
     links { "Voidstar","Freetype", "ImGui","vulkan-1.lib"  }
 
-    postbuildcommands {
-       ('{COPY} "%{wks.location}/bin/Voidstar/' .. outputdir .. '/Voidstar.dll" "%{cfg.targetdir}"')
-   }
+-- if we are to make renderer a dll 
+--     postbuildcommands {
+--        ('{COPY} "%{wks.location}/bin/Voidstar/' .. outputdir .. '/Voidstar.dll" "%{cfg.targetdir}"')
+--    }
 
     filter "configurations:Debug"
         defines "VS_DEBUG"

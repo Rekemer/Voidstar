@@ -256,7 +256,7 @@ namespace Voidstar
 
 		m_CommandBuffer.pipelineBarrier(sourceStage, destinationStage, vk::DependencyFlags(), nullptr, nullptr, barrier);
 	}
-	void CommandBuffer::CopyBufferToImage(Buffer& buffer, vk::Image& image, int width, int height, int bufferOffset,vk::Offset3D offset,
+	void CommandBuffer::CopyBufferToImage(Buffer& buffer, vk::Image image, int width, int height, int bufferOffset,vk::Offset3D offset,
 		int baseLayer , int layerCount)
 	{
 		vk::BufferImageCopy copy;

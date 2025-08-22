@@ -5,8 +5,11 @@
 #include <functional>
 #include "RenderContext.h"
 #include "Device.h"
+#include "Image.h"
+#include "Log.h"
 #include <utility>
 #include "IExecute.h"
+#include "Initializers.h"
 namespace Voidstar
 {
 	class CommandBuffer;
@@ -22,7 +25,6 @@ namespace Voidstar
 	class AttachmentManager;
 	class FramebufferManager;
 	class AttachmentSpec;
-	class Image;
 	class SwapchainImage;
 	class VOIDSTAR_API RenderPassBuilder
 	{

@@ -137,15 +137,15 @@ namespace Voidstar
 	}
 
 
-	void PipelineBuilder::AddBindingDescription(vk::VertexInputBindingDescription& bindings)
+	void PipelineBuilder::AddBindingDescription(const vk::VertexInputBindingDescription& bindings)
 	{
 		m_Bindings.push_back(bindings);
 	}
-	void PipelineBuilder::AddBindingDescription(std::vector<vk::VertexInputBindingDescription>& bindings)
+	void PipelineBuilder::AddBindingDescription(const std::vector<vk::VertexInputBindingDescription>& bindings)
 	{
 		m_Bindings.insert(m_Bindings.end(), bindings.begin(), bindings.end());
 	}
-	void PipelineBuilder::AddAttributeDescription(std::vector<vk::VertexInputAttributeDescription>& attributes)
+	void PipelineBuilder::AddAttributeDescription(const std::vector<vk::VertexInputAttributeDescription>& attributes)
 	{
 		m_Attributes = attributes;
 	}

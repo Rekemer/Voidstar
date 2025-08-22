@@ -21,7 +21,7 @@ namespace Voidstar
 		glm::vec3 Pos;
 		glm::vec3 Scale = {1,1,1};
 		glm::vec4 Color = { 1,0,1,1 };
-		glm::vec3& Rot = glm::vec3{ 0,0,0 };
+		glm::vec3 Rot = glm::vec3{ 0,0,0 };
 	};
 	class Drawable
 	{

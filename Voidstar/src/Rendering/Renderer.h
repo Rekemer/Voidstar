@@ -22,21 +22,14 @@
 #include "CommandPoolManager.h"
 #include "IndexBuffer.h"
 
-
+#include "ShaderType.h"
 
 struct ImGui_ImplVulkanH_Window;
 namespace Voidstar
 {
 
 
-	enum class VOIDSTAR_API ShaderType : uint32_t
-	{
-		VERTEX,
-		FRAGMENT,
-		COMPUTE,
-		TESS_CONTROL,
-		TESS_EVALUATION
-	};
+	
 
 
 	inline std::string BASE_SHADER_PATH = "../Shaders/";
@@ -108,8 +101,8 @@ namespace Voidstar
 			return m_CommandPoolManager.get();
 		}
 		void Flush(std::vector< vk:: CommandBuffer > commandBuffers);
-		void Wait(vk::Fence& fence);
-		void Reset(vk::Fence& fence);
+		void Wait(const vk::Fence& fence);
+		void Reset(const vk::Fence& fence);
 		~Renderer();
 		Sets& GetSets() { return m_SetsAmount; }
 		Bindings& GetBindings() { return m_Bindings; }

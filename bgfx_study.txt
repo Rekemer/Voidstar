@@ -265,3 +265,52 @@ bgfx::TextureHandle rt[2] =
 	m_pickingRTDepth
 };
 m_pickingFB = bgfx::createFrameBuffer(BX_COUNTOF(rt), rt, true);
+
+
+
+reflect each shader to understand resources it needs
+bgfx::setBuffer(1, m_bufferSubd[m_pingPong], bgfx::Access::ReadWrite);
+bgfx::submit(kRenderPassGeometry, m_geomProgram);
+
+view id and shader handle
+bgfx::submit(i, m_vt_mip);
+
+
+
+Frame class 
+
+
+ViewId m_viewRemap[BGFX_CONFIG_MAX_VIEWS];
+float m_colorPalette[BGFX_CONFIG_MAX_COLOR_PALETTE][4];
+
+View m_view[BGFX_CONFIG_MAX_VIEWS];
+
+int32_t m_occlusion[BGFX_CONFIG_MAX_OCCLUSION_QUERIES];
+
+uint64_t m_sortKeys[BGFX_CONFIG_MAX_DRAW_CALLS+1];
+RenderItemCount m_sortValues[BGFX_CONFIG_MAX_DRAW_CALLS+1];
+RenderItem m_renderItem[BGFX_CONFIG_MAX_DRAW_CALLS+1];
+RenderBind m_renderItemBind[BGFX_CONFIG_MAX_DRAW_CALLS + 1];
+
+uint32_t m_blitKeys[BGFX_CONFIG_MAX_BLIT_ITEMS+1];
+BlitItem m_blitItem[BGFX_CONFIG_MAX_BLIT_ITEMS+1];
+
+FrameCache m_frameCache;
+UniformBuffer** m_uniformBuffer;
+
+uint32_t m_numRenderItems;
+uint16_t m_numBlitItems;
+
+uint32_t m_iboffset;
+uint32_t m_vboffset;
+TransientIndexBuffer* m_transientIb;
+TransientVertexBuffer* m_transientVb;
+
+Resolution m_resolution;
+uint32_t m_debug;
+
+ScreenShot m_screenShot[BGFX_CONFIG_MAX_SCREENSHOTS];
+uint8_t m_numScreenShots;
+
+CommandBuffer m_cmdPre;
+CommandBuffer m_cmdPost;

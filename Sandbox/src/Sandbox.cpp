@@ -20,6 +20,10 @@ using namespace Voidstar;
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_vulkan.h"
 
+
+
+#include <spirv_cross/spirv_cross.hpp>
+
 // ImGui
 static VkDescriptorPool         g_DescriptorPool = VK_NULL_HANDLE;
 
@@ -173,6 +177,9 @@ public:
 			builder.AddBindingDescription(StandardBinding());
 			builder.SetPolygoneMode(Renderer::Instance()->GetPolygonMode());
 			builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
+
+			m_FeedbackShader = LoadShader("feedback.spvV", "feedback.spvF");
+
 			Renderer::Instance()->CompileShader("feedback.spvV", ShaderType::VERTEX);
 			Renderer::Instance()->CompileShader("feedback.spvF", ShaderType::FRAGMENT);
 			builder.AddShader(BASE_SPIRV_OUTPUT + "feedback.spvV", vk::ShaderStageFlagBits::eVertex);
@@ -306,6 +313,9 @@ public:
 			builder.AddBindingDescription(bindings);
 			builder.SetPolygoneMode(Renderer::Instance()->GetPolygonMode());
 			builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
+
+			m_FinalShader = LoadShader("feedback.spvV", "render_working_set.spvF");
+
 			Renderer::Instance()->CompileShader("feedback.spvV", ShaderType::VERTEX);
 			Renderer::Instance()->CompileShader("render_working_set.spvF", ShaderType::FRAGMENT);
 			builder.AddShader(BASE_SPIRV_OUTPUT + "feedback.spvV", vk::ShaderStageFlagBits::eVertex);
@@ -418,6 +428,9 @@ public:
 			builder.AddBindingDescription(std::vector<vk::VertexInputBindingDescription>{});
 			builder.SetPolygoneMode(Renderer::Instance()->GetPolygonMode());
 			builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
+
+			m_DebugShader = LoadShader("debug.spvV", "debug.spvF");
+
 			Renderer::Instance()->CompileShader("debug.spvV", ShaderType::VERTEX);
 			Renderer::Instance()->CompileShader("debug.spvF", ShaderType::FRAGMENT);
 			builder.AddShader(BASE_SPIRV_OUTPUT + "debug.spvV", vk::ShaderStageFlagBits::eVertex);
@@ -437,6 +450,8 @@ public:
 		}
 		return m_DebugRenderPass;
 	}
+
+	
 
 	ExampleApplication(std::string appName, size_t screenWidth, size_t screenHeight) : Voidstar::Application(appName, screenWidth, screenHeight)
 	{
@@ -580,8 +595,8 @@ public:
 				device->UpdateDescriptorSet(m_DescriptorSets[i], 0, 1, *Renderer::Instance()->m_UniformBuffers[i], vk::DescriptorType::eUniformBuffer);
 			}
 
-			auto ptr = RenderContext::GetDevice()->GetDevice().mapMemory(m_AddInfo->GetMemory(), 0, sizeof AdditionalData);
-			memcpy(ptr, &m_AddData, sizeof AdditionalData);
+			auto ptr = RenderContext::GetDevice()->GetDevice().mapMemory(m_AddInfo->GetMemory(), 0, sizeof( AdditionalData));
+			memcpy(ptr, &m_AddData, sizeof( AdditionalData));
 			RenderContext::GetDevice()->GetDevice().unmapMemory(m_AddInfo->GetMemory());
 			device->UpdateDescriptorSet(m_DescriptorSetDebug, 1, 1,
 				*m_AddInfo, vk::DescriptorType::eUniformBuffer);
@@ -646,11 +661,15 @@ public:
 			Renderer::Instance()->CreateSyncObjects();
 
 			
-			
+
+
 			
 			UPtr<IExecute> m_UpdatePageTablePass;
 
 			{
+				m_ComputeShaders[0] = LoadShader("pageTable.comp", ShaderType::COMPUTE);
+				m_ComputeShaders[1] = LoadShader("pageTableFinal.comp", ShaderType::COMPUTE);
+
 				Renderer::Instance()->CompileShader("pageTable.comp", ShaderType::COMPUTE);
 				Pipeline::CreateComputePipeline(COMPUTE_PAGE_TABLE_PASS, BASE_SPIRV_OUTPUT +"pageTable.spvCmp", { m_DescriptorSetPageTableCompLayout->GetLayout() });
 			}
@@ -928,9 +947,7 @@ public:
 			uint32_t stencil0 = 3;
 
 			auto m_FinalRenderPass = CreateFinalRenderPass();
-
 			auto m_DebugRenderPass = CreateDebugRenderPass();
-
 			auto m_FeedbackRenderPass = CreateFeedbackRenderPass();
 					
 			// ImGui
@@ -1226,7 +1243,7 @@ public:
 
 	}
 
-	void PreRender(Camera& camera) override
+	void PreUpdate(Camera& camera) override
 	{
 		static size_t currentFrame = 0;
 
@@ -1287,9 +1304,41 @@ public:
 		
 	}
 
+	void Update(float deltaTime) override
+	{
+
+		// feedback pass
+
+		Submit(m_FeedbackRenderPass, m_FeedbackShader);
+
+		// update page table pass
+		Submit(m_UpdatePageTablePass[0], m_ComputeShaders[0]);
+		Submit(m_UpdatePageTablePass[1], m_ComputeShaders[1]);
+		// final render pass
+
+		Submit(m_FinalRenderPass, m_FinalShader);
+		// debug render pass
+		Submit(m_DebugRenderPass, m_DebugShader);
+
+
+		Render();
+
+	}
 
 
 private:
+
+	PassID m_FeedbackRenderPass = 0;
+	PassID m_UpdatePageTablePass[2] = {1,2};
+	PassID m_FinalRenderPass = 3;
+	PassID m_DebugRenderPass = 4;
+
+
+	ProgramHandle m_FeedbackShader;
+	ProgramHandle m_ComputeShaders[2];
+	ProgramHandle m_FinalShader;
+	ProgramHandle m_DebugShader;
+
 
 	vk::ClearValue clearColor = { std::array<float, 4>{137.f / 255.f, 189.f / 255.f, 199.f / 255.f, 1.0f} };
 	vk::ClearValue depthClear{ vk::ClearDepthStencilValue({ 1.0f, 0 }) };
@@ -1345,6 +1394,7 @@ private:
 };
 
 
+
 Voidstar::Application* Voidstar::CreateApplication()
 {
 	auto str = std::string("Example");
@@ -1353,7 +1403,26 @@ Voidstar::Application* Voidstar::CreateApplication()
 	const int res = 110;
 	return new ExampleApplication(str, std::min(16 * res,1920), std::min(9 * res, 1061));
 }
+
+
+//#include <spirv_cross/spirv_cross.hpp>
+//
+//std::vector<uint32_t> LoadSpv(const char* path) {
+//	std::ifstream f(path, std::ios::binary);
+//	if (!f) throw std::runtime_error("can't open spv");
+//	f.seekg(0, std::ios::end);
+//	size_t bytes = size_t(f.tellg());
+//	if (bytes % 4 != 0) throw std::runtime_error("spv size not multiple of 4");
+//	f.seekg(0, std::ios::beg);
+//
+//	std::vector<uint32_t> words(bytes / 4);
+//	f.read(reinterpret_cast<char*>(words.data()), bytes);
+//	return words;
+//};
 int main()
 {
+	//std::vector<uint32_t> words = LoadSpv(R"(C:\dev\Voidstar\Voidstar\Shaders\Binary\pageTable.spvCmp)");
+	//assert(!words.empty() && words[0] == 0x07230203u);
+	//spirv_cross::Compiler c(std::move(words));
 	return Main();
 }

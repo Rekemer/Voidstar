@@ -1,5 +1,5 @@
 project "Voidstar"
-    kind "SharedLib"
+    kind "StaticLib"
     language "C++"
     cppdialect "C++17"
     targetdir ("%{wks.location}/bin/%{prj.name}/"..outputdir)
@@ -23,6 +23,7 @@ project "Voidstar"
         "../"..SPDLOG_HEADERS,
         "%{wks.location}/Dependencies/",
         "../"..TRACY_HEADERS,
+        "../"..SPIRV_CROSS_HEADERS,
         "%{wks.location}/Dependencies/ImGui",
         "%{prj.location}/src"
         

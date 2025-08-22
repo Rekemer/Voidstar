@@ -16,7 +16,8 @@ namespace Voidstar
 
 		SPtr<Camera>& GetCamera() { return m_Camera; }
 		float GetExeTime() { return m_ExeTime; }
-		virtual void PreRender(Camera& camera) {};
+		virtual void PreUpdate(Camera& camera) {};
+		virtual void Update(float deltaTime) = 0;
 		virtual ~Application();
 		size_t GetScreenWidth() { return m_ScreenWidth; }
 		size_t GetScreenHeight() { return m_ScreenHeight; }
@@ -32,6 +33,6 @@ namespace Voidstar
 		SPtr<Window> m_Window;
 	};
 
-	Application* CreateApplication();
+	VOIDSTAR_API Application* CreateApplication();
 }
 

@@ -26,9 +26,9 @@ namespace Voidstar
 	public:
 		void SetDevice(vk::Device);
 		void AddShader(std::string_view path, vk::ShaderStageFlagBits type);
-		void AddBindingDescription(vk::VertexInputBindingDescription& bindings);
-		void AddBindingDescription(std::vector<vk::VertexInputBindingDescription>& bindings);
-		void AddAttributeDescription(std::vector<vk::VertexInputAttributeDescription>& attributes);
+		void AddBindingDescription(const vk::VertexInputBindingDescription& bindings);
+		void AddBindingDescription(const std::vector<vk::VertexInputBindingDescription>& bindings);
+		void AddAttributeDescription(const std::vector<vk::VertexInputAttributeDescription>& attributes);
 		void AddDescriptorLayouts(std::vector<vk::DescriptorSetLayout>& layouts);
 		void AddExtent(vk::Extent2D);
 		void AddImageFormat(vk::Format);

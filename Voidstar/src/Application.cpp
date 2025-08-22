@@ -40,7 +40,9 @@ namespace Voidstar
 			m_Window->Update(deltaTime);
 			m_ExeTime += deltaTime;
 			m_Camera->Update(deltaTime);
-			PreRender(*m_Camera);
+
+			PreUpdate(*m_Camera);
+			Update(deltaTime);
 
 			Renderer::Instance()->BeginFrame(*m_Camera,m_ScreenWidth,m_ScreenHeight);
 			Renderer::Instance()->Render(deltaTime,*m_Camera);

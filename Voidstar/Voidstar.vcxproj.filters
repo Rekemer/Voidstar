@@ -117,6 +117,9 @@
     <ClInclude Include="src\Rendering\Pipeline.h">
       <Filter>src\Rendering</Filter>
     </ClInclude>
+    <ClInclude Include="src\Rendering\Reflection.h">
+      <Filter>src\Rendering</Filter>
+    </ClInclude>
     <ClInclude Include="src\Rendering\RenderContext.h">
       <Filter>src\Rendering</Filter>
     </ClInclude>
@@ -132,6 +135,9 @@
     <ClInclude Include="src\Rendering\Settings.h">
       <Filter>src\Rendering</Filter>
     </ClInclude>
+    <ClInclude Include="src\Rendering\ShaderType.h">
+      <Filter>src\Rendering</Filter>
+    </ClInclude>
     <ClInclude Include="src\Rendering\SupportStruct.h">
       <Filter>src\Rendering</Filter>
     </ClInclude>
@@ -144,10 +150,16 @@
     <ClInclude Include="src\Rendering\Vertex.h">
       <Filter>src\Rendering</Filter>
     </ClInclude>
+    <ClInclude Include="src\Submission.h">
+      <Filter>src</Filter>
+    </ClInclude>
     <ClInclude Include="src\Transform.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\Types.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Utils.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\Voidstar.h">
@@ -236,8 +248,12 @@
     <ClCompile Include="src\Rendering\Swapchain.cpp">
       <Filter>src\Rendering</Filter>
     </ClCompile>
+    <ClCompile Include="src\Submission.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
     <ClCompile Include="src\Window.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="src\Utils.cpp" />
   </ItemGroup>
 </Project>

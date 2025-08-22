@@ -27,7 +27,7 @@ float lodFactor(float dist)
     float u_tessellationFactor = 2;
     float u_tessellationSlope = 1;
     float u_tessellationShift = 0;
-	float tessellationLevel = max(0.0, u_tessellationFactor/pow(dist, u_tessellationSlope) + u_tessellationShift);
+	float tessellationLevel = max(0.0,  /pow(dist, u_tessellationSlope) + u_tessellationShift);
 	return tessellationLevel;
 }
                 //indices.push_back(topLeft);

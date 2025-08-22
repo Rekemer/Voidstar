@@ -30,3 +30,5 @@
 #include "Window.h"
 #include "Log.h"
 #include "Cache.h"
+#include "Utils.h"
+#include "Submission.h"

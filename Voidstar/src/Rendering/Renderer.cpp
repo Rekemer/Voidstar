@@ -39,8 +39,8 @@
 #include <gtc/quaternion.hpp>
 #include <fstream>
 
-#include <spirv_cross/spirv_cross.hpp>
-#include <spirv_cross/spirv_glsl.hpp>
+#include "spirv_cross.hpp"
+
 
 namespace std
 {
@@ -690,18 +690,32 @@ namespace Voidstar
 		return { command, shaderOutput};
 	}
 
-
-	static std::vector<uint32_t> LoadSpv(const char* path)
-	{
+	std::vector<uint32_t> LoadSpv(const char* path) {
 		std::ifstream f(path, std::ios::binary);
+		if (!f) throw std::runtime_error("can't open spv");
 		f.seekg(0, std::ios::end);
-		const size_t sz = size_t(f.tellg());
+		size_t bytes = size_t(f.tellg());
+		if (bytes % 4 != 0) throw std::runtime_error("spv size not multiple of 4");
 		f.seekg(0, std::ios::beg);
 
-		std::vector<uint32_t> spirv(sz / sizeof(uint32_t));
-		f.read(reinterpret_cast<char*>(spirv.data()), sz);
-		return spirv;
+		std::vector<uint32_t> words(bytes / 4);
+		f.read(reinterpret_cast<char*>(words.data()), bytes);
+		return words;
 	}
+
+
+
+	ShaderType GetShaderType(spv::ExecutionModel m) {
+		switch (m) {
+		case spv::ExecutionModelVertex:                 return ShaderType::VERTEX;
+		case spv::ExecutionModelFragment:               return ShaderType::FRAGMENT;
+		case spv::ExecutionModelGLCompute:              return ShaderType::COMPUTE;
+		//case spv::ExecutionModelTessellationControl:    return ShaderType::TESS_CONTROL;
+		//case spv::ExecutionModelTessellationEvaluation: return ShaderType::TESS_EVALUATION;
+		default: throw new std::exception("Shader format {} is not supported in reflection", m);
+		}
+	}
+
 
 	void Renderer::CompileShader(std::string_view binaryShaderName, ShaderType type)
 	{	
@@ -724,16 +738,63 @@ namespace Voidstar
 			return;
 		}
 		// reflection time, we need to figure out what resources shader needs to work
-		//auto spirv = LoadSpv(output.c_str());
-		//spirv_cross::Compiler comp(spirv);
-		//
-		//auto res = comp.get_shader_resources();
-		//
-		//
-		//for (auto& r : res.uniform_buffers)
-		//{
-		//
-		//}
+		auto spirv = LoadSpv(output.c_str());
+		
+		if (spirv.empty()) {
+			Log::GetLog()->error("Empty SPIR-V: {}", output);
+			return;
+		}
+		if (spirv[0] != 0x07230203u) {
+			Log::GetLog()->error("Not a SPIR-V binary (magic=0x{:08X}) at {}", spirv[0], output);
+			return;
+		}
+		
+		spirv_cross::Compiler comp(spirv.data(), spirv.size());
+		
+
+		auto shaderType = GetShaderType(comp.get_execution_model());
+
+		// we can encode everything the shader uses amd then later create it when it is needed
+
+		auto res = comp.get_shader_resources();
+		
+		// UB, Textures, SB,
+
+		
+		for (auto& buf : res.storage_buffers) {
+			uint32_t set = comp.get_decoration(buf.id, spv::DecorationDescriptorSet);
+			uint32_t binding = comp.get_decoration(buf.id, spv::DecorationBinding);
+			size_t   blockSize = comp.get_declared_struct_size(comp.get_type(buf.base_type_id));
+			const auto& block = comp.get_type(buf.base_type_id);      // struct StorageBuffer
+			uint32_t arr_index = 0;                                   // tiles
+
+			// Stride of tiles[] (bytes between elements)
+			uint32_t stride = comp.type_struct_member_array_stride(block, arr_index);
+
+			std::cout << "SSBO: name=\"" << buf.name
+				<< "\" set=" << set << " binding=" << binding
+				<< " blockSize=" << blockSize << " bytes\n";
+
+			// Inspect members of the SSBO struct
+			const auto& st = comp.get_type(buf.base_type_id);
+			for (uint32_t m = 0; m < st.member_types.size(); ++m) {
+				auto memberTypeId = st.member_types[m];
+				auto memberName = comp.get_member_name(buf.base_type_id, m);
+				size_t offset = comp.type_struct_member_offset(st, m);
+				size_t size = comp.get_declared_struct_member_size(st, m);
+
+				std::cout << "  member[" << m << "] name=\"" << memberName
+					<< "\" offset=" << offset << " size=" << size << "\n";
+			}
+		}
+
+
+		
+		for (auto& ub : res.uniform_buffers) {
+			uint32_t set = comp.get_decoration(ub.id, spv::DecorationDescriptorSet);
+			uint32_t binding = comp.get_decoration(ub.id, spv::DecorationBinding);
+			std::cout << "UBO: name=\"" << ub.name << "\" set=" << set << " binding=" << binding << "\n";
+		}
 
 	}
 	void Renderer::Draw(Drawable& drawable)
@@ -863,8 +924,8 @@ namespace Voidstar
 	
 	Renderer* Renderer::Instance()
 	{
-		static Renderer renderer ;
-		return &renderer;
+		static Renderer* renderer = new Renderer;
+		return renderer;
 	}
 	void Renderer::Render(float deltaTime,Camera& camera)
 	{
@@ -927,11 +988,11 @@ namespace Voidstar
 	
 
 	
-	void Renderer::Wait(vk::Fence& fence)
+	void Renderer::Wait(const vk::Fence& fence)
 	{
 		m_Device->GetDevice().waitForFences(fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
 	}
-	void Renderer::Reset(vk::Fence& fence)
+	void Renderer::Reset(const vk::Fence& fence)
 	{
 		m_Device->GetDevice().resetFences(fence);
 	}
@@ -1000,7 +1061,7 @@ namespace Voidstar
 
 	Renderer::~Renderer()
 	{
-
+		
 	}
 
 

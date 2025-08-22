@@ -92,9 +92,6 @@
       <AdditionalDependencies>vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>C:\VulkanSDK\1.3.216.0\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
-    <PostBuildEvent>
-      <Command>IF EXIST "$(SolutionDir)\bin\Voidstar\Debug-windows-x86_64\Voidstar.dll"\ (xcopy /Q /E /Y /I "$(SolutionDir)\bin\Voidstar\Debug-windows-x86_64\Voidstar.dll" "..\bin\Sandbox\Debug-windows-x86_64" &gt; nul) ELSE (xcopy /Q /Y /I "$(SolutionDir)\bin\Voidstar\Debug-windows-x86_64\Voidstar.dll" "..\bin\Sandbox\Debug-windows-x86_64" &gt; nul)</Command>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -118,9 +115,6 @@
       <AdditionalDependencies>vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>C:\VulkanSDK\1.3.216.0\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
-    <PostBuildEvent>
-      <Command>IF EXIST "$(SolutionDir)\bin\Voidstar\Release-windows-x86_64\Voidstar.dll"\ (xcopy /Q /E /Y /I "$(SolutionDir)\bin\Voidstar\Release-windows-x86_64\Voidstar.dll" "..\bin\Sandbox\Release-windows-x86_64" &gt; nul) ELSE (xcopy /Q /Y /I "$(SolutionDir)\bin\Voidstar\Release-windows-x86_64\Voidstar.dll" "..\bin\Sandbox\Release-windows-x86_64" &gt; nul)</Command>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Dist|x64'">
     <ClCompile>
@@ -138,9 +132,6 @@
       <AdditionalDependencies>vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>C:\VulkanSDK\1.3.216.0\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
-    <PostBuildEvent>
-      <Command>IF EXIST "$(SolutionDir)\bin\Voidstar\Dist-windows-x86_64\Voidstar.dll"\ (xcopy /Q /E /Y /I "$(SolutionDir)\bin\Voidstar\Dist-windows-x86_64\Voidstar.dll" "..\bin\Sandbox\Dist-windows-x86_64" &gt; nul) ELSE (xcopy /Q /Y /I "$(SolutionDir)\bin\Voidstar\Dist-windows-x86_64\Voidstar.dll" "..\bin\Sandbox\Dist-windows-x86_64" &gt; nul)</Command>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\Sandbox.cpp" />
