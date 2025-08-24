@@ -159,15 +159,13 @@
     <ClInclude Include="src\Types.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="src\Utils.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="src\Voidstar.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\Window.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="src\ResourceCommandBuffer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Dependencies\Tracy\public\TracyClient.cpp">
@@ -254,6 +252,6 @@
     <ClCompile Include="src\Window.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="src\Utils.cpp" />
+    <ClCompile Include="src\ResourceCommandBuffer.cpp" />
   </ItemGroup>
 </Project>

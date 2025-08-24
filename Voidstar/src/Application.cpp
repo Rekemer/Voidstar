@@ -4,8 +4,9 @@
 #include "Log.h"
 #include "Rendering/Renderer.h"
 #include "Input.h"
-
 #include "Rendering/Camera.h"
+#include "Submission.h"
+
 namespace Voidstar
 {
 	Application::Application(std::string appName ,size_t screenWidth, size_t screenHeight) :
@@ -18,6 +19,7 @@ namespace Voidstar
 		m_Camera = CreateSPtr<Camera>();
 		m_Camera->UpdateProj(screenWidth, screenHeight,m_Camera->GetFov());
 		Input::Init(m_Window);
+		SubmitInit();
 		Renderer::Instance()->Init(screenWidth, screenHeight, m_Window, this);
 
 	}

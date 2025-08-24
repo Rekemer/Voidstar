@@ -178,7 +178,8 @@ public:
 			builder.SetPolygoneMode(Renderer::Instance()->GetPolygonMode());
 			builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
 
-			m_FeedbackShader = LoadShader("feedback.spvV", "feedback.spvF");
+			//m_FeedbackShader = LoadShader("feedback.spvV", "feedback.spvF");
+			LoadProgram("feedback.spvV", "feedback.spvF");
 
 			Renderer::Instance()->CompileShader("feedback.spvV", ShaderType::VERTEX);
 			Renderer::Instance()->CompileShader("feedback.spvF", ShaderType::FRAGMENT);
@@ -314,7 +315,7 @@ public:
 			builder.SetPolygoneMode(Renderer::Instance()->GetPolygonMode());
 			builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
 
-			m_FinalShader = LoadShader("feedback.spvV", "render_working_set.spvF");
+			//m_FinalShader = LoadShader("feedback.spvV", "render_working_set.spvF");
 
 			Renderer::Instance()->CompileShader("feedback.spvV", ShaderType::VERTEX);
 			Renderer::Instance()->CompileShader("render_working_set.spvF", ShaderType::FRAGMENT);
@@ -429,7 +430,7 @@ public:
 			builder.SetPolygoneMode(Renderer::Instance()->GetPolygonMode());
 			builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
 
-			m_DebugShader = LoadShader("debug.spvV", "debug.spvF");
+			//m_DebugShader = LoadShader("debug.spvV", "debug.spvF");
 
 			Renderer::Instance()->CompileShader("debug.spvV", ShaderType::VERTEX);
 			Renderer::Instance()->CompileShader("debug.spvF", ShaderType::FRAGMENT);
@@ -667,8 +668,8 @@ public:
 			UPtr<IExecute> m_UpdatePageTablePass;
 
 			{
-				m_ComputeShaders[0] = LoadShader("pageTable.comp", ShaderType::COMPUTE);
-				m_ComputeShaders[1] = LoadShader("pageTableFinal.comp", ShaderType::COMPUTE);
+				//m_ComputeShaders[0] = LoadShader("pageTable.comp", ShaderType::COMPUTE);
+				//m_ComputeShaders[1] = LoadShader("pageTableFinal.comp", ShaderType::COMPUTE);
 
 				Renderer::Instance()->CompileShader("pageTable.comp", ShaderType::COMPUTE);
 				Pipeline::CreateComputePipeline(COMPUTE_PAGE_TABLE_PASS, BASE_SPIRV_OUTPUT +"pageTable.spvCmp", { m_DescriptorSetPageTableCompLayout->GetLayout() });

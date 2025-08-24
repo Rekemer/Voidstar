@@ -184,10 +184,10 @@
     <ClInclude Include="src\Rendering\Swapchain.h" />
     <ClInclude Include="src\Rendering\Sync.h" />
     <ClInclude Include="src\Rendering\Vertex.h" />
+    <ClInclude Include="src\ResourceCommandBuffer.h" />
     <ClInclude Include="src\Submission.h" />
     <ClInclude Include="src\Transform.h" />
     <ClInclude Include="src\Types.h" />
-    <ClInclude Include="src\Utils.h" />
     <ClInclude Include="src\Voidstar.h" />
     <ClInclude Include="src\Window.h" />
   </ItemGroup>
@@ -222,8 +222,8 @@
     <ClCompile Include="src\Rendering\RenderPassGraph.cpp" />
     <ClCompile Include="src\Rendering\Renderer.cpp" />
     <ClCompile Include="src\Rendering\Swapchain.cpp" />
+    <ClCompile Include="src\ResourceCommandBuffer.cpp" />
     <ClCompile Include="src\Submission.cpp" />
-    <ClCompile Include="src\Utils.cpp" />
     <ClCompile Include="src\Window.cpp" />
   </ItemGroup>
   <ItemGroup>

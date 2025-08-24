@@ -1,36 +1,51 @@
 #include "Prereq.h"
 #include "Submission.h"
+#include "Rendering/RenderContext.h"
 
 namespace Voidstar
 {
-	class Frame
-	{
+	UPtr<Submission> g_Submission = CreateUPtr<Submission>();
+
+	ProgramHandle LoadProgram(std::string_view vertex, std::string_view fragment, std::string_view geometry) { return {}; }
+
+	ProgramHandle LoadProgram(std::string_view vertex, std::string_view fragment)
+	{ 
+		auto& cmd = g_Submission->GetCommandBuffer(ResourceCommand::CreateShader);
+		cmd.Write(vertex);
+
+		cmd.ReadByte();
+		auto str = cmd.ReadString();
+		std::cout << str;
+		g_Submission->GetCommandBuffer(ResourceCommand::CreateShader).Write(fragment);
+
+		g_Submission->GetCommandBuffer(ResourceCommand::CreateProgram);
 		
-		// command to execute before Render/Compute API calls
-		ResourceCommandBuffer m_CmdPre;
-		// command to execute after Render/Compute API calls
-		ResourceCommandBuffer m_CmdPost;
-	};
-
-	Frame m_frame[1];
-	// the one doing API calls
-	Frame* m_render;
-	// the one registering user commands
-	Frame* m_submit;
-}
-
-
-void Voidstar::Submit(PassID id, ProgramHandle)
-{
+		return {}; 
+	}
 	
+	ProgramHandle LoadProgram(std::string_view shader, ShaderType type) { return {}; }
+	
+	ShaderHandle LoadShader(std::string_view shader, ShaderType type)
+	{
+
+		return {};
+	}
+
+	void Submit(PassID id, ProgramHandle)
+	{
+
+	}
+
+	void SubmitInit()
+	{
+		g_Submission->Submit = g_Submission->Render = &g_Submission->Frames[0];
+	}
+
+	void Render()
+	{
+
+	}
 }
 
-void Voidstar::Init()
-{
-	m_submit = m_render = &m_frame[0];
-}
 
-void Voidstar::Render()
-{
 
-}

@@ -314,3 +314,9 @@ uint8_t m_numScreenShots;
 
 CommandBuffer m_cmdPre;
 CommandBuffer m_cmdPost;
+
+
+we will read command to compile shader and then return metadata to front end after reflection
+
+
+front end will emit commands for compilation and linking to form metadata on backend

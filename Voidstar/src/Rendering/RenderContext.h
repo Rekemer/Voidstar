@@ -1,7 +1,6 @@
 #pragma once
 #include"Prereq.h"
 #include"vulkan/vulkan.hpp"
-
 namespace Voidstar
 {
 	class Device;
