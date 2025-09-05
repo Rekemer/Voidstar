@@ -3,6 +3,8 @@
 #include <string_view>
 #include "Core.h"
 #include "Rendering/ShaderType.h"
+#include "InitParams.h"
+#include "Window.h"
 
 namespace Voidstar
 {
@@ -10,7 +12,6 @@ namespace Voidstar
 
 	struct Frame
 	{
-
 		// command to execute before Render/Compute API calls
 		ResourceCommandBuffer CmdPre;
 		// command to execute after Render/Compute API calls
@@ -26,20 +27,12 @@ namespace Voidstar
 		{
 			auto& cmdBuf = command < ResourceCommand::End ? Submit->CmdPre : Submit->CmdPost;
 
-			// alignment ???
-
-			//template<typename Type>
-			//void write(const Type & _in)
-			//{
-			//	align(BX_ALIGNOF(Type));
-			//	write(reinterpret_cast<const uint8_t*>(&_in), sizeof(Type));
-			//}
-
 			cmdBuf.WriteByte(static_cast<uint8_t>(command));
 
 			return cmdBuf;
 		}
-
+		// am not sure how we treat it in multithreading
+		SPtr<Window> Window;
 		Frame  Frames[1];
 		// the one registering user commands
 		Frame* Submit;
@@ -60,9 +53,9 @@ namespace Voidstar
 	ProgramHandle LoadProgram(std::string_view program, ShaderType type);
 
 	ShaderHandle LoadShader(std::string_view shader, ShaderType type);
-
-	void SubmitInit();
+	void SetWindow(SPtr<Window> window);
+	void SubmitInit(InitParams);
 	void Submit(PassID id, ProgramHandle program);
-	void Render();
+	void Step();
 
 }

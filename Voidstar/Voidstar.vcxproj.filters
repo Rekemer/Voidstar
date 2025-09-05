@@ -166,6 +166,7 @@
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\ResourceCommandBuffer.h" />
+    <ClInclude Include="src\SparseSet.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Dependencies\Tracy\public\TracyClient.cpp">
@@ -253,5 +254,6 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="src\ResourceCommandBuffer.cpp" />
+    <ClCompile Include="src\SparseSet.cpp" />
   </ItemGroup>
 </Project>

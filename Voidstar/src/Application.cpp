@@ -6,21 +6,30 @@
 #include "Input.h"
 #include "Rendering/Camera.h"
 #include "Submission.h"
+#include "InitParams.h"
 
 namespace Voidstar
 {
-	Application::Application(std::string appName ,size_t screenWidth, size_t screenHeight) :
+	Application::Application(std::string_view appName ,size_t screenWidth, size_t screenHeight) :
 		m_ScreenWidth{ screenWidth }, m_ScreenHeight{ screenHeight}
 	{
 		Log::Init();
 		// init Window
-		m_Window = CreateSPtr<Window>(appName, screenWidth, screenHeight);
+		
 		// init Renderer
 		m_Camera = CreateSPtr<Camera>();
 		m_Camera->UpdateProj(screenWidth, screenHeight,m_Camera->GetFov());
+
+		InitParams init{screenWidth,screenHeight};
+		init.SetName(appName);
+		
+		
+		m_Window = CreateSPtr<Window>(init.appName, init.width, init.height);
+		
+		SetWindow(m_Window);
 		Input::Init(m_Window);
-		SubmitInit();
-		Renderer::Instance()->Init(screenWidth, screenHeight, m_Window, this);
+		SubmitInit(init);
+		Step();
 
 	}
 	Application::~Application()

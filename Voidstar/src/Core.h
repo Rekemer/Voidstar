@@ -8,4 +8,4 @@
 
 
 #define VOID_HANDLE(_name)\
-	struct _name { uint32_t idx; };
+	struct _name { uint16_t idx; };

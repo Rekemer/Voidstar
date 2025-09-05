@@ -24,6 +24,8 @@
 
 #include "ShaderType.h"
 
+#include "ShaderCompiler.h"
+
 struct ImGui_ImplVulkanH_Window;
 namespace Voidstar
 {
@@ -32,13 +34,6 @@ namespace Voidstar
 	
 
 
-	inline std::string BASE_SHADER_PATH = "../Shaders/";
-	inline std::string BASE_RES_PATH = "res";
-	
-	inline std::string BASE_VIRT_PATH = "E:/dev/Voidstar/mipMaps_virtualTex4.tiff/";
-
-	const std::string SPIRV_COMPILER_PATH = std::string(std::string(std::getenv("VULKAN_SDK")) + std::string("/Bin/glslangvalidator.exe"));
-	inline std::string BASE_SPIRV_OUTPUT = BASE_SHADER_PATH + "Binary/";
 
 	class Window;
 	class SwapChainSupportDetails;
@@ -85,17 +80,17 @@ namespace Voidstar
 			Sets;
 
 	public:
-		void Init(size_t screenWidth, size_t screenHeight, std::shared_ptr<Window> window, Application* app );
+		void Init(size_t screenWidth, size_t screenHeight, std::shared_ptr<Window> window);
 		static Renderer* Instance();
 		void BeginFrame(Camera& camera, size_t viewportWidth, 
 			size_t viewportHeight);
 		void Render(float deltaTime,Camera& camera);
-
+		void Compile(std::string_view shader, ShaderType type);
 		
 		
 		void EndFrame();
 		void UserInit();
-		void CompileShader(std::string_view path, ShaderType type);
+
 		CommandPoolManager* GetCommandPoolManager()
 		{
 			return m_CommandPoolManager.get();
@@ -209,7 +204,8 @@ namespace Voidstar
 		Device* m_Device;
 		int m_ViewportWidth, m_ViewportHeight;
 		size_t m_CurrentFrame = 0;
-		Application* m_App;
+		
+		ShaderCompiler m_Compiler;
 
 		std::vector<CommandBuffer> m_RenderCommandBuffer,
 			m_TransferCommandBuffer, m_ComputeCommandBuffer;

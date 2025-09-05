@@ -11,10 +11,10 @@ namespace Voidstar
 	class VOIDSTAR_API Application
 	{
 	public:
-		Application(std::string appName,size_t screenWidth, size_t screenHeight);
+		Application(std::string_view appName,size_t screenWidth, size_t screenHeight);
 		void Run();
 
-		SPtr<Camera>& GetCamera() { return m_Camera; }
+		SPtr<Camera> GetCamera() { return m_Camera; }
 		float GetExeTime() { return m_ExeTime; }
 		virtual void PreUpdate(Camera& camera) {};
 		virtual void Update(float deltaTime) = 0;

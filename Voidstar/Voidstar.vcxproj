@@ -144,6 +144,7 @@
     <ClInclude Include="src\Application.h" />
     <ClInclude Include="src\Cache.h" />
     <ClInclude Include="src\Core.h" />
+    <ClInclude Include="src\Init.h" />
     <ClInclude Include="src\Input.h" />
     <ClInclude Include="src\Keys.h" />
     <ClInclude Include="src\Log.h" />
@@ -185,6 +186,7 @@
     <ClInclude Include="src\Rendering\Sync.h" />
     <ClInclude Include="src\Rendering\Vertex.h" />
     <ClInclude Include="src\ResourceCommandBuffer.h" />
+    <ClInclude Include="src\SparseSet.h" />
     <ClInclude Include="src\Submission.h" />
     <ClInclude Include="src\Transform.h" />
     <ClInclude Include="src\Types.h" />
@@ -223,6 +225,7 @@
     <ClCompile Include="src\Rendering\Renderer.cpp" />
     <ClCompile Include="src\Rendering\Swapchain.cpp" />
     <ClCompile Include="src\ResourceCommandBuffer.cpp" />
+    <ClCompile Include="src\SparseSet.cpp" />
     <ClCompile Include="src\Submission.cpp" />
     <ClCompile Include="src\Window.cpp" />
   </ItemGroup>

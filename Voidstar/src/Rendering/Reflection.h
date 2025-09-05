@@ -45,8 +45,4 @@ namespace Voidstar
         std::vector<PushConstRange> pushes;  // merged
         uint64_t layoutKey = 0;              // hash of merged layout
     };
-
-
-
-
 }
