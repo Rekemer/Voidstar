@@ -23,9 +23,6 @@ layout(location = 3) out float out_texIndex;
 
 void main() 
 {
-    
-    vec3 instanceScale = vec3(100,100,1);
-    vec3 instancePos = vec3(100,500,0); 
     vec3 worldPos = in_pos;
     vec4 clipSpace = ubo.proj * vec4(worldPos,1);
 	out_uv = vec2(in_uv.x,in_uv.y);

@@ -622,33 +622,7 @@ namespace Voidstar
 
 	
 
-	std::string GetFileNameWithoutExtension(const std::string& filepath)
-	{
-		size_t extensionIndex = filepath.find_last_of('.');
-		return filepath.substr(0, extensionIndex);
-	}
-
-	// returns exe invocations and binary path
-	std::pair<std::string, std::string> CreateCommand(std::string_view shader, const char* binaryExtension, std::string& shaderPath)
-	{
-		auto name = GetFileNameWithoutExtension(shader.data());
-		std::string shaderOutput = BASE_SPIRV_OUTPUT + name.c_str() + binaryExtension;
-		std::string command = SPIRV_COMPILER_PATH + " -V " + shaderPath + " -o " + shaderOutput;
-		return { command, shaderOutput};
-	}
-
-	std::vector<uint32_t> LoadSpv(const char* path) {
-		std::ifstream f(path, std::ios::binary);
-		if (!f) throw std::runtime_error("can't open spv");
-		f.seekg(0, std::ios::end);
-		size_t bytes = size_t(f.tellg());
-		if (bytes % 4 != 0) throw std::runtime_error("spv size not multiple of 4");
-		f.seekg(0, std::ios::beg);
-
-		std::vector<uint32_t> words(bytes / 4);
-		f.read(reinterpret_cast<char*>(words.data()), bytes);
-		return words;
-	}
+	
 
 
 
@@ -783,12 +757,14 @@ namespace Voidstar
 		return renderer;
 	}
 
-	void Renderer::Compile(std::string_view path, ShaderType type)
+	void Renderer::CompileShader(std::string_view path)
 	{
-		m_Compiler.Compile(path, type);
-
+		m_Compiler.Compile(std::filesystem::path{path});
 	}
-
+	void Renderer::LinkShaders(ProgramHandle handle ,uint8_t shaderAmount)
+	{
+		m_Compiler.Link(handle, shaderAmount);
+	}
 	void Renderer::Render(float deltaTime,Camera& camera)
 	{
 		uint32_t imageIndex;
@@ -889,10 +865,10 @@ namespace Voidstar
 	}
 	void Renderer::EndFrame()
 	{
-		for (auto& e : m_Drawables)
-		{
-			e.second.clear();
-		}
+		//for (auto& e : m_Drawables)
+		//{
+		//	e.second.clear();
+		//}
 	}
 
 

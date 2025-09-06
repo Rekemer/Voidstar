@@ -10,6 +10,8 @@ namespace Voidstar
 {
 
 
+
+
 	struct Frame
 	{
 		// command to execute before Render/Compute API calls
@@ -42,6 +44,7 @@ namespace Voidstar
 
 	VOID_HANDLE(ProgramHandle)
 	VOID_HANDLE(ShaderHandle)
+	VOID_HANDLE(VertexBufferHandle)
 
 	using PassID = uint16_t;
 
@@ -56,6 +59,7 @@ namespace Voidstar
 	void SetWindow(SPtr<Window> window);
 	void SubmitInit(InitParams);
 	void Submit(PassID id, ProgramHandle program);
+	void SetVertexBuffer(VertexBufferHandle handle);
 	void Step();
 
 }

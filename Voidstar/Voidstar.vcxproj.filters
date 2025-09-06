@@ -117,9 +117,6 @@
     <ClInclude Include="src\Rendering\Pipeline.h">
       <Filter>src\Rendering</Filter>
     </ClInclude>
-    <ClInclude Include="src\Rendering\Reflection.h">
-      <Filter>src\Rendering</Filter>
-    </ClInclude>
     <ClInclude Include="src\Rendering\RenderContext.h">
       <Filter>src\Rendering</Filter>
     </ClInclude>
@@ -167,6 +164,8 @@
     </ClInclude>
     <ClInclude Include="src\ResourceCommandBuffer.h" />
     <ClInclude Include="src\SparseSet.h" />
+    <ClInclude Include="src\Init.h" />
+    <ClInclude Include="src\Rendering\ShaderCompiler.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Dependencies\Tracy\public\TracyClient.cpp">
@@ -255,5 +254,6 @@
     </ClCompile>
     <ClCompile Include="src\ResourceCommandBuffer.cpp" />
     <ClCompile Include="src\SparseSet.cpp" />
+    <ClCompile Include="src\Rendering\ShaderCompiler.cpp" />
   </ItemGroup>
 </Project>

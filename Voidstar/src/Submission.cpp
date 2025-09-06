@@ -22,9 +22,12 @@ namespace Voidstar
 		LoadShader(vertex, ShaderType::VERTEX);
 		LoadShader(vertex, ShaderType::FRAGMENT);
 
-		g_Submission->GetCommandBuffer(ResourceCommand::CreateProgram);
-		
 		auto programHandle =g_ProgramHandleAllocator.GetId();
+		auto& cmd = g_Submission->GetCommandBuffer(ResourceCommand::CreateProgram);
+		
+		cmd.WriteObject(programHandle);
+		cmd.WriteByte(2);
+
 		return ProgramHandle{ programHandle };
 	}
 	
@@ -100,13 +103,14 @@ namespace Voidstar
 				auto handle = commandBuffer.Read<uint16_t>();
 
 				auto path = commandBuffer.ReadString();
-				Renderer::Instance()->CompileShader(path,ShaderType::VERTEX);
-				//cmd.WriteString(shader);
+				Renderer::Instance()->CompileShader(path);
 				break;
 			}
 			case Voidstar::ResourceCommand::CreateProgram:
 			{
-
+				auto handle = commandBuffer.Read<uint16_t>();
+				auto shaderAmount = commandBuffer.ReadByte();
+				Renderer::Instance()->LinkShaders(ProgramHandle{ handle }, shaderAmount);
 				break;
 			}
 			case Voidstar::ResourceCommand::CreateTexture:

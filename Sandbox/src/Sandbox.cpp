@@ -95,7 +95,7 @@ public:
 
 	glm::vec2 feedbackSize;
 
-
+#if 0 
 	UPtr<IExecute> CreateFeedbackRenderPass()
 	{
 		UPtr<IExecute> m_FeedbackRenderPass;
@@ -178,15 +178,15 @@ public:
 			builder.SetPolygoneMode(Renderer::Instance()->GetPolygonMode());
 			builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
 
-			m_FeedbackShader  = LoadProgram("feedback.spvV", "feedback.spvF");
+			m_FeedbackShader  = LoadProgram("feedback.vert", "feedback.frag");
 			
 			Step();
 
 
-			Renderer::Instance()->CompileShader("feedback.spvV", ShaderType::VERTEX);
-			Renderer::Instance()->CompileShader("feedback.spvF", ShaderType::FRAGMENT);
+			//Renderer::Instance()->CompileShader("feedback.spvV");
+			//Renderer::Instance()->CompileShader("feedback.spvF");
 			builder.AddShader(BASE_SPIRV_OUTPUT + "feedback.spvV", vk::ShaderStageFlagBits::eVertex);
-			builder.AddShader(BASE_SPIRV_OUTPUT + "feedback.spvF", vk::ShaderStageFlagBits::eFragment);
+			//builder.AddShader(BASE_SPIRV_OUTPUT + "feedback.spvF", vk::ShaderStageFlagBits::eFragment);
 			builder.SetSubpassAmount(0);
 			builder.AddExtent(feedbackExtent);
 			builder.AddImageFormat(vk::Format::eR8G8B8A8Uint);
@@ -318,12 +318,12 @@ public:
 			builder.SetTopology(vk::PrimitiveTopology::eTriangleList);
 
 			
-			m_FinalShader = LoadProgram("feedback.spvV", "render_working_set.spvF");
+			m_FinalShader = LoadProgram("feedback.vert", "render_working_set.frag");
 			
-			Renderer::Instance()->CompileShader("feedback.spvV", ShaderType::VERTEX);
-			Renderer::Instance()->CompileShader("render_working_set.spvF", ShaderType::FRAGMENT);
-			builder.AddShader(BASE_SPIRV_OUTPUT + "feedback.spvV", vk::ShaderStageFlagBits::eVertex);
-			builder.AddShader(BASE_SPIRV_OUTPUT + "render_working_set.spvF", vk::ShaderStageFlagBits::eFragment);
+			//Renderer::Instance()->CompileShader("feedback.spvV");
+			//Renderer::Instance()->CompileShader("render_working_set.spvF");
+			//builder.AddShader(BASE_SPIRV_OUTPUT + "feedback.spvV", vk::ShaderStageFlagBits::eVertex);
+			//builder.AddShader(BASE_SPIRV_OUTPUT + "render_working_set.spvF", vk::ShaderStageFlagBits::eFragment);
 			builder.SetSubpassAmount(0);
 			builder.AddExtent(extent);
 			builder.AddImageFormat(vk::Format::eB8G8R8A8Unorm);
@@ -436,10 +436,10 @@ public:
 		
 			m_DebugShader = LoadProgram("debug.spvV", "debug.spvF");
 		
-			Renderer::Instance()->CompileShader("debug.spvV", ShaderType::VERTEX);
-			Renderer::Instance()->CompileShader("debug.spvF", ShaderType::FRAGMENT);
-			builder.AddShader(BASE_SPIRV_OUTPUT + "debug.spvV", vk::ShaderStageFlagBits::eVertex);
-			builder.AddShader(BASE_SPIRV_OUTPUT + "debug.spvF", vk::ShaderStageFlagBits::eFragment);
+			//Renderer::Instance()->CompileShader("debug.spvV");
+			//Renderer::Instance()->CompileShader("debug.spvF");
+			//builder.AddShader(BASE_SPIRV_OUTPUT + "debug.spvV", vk::ShaderStageFlagBits::eVertex);
+			//builder.AddShader(BASE_SPIRV_OUTPUT + "debug.spvF", vk::ShaderStageFlagBits::eFragment);
 			builder.SetSubpassAmount(0);
 			builder.AddExtent(extent);
 			builder.AddImageFormat(vk::Format::eB8G8R8A8Unorm);
@@ -455,7 +455,7 @@ public:
 		}
 		return m_DebugRenderPass;
 	}
-
+#endif
 	
 
 	ExampleApplication(std::string appName, size_t screenWidth, size_t screenHeight) : Voidstar::Application(appName, screenWidth, screenHeight)
@@ -467,11 +467,12 @@ public:
 		feedbackSize = { Application::GetScreenWidth() / 70 ,Application::GetScreenHeight() / 70 };
 
 
-		m_FeedbackShader = LoadProgram("feedback.spvV", "feedback.spvF");
+		m_FeedbackShader = LoadProgram("feedback.vert", "feedback.frag");
+		m_DefautShader = LoadProgram("basic.vert", "basic.frag");
 
 		Step();
 
-
+#if 0
 
 		auto bindingsInit = [this]()
 		{
@@ -683,12 +684,12 @@ public:
 				m_ComputeShaders[0] = LoadProgram("pageTable.comp", ShaderType::COMPUTE);
 				m_ComputeShaders[1] = LoadProgram("pageTableFinal.comp", ShaderType::COMPUTE);
 
-				Renderer::Instance()->CompileShader("pageTable.comp", ShaderType::COMPUTE);
-				Pipeline::CreateComputePipeline(COMPUTE_PAGE_TABLE_PASS, BASE_SPIRV_OUTPUT +"pageTable.spvCmp", { m_DescriptorSetPageTableCompLayout->GetLayout() });
+				//Renderer::Instance()->CompileShader("pageTable.comp");
+				//Pipeline::CreateComputePipeline(COMPUTE_PAGE_TABLE_PASS, BASE_SPIRV_OUTPUT +"pageTable.spvCmp", { m_DescriptorSetPageTableCompLayout->GetLayout() });
 			}
 			{
-				Renderer::Instance()->CompileShader("pageTableFinal.comp", ShaderType::COMPUTE);
-				Pipeline::CreateComputePipeline(COMPUTE_PAGE_TABLE_FINAL_PASS, BASE_SPIRV_OUTPUT + "pageTableFinal.spvCmp", { m_DescriptorSetPageTableCompFinalLayout->GetLayout() });
+				//Renderer::Instance()->CompileShader("pageTableFinal.comp");
+				//Pipeline::CreateComputePipeline(COMPUTE_PAGE_TABLE_FINAL_PASS, BASE_SPIRV_OUTPUT + "pageTableFinal.spvCmp", { m_DescriptorSetPageTableCompFinalLayout->GetLayout() });
 			
 			}
 
@@ -756,82 +757,82 @@ public:
 					{
 						std::vector<std::future<void>> tilesToLoad;
 						ZoneScopedN("Reading Feedback Buffer");
-						for (auto& feedback : m_FeedbackRes)
-						{
-							// there is feedback
-							if (feedback.isValid > 0)
-							{
-								std::stringstream ss;
+						//for (auto& feedback : m_FeedbackRes)
+						//{
+						//	// there is feedback
+						//	if (feedback.isValid > 0)
+						//	{
+						//		std::stringstream ss;
 
-								ss << (int)feedback.pageX << "_" << (int)feedback.pageY << ".png";
-								std::string path = BASE_VIRT_PATH + mipTiles[feedback.mipMap].data() + ss.str();
-								// check cache instead
-								auto cachedPage = m_Cache.Get(path);
+						//		ss << (int)feedback.pageX << "_" << (int)feedback.pageY << ".png";
+						//		std::string path = BASE_VIRT_PATH + mipTiles[feedback.mipMap].data() + ss.str();
+						//		// check cache instead
+						//		auto cachedPage = m_Cache.Get(path);
 
 
-								if (!cachedPage)
-								{
-									if (m_Overload)
-									{
-										ZoneScopedN("Replace old page");
-										auto coords = m_Cache.GetLUPage(mipTiles, BASE_VIRT_PATH);
-										m_WorkingSetPtr[0] = coords.x ;
-										m_WorkingSetPtr[1] = coords.y ;
-									}
-									else
-									{
-										ZoneScopedN("Add new page");
-										if (workingSetPageAmountX <= m_WorkingSetPtr[0] + 1)
-										{
-											m_WorkingSetPtr[0] = 0;
-											if (workingSetPageAmountY <= m_WorkingSetPtr[1] + 1)
-											{
-												ZoneScopedN("Replace old page first time");
-												// we dont have enough space, must overwrite something
-												m_Overload = true;
-												auto coords = m_Cache.GetLUPage(mipTiles, BASE_VIRT_PATH);
-												m_WorkingSetPtr[0] = coords.x ;
-												m_WorkingSetPtr[1] = coords.y ;
-											}
-											else
-											{
-												m_WorkingSetPtr[1] += 1;
-											}
-										}
-										else
-										{
-											m_WorkingSetPtr[0] += 1;
-										}
-									}
+						//		if (!cachedPage)
+						//		{
+						//			if (m_Overload)
+						//			{
+						//				ZoneScopedN("Replace old page");
+						//				auto coords = m_Cache.GetLUPage(mipTiles, BASE_VIRT_PATH);
+						//				m_WorkingSetPtr[0] = coords.x ;
+						//				m_WorkingSetPtr[1] = coords.y ;
+						//			}
+						//			else
+						//			{
+						//				ZoneScopedN("Add new page");
+						//				if (workingSetPageAmountX <= m_WorkingSetPtr[0] + 1)
+						//				{
+						//					m_WorkingSetPtr[0] = 0;
+						//					if (workingSetPageAmountY <= m_WorkingSetPtr[1] + 1)
+						//					{
+						//						ZoneScopedN("Replace old page first time");
+						//						// we dont have enough space, must overwrite something
+						//						m_Overload = true;
+						//						auto coords = m_Cache.GetLUPage(mipTiles, BASE_VIRT_PATH);
+						//						m_WorkingSetPtr[0] = coords.x ;
+						//						m_WorkingSetPtr[1] = coords.y ;
+						//					}
+						//					else
+						//					{
+						//						m_WorkingSetPtr[1] += 1;
+						//					}
+						//				}
+						//				else
+						//				{
+						//					m_WorkingSetPtr[0] += 1;
+						//				}
+						//			}
 
-									vk::Offset3D offset{ m_WorkingSetPtr[0],m_WorkingSetPtr[1] ,0};
-									int layer = m_WorkingSetPtr[1] * workingSetPageAmountX + m_WorkingSetPtr[0];
-									assert(layer < workingSetPageAmount);
-									//std::cout << path << std::endl;
-									auto future = std::async(std::launch::async, &Image::UpdateRegionWithImage, path, m_WorkingSet, vk::Offset3D{0,0,0}, layer);
-									tilesToLoad.push_back(std::move(future));
+						//			vk::Offset3D offset{ m_WorkingSetPtr[0],m_WorkingSetPtr[1] ,0};
+						//			int layer = m_WorkingSetPtr[1] * workingSetPageAmountX + m_WorkingSetPtr[0];
+						//			assert(layer < workingSetPageAmount);
+						//			//std::cout << path << std::endl;
+						//			auto future = std::async(std::launch::async, &Image::UpdateRegionWithImage, path, m_WorkingSet, vk::Offset3D{0,0,0}, layer);
+						//			tilesToLoad.push_back(std::move(future));
 
-									float workingSetCoordX = (float)(m_WorkingSetPtr[0]) ;
-									float workingSetCoordY = (float)m_WorkingSetPtr[1] ;
-									glm::vec2 physCoord = { workingSetCoordX,workingSetCoordY };
-									auto mipMap = feedback.mipMap;
-									glm::vec2 pageCoord = { feedback.pageX ,feedback.pageY };
-									PageEntry page{ mipMap,pageCoord,physCoord };
+						//			float workingSetCoordX = (float)(m_WorkingSetPtr[0]) ;
+						//			float workingSetCoordY = (float)m_WorkingSetPtr[1] ;
+						//			glm::vec2 physCoord = { workingSetCoordX,workingSetCoordY };
+						//			auto mipMap = feedback.mipMap;
+						//			glm::vec2 pageCoord = { feedback.pageX ,feedback.pageY };
+						//			PageEntry page{ mipMap,pageCoord,physCoord };
 
-									m_Cache.Add(page, path);
-									tilesWeSee.push_back(page);
-								}
-								else
-								{
-									ZoneScopedN("Add exisiting page");
-									if (std::find(tilesWeSee.begin(), tilesWeSee.end(), *cachedPage) == tilesWeSee.end())
-									{
-										tilesWeSee.push_back(*cachedPage);
-									}
-								}
+						//			m_Cache.Add(page, path);
+						//			tilesWeSee.push_back(page);
+						//		}
+						//		else
+						//		{
+						//			ZoneScopedN("Add exisiting page");
+						//			if (std::find(tilesWeSee.begin(), tilesWeSee.end(), *cachedPage) == tilesWeSee.end())
+						//			{
+						//				tilesWeSee.push_back(*cachedPage);
+						//			}
+						//		}
 
-							}
-						}
+						//	}
+						//}
 					}
 					
 
@@ -1107,7 +1108,7 @@ public:
 
 		Renderer::Instance()->SetCallables(callables);
 		Renderer::Instance()->UserInit();
-		
+#endif	
 	}
 
 	~ExampleApplication()
@@ -1322,6 +1323,8 @@ public:
 
 		// feedback pass
 
+		Submit(m_TriangleRenderPass, m_FeedbackShader);
+#if 0 
 		Submit(m_FeedbackRenderPass, m_FeedbackShader);
 
 		// update page table pass
@@ -1332,6 +1335,7 @@ public:
 		Submit(m_FinalRenderPass, m_FinalShader);
 		// debug render pass
 		Submit(m_DebugRenderPass, m_DebugShader);
+#endif
 
 
 		Step();
@@ -1345,12 +1349,15 @@ private:
 	PassID m_UpdatePageTablePass[2] = {1,2};
 	PassID m_FinalRenderPass = 3;
 	PassID m_DebugRenderPass = 4;
+	PassID m_TriangleRenderPass = 5;
 
 
 	ProgramHandle m_FeedbackShader;
 	ProgramHandle m_ComputeShaders[2];
 	ProgramHandle m_FinalShader;
 	ProgramHandle m_DebugShader;
+
+	ProgramHandle m_DefautShader;
 
 
 	vk::ClearValue clearColor = { std::array<float, 4>{137.f / 255.f, 189.f / 255.f, 199.f / 255.f, 1.0f} };
@@ -1417,25 +1424,7 @@ Voidstar::Application* Voidstar::CreateApplication()
 	return new ExampleApplication(str, std::min(16 * res,1920), std::min(9 * res, 1061));
 }
 
-
-//#include <spirv_cross/spirv_cross.hpp>
-//
-//std::vector<uint32_t> LoadSpv(const char* path) {
-//	std::ifstream f(path, std::ios::binary);
-//	if (!f) throw std::runtime_error("can't open spv");
-//	f.seekg(0, std::ios::end);
-//	size_t bytes = size_t(f.tellg());
-//	if (bytes % 4 != 0) throw std::runtime_error("spv size not multiple of 4");
-//	f.seekg(0, std::ios::beg);
-//
-//	std::vector<uint32_t> words(bytes / 4);
-//	f.read(reinterpret_cast<char*>(words.data()), bytes);
-//	return words;
-//};
 int main()
 {
-	//std::vector<uint32_t> words = LoadSpv(R"(C:\dev\Voidstar\Voidstar\Shaders\Binary\pageTable.spvCmp)");
-	//assert(!words.empty() && words[0] == 0x07230203u);
-	//spirv_cross::Compiler c(std::move(words));
 	return Main();
 }

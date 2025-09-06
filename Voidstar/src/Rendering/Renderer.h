@@ -85,8 +85,8 @@ namespace Voidstar
 		void BeginFrame(Camera& camera, size_t viewportWidth, 
 			size_t viewportHeight);
 		void Render(float deltaTime,Camera& camera);
-		void Compile(std::string_view shader, ShaderType type);
-		
+		void CompileShader(std::string_view shader);
+		void LinkShaders(ProgramHandle handle, uint8_t shaderAmount);
 		
 		void EndFrame();
 		void UserInit();
@@ -193,8 +193,6 @@ namespace Voidstar
 		void UpdateUniformBuffer(const glm::mat4& proj, Camera& camera);
 	private:
 		void CreateInstance();
-		void CreateSurface();
-		void RecordCommandBuffer(uint32_t imageIndex, vk::RenderPass& renderPass, vk::Pipeline& pipeline, vk::PipelineLayout& pipelineLayout, int instances);
 		void RecreateSwapchain();
 		void AllocateSets();
 		void CreateLayouts();
