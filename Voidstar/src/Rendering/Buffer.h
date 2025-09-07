@@ -1,6 +1,6 @@
 #pragma once
-#include "Vertex.h"
 #include "../Prereq.h"
+#include "vulkan/vulkan.hpp"
 namespace Voidstar
 {
 

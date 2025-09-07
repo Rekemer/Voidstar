@@ -1,7 +1,7 @@
 #pragma once
 #include "vulkan/vulkan.hpp"
 #include "RenderContext.h"
-#include "Vertex.h"
+#include "Vertex_.h"
 
 
 namespace Voidstar
@@ -112,8 +112,8 @@ namespace Voidstar
 		uint32_t offset)
 	{
 		vk::VertexInputAttributeDescription vInputAttribDescription{};
-		vInputAttribDescription.location = location;
 		vInputAttribDescription.binding = binding;
+		vInputAttribDescription.location = location;
 		vInputAttribDescription.format = format;
 		vInputAttribDescription.offset = offset;
 		return vInputAttribDescription;
@@ -134,14 +134,13 @@ namespace Voidstar
 	inline std::vector<vk::VertexInputAttributeDescription> StandardAttributes()
 	{
 		return {
-		VertexInputAttributeDescription(0,0,vk::Format::eR32G32B32Sfloat,offsetof(Voidstar::Vertex, Position)),
-		VertexInputAttributeDescription(0,1,vk::Format::eR32G32Sfloat,offsetof(Voidstar::Vertex, UV)),
-		VertexInputAttributeDescription(0,2,vk::Format::eR32G32B32A32Sfloat,offsetof(Voidstar::Vertex, Color)),
-		VertexInputAttributeDescription(0,3,vk::Format::eR32Sfloat,offsetof(Voidstar::Vertex, textureID)),
+			VertexInputAttributeDescription(0,0,vk::Format::eR32G32B32Sfloat,offsetof(Voidstar::Vertex_, Position)),
+			VertexInputAttributeDescription(0,1,vk::Format::eR32G32Sfloat,offsetof(Voidstar::Vertex_, UV)),
+			VertexInputAttributeDescription(0,2,vk::Format::eR32G32B32A32Sfloat,offsetof(Voidstar::Vertex_, Color)),
 		};
 	}
 	inline std::vector<vk::VertexInputBindingDescription> StandardBinding()
 	{
-		return { VertexBindingDescription(0, sizeof(Voidstar::Vertex), vk::VertexInputRate::eVertex) };
+		return { VertexBindingDescription(0, sizeof(Voidstar::Vertex_), vk::VertexInputRate::eVertex) };
 	}
 }

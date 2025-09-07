@@ -5,11 +5,15 @@
 #include "Rendering/ShaderType.h"
 #include "InitParams.h"
 #include "Window.h"
+#include "glm.hpp"
 
 namespace Voidstar
 {
-
-
+	VOID_HANDLE(ProgramHandle)
+	VOID_HANDLE(ShaderHandle)
+	VOID_HANDLE(VertexBufferHandle)
+	VOID_HANDLE(FrameBufferHandle)
+	
 
 
 	struct Frame
@@ -21,6 +25,18 @@ namespace Voidstar
 	};
 
 	
+	struct FramePass
+	{
+		
+
+
+		VertexBufferHandle VertexBuffers[256];
+
+		glm::mat4 View;
+		glm::mat4 Proj;
+		FrameBufferHandle Fbh;
+	};
+
 
 	struct Submission
 	{
@@ -33,6 +49,9 @@ namespace Voidstar
 
 			return cmdBuf;
 		}
+
+		FramePass FramePasses[256];
+
 		// am not sure how we treat it in multithreading
 		SPtr<Window> Window;
 		Frame  Frames[1];
@@ -42,9 +61,57 @@ namespace Voidstar
 		Frame* Render;
 	};
 
-	VOID_HANDLE(ProgramHandle)
-	VOID_HANDLE(ShaderHandle)
-	VOID_HANDLE(VertexBufferHandle)
+	enum class ShaderDataType
+	{
+		FLOAT4,
+		FLOAT3,
+		FLOAT2,
+		FLOAT,
+
+	};
+
+	struct VertexLayout
+	{
+		struct VertexLayoutElement
+		{
+			ShaderDataType type;
+			size_t offset;
+		};
+
+		VertexLayout& Add(ShaderDataType type)
+		{
+			m_Elements.push_back(VertexLayoutElement{type,m_CurrentOffset});
+			m_CurrentOffset += GetSize(type);
+			return *this;
+		}
+
+	private:
+		int GetSize(ShaderDataType type)
+		{
+			switch (type)	
+			{
+			case Voidstar::ShaderDataType::FLOAT4:
+				return sizeof(float) * 4;
+				break;
+			case Voidstar::ShaderDataType::FLOAT3:
+				return sizeof(float) * 3;
+				break;
+			case Voidstar::ShaderDataType::FLOAT2:
+				return sizeof(float) * 2;
+				break;
+			case Voidstar::ShaderDataType::FLOAT:
+				return sizeof(float);
+				break;
+			default:
+				assert(false);
+				return -1;
+				break;
+			}
+		}
+		std::vector<VertexLayoutElement> m_Elements;
+		size_t m_CurrentOffset = 0;
+	};
+
 
 	using PassID = uint16_t;
 
@@ -59,7 +126,12 @@ namespace Voidstar
 	void SetWindow(SPtr<Window> window);
 	void SubmitInit(InitParams);
 	void Submit(PassID id, ProgramHandle program);
-	void SetVertexBuffer(VertexBufferHandle handle);
+
+	// shader location
+	inline void SetVertexBuffer(uint16_t location, VertexBufferHandle handle){};
+	
+	inline VertexBufferHandle CreateVertexBuffer() { return{}; };
+
 	void Step();
 
 }

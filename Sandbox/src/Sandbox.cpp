@@ -21,8 +21,8 @@ using namespace Voidstar;
 #include "backends/imgui_impl_vulkan.h"
 
 
-
 #include <spirv_cross/spirv_cross.hpp>
+#include "Vertex.h"
 
 // ImGui
 static VkDescriptorPool         g_DescriptorPool = VK_NULL_HANDLE;
@@ -88,14 +88,14 @@ std::string_view IMGUI_RENDER_PASS = "ImGui";
 				Renderer::Instance()->DrawBatch(vkCommandBuffer);\
 			}
 
-
+#define OLD 0
 class ExampleApplication : public Voidstar::Application
 {
 public:
 
 	glm::vec2 feedbackSize;
 
-#if 0 
+#if OLD 
 	UPtr<IExecute> CreateFeedbackRenderPass()
 	{
 		UPtr<IExecute> m_FeedbackRenderPass;
@@ -458,6 +458,7 @@ public:
 #endif
 	
 
+
 	ExampleApplication(std::string appName, size_t screenWidth, size_t screenHeight) : Voidstar::Application(appName, screenWidth, screenHeight)
 	{
 		
@@ -469,10 +470,15 @@ public:
 
 		m_FeedbackShader = LoadProgram("feedback.vert", "feedback.frag");
 		m_DefautShader = LoadProgram("basic.vert", "basic.frag");
+		m_VertexLayout.Add(ShaderDataType::FLOAT3)
+					  .Add(ShaderDataType::FLOAT2);
+
+		m_VertexCube = CreateVertexBuffer();
+		//m_QuadBuffer = CreateVerte
 
 		Step();
 
-#if 0
+#if OLD
 
 		auto bindingsInit = [this]()
 		{
@@ -1323,7 +1329,9 @@ public:
 
 		// feedback pass
 
-		Submit(m_TriangleRenderPass, m_FeedbackShader);
+		SetVertexBuffer(0, m_VertexCube);
+
+		Submit(m_CubeRenderPass, m_DefautShader);
 #if 0 
 		Submit(m_FeedbackRenderPass, m_FeedbackShader);
 
@@ -1349,7 +1357,7 @@ private:
 	PassID m_UpdatePageTablePass[2] = {1,2};
 	PassID m_FinalRenderPass = 3;
 	PassID m_DebugRenderPass = 4;
-	PassID m_TriangleRenderPass = 5;
+	PassID m_CubeRenderPass = 5;
 
 
 	ProgramHandle m_FeedbackShader;
@@ -1357,8 +1365,9 @@ private:
 	ProgramHandle m_FinalShader;
 	ProgramHandle m_DebugShader;
 
+	VertexBufferHandle m_VertexCube;
 	ProgramHandle m_DefautShader;
-
+	VertexLayout m_VertexLayout;
 
 	vk::ClearValue clearColor = { std::array<float, 4>{137.f / 255.f, 189.f / 255.f, 199.f / 255.f, 1.0f} };
 	vk::ClearValue depthClear{ vk::ClearDepthStencilValue({ 1.0f, 0 }) };

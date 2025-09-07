@@ -26,7 +26,7 @@ namespace Voidstar
         {
             for (const auto& index : shape.mesh.indices)
             {
-                Vertex vertex{};
+                Vertex_ vertex{};
 
                      
                 vertex.Position[0] = attrib.vertices[3 * index.vertex_index + 0];

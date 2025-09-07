@@ -2,7 +2,7 @@
 #include "glm.hpp"
 #include "Prereq.h"
 #include "Renderer.h"
-#include "Vertex.h"
+#include "Vertex_.h"
 namespace Voidstar
 {
 	struct Quad
@@ -13,7 +13,7 @@ namespace Voidstar
 	};
 	struct QuadRangle
 	{
-		std::vector<Vertex> Verticies;
+		std::vector<Vertex_> Verticies;
 	};
 	
 	struct Sphere

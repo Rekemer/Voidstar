@@ -10,7 +10,7 @@
 #include "Device.h"
 #include "Swapchain.h"
 #include "SupportStruct.h"
-#include "Vertex.h"
+
 #include "Buffer.h"
 #include "IndexBuffer.h"
 #include "RenderContext.h"
@@ -62,89 +62,12 @@ namespace Voidstar
 {
 
 	
+	
 	QuadData quad;
-	std::vector<Vertex> sphere;
+	std::vector<Vertex_> sphere;
 	std::vector<IndexType> sphereIndicies;
 	
 	const int QUAD_AMOUNT = 700;
-
-
-
-
-	std::vector<Vertex> GetCube()
-	{
-		const std::vector<uint32_t> indices =
-		{
-			0, 1, 3, 3, 1, 2,
-			1, 5, 2, 2, 5, 6,
-			5, 4, 6, 6, 4, 7,
-			4, 0, 7, 7, 0, 3,
-			3, 2, 7, 7, 2, 6,
-			4, 5, 0, 0, 5, 1
-		};
-
-		std::vector<Vertex> CubeVerticies;
-		CubeVerticies.resize(8);
-		//vertices[0].Position = { -1, -1, -1 };
-		CubeVerticies[0].Position[0] = -1;
-		CubeVerticies[0].Position[1] = -1;
-		CubeVerticies[0].Position[2] = -1;
-
-
-		//vertices[1].Position = { 1, -1, -1 };
-		CubeVerticies[1].Position[0] = 1;
-		CubeVerticies[1].Position[1] = -1;
-		CubeVerticies[1].Position[2] = -1;
-		//vertices[2].Position = { 1, 1, -1};
-		CubeVerticies[2].Position[0] = 1;
-		CubeVerticies[2].Position[1] = 1;
-		CubeVerticies[2].Position[2] = -1;
-		//vertices[3].Position = { -1, 1, -1 };
-		CubeVerticies[3].Position[0] = -1;
-		CubeVerticies[3].Position[1] = 1;
-		CubeVerticies[3].Position[2] = -1;
-		//vertices[4].Position = { -1, -1, 1 };
-		CubeVerticies[4].Position[0] = -1;
-		CubeVerticies[4].Position[1] = -1;
-		CubeVerticies[4].Position[2] = 1;
-		//vertices[5].Position = { 1, -1, 1};
-		CubeVerticies[5].Position[0] = 1;
-		CubeVerticies[5].Position[1] = -1;
-		CubeVerticies[5].Position[2] = 1;
-		//vertices[6].Position = { 1, 1, 1};
-		CubeVerticies[6].Position[0] = 1;
-		CubeVerticies[6].Position[1] = 1;
-		CubeVerticies[6].Position[2] = 1;
-		//vertices[7].Position = { -1, 1, 1 };
-		CubeVerticies[7].Position[0] = -1;
-		CubeVerticies[7].Position[1] = 1;
-		CubeVerticies[7].Position[2] = 1;
-
-		CubeVerticies[0].UV[0] = 0.0f; // U coordinate
-		CubeVerticies[0].UV[1] = 0.0f; // V coordinate
-
-		CubeVerticies[1].UV[0] = 1.0f;
-		CubeVerticies[1].UV[1] = 0.0f;
-
-		CubeVerticies[2].UV[0] = 1.0f;
-		CubeVerticies[2].UV[1] = 1.0f;
-
-		CubeVerticies[3].UV[0] = 0.0f;
-		CubeVerticies[3].UV[1] = 1.0f;
-
-		CubeVerticies[4].UV[0] = 0.0f;
-		CubeVerticies[4].UV[1] = 0.0f;
-
-		CubeVerticies[5].UV[0] = 1.0f;
-		CubeVerticies[5].UV[1] = 0.0f;
-
-		CubeVerticies[6].UV[0] = 1.0f;
-		CubeVerticies[6].UV[1] = 1.0f;
-
-		CubeVerticies[7].UV[0] = 0.0f;
-		CubeVerticies[7].UV[1] = 1.0f;
-		return CubeVerticies;
-	}
 
 	
 	void Renderer::CreateLayouts()
@@ -207,7 +130,7 @@ namespace Voidstar
 	{
 		m_QuadIndex = 0;
 		m_BatchQuad = m_BatchQuadStart;
-		m_BatchInstance = m_BatchInstanceStart;
+		//m_BatchInstance = m_BatchInstanceStart;
 	}
 
 	void Renderer::DrawBatch(vk::CommandBuffer& commandBuffer,size_t offset, int index)
@@ -233,23 +156,23 @@ namespace Voidstar
 		commandBuffer.drawIndexed(indexAmount, 1, m_QuadIndex-index, 0, 0);
 	}
 
-	void UpdateVertex(Vertex*& vertex, glm::vec3 position, glm::vec4& color, glm::mat4& world,  int vertIndex, size_t texID =0)
+	void UpdateVertex(Vertex_*& vertex, glm::vec3 position, glm::vec2 uv,glm::vec4& color, glm::mat4& world,  int vertIndex)
 	{
 		vertex->Position = world * glm::vec4{ position,1 };
-		vertex->UV = quad.verticies[vertIndex].UV;
+		vertex->UV = uv;
 		vertex->Color = color;
-		vertex->textureID = texID;
 	};
-	void UpdateVerticies(Vertex*& vertex, std::vector<Vertex>& verticies)
+	void UpdateVerticies(Vertex_*& vertex, std::vector<Vertex_>& verticies)
 	{
-		UpdateVertex(vertex,verticies[0].Position, verticies[0].Color, glm::identity<glm::mat4>(),0,verticies[0].textureID);
-		vertex++;																				   
-		UpdateVertex(vertex,verticies[2].Position, verticies[2].Color, glm::identity<glm::mat4>(),2,verticies[0].textureID);
-		vertex++;																				   
-		UpdateVertex(vertex,verticies[3].Position, verticies[3].Color, glm::identity<glm::mat4>(),3,verticies[0].textureID);
-		vertex++;																				   
-		UpdateVertex(vertex,verticies[1].Position, verticies[1].Color, glm::identity<glm::mat4>(),1,verticies[0].textureID);
-		vertex++;
+		assert(false);
+		//UpdateVertex(vertex,verticies[0].Position, verticies[0].Color, glm::identity<glm::mat4>());
+		//vertex++;																				   
+		//UpdateVertex(vertex,verticies[2].Position, verticies[2].Color, glm::identity<glm::mat4>());
+		//vertex++;																				   
+		//UpdateVertex(vertex,verticies[3].Position, verticies[3].Color, glm::identity<glm::mat4>());
+		//vertex++;																				   
+		//UpdateVertex(vertex,verticies[1].Position, verticies[1].Color, glm::identity<glm::mat4>());
+		//vertex++;
 
 	};
 	void Renderer::DrawTxt(vk::CommandBuffer commandBuffer, std::string_view str, glm::vec2 pos, std::map< unsigned char, Character>& characters)
@@ -338,19 +261,21 @@ namespace Voidstar
 	}
 	void Renderer::DrawSphere(glm::vec3 pos, glm::vec3 scale, glm::vec4 color, glm::vec3 rot)
 	{
-		m_BatchInstance->Color = color;
+		assert(false);
+		//m_BatchInstance->Color = color;
 		auto iden = glm::identity<glm::mat4>();
 		iden = glm::translate(iden, pos);
 		auto rotMatrix =  glm::rotate(iden, glm::radians(rot.x), glm::vec3{ 1,0,0 });
 		rotMatrix = glm::rotate(rotMatrix, glm::radians(rot.y), glm::vec3{ 0,1,0 });
 		rotMatrix = glm::scale(rotMatrix,scale);
 		auto transpose = glm::transpose(rotMatrix);
-		m_BatchInstance->WorldMatrix= transpose;
-		m_BatchInstance++;
+		//m_BatchInstance->WorldMatrix= transpose;
+		//m_BatchInstance++;
 	}
 
 	void Renderer::DrawSphereInstance(vk::CommandBuffer& commandBuffer)
 	{
+		assert(false);
 		vk::DeviceSize offsets[] = { 0 };
 
 		{
@@ -361,34 +286,37 @@ namespace Voidstar
 
 		}
 		commandBuffer.bindIndexBuffer(m_SphereIndexBuffer->GetBuffer(), 0, m_SphereIndexBuffer->GetIndexType());
-		auto instanceAmount = static_cast<uint64_t>(m_BatchInstance - m_BatchInstanceStart);
+		//auto instanceAmount = static_cast<uint64_t>(m_BatchInstance - m_BatchInstanceStart);
+		auto instanceAmount = static_cast<uint64_t>(0);
 		commandBuffer.drawIndexed(m_SphereIndexBuffer->GetIndexAmount(), instanceAmount, 0, 0, 0);
 	}
 	void Renderer::DrawQuad(glm::mat4& world, glm::vec4 color)
 	{
-		auto& verticies = quad.verticies;
-		// left bottom
-		UpdateVertex(m_BatchQuad,verticies[0].Position,color,world,0);
-		m_BatchQuad++;
-		// right bottom
-		UpdateVertex(m_BatchQuad,verticies[2].Position,color,world,2);
-		m_BatchQuad++;
-		// right top
-		UpdateVertex(m_BatchQuad, verticies[3].Position, color, world, 3);
-		m_BatchQuad++;
+		assert(false);
+		//auto& verticies = quad.verticies;
+		//// left bottom
+		//UpdateVertex(m_BatchQuad,verticies[0].Position,color,world,0);
+		//m_BatchQuad++;
+		//// right bottom
+		//UpdateVertex(m_BatchQuad,verticies[2].Position,color,world,2);
+		//m_BatchQuad++;
+		//// right top
+		//UpdateVertex(m_BatchQuad, verticies[3].Position, color, world);
+		//m_BatchQuad++;
 
 
-		// left top
-		UpdateVertex(m_BatchQuad, verticies[1].Position, color, world, 1);
-		m_BatchQuad++;
+		//// left top
+		//UpdateVertex(m_BatchQuad, verticies[1].Position, color, world);
+		//m_BatchQuad++;
 
-		m_QuadIndex += 6;
+		//m_QuadIndex += 6;
 	}
 
-	void Renderer::DrawQuad(std::vector<Vertex>& verticies)
+	void Renderer::DrawQuad(std::vector<Vertex_>& verticies)
 	{
-		UpdateVerticies(m_BatchQuad, verticies);
-		m_QuadIndex += 6;
+		assert(false);
+		//UpdateVerticies(m_BatchQuad, verticies);
+		//m_QuadIndex += 6;
 	}
 	
 
@@ -396,7 +324,7 @@ namespace Voidstar
 		
 	{
 		m_Window=window; 
-		m_ViewportWidth = screenWidth;
+		m_ViewportWidth = screenWidth;  
 		m_ViewportHeight = screenHeight;
 		m_CommandPoolManager = CreateUPtr<CommandPoolManager>();
 		// create instance
@@ -438,8 +366,10 @@ namespace Voidstar
 		};
 		commandBufferInit();
 		
+#if 0
 		quad = GeneratePlane(1);
 		sphere = GenerateSphere(1,10, sphereIndicies);
+
 		auto& verticies = quad.verticies;
 		auto& indices = quad.indicies;
 		auto indexSize = SizeOfBuffer(indices.size(), indices[0]);
@@ -599,6 +529,8 @@ namespace Voidstar
 			m_UniformBuffers[i] = CreateUPtr<Buffer>(inputBuffer);
 			uniformBuffersMapped[i] = m_Device->GetDevice().mapMemory(m_UniformBuffers[i]->GetMemory(), 0, bufferSize);
 		}
+#endif // 0
+
 
 	
 		auto physDev = m_Device->GetDevicePhys();

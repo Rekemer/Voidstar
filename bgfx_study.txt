@@ -322,3 +322,11 @@ we will read command to compile shader and then return metadata to front end aft
 front end will emit commands for compilation and linking to form metadata on backend
 
 programm handle consists of shader handles
+
+
+// Create static vertex buffer.
+m_vbh = bgfx::createVertexBuffer(
+		bgfx::makeRef(s_cubeVertices, sizeof(s_cubeVertices) )
+		, PosNormalTangentTexcoordVertex::ms_layout
+		);
+

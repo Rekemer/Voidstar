@@ -23,7 +23,7 @@
 #include "IndexBuffer.h"
 
 #include "ShaderType.h"
-
+#include "Vertex_.h"
 #include "ShaderCompiler.h"
 
 struct ImGui_ImplVulkanH_Window;
@@ -44,7 +44,6 @@ namespace Voidstar
 	class DescriptorPool;
 	class Model;
 	class Pipeline;
-	class Vertex;
 
 
 
@@ -66,7 +65,7 @@ namespace Voidstar
 	};
 
 
-	
+
 	class Instance;
 	class Device;
 	class Swapchain;
@@ -121,7 +120,7 @@ namespace Voidstar
 		// position 0 0 is center of screen
 		void DrawQuadScreen(vk::CommandBuffer commandBuffer);
 		void DrawQuad(glm::mat4& world, glm::vec4 color);
-		void DrawQuad(std::vector<Vertex>& verticies);
+		void DrawQuad(std::vector<Vertex_>& verticies);
 		void DrawTxt(vk::CommandBuffer commandBuffer, std::string_view str,glm::vec2 pos, std::map<unsigned char, Character> &Characters);
 		void Draw(Drawable& drawable);
 		void DrawSphere(glm::vec3 pos, glm::vec3 scale,
@@ -136,11 +135,13 @@ namespace Voidstar
 		}
 		UPtr<Buffer> m_QuadBufferBatch{ nullptr };
 		UPtr<IndexBuffer> m_QuadBufferBatchIndex{ nullptr };
-		Vertex * m_BatchQuad;
-		Vertex * m_BatchQuadStart;
 		UPtr<Buffer> m_InstanceBuffer{ nullptr };
-		InstanceData* m_BatchInstance; 
-		InstanceData* m_BatchInstanceStart;
+		
+		Vertex_ * m_BatchQuad;
+		Vertex_ * m_BatchQuadStart;
+		//InstanceData* m_BatchInstance; 
+		//InstanceData* m_BatchInstanceStart;
+		
 		int m_QuadIndex= 0;
 		void CreateSyncObjects();
 		void AddRenderGraph(std::string_view name, UPtr<RenderPassGraph> graph)

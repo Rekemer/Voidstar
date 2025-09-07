@@ -183,7 +183,7 @@
     <ClInclude Include="src\Rendering\SupportStruct.h" />
     <ClInclude Include="src\Rendering\Swapchain.h" />
     <ClInclude Include="src\Rendering\Sync.h" />
-    <ClInclude Include="src\Rendering\Vertex.h" />
+    <ClInclude Include="src\Rendering\Vertex_.h" />
     <ClInclude Include="src\ResourceCommandBuffer.h" />
     <ClInclude Include="src\Rendering\ShaderCompiler.h" />
     <ClInclude Include="src\SparseSet.h" />
