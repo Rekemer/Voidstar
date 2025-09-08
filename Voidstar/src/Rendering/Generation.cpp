@@ -78,7 +78,6 @@ QuadData GeneratePlane(float detail)
 	
 		return {vertices,indices};
 	}
-float toRadians(float degrees) { return (degrees * 2.0f * 3.14159f) / 360.0f; }
 std::vector<Vertex_> GenerateSphere(float radius, float prec, std::vector<IndexType>& indices)
 	{
 		float numVertices = (prec + 1) * (prec + 1);
@@ -114,9 +113,7 @@ std::vector<Vertex_> GenerateSphere(float radius, float prec, std::vector<IndexT
 	
 		return vertices;
 	}
-
-
-	std::vector<Vertex_> GetCube()
+std::vector<Vertex_> GenerateCube()
 	{
 		const std::vector<uint32_t> indices =
 		{
@@ -190,4 +187,5 @@ std::vector<Vertex_> GenerateSphere(float radius, float prec, std::vector<IndexT
 		CubeVerticies[7].UV[1] = 1.0f;
 		return CubeVerticies;
 	}
+
 }

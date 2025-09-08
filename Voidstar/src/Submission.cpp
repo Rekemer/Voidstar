@@ -10,8 +10,13 @@
 namespace Voidstar
 {
 	UPtr<Submission> g_Submission = CreateUPtr<Submission>();
+
 	SparseSet g_ShaderHandleAllocator;
 	SparseSet g_ProgramHandleAllocator;
+
+	SparseSet g_VertexBufferHandleAllocator;
+	SparseSet g_IndexBufferHandleAllocator;
+	SparseSet g_LayoutHandleAllocator;
 
 
 
@@ -46,9 +51,19 @@ namespace Voidstar
 		return ShaderHandle{ handle };
 	}
 
+	void SetViewTransform(PassID id, glm::mat4& view, glm::mat4& proj)
+	{
+		g_Submission->Views[id].View = view;
+		g_Submission->Views[id].Proj= proj;
+	}
+	void SetViewRect(PassID id, size_t x, size_t y, size_t width, size_t height)
+	{
+		g_Submission->Views[id].Rect = { x,y,width,height };
+	}
+
 	void Submit(PassID id, ProgramHandle)
 	{
-
+		// creates render item
 	}
 
 	void SetWindow(SPtr<Window> window)
@@ -79,7 +94,9 @@ namespace Voidstar
 			case Voidstar::ResourceCommand::RendererInit:
 			{
 				auto init = commandBuffer.ReadObject<InitParams>();
+
 				Renderer::Instance()->Init(init.width, init.height, g_Submission->Window);
+				
 				break;
 			}
 			case Voidstar::ResourceCommand::RendererShutdownBegin:
@@ -89,6 +106,15 @@ namespace Voidstar
 			case Voidstar::ResourceCommand::CreateIndexBuffer:
 				break;
 			case Voidstar::ResourceCommand::CreateVertexBuffer:
+			{
+				auto mem = commandBuffer.ReadObject<Memory>();
+				auto bufferHandle = commandBuffer.ReadObject<uint16_t>();
+				auto layoutHandle = commandBuffer.ReadObject<uint16_t>();
+
+			
+			    BufferInputChunk input 
+
+			}
 				break;
 			case Voidstar::ResourceCommand::CreateDynamicIndexBuffer:
 				break;
@@ -161,7 +187,7 @@ namespace Voidstar
 	}
 
 	// start calling implementation
-	void Step()
+	void ExecuteFrame()
 	{
 		std::swap(g_Submission->Submit, g_Submission->Render);
 		// execute prerender commands
@@ -172,6 +198,45 @@ namespace Voidstar
 		ExecuteCommands(g_Submission->Render->CmdPost);
 
 
+	}
+	void BindIndexBuffer(IndexBufferHandle handle)
+	{
+		
+	};
+	void BindVertexBuffer(uint16_t location, VertexBufferHandle handle)
+	{
+		g_Submission->CurrentRenderItem->Bindings[location].VertexHandle = handle;
+		g_Submission->CurrentRenderItem->Bindings[location].LayoutHandle.idx = g_Submission->VertexLayoutMap.at(handle.idx);
+	};
+
+
+	VertexBufferHandle CreateVertexBuffer(Memory mem, VertexLayout& layout)
+	{
+		auto bufferHandle = g_VertexBufferHandleAllocator.GetId();
+		
+
+		auto layoutHandle = g_LayoutHandleAllocator.GetId();
+		g_Submission->Layouts.insert({layoutHandle,layout});
+		g_Submission->VertexLayoutMap.insert({ bufferHandle, layoutHandle });
+
+		auto& cmd = g_Submission->GetCommandBuffer(ResourceCommand::CreateVertexBuffer);
+		cmd.WriteObject(mem);
+		//auto me = cmd.ReadObject<Memory>();
+		cmd.WriteObject(bufferHandle);
+		cmd.WriteObject(layoutHandle);
+
+		return{ bufferHandle };
+	};
+	IndexBufferHandle CreateIndexBuffer(Memory mem)
+	{
+		auto bufferHandle = g_IndexBufferHandleAllocator.GetId();
+
+		auto& cmd = g_Submission->GetCommandBuffer(ResourceCommand::CreateIndexBuffer);
+
+		cmd.WriteObject(mem);
+		//auto me = cmd.ReadObject<Memory>();
+		cmd.WriteObject(bufferHandle);
+		return { bufferHandle };
 	}
 
 }

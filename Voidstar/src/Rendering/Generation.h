@@ -11,9 +11,124 @@ namespace Voidstar
 	};
 
 	QuadData GeneratePlane(float detail);
-	std::vector<Vertex_> GenerateSphere(float radius, float prec, std::vector<IndexType>& indices);
+	//std::vector<Vertex_> GenerateSphere(float radius, float prec, std::vector<IndexType>& indices);
+	//std::vector<Vertex_> GenerateCube();
 
-	std::vector<Vertex_> GetCube();
+
+	inline float toRadians(float degrees) { return (degrees * 2.0f * 3.14159f) / 360.0f; }
+	template<typename T>
+	std::vector<T> GenerateSphere(float radius, float prec, std::vector<IndexType>& indices)
+	{
+		float numVertices = (prec + 1) * (prec + 1);
+		float numIndices = prec * prec * 6;
+
+		std::vector<T> vertices;
+		indices.resize(numIndices);
+		vertices.resize(numVertices);
+		for (int i = 0; i <= prec; i++) {
+			for (int j = 0; j <= prec; j++) {
+				float y = (float)cos(toRadians(180.0f - i * 180.0f / prec));
+				float x = -(float)cos(toRadians(j * 360.0f / prec)) * (float)abs(cos(asin(y)));
+				float z = (float)sin(toRadians(j * 360.0f / prec)) * (float)abs(cos(asin(y)));
+				vertices[i * (prec + 1) + j].Position = glm::vec3(x, y, z);
+				vertices[i * (prec + 1) + j].UV = glm::vec2(((float)j / prec), ((float)i / prec));
+			}
+		}
+
+		// generate indexes
+		for (int i = 0; i < prec; i++) {
+			for (int j = 0; j < prec; j++) {
+				indices[6 * (i * prec + j) + 0] = i * (prec + 1) + j;
+				indices[6 * (i * prec + j) + 1] = i * (prec + 1) + j + 1;
+				indices[6 * (i * prec + j) + 2] = (i + 1) * (prec + 1) + j;
+				indices[6 * (i * prec + j) + 3] = i * (prec + 1) + j + 1;
+				indices[6 * (i * prec + j) + 4] = (i + 1) * (prec + 1) + j + 1;
+				indices[6 * (i * prec + j) + 5] = (i + 1) * (prec + 1) + j;
+			}
+
+		}
+
+
+
+		return vertices;
+	}
+	template<typename T> 
+	std::tuple<std::vector<T>,std::vector<IndexType>> GenerateCube()
+	{
+		const std::vector<IndexType> indices =
+		{
+			0, 1, 3, 3, 1, 2,
+			1, 5, 2, 2, 5, 6,
+			5, 4, 6, 6, 4, 7,
+			4, 0, 7, 7, 0, 3,
+			3, 2, 7, 7, 2, 6,
+			4, 5, 0, 0, 5, 1
+		};
+
+		std::vector<T> CubeVerticies;
+		CubeVerticies.resize(8);
+		//vertices[0].Position = { -1, -1, -1 };
+		CubeVerticies[0].Position[0] = -1;
+		CubeVerticies[0].Position[1] = -1;
+		CubeVerticies[0].Position[2] = -1;
+
+
+		//vertices[1].Position = { 1, -1, -1 };
+		CubeVerticies[1].Position[0] = 1;
+		CubeVerticies[1].Position[1] = -1;
+		CubeVerticies[1].Position[2] = -1;
+		//vertices[2].Position = { 1, 1, -1};
+		CubeVerticies[2].Position[0] = 1;
+		CubeVerticies[2].Position[1] = 1;
+		CubeVerticies[2].Position[2] = -1;
+		//vertices[3].Position = { -1, 1, -1 };
+		CubeVerticies[3].Position[0] = -1;
+		CubeVerticies[3].Position[1] = 1;
+		CubeVerticies[3].Position[2] = -1;
+		//vertices[4].Position = { -1, -1, 1 };
+		CubeVerticies[4].Position[0] = -1;
+		CubeVerticies[4].Position[1] = -1;
+		CubeVerticies[4].Position[2] = 1;
+		//vertices[5].Position = { 1, -1, 1};
+		CubeVerticies[5].Position[0] = 1;
+		CubeVerticies[5].Position[1] = -1;
+		CubeVerticies[5].Position[2] = 1;
+		//vertices[6].Position = { 1, 1, 1};
+		CubeVerticies[6].Position[0] = 1;
+		CubeVerticies[6].Position[1] = 1;
+		CubeVerticies[6].Position[2] = 1;
+		//vertices[7].Position = { -1, 1, 1 };
+		CubeVerticies[7].Position[0] = -1;
+		CubeVerticies[7].Position[1] = 1;
+		CubeVerticies[7].Position[2] = 1;
+
+		CubeVerticies[0].UV[0] = 0.0f; // U coordinate
+		CubeVerticies[0].UV[1] = 0.0f; // V coordinate
+
+		CubeVerticies[1].UV[0] = 1.0f;
+		CubeVerticies[1].UV[1] = 0.0f;
+
+		CubeVerticies[2].UV[0] = 1.0f;
+		CubeVerticies[2].UV[1] = 1.0f;
+
+		CubeVerticies[3].UV[0] = 0.0f;
+		CubeVerticies[3].UV[1] = 1.0f;
+
+		CubeVerticies[4].UV[0] = 0.0f;
+		CubeVerticies[4].UV[1] = 0.0f;
+
+		CubeVerticies[5].UV[0] = 1.0f;
+		CubeVerticies[5].UV[1] = 0.0f;
+
+		CubeVerticies[6].UV[0] = 1.0f;
+		CubeVerticies[6].UV[1] = 1.0f;
+
+		CubeVerticies[7].UV[0] = 0.0f;
+		CubeVerticies[7].UV[1] = 1.0f;
+		return { CubeVerticies ,indices };
+	}
+
+
 	
 
 }

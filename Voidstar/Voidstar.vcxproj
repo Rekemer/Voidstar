@@ -192,6 +192,7 @@
     <ClInclude Include="src\Types.h" />
     <ClInclude Include="src\Voidstar.h" />
     <ClInclude Include="src\Window.h" />
+    <ClInclude Include="src\VertexLayout.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Dependencies\Tracy\public\TracyClient.cpp">

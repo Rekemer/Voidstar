@@ -5,6 +5,15 @@
 #include "Device.h"
 namespace Voidstar
 {
+
+	void AttachmentManager::Init()
+	{
+		// swachain images can be targeted as color or resolve
+		auto swapchainImages = RenderContext::GetFrames();
+		m_Resolve["Default"] = swapchainImages;
+		m_Color["Default"] = swapchainImages;
+	}
+
 	void AttachmentManager::CreateColor(std::string_view attachmentName,
 		AttachmentManager& manager, vk::Format format, size_t width, size_t height,
 		vk::SampleCountFlagBits samples,

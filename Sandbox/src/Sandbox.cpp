@@ -23,6 +23,7 @@ using namespace Voidstar;
 
 #include <spirv_cross/spirv_cross.hpp>
 #include "Vertex.h"
+#include "Rendering/Generation.h"
 
 // ImGui
 static VkDescriptorPool         g_DescriptorPool = VK_NULL_HANDLE;
@@ -469,14 +470,26 @@ public:
 
 
 		m_FeedbackShader = LoadProgram("feedback.vert", "feedback.frag");
-		m_DefautShader = LoadProgram("basic.vert", "basic.frag");
+		m_DefaultShader = LoadProgram("basic.vert", "basic.frag");
 		m_VertexLayout.Add(ShaderDataType::FLOAT3)
 					  .Add(ShaderDataType::FLOAT2);
+		auto [verts, indices] = GenerateCube<Vertex>();
+		m_Cube = verts;
+		m_IndexCube = indices;
+		
 
-		m_VertexCube = CreateVertexBuffer();
+		
+		m_VertexCubeHandle = CreateVertexBuffer({
+			reinterpret_cast<uint8_t*>(m_Cube.data()),m_Cube.size() * sizeof(m_Cube[0]) }
+		,m_VertexLayout);
+		m_IndexCubeHandle = CreateIndexBuffer
+		(
+			Memory{ reinterpret_cast<uint8_t*>(m_Cube.data()), m_Cube.size() * sizeof(m_Cube[0]) }
+		);
+
 		//m_QuadBuffer = CreateVerte
 
-		Step();
+		ExecuteFrame();
 
 #if OLD
 
@@ -1327,11 +1340,16 @@ public:
 	void Update(float deltaTime) override
 	{
 
-		// feedback pass
+		// test pass
+		
+		SetViewRect(m_CubeRenderPass,0,0, Application::GetScreenWidth(), Application::GetScreenHeight());
+		//SetFramebuffer(m_CubeRenderPass)
+		SetViewTransform(m_CubeRenderPass,GetCamera()->GetView(), GetCamera()->GetProj());
 
-		SetVertexBuffer(0, m_VertexCube);
+		BindVertexBuffer(0, m_VertexCubeHandle);
+		BindIndexBuffer(m_IndexCubeHandle);
 
-		Submit(m_CubeRenderPass, m_DefautShader);
+		Submit(m_CubeRenderPass, m_DefaultShader);
 #if 0 
 		Submit(m_FeedbackRenderPass, m_FeedbackShader);
 
@@ -1346,7 +1364,7 @@ public:
 #endif
 
 
-		Step();
+		ExecuteFrame();
 
 	}
 
@@ -1365,9 +1383,13 @@ private:
 	ProgramHandle m_FinalShader;
 	ProgramHandle m_DebugShader;
 
-	VertexBufferHandle m_VertexCube;
-	ProgramHandle m_DefautShader;
+	VertexBufferHandle m_VertexCubeHandle;
+	IndexBufferHandle m_IndexCubeHandle;
+		
+	ProgramHandle m_DefaultShader;
 	VertexLayout m_VertexLayout;
+	std::vector<Vertex> m_Cube;
+	std::vector<IndexType> m_IndexCube;
 
 	vk::ClearValue clearColor = { std::array<float, 4>{137.f / 255.f, 189.f / 255.f, 199.f / 255.f, 1.0f} };
 	vk::ClearValue depthClear{ vk::ClearDepthStencilValue({ 1.0f, 0 }) };
@@ -1415,7 +1437,7 @@ private:
 	};
 	std::vector<FeedbackRes> m_FeedbackRes;
 	Callables callables;
-	AttachmentManager m_AttachmentManager;
+
 	Quad m_Plane;
 	glm::mat4 iden{ 1 };
 	glm::vec3  m_SphereRot = {0,0,0};

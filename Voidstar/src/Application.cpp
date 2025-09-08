@@ -29,7 +29,7 @@ namespace Voidstar
 		SetWindow(m_Window);
 		Input::Init(m_Window);
 		SubmitInit(init);
-		Step();
+		Frame();
 
 	}
 	Application::~Application()

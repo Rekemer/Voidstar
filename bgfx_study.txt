@@ -329,4 +329,4 @@ m_vbh = bgfx::createVertexBuffer(
 		bgfx::makeRef(s_cubeVertices, sizeof(s_cubeVertices) )
 		, PosNormalTangentTexcoordVertex::ms_layout
 		);
-
+to create vertex layout we first save the core data, but creation happend only when we 

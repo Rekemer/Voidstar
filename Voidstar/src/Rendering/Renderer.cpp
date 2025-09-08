@@ -365,6 +365,7 @@ namespace Voidstar
 			m_ComputeCommandBuffer = CommandBuffer::CreateBuffers(m_FrameCommandPool, vk::CommandBufferLevel::ePrimary, frameAmount);
 		};
 		commandBufferInit();
+		m_AttachmentManager.Init();
 		
 #if 0
 		quad = GeneratePlane(1);

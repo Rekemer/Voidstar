@@ -25,16 +25,11 @@
 #include "ShaderType.h"
 #include "Vertex_.h"
 #include "ShaderCompiler.h"
+#include "AttachmentManager.h"
 
 struct ImGui_ImplVulkanH_Window;
 namespace Voidstar
 {
-
-
-	
-
-
-
 	class Window;
 	class SwapChainSupportDetails;
 	class Buffer;
@@ -44,9 +39,6 @@ namespace Voidstar
 	class DescriptorPool;
 	class Model;
 	class Pipeline;
-
-
-
 	struct VOIDSTAR_API Callables
 	{
 		std::function<void()> bindingsInit;
@@ -203,7 +195,8 @@ namespace Voidstar
 		Device* m_Device;
 		int m_ViewportWidth, m_ViewportHeight;
 		size_t m_CurrentFrame = 0;
-		
+
+		AttachmentManager m_AttachmentManager;
 		ShaderCompiler m_Compiler;
 
 		std::vector<CommandBuffer> m_RenderCommandBuffer,

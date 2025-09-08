@@ -7,5 +7,3 @@
 #define VOIDSTAR_API    // when building the DLL
 
 
-#define VOID_HANDLE(_name)\
-	struct _name { uint16_t idx; };

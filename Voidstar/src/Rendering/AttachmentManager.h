@@ -9,16 +9,10 @@
 namespace Voidstar
 {
 
-	class VOIDSTAR_API AttachmentManager
+	class AttachmentManager
 	{
 	public:
-		AttachmentManager()
-		{
-			// swachain images can be targeted as color or resolve
-			auto swapchainImages = RenderContext::GetFrames();
-			m_Resolve["Default"]  = swapchainImages;
-			m_Color["Default"]  = swapchainImages;
-		}
+		void Init();
 		std::vector<SPtr<Image>> GetColor(std::vector< std::string_view> names)
 		{
 			auto attachments = GetAttachhmentsFrom(m_Color, names);
