@@ -78,7 +78,9 @@ namespace Voidstar
 		void Render(float deltaTime,Camera& camera);
 		void CompileShader(std::string_view shader);
 		void LinkShaders(ProgramHandle handle, uint8_t shaderAmount);
-		
+		void CreateVertexBuffer(Memory& mem, VertexBufferHandle vertHandle, UpdateHint hint = UpdateHint::Static);
+		void CreateIndexBuffer(Memory& mem, IndexBufferHandle indexHandle);
+
 		void EndFrame();
 		void UserInit();
 
@@ -198,6 +200,13 @@ namespace Voidstar
 
 		AttachmentManager m_AttachmentManager;
 		ShaderCompiler m_Compiler;
+
+		std::unordered_map<VertexBufferHandle, SPtr<Buffer>> m_VertexBuffers;
+		std::unordered_map<IndexBufferHandle, SPtr<IndexBuffer>> m_IndexBuffers;
+		//std::unordered_map<VertexLayoutHandle, > m_BufferLayouts;
+
+
+
 
 		std::vector<CommandBuffer> m_RenderCommandBuffer,
 			m_TransferCommandBuffer, m_ComputeCommandBuffer;

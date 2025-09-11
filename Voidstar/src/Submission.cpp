@@ -104,16 +104,18 @@ namespace Voidstar
 			case Voidstar::ResourceCommand::CreateVertexLayout:
 				break;
 			case Voidstar::ResourceCommand::CreateIndexBuffer:
+			{
+				auto mem = commandBuffer.ReadObject<Memory>();
+				auto bufferHandle = commandBuffer.ReadObject<uint16_t>();
+				Renderer::Instance()->CreateIndexBuffer(mem, IndexBufferHandle{ bufferHandle });
+			}
 				break;
 			case Voidstar::ResourceCommand::CreateVertexBuffer:
 			{
 				auto mem = commandBuffer.ReadObject<Memory>();
 				auto bufferHandle = commandBuffer.ReadObject<uint16_t>();
 				auto layoutHandle = commandBuffer.ReadObject<uint16_t>();
-
-			
-			    BufferInputChunk input 
-
+				Renderer::Instance()->CreateVertexBuffer(mem, VertexBufferHandle{ bufferHandle });
 			}
 				break;
 			case Voidstar::ResourceCommand::CreateDynamicIndexBuffer:
@@ -206,16 +208,16 @@ namespace Voidstar
 	void BindVertexBuffer(uint16_t location, VertexBufferHandle handle)
 	{
 		g_Submission->CurrentRenderItem->Bindings[location].VertexHandle = handle;
-		g_Submission->CurrentRenderItem->Bindings[location].LayoutHandle.idx = g_Submission->VertexLayoutMap.at(handle.idx);
+		g_Submission->CurrentRenderItem->Bindings[location].LayoutHandle = g_Submission->VertexLayoutMap.at(handle);
 	};
 
 
 	VertexBufferHandle CreateVertexBuffer(Memory mem, VertexLayout& layout)
 	{
-		auto bufferHandle = g_VertexBufferHandleAllocator.GetId();
+		auto bufferHandle = VertexBufferHandle{ g_VertexBufferHandleAllocator.GetId() };
 		
 
-		auto layoutHandle = g_LayoutHandleAllocator.GetId();
+		auto layoutHandle = VertexLayoutHandle{g_LayoutHandleAllocator.GetId()};
 		g_Submission->Layouts.insert({layoutHandle,layout});
 		g_Submission->VertexLayoutMap.insert({ bufferHandle, layoutHandle });
 

@@ -698,6 +698,63 @@ namespace Voidstar
 	{
 		m_Compiler.Link(handle, shaderAmount);
 	}
+
+
+	vk::MemoryPropertyFlags GetMemoryFlags(UpdateHint hint)
+	{
+		switch (hint)	
+		{
+		case Voidstar::UpdateHint::Immutable:
+		case Voidstar::UpdateHint::Static:
+			return vk::MemoryPropertyFlagBits::eDeviceLocal;
+			break;
+		case Voidstar::UpdateHint::Dynamic:
+			return vk::MemoryPropertyFlagBits::eHostCoherent |
+				vk::MemoryPropertyFlagBits::eHostVisible;
+			break;
+		case Voidstar::UpdateHint::Readback:
+			return vk::MemoryPropertyFlagBits::eHostCoherent |
+				vk::MemoryPropertyFlagBits::eHostVisible |
+				vk::MemoryPropertyFlagBits::eHostCached;
+			break;
+		default:
+			return vk::MemoryPropertyFlagBits::eDeviceLocal;;
+			break;
+		}
+	}
+
+	void Renderer::CreateVertexBuffer(Memory& mem, VertexBufferHandle vertHandle, UpdateHint hint)
+	{
+		BufferInputChunk input;
+		input.size = mem.size;
+		input.usage = vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst;
+		input.memoryProperties = GetMemoryFlags(hint);
+		auto& buffer = m_VertexBuffers[vertHandle] = CreateSPtr<Buffer>(input);
+		SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(mem.size);
+
+		m_TransferCommandBuffer[0].BeginTransfering();
+		m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), buffer.get(), mem.data, mem.size);
+		m_TransferCommandBuffer[0].EndTransfering();
+
+	}
+
+	void Renderer::CreateIndexBuffer(Memory& mem, IndexBufferHandle indexHandle)
+	{
+		BufferInputChunk input;
+		input.size = mem.size;
+		input.usage = vk::BufferUsageFlagBits::eIndexBuffer |  vk::BufferUsageFlagBits::eTransferDst;
+		input.memoryProperties = GetMemoryFlags(UpdateHint::Static);
+		auto indexAmount = mem.size / 4;
+		auto& buffer = m_IndexBuffers[indexHandle] = CreateSPtr<IndexBuffer>(input, indexAmount, vk::IndexType::eUint32);
+
+		SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(mem.size);
+
+		m_TransferCommandBuffer[0].BeginTransfering();
+		m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), buffer.get(), mem.data, mem.size);
+		m_TransferCommandBuffer[0].EndTransfering();
+
+	}
+
 	void Renderer::Render(float deltaTime,Camera& camera)
 	{
 		uint32_t imageIndex;

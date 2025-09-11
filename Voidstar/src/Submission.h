@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "ResourceCommandBuffer.h"
 #include <string_view>
 #include "Core.h"
@@ -12,16 +12,28 @@
 
 namespace Voidstar
 {
+
 	template <class Tag>
 	struct Handle {
-		
+
 		static constexpr uint16_t INVALID_ID = uint16_t(-1);
 
 		uint16_t idx = INVALID_ID;
 
 		// validity
 		bool Valid() const { return idx != INVALID_ID; }
+
+		bool operator==(const Handle& other) const {
+			return idx == other.idx;
+		}
+		bool operator!=(const Handle& other) const {
+			return idx != other.idx;
+		}
+
 	};
+
+
+
 
 
 	struct ProgramTag {};
@@ -38,8 +50,26 @@ namespace Voidstar
 	using FrameBufferHandle = Handle<FramebufferTag>;
 	using VertexLayoutHandle = Handle<VertexLayoutTag>;
 	using PassID = uint16_t;
-	
-	
+
+}
+namespace std {
+	template <class Tag>
+	struct hash<Voidstar::Handle<Tag>> {
+		size_t operator()(const Voidstar::Handle<Tag>& h) const noexcept {
+			return std::hash<uint16_t>{}(h.idx);
+		}
+	};
+}
+namespace Voidstar
+{
+
+	enum class UpdateHint {
+		Immutable,   // uploaded once, then never touched by CPU
+		Static,      // updated occasionally (loading screen, level change)
+		Dynamic,     // updated frequently (per frame or per few frames)
+		Readback     // GPU → CPU reads (screenshots, queries)
+	};
+
 	struct Memory
 	{
 		uint8_t* data; //!< Pointer to data.
@@ -92,8 +122,8 @@ namespace Voidstar
 		View Views[256];
 		RenderItem* CurrentRenderItem = Frames[0].m_renderItem;
 
-		std::unordered_map<uint16_t, uint16_t> VertexLayoutMap;
-		std::unordered_map<uint16_t, VertexLayout> Layouts;
+		std::unordered_map<VertexBufferHandle, VertexLayoutHandle> VertexLayoutMap;
+		std::unordered_map<VertexLayoutHandle, VertexLayout> Layouts;
 		// am not sure how we treat it in multithreading
 		SPtr<Window> Window;
 		Frame  Frames[1];
@@ -136,3 +166,4 @@ namespace Voidstar
 	void ExecuteFrame();
 
 }
+

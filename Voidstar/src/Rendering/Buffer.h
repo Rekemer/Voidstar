@@ -24,7 +24,10 @@ namespace Voidstar
 		Buffer(const BufferInputChunk& input);
 		Buffer(const Buffer& buffer) = delete;
 		static SPtr<Buffer> CreateStagingBuffer(size_t dataSize);
-		void AllocateBufferMemory(const BufferInputChunk& input, Device* device);
+
+	
+
+
 		void SetData(void* data);
 		vk::Buffer& GetBuffer() { return m_Buffer; }
 		vk::DeviceMemory& GetMemory() { return m_BufferMemory; }
@@ -32,6 +35,7 @@ namespace Voidstar
 		void Free();
 		~Buffer();	
 	private:
+		void AllocateBufferMemory(const BufferInputChunk& input, Device* device);
 		friend class Renderer;
 		friend class Device;
 		uint32_t m_Size;
