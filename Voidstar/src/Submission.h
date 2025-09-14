@@ -6,6 +6,7 @@
 #include "InitParams.h"
 #include "Window.h"
 #include "VertexLayout.h"
+#include "Handle.h"
 #include "glm.hpp"
 #include <unordered_map>
 #include <cstdint>
@@ -13,24 +14,7 @@
 namespace Voidstar
 {
 
-	template <class Tag>
-	struct Handle {
 
-		static constexpr uint16_t INVALID_ID = uint16_t(-1);
-
-		uint16_t idx = INVALID_ID;
-
-		// validity
-		bool Valid() const { return idx != INVALID_ID; }
-
-		bool operator==(const Handle& other) const {
-			return idx == other.idx;
-		}
-		bool operator!=(const Handle& other) const {
-			return idx != other.idx;
-		}
-
-	};
 
 
 
@@ -84,8 +68,10 @@ namespace Voidstar
 	// render items learns about the view at submit
 	struct RenderItem
 	{
+		ProgramHandle Program;
 		PassID View;
 		VertexBinding Bindings[10];
+		IndexBufferHandle IndexBuffer;
 	};
 
 	struct Frame
@@ -119,8 +105,14 @@ namespace Voidstar
 			return cmdBuf;
 		}
 
+		void NextItem()
+		{
+			currentFrame++;
+			CurrentRenderItem = Frames[currentFrame].m_renderItem;
+		}
+
 		View Views[256];
-		RenderItem* CurrentRenderItem = Frames[0].m_renderItem;
+		RenderItem* CurrentRenderItem = Frames[currentFrame].m_renderItem;
 
 		std::unordered_map<VertexBufferHandle, VertexLayoutHandle> VertexLayoutMap;
 		std::unordered_map<VertexLayoutHandle, VertexLayout> Layouts;
@@ -131,6 +123,8 @@ namespace Voidstar
 		Frame* Submit;
 		// the one doing API calls
 		Frame* Render;
+	private:
+		int  currentFrame = 0;
 	};
 
 	

@@ -6,11 +6,11 @@
 namespace Voidstar
 {
 
-	void AttachmentManager::Init()
+	void AttachmentManager::Init(const std::vector<SPtr<Image>>& swapchainImages)
 	{
-		// swachain images can be targeted as color or resolve
-		auto swapchainImages = RenderContext::GetFrames();
+		// default can be used as resolve after MSAA
 		m_Resolve["Default"] = swapchainImages;
+		// or as direct render targert
 		m_Color["Default"] = swapchainImages;
 	}
 

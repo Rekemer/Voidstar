@@ -88,70 +88,7 @@ namespace Voidstar
 			swapchain->m_Images[i]->SetHeight(viewportHeight);
 		}
 		return swapchain;
-		//for (size_t i = 0; i < images.size(); ++i) {
-
-
-		//	swapchain->m_SwapchainFrames[i].ColourImage.m_Image = images[i];
-
-
-		//	// just for depth
-		//	auto defCandidates = { vk::Format::eD32Sfloat, vk::Format::eD24UnormS8Uint };
-		//	// for stencil
-		//	std::vector<vk::Format> candidates = 
-		//	{
-		//		vk::Format::eD32SfloatS8Uint,
-		//		vk::Format::eD24UnormS8Uint,
-		//		vk::Format::eD16UnormS8Uint
-
-		//	};
-		//	auto depthFormat = Image::GetFormat(
-		//		device->GetDevicePhys(),
-		//		candidates,
-		//		vk::ImageTiling::eOptimal,
-		//		vk::FormatFeatureFlagBits::eDepthStencilAttachment
-		//	);
-
-		//	ImageSpecs imageInfo;
-		//	
-		//	imageInfo.tiling = vk::ImageTiling::eOptimal;
-		//	imageInfo.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment| vk::ImageUsageFlagBits::eInputAttachment;
-		//	imageInfo.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
-		//	imageInfo.width = viewportWidth;
-		//	imageInfo.height = viewportHeight;
-		//	imageInfo.format = depthFormat;
-
-
-		//	auto samples = RenderContext::GetDevice()->GetSamples();
-		//	swapchain->m_SwapchainFrames[i].imageDepth= Image::CreateVKImage(imageInfo, samples);
-		//	swapchain->m_SwapchainFrames[i].depthImageMemory = Image::CreateMemory(swapchain->m_SwapchainFrames[i].imageDepth,imageInfo);
-		//	swapchain->m_SwapchainFrames[i].imageDepthView = Image::CreateImageView(
-		//	swapchain->m_SwapchainFrames[i].imageDepth, depthFormat, vk::ImageAspectFlagBits::eDepth
-		//	);
-
-		//	swapchain->m_SwapchainFrames[i].depthFormat = depthFormat;
-
-		//}
-
-		//swapchain->m_SwapchainFormat = format.format;
-		//swapchain->m_SwapchainExtent = extent;
 		
-		}
-
-		void Swapchain::CreateMSAAFrame()
-		{
-			ImageSpecs specs;
-			auto extent = m_SwapchainExtent;
-			auto swapchainFormat = m_SwapchainFormat;
-			specs.width = extent.width;
-			specs.height = extent.height;
-			specs.tiling = vk::ImageTiling::eOptimal;
-			specs.usage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransientAttachment;
-			specs.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
-			specs.format = swapchainFormat;
-			auto samples = RenderContext::GetDevice()->GetSamples();
-			//m_MsaaImage = Image::CreateVKImage(specs, samples);
-			//m_MsaaImageMemory = Image::CreateMemory(m_MsaaImage, specs);
-			//m_MsaaImageView = Image::CreateImageView(m_MsaaImage, swapchainFormat, vk::ImageAspectFlagBits::eColor);
 		}
 		
 		void Swapchain::CleanUp()
@@ -162,27 +99,8 @@ namespace Voidstar
 
 				e.reset();
 			}
-			//for (auto& frame : m_SwapchainFrames) {
-
-			//	 // image is destroyed with swapchain
-			//	device.destroyImageView(frame.imageView);
-			//	device.destroyFramebuffer(frame.framebuffer);
-			//	device.freeMemory(frame.depthImageMemory);
-			//	device.destroyImage(frame.imageDepth);
-			//	device.destroyImageView(frame.imageDepthView);
-
-			//}
-
-			//device.freeMemory(m_MsaaImageMemory);
-			//device.destroyImage(m_MsaaImage);
-			//device.destroyImageView(m_MsaaImageView);
-
 			// cannot not use detroy image on  presentable image
 			device.destroySwapchainKHR(m_Swapchain);
-		}
-		Swapchain::~Swapchain()
-		{
-			//CleanUp();
 		}
 		
 

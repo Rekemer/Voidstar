@@ -11,12 +11,12 @@ namespace Voidstar
 {
 	UPtr<Submission> g_Submission = CreateUPtr<Submission>();
 
-	SparseSet g_ShaderHandleAllocator;
-	SparseSet g_ProgramHandleAllocator;
+	SparseSet<ShaderHandle> g_ShaderHandleAllocator;
+	SparseSet<ProgramHandle> g_ProgramHandleAllocator;
 
-	SparseSet g_VertexBufferHandleAllocator;
-	SparseSet g_IndexBufferHandleAllocator;
-	SparseSet g_LayoutHandleAllocator;
+	SparseSet<VertexBufferHandle> g_VertexBufferHandleAllocator;
+	SparseSet<IndexBufferHandle> g_IndexBufferHandleAllocator;
+	SparseSet<VertexLayoutHandle> g_LayoutHandleAllocator;
 
 
 
@@ -44,8 +44,8 @@ namespace Voidstar
 		auto handle = g_ShaderHandleAllocator.GetId();
 		auto& cmd = g_Submission->GetCommandBuffer(ResourceCommand::CreateShader);
 
-		cmd.WriteByte(static_cast<uint8_t>(handle & 0x00FF));
-		cmd.WriteByte(static_cast<uint8_t>(handle >> 8));
+		cmd.WriteByte(static_cast<uint8_t>(handle.idx & 0x00FF));
+		cmd.WriteByte(static_cast<uint8_t>(handle.idx >> 8));
 
 		cmd.WriteString(shader);
 		return ShaderHandle{ handle };
@@ -61,9 +61,17 @@ namespace Voidstar
 		g_Submission->Views[id].Rect = { x,y,width,height };
 	}
 
-	void Submit(PassID id, ProgramHandle)
+	void Submit(PassID viewID, ProgramHandle programHandle)
 	{
 		// creates render item
+		auto& renderItem = g_Submission->CurrentRenderItem;
+		renderItem->Program = programHandle;
+		renderItem->View =viewID;
+		// we can create pipeline
+
+	
+		g_Submission->NextItem();
+		
 	}
 
 	void SetWindow(SPtr<Window> window)
@@ -203,7 +211,7 @@ namespace Voidstar
 	}
 	void BindIndexBuffer(IndexBufferHandle handle)
 	{
-		
+		g_Submission->CurrentRenderItem->IndexBuffer = handle;
 	};
 	void BindVertexBuffer(uint16_t location, VertexBufferHandle handle)
 	{

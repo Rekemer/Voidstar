@@ -61,8 +61,8 @@ namespace std
 namespace Voidstar
 {
 
-	
-	
+
+
 	QuadData quad;
 	std::vector<Vertex_> sphere;
 	std::vector<IndexType> sphereIndicies;
@@ -276,19 +276,19 @@ namespace Voidstar
 	void Renderer::DrawSphereInstance(vk::CommandBuffer& commandBuffer)
 	{
 		assert(false);
-		vk::DeviceSize offsets[] = { 0 };
-
-		{
-			vk::Buffer vertexBuffers[] = { m_SphereBuffer->GetBuffer() };
-			vk::Buffer instanceBuffers[] = { m_InstanceBuffer->GetBuffer() };
-			commandBuffer.bindVertexBuffers(0, 1, vertexBuffers, offsets);
-			commandBuffer.bindVertexBuffers(1, 1, instanceBuffers, offsets);
-
-		}
-		commandBuffer.bindIndexBuffer(m_SphereIndexBuffer->GetBuffer(), 0, m_SphereIndexBuffer->GetIndexType());
-		//auto instanceAmount = static_cast<uint64_t>(m_BatchInstance - m_BatchInstanceStart);
-		auto instanceAmount = static_cast<uint64_t>(0);
-		commandBuffer.drawIndexed(m_SphereIndexBuffer->GetIndexAmount(), instanceAmount, 0, 0, 0);
+		//vk::DeviceSize offsets[] = { 0 };
+		//
+		//{
+		//	vk::Buffer vertexBuffers[] = { m_SphereBuffer->GetBuffer() };
+		//	vk::Buffer instanceBuffers[] = { m_InstanceBuffer->GetBuffer() };
+		//	commandBuffer.bindVertexBuffers(0, 1, vertexBuffers, offsets);
+		//	commandBuffer.bindVertexBuffers(1, 1, instanceBuffers, offsets);
+		//
+		//}
+		//commandBuffer.bindIndexBuffer(m_SphereIndexBuffer->GetBuffer(), 0, m_SphereIndexBuffer->GetIndexType());
+		////auto instanceAmount = static_cast<uint64_t>(m_BatchInstance - m_BatchInstanceStart);
+		//auto instanceAmount = static_cast<uint64_t>(0);
+		//commandBuffer.drawIndexed(m_SphereIndexBuffer->GetIndexAmount(), instanceAmount, 0, 0, 0);
 	}
 	void Renderer::DrawQuad(glm::mat4& world, glm::vec4 color)
 	{
@@ -319,7 +319,7 @@ namespace Voidstar
 		//m_QuadIndex += 6;
 	}
 	
-
+	
 	void Renderer::Init(size_t screenWidth, size_t screenHeight, std::shared_ptr<Window> window) 
 		
 	{
@@ -352,21 +352,82 @@ namespace Voidstar
 
 		m_UniversalPool = DescriptorPool::Create(pool_sizes, 10);
 
+	
+		auto frameAmount = RenderContext::GetFrameAmount();
+		m_FrameCommandPool = Renderer::Instance()->GetCommandPoolManager()->GetFreePool();
+		m_RenderCommandBuffer = CommandBuffer::CreateBuffers(m_FrameCommandPool, vk::CommandBufferLevel::ePrimary, frameAmount);
+		m_TransferCommandBuffer = CommandBuffer::CreateBuffers(m_FrameCommandPool, vk::CommandBufferLevel::ePrimary, frameAmount);
+		m_ComputeCommandBuffer = CommandBuffer::CreateBuffers(m_FrameCommandPool, vk::CommandBufferLevel::ePrimary, frameAmount);
+		
+		
+		m_AttachmentManager.Init(RenderContext::GetFrames());
+
+
+		auto samples = RenderContext::GetDevice()->GetSamples();
+		m_AttachmentManager.CreateColor("MSAA", m_AttachmentManager, vk::Format::eB8G8R8A8Unorm,
+			screenWidth, screenHeight,
+			samples, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransientAttachment,
+			frameAmount);
+
+		m_AttachmentManager.CreateDepthStencil("DepthStencil", m_AttachmentManager,
+			screenWidth, screenHeight, 
+			samples, vk::ImageUsageFlagBits::eDepthStencilAttachment,
+			frameAmount);
+
+
+		auto defaultRenderPass = g_RenderPassAllocator.GetId() ;
 		
 
+		RenderPassBuilder builder;
+
+		builder.ColorOutput("MSAA", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
+		builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
+		builder.SetSaveOp(vk::AttachmentStoreOp::eDontCare);
+		builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+		builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
+		builder.SetInitialLayout(vk::ImageLayout::eUndefined);
+		builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
+
+		builder.BuildAttachmentDesc();
+
+		builder.DepthStencilOutput("DepthStencil", m_AttachmentManager, vk::ImageLayout::eDepthStencilAttachmentOptimal);
+		builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
+		builder.SetSaveOp(vk::AttachmentStoreOp::eDontCare);
+		builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+		builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
+		builder.SetInitialLayout(vk::ImageLayout::eUndefined);
+		builder.SetFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+		builder.BuildAttachmentDesc();
+
+		builder.ResolveOutput("Default", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
+		builder.SetLoadOp(vk::AttachmentLoadOp::eDontCare);
+		builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
+		builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+		builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
+		builder.SetInitialLayout(vk::ImageLayout::eUndefined);
+		//builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
+		builder.SetFinalLayout(vk::ImageLayout::ePresentSrcKHR);
+		builder.BuildAttachmentDesc();
+
+		vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0,
+			vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests, vk::AccessFlagBits::eColorAttachmentWrite,
+			vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests, vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eDepthStencilAttachmentWrite);
 
 
-		auto commandBufferInit = [this]()
-		{
-			auto frameAmount = RenderContext::GetFrameAmount();
-			m_FrameCommandPool = Renderer::Instance()->GetCommandPoolManager()->GetFreePool();
-			m_RenderCommandBuffer = CommandBuffer::CreateBuffers(m_FrameCommandPool, vk::CommandBufferLevel::ePrimary, frameAmount	);
-			m_TransferCommandBuffer = CommandBuffer::CreateBuffers(m_FrameCommandPool, vk::CommandBufferLevel::ePrimary, frameAmount);
-			m_ComputeCommandBuffer = CommandBuffer::CreateBuffers(m_FrameCommandPool, vk::CommandBufferLevel::ePrimary, frameAmount);
-		};
-		commandBufferInit();
-		m_AttachmentManager.Init();
+
+		builder.AddSubpass({ 0 }, { 1 }, { 2 });
+
+		builder.AddSubpassDependency(dependency0);
+
 		
+
+		vk::Extent2D extent = { static_cast<uint32_t>(screenWidth),static_cast<uint32_t>(screenHeight)};
+
+		vk::ClearValue clearColor = { std::array<float, 4>{137.f / 255.f, 189.f / 255.f, 199.f / 255.f, 1.0f} };
+		vk::ClearValue clearDepth = vk::ClearDepthStencilValue{ 1.0f, 0 };
+		std::vector<vk::ClearValue> clearValues{ clearColor ,clearDepth, clearColor };
+		m_RenderPasses[defaultRenderPass] = builder.Build(m_AttachmentManager, RenderContext::GetFrameAmount(), extent, clearValues);
+
 #if 0
 		quad = GeneratePlane(1);
 		sphere = GenerateSphere(1,10, sphereIndicies);
@@ -531,23 +592,7 @@ namespace Voidstar
 			uniformBuffersMapped[i] = m_Device->GetDevice().mapMemory(m_UniformBuffers[i]->GetMemory(), 0, bufferSize);
 		}
 #endif // 0
-
-
-	
-		auto physDev = m_Device->GetDevicePhys();
-		auto dev = m_Device->GetDevice();
-		auto queue = m_Device->GetGraphicsQueue();
-		m_TracyCommandPool = m_CommandPoolManager->GetFreePool();
-		m_TracyCommandBuffer = CommandBuffer::CreateBuffer(m_TracyCommandPool,vk::CommandBufferLevel::ePrimary);
-		auto instance = m_Instance->GetInstance();
-		PFN_vkGetPhysicalDeviceCalibrateableTimeDomainsEXT vkGetPhysicalDeviceCalibrateableTimeDomainsEXT = reinterpret_cast<PFN_vkGetPhysicalDeviceCalibrateableTimeDomainsEXT>(vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceCalibrateableTimeDomainsEXT"));
-		PFN_vkGetCalibratedTimestampsEXT vkGetCalibratedTimestampsEXT = reinterpret_cast<PFN_vkGetCalibratedTimestampsEXT>(vkGetDeviceProcAddr(dev, "vkGetCalibratedTimestampsEXT"));
-
-		m_TracyContext = TracyVkContextCalibrated(physDev,dev,queue, m_TracyCommandBuffer.GetCommandBuffer(),
-			vkGetPhysicalDeviceCalibrateableTimeDomainsEXT, vkGetCalibratedTimestampsEXT);
-
-
-		
+			
 	}
 
 	
@@ -569,12 +614,8 @@ namespace Voidstar
 	}
 	void Renderer::UserInit()
 	{
-		m_UserFunctions.bindingsInit();
 		CreateLayouts();
 		AllocateSets();
-		m_UserFunctions.createResources();
-		m_UserFunctions.bindResources();
-		m_UserFunctions.createPipelines();
 
 	}
 	void Renderer::CreateSyncObjects()
@@ -630,10 +671,7 @@ namespace Voidstar
 			device.waitIdle();
 
 
-
-			TracyVkDestroy(m_TracyContext)
-
-			m_CommandPoolManager->FreePool(m_TracyCommandPool);
+				
 
 				std::for_each(m_Graphs.begin(),
 					m_Graphs.end(),
@@ -666,11 +704,7 @@ namespace Voidstar
 
 			m_Pipelines.clear();
 			m_CommandPoolManager->Release();
-			m_QuadBuffer.reset();
-			m_SphereBuffer.reset();
 			m_InstanceBuffer.reset();
-			m_SphereIndexBuffer.reset();
-			m_QuadIndexBuffer.reset();
 			m_QuadBufferBatch.reset();
 			m_QuadBufferBatchIndex.reset();
 			RenderContext::Shutdown();
@@ -755,6 +789,15 @@ namespace Voidstar
 
 	}
 
+	void Renderer::AddFramebuffers(FrameBufferHandle handle, std::vector<vk::Framebuffer>& framebuffers)
+	{
+		if (m_Framebuffers.find(handle) != m_Framebuffers.end())
+		{
+			Log::GetLog()->error("Adding existing frame buffer");
+		}
+		m_Framebuffers[handle] = framebuffers;
+	}
+
 	void Renderer::Render(float deltaTime,Camera& camera)
 	{
 		uint32_t imageIndex;
@@ -796,12 +839,7 @@ namespace Voidstar
 			ZoneScopedN("Recreating swapchain");
 			RecreateSwapchain();
 		}
-		m_TracyCommandBuffer.BeginRendering();
-		TracyVkCollect(m_TracyContext, m_TracyCommandBuffer.GetCommandBuffer());
-		m_TracyCommandBuffer.EndRendering();
 		m_CurrentFrame = (m_CurrentFrame + 1) % RenderContext::GetFrameAmount();
-
-		
 		
 		FrameMark;
 	}

@@ -24,6 +24,8 @@
 
 #include "ShaderType.h"
 #include "Vertex_.h"
+#include "Handle.h"
+#include "SparseSet.h"
 #include "ShaderCompiler.h"
 #include "AttachmentManager.h"
 
@@ -105,7 +107,6 @@ namespace Voidstar
 		}
 		std::pair<float, float> GetViewportSize() const { return { m_ViewportWidth,m_ViewportHeight }; }
 		vk::PolygonMode GetPolygonMode() const { return m_PolygoneMode; }
-		void SetCallables(Callables functions) { m_UserFunctions = functions; };
 		void Shutdown();
 		CommandBuffer& GetRenderCommandBuffer(size_t frameindex);
 		CommandBuffer& GetComputeCommandBuffer(size_t frameindex);
@@ -177,21 +178,18 @@ namespace Voidstar
 		void Draw(Quad& quad, glm::mat4& world);
 		void Draw(Sphere& drawable);
 		void Draw(QuadRangle& drawable);
-		TracyVkCtx GetTracyCtx()
-		{
-			return m_TracyContext;
-		}
-		CommandBuffer& GetTracyCmd()
-		{
-			return m_TracyCommandBuffer;
-		}
 		void UpdateUniformBuffer(const glm::mat4& proj, Camera& camera);
+		void AddFramebuffers(FrameBufferHandle handle, std::vector<vk::Framebuffer>& framebuffers);
 	private:
 		void CreateInstance();
 		void RecreateSwapchain();
 		void AllocateSets();
 		void CreateLayouts();
 		void CleanUpLayouts();
+	private:
+		struct RenderPassTag {};
+		using RenderPassHandle_ = Handle<RenderPassTag>;
+		SparseSet<RenderPassHandle_> g_RenderPassAllocator;
 	private:
 		Voidstar::Instance* m_Instance;
 		Device* m_Device;
@@ -204,28 +202,26 @@ namespace Voidstar
 		std::unordered_map<VertexBufferHandle, SPtr<Buffer>> m_VertexBuffers;
 		std::unordered_map<IndexBufferHandle, SPtr<IndexBuffer>> m_IndexBuffers;
 		//std::unordered_map<VertexLayoutHandle, > m_BufferLayouts;
-
+		std::unordered_map<FrameBufferHandle, std::vector<vk::Framebuffer>> m_Framebuffers;
+		
+		// 0 handle is default render pass
+		std::unordered_map<RenderPassHandle_, UPtr<IExecute>> m_RenderPasses;
 
 
 
 		std::vector<CommandBuffer> m_RenderCommandBuffer,
 			m_TransferCommandBuffer, m_ComputeCommandBuffer;
 		vk::CommandPool m_FrameCommandPool;
-		UPtr<IndexBuffer> m_QuadIndexBuffer;
-		UPtr<Buffer> m_QuadBuffer{ nullptr };
+		
+				
 
-		UPtr<IndexBuffer> m_SphereIndexBuffer;
-		UPtr<Buffer> m_SphereBuffer{ nullptr };
-		TracyVkCtx m_TracyContext;
 
 
 		SPtr<DescriptorPool> m_UniversalPool;
-		// can be in one buffer?
-		CommandBuffer m_TracyCommandBuffer;
-		vk::CommandPool m_TracyCommandPool;
+
 
 		UPtr<CommandPoolManager> m_CommandPoolManager;
-		std::vector<void*> uniformBuffersMapped;
+		
 
 		std::vector<Semaphore> m_ImageAvailableSemaphore;
 		std::vector<Semaphore> m_RenderFinishedSemaphore;
@@ -239,18 +235,13 @@ namespace Voidstar
 		vk::PolygonMode m_PolygoneMode = vk::PolygonMode::eFill;
 
 
-
-		void* m_NoiseDataPtr;
-
-		bool m_IsResized, m_IsNewParametrs, m_IsPolygon;
-
-
 		// int is number of set, int is a type of pipeline render or compute
 		Bindings m_Bindings;
 		std::unordered_map<std::pair<int, PipelineType>, DescriptorSetLayout*, EnumClassHash> m_Layout;
 		std::unordered_map<std::pair<int, PipelineType>, std::variant<vk::DescriptorSet, std::vector<vk::DescriptorSet> >, EnumClassHash> m_Sets;
+
 		Sets m_SetsAmount;
-		Callables m_UserFunctions;
+		
 		std::vector<UPtr<RenderPassGraph>> m_Graphs;
 		std::unordered_map<std::string,std::vector<Drawable>> m_Drawables;
 		std::unordered_map<std::string,std::vector<Drawable>> m_StaticDrawables;

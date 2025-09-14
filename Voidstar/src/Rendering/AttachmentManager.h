@@ -1,5 +1,6 @@
 #pragma once
 #include "Prereq.h"
+#include <vector>
 #include "unordered_map"
 #include "vulkan/vulkan.hpp"
 #include "Image.h"
@@ -12,7 +13,7 @@ namespace Voidstar
 	class AttachmentManager
 	{
 	public:
-		void Init();
+		void Init(const std::vector<SPtr<Image>>& swapchainImages);
 		std::vector<SPtr<Image>> GetColor(std::vector< std::string_view> names)
 		{
 			auto attachments = GetAttachhmentsFrom(m_Color, names);

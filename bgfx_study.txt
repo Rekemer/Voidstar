@@ -330,3 +330,6 @@ m_vbh = bgfx::createVertexBuffer(
 		, PosNormalTangentTexcoordVertex::ms_layout
 		);
 to create vertex layout we first save the core data, but creation happend only when we 
+
+
+we can have many user render passes mapped to one render pass

@@ -10,11 +10,13 @@
 #include "Image.h"
 #include<algorithm>
 #include "Renderer.h"
+#include "Submission.h"
+#include "SparseSet.h"
 namespace Voidstar
 {
 
 
-
+	static SparseSet<FrameBufferHandle> g_FrameBufferAllocator;
 
 
 	void RenderPassBuilder::SetLoadOp(vk::AttachmentLoadOp loadOp)
@@ -135,14 +137,91 @@ namespace Voidstar
 	
 
 
+	UPtr<IExecute> RenderPassBuilder::Build(
+		AttachmentManager& manager,
+		size_t framebufferAmount,
+		vk::Extent2D extent,
+		std::vector<vk::ClearValue> clearValues
+	)
+	{
+		auto device = RenderContext::GetDevice();
+		//Now create the renderpass
+		vk::RenderPassCreateInfo renderpassInfo = {};
+		std::vector<vk::AttachmentDescription> attachments;
+		for (auto attachment : m_Attachments)
+		{
+			attachments.push_back(attachment);
+		}
+		// to be able to map NDC to screen coordinates - Viewport ans Scissors Transform
+		renderpassInfo.flags = vk::RenderPassCreateFlags();
+		renderpassInfo.attachmentCount = attachments.size();
+		renderpassInfo.pAttachments = attachments.data();
+		renderpassInfo.subpassCount = m_Subpasses.size();
+		renderpassInfo.pSubpasses = m_Subpasses.data();
+		renderpassInfo.dependencyCount = m_Dependencies.size();
+		renderpassInfo.pDependencies = m_Dependencies.data();
+
+		auto handle = g_FrameBufferAllocator.GetId();
+		std::vector<vk::Framebuffer> framebuffers(framebufferAmount);
+		try
+		{
+			auto vkRenderPass = device->GetDevice().createRenderPass(renderpassInfo);
+
+			for (int i = 0; i < framebufferAmount; i++)
+			{
+				int colorOutputOverall = 0;
+				std::vector<vk::ImageView> views;
+				for (auto type : m_OutputTypes)
+				{
+					if (type == OutputType::COLOR)
+					{
+						views.push_back(m_Color[colorOutputOverall][i]->GetImageView());
+						colorOutputOverall++;
+					}
+					else if (type == OutputType::DEPTH)
+					{
+						views.push_back(m_DepthStencil[0]->GetImageView());
+					}
+					else if (type == OutputType::RESOLVE)
+					{
+						views.push_back(m_Resolve[i]->GetImageView());
+
+					}
+				}
+
+				// width and height for all images are supposed to be equal to each other
+				framebuffers[i] = CreateFramebuffer(views, vkRenderPass, m_Color[0][0]->GetWidth(), m_Color[0][0]->GetHeight());
+
+			}
+			Renderer::Instance()->AddFramebuffers(handle, framebuffers);
+			UPtr<IExecute> renderPass = CreateUPtr<RenderPass>(vkRenderPass, extent, clearValues, handle);
+			m_DepthReferences.clear();
+			m_ColorReferences.clear();
+			m_ResolveReferences.clear();
+			m_DepthStencil.clear();
+			m_Color.clear();
+			m_Resolve.clear();
+			m_IsMSAA = false;
+			return std::move(renderPass);
+		}
+		catch (vk::SystemError err)
+		{
+			Log::GetLog()->error("Failed to create renderpass!");
+		}
+	}
+
+
 	void RenderPass::Execute(CommandBuffer& cmd, size_t frameIndex)
 	{
-		cmd.BeginRendering();
-		cmd.BeginRenderPass(m_RenderPass, m_Framebuffers[frameIndex], m_Extent, m_ClearValues);
-		m_Execute(cmd, frameIndex);
-		cmd.EndRenderPass();
-		
-		cmd.EndRendering();
+		assert(false);
+		//cmd.BeginRendering();
+		//cmd.BeginRenderPass(m_RenderPass, m_Framebuffers[frameIndex], m_Extent, m_ClearValues);
+		//
+		//
+		//
+		//cmd.EndRenderPass();
+		//
+		//cmd.EndRendering();
 	}
 
 
@@ -151,10 +230,7 @@ namespace Voidstar
 		auto device = RenderContext::GetDevice()->GetDevice();
 		device.waitIdle();
 		device.destroyRenderPass(m_RenderPass);
-		for (auto e : m_Framebuffers)
-		{
-			device.destroyFramebuffer(e);
-		}
+	
 	}
 
 }
