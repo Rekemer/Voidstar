@@ -53,24 +53,22 @@ namespace Voidstar
 
 	void SetViewTransform(PassID id, glm::mat4& view, glm::mat4& proj)
 	{
-		g_Submission->Views[id].View = view;
-		g_Submission->Views[id].Proj= proj;
+		g_Submission->Submit->Views[id].View = view;
+		g_Submission->Submit->Views[id].Proj= proj;
 	}
 	void SetViewRect(PassID id, size_t x, size_t y, size_t width, size_t height)
 	{
-		g_Submission->Views[id].Rect = { x,y,width,height };
+		g_Submission->Submit->Views[id].Rect = { x,y,width,height };
 	}
 
 	void Submit(PassID viewID, ProgramHandle programHandle)
 	{
 		// creates render item
-		auto& renderItem = g_Submission->CurrentRenderItem;
+		auto renderItem = g_Submission->Submit->CurrentRenderItem;
 		renderItem->Program = programHandle;
 		renderItem->View =viewID;
 		// we can create pipeline
-
-	
-		g_Submission->NextItem();
+		g_Submission->Submit->NextItem();
 		
 	}
 
@@ -197,26 +195,26 @@ namespace Voidstar
 	}
 
 	// start calling implementation
-	void ExecuteFrame()
+	void ExecuteFrame(float deltaTime)
 	{
 		std::swap(g_Submission->Submit, g_Submission->Render);
 		// execute prerender commands
 		ExecuteCommands(g_Submission->Render->CmdPre);
 		// render commands
 
+		Renderer::Instance()->RenderFrame(g_Submission->Render, deltaTime);
+
 		// execute postrender commands
 		ExecuteCommands(g_Submission->Render->CmdPost);
-
-
 	}
 	void BindIndexBuffer(IndexBufferHandle handle)
 	{
-		g_Submission->CurrentRenderItem->IndexBuffer = handle;
+		g_Submission->Submit->CurrentRenderItem->IndexBuffer = handle;
 	};
 	void BindVertexBuffer(uint16_t location, VertexBufferHandle handle)
 	{
-		g_Submission->CurrentRenderItem->Bindings[location].VertexHandle = handle;
-		g_Submission->CurrentRenderItem->Bindings[location].LayoutHandle = g_Submission->VertexLayoutMap.at(handle);
+		g_Submission->Submit->CurrentRenderItem->Bindings[location].VertexHandle = handle;
+		g_Submission->Submit->CurrentRenderItem->Bindings[location].LayoutHandle = g_Submission->VertexLayoutMap.at(handle);
 	};
 
 

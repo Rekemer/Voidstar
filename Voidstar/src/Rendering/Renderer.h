@@ -36,6 +36,7 @@ namespace Voidstar
 	class SwapChainSupportDetails;
 	class Buffer;
 	class Camera;
+	struct Frame;
 	class Application;
 	class Image;
 	class DescriptorPool;
@@ -77,7 +78,7 @@ namespace Voidstar
 		static Renderer* Instance();
 		void BeginFrame(Camera& camera, size_t viewportWidth, 
 			size_t viewportHeight);
-		void Render(float deltaTime,Camera& camera);
+		void RenderFrame(Frame* render, float deltaTime);
 		void CompileShader(std::string_view shader);
 		void LinkShaders(ProgramHandle handle, uint8_t shaderAmount);
 		void CreateVertexBuffer(Memory& mem, VertexBufferHandle vertHandle, UpdateHint hint = UpdateHint::Static);

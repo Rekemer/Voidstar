@@ -30,7 +30,8 @@ namespace Voidstar
 			{
 				m_Transitions[i]->Execute(compute, frameIndex);
 			}
-			else m_Transitions[i]->Execute(cmd, frameIndex);
+			else 
+				m_Transitions[i]->Execute(cmd, frameIndex);
 			
 			if (i == 0)
 			{

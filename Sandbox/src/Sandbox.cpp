@@ -489,7 +489,7 @@ public:
 
 		//m_QuadBuffer = CreateVerte
 
-		ExecuteFrame();
+		ExecuteFrame(0);
 
 #if OLD
 
@@ -1350,6 +1350,7 @@ public:
 		BindIndexBuffer(m_IndexCubeHandle);
 
 		Submit(m_CubeRenderPass, m_DefaultShader);
+		
 #if 0 
 		Submit(m_FeedbackRenderPass, m_FeedbackShader);
 
@@ -1364,7 +1365,7 @@ public:
 #endif
 
 
-		ExecuteFrame();
+		ExecuteFrame(deltaTime);
 
 	}
 

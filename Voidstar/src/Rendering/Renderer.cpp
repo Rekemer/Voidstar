@@ -62,6 +62,99 @@ namespace Voidstar
 {
 
 
+	static vk::BlendFactor map(BlendFactor f) {
+		switch (f) {
+		case BlendFactor::Zero:               return vk::BlendFactor::eZero;
+		case BlendFactor::One:                return vk::BlendFactor::eOne;
+		case BlendFactor::SrcColor:           return vk::BlendFactor::eSrcColor;
+		case BlendFactor::OneMinusSrcColor:   return vk::BlendFactor::eOneMinusSrcColor;
+		case BlendFactor::DstColor:           return vk::BlendFactor::eDstColor;
+		case BlendFactor::OneMinusDstColor:   return vk::BlendFactor::eOneMinusDstColor;
+		case BlendFactor::SrcAlpha:           return vk::BlendFactor::eSrcAlpha;
+		case BlendFactor::OneMinusSrcAlpha:   return vk::BlendFactor::eOneMinusSrcAlpha;
+		case BlendFactor::DstAlpha:           return vk::BlendFactor::eDstAlpha;
+		case BlendFactor::OneMinusDstAlpha:   return vk::BlendFactor::eOneMinusDstAlpha;
+		case BlendFactor::ConstColor:         return vk::BlendFactor::eConstantColor;
+		case BlendFactor::OneMinusConstColor: return vk::BlendFactor::eOneMinusConstantColor;
+		case BlendFactor::ConstAlpha:         return vk::BlendFactor::eConstantAlpha;
+		case BlendFactor::OneMinusConstAlpha: return vk::BlendFactor::eOneMinusConstantAlpha;
+		case BlendFactor::SrcAlphaSaturate:   return vk::BlendFactor::eSrcAlphaSaturate;
+		}
+		return vk::BlendFactor::eOne;
+	}
+
+	static vk::BlendOp map(BlendOp op) {
+		switch (op) {
+		case BlendOp::Add:             return vk::BlendOp::eAdd;
+		case BlendOp::Subtract:        return vk::BlendOp::eSubtract;
+		case BlendOp::ReverseSubtract: return vk::BlendOp::eReverseSubtract;
+		case BlendOp::Min:             return vk::BlendOp::eMin;
+		case BlendOp::Max:             return vk::BlendOp::eMax;
+		}
+		return vk::BlendOp::eAdd;
+	}
+
+	static vk::CompareOp map(CompareOp c) {
+		switch (c) {
+		case CompareOp::Never:    return vk::CompareOp::eNever;
+		case CompareOp::Less:     return vk::CompareOp::eLess;
+		case CompareOp::Equal:    return vk::CompareOp::eEqual;
+		case CompareOp::LessEqual:   return vk::CompareOp::eLessOrEqual;
+		case CompareOp::Greater:  return vk::CompareOp::eGreater;
+		case CompareOp::NotEqual: return vk::CompareOp::eNotEqual;
+		case CompareOp::GreaterEqual:   return vk::CompareOp::eGreaterOrEqual;
+		case CompareOp::Always:   return vk::CompareOp::eAlways;
+		}
+		return vk::CompareOp::eLessOrEqual;
+	}
+
+	static vk::CullModeFlags map(Culling c) {
+		switch (c) {
+		case Culling::None:  return vk::CullModeFlagBits::eNone;
+		case Culling::Back:  return vk::CullModeFlagBits::eBack;
+		case Culling::Front: return vk::CullModeFlagBits::eFront;
+		}
+		return vk::CullModeFlagBits::eBack;
+	}
+
+	static vk::PolygonMode map(Polygon p) {
+		switch (p) {
+		case Polygon::Fill:  return vk::PolygonMode::eFill;
+		case Polygon::Line:  return vk::PolygonMode::eLine;
+		case Polygon::Point: return vk::PolygonMode::ePoint;
+		}
+		return vk::PolygonMode::eFill;
+	}
+
+	static vk::PrimitiveTopology map(Topology t) {
+		switch (t) {
+		case Topology::TriList:   return vk::PrimitiveTopology::eTriangleList;
+		case Topology::TriStrip:  return vk::PrimitiveTopology::eTriangleStrip;
+		case Topology::LineList:  return vk::PrimitiveTopology::eLineList;
+		case Topology::LineStrip: return vk::PrimitiveTopology::eLineStrip;
+		case Topology::Point:     return vk::PrimitiveTopology::ePointList;
+		}
+		return vk::PrimitiveTopology::eTriangleList;
+	}
+
+	static vk::StencilOp map(StencilOp o) {
+		switch (o) {
+		case StencilOp::Keep:      return vk::StencilOp::eKeep;
+		case StencilOp::Zero:      return vk::StencilOp::eZero;
+		case StencilOp::Replace:   return vk::StencilOp::eReplace;
+		case StencilOp::IncrClamp: return vk::StencilOp::eIncrementAndClamp;
+		case StencilOp::DecrClamp: return vk::StencilOp::eDecrementAndClamp;
+		case StencilOp::Invert:    return vk::StencilOp::eInvert;
+		case StencilOp::IncrWrap:  return vk::StencilOp::eIncrementAndWrap;
+		case StencilOp::DecrWrap:  return vk::StencilOp::eDecrementAndWrap;
+		}
+		return vk::StencilOp::eKeep;
+	}
+
+
+
+
+
 
 	QuadData quad;
 	std::vector<Vertex_> sphere;
@@ -798,8 +891,25 @@ namespace Voidstar
 		m_Framebuffers[handle] = framebuffers;
 	}
 
-	void Renderer::Render(float deltaTime,Camera& camera)
+	void Renderer::RenderFrame(Frame* render, float deltaTime)
 	{
+
+
+		for (int i = 0; i < render->currentRenderItem; i++)
+		{
+			auto& renderItem = render->m_renderItem[i];
+
+			auto& view = render->Views[renderItem.View];
+
+			auto& meta = m_Compiler.m_Programs.at(renderItem.Program);
+
+
+			// get pipeline
+
+		}
+
+		return;
+
 		uint32_t imageIndex;
 		auto swapchain = RenderContext::GetSwapchain();
 		{
@@ -844,15 +954,6 @@ namespace Voidstar
 		FrameMark;
 	}
 
-
-	
-
-	
-
-
-	
-
-	
 	void Renderer::Wait(const vk::Fence& fence)
 	{
 		m_Device->GetDevice().waitForFences(fence, VK_TRUE, std::numeric_limits<uint64_t>::max());

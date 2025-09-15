@@ -289,7 +289,7 @@ namespace Voidstar
 			m_StageMetas.pop();
 		}
 
-		auto id = handle.idx;
+		auto id = handle;
 		m_Programs[id] = meta;
 	}
 

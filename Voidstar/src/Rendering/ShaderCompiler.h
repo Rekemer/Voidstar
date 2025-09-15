@@ -53,9 +53,29 @@ namespace Voidstar
 
         std::vector<BindingDesc> merged;   
         std::vector<PushConstRange> pushes; 
-        uint64_t layoutKey = 0;             
+
+
+        std::vector <DescriptorLayoutKey> descriptorKey;
+        PipelineLayoutKey pipelineKey;
+
+        //uint64_t layoutKey = 0;             
     };
 
+
+    struct DescriptorLayoutKey {std::vector<BindingDesc> bindings; };
+    struct PipelineLayoutKey 
+    {
+        // multiple sets
+        std::vector<DescriptorLayoutKey> descriptorsSetLayouts;
+    };
+
+    struct BufferWrite {
+        uint32_t binding, arrayIndex;
+        vk::DescriptorType type;        
+        BufferHandle bufferHandle;       
+        vk::DeviceSize offset, range;
+    };
+    struct DescriptorWriteKey { DescriptorLayoutKey key; std::vector<BufferWrite> buffers; };
 
 	class ShaderCompiler
 	{
@@ -63,9 +83,18 @@ namespace Voidstar
 		void Init();
 		void Compile(std::filesystem::path shaderPath);
         void Link(ProgramHandle handle, uint8_t shaderAmount);
+
+		std::unordered_map<ProgramHandle, ProgramMeta> m_Programs;
+		std::unordered_map<PipelineLayoutKey, vk::PipelineLayout> m_PipelineLayout;
+		std::unordered_map<DescriptorLayoutKey, vk::DescriptorSetLayout> m_DescriptorLayout;
+		std::unordered_map<DescriptorWriteKey, vk::DescriptorSet> m_DescriptorSet;
+
+
+
 	private:
 
         std::stack<StageMeta> m_StageMetas;
-		std::unordered_map<uint16_t, ProgramMeta> m_Programs;
+
+
 	};
 }

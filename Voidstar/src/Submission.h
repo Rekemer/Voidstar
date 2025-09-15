@@ -26,6 +26,7 @@ namespace Voidstar
 	struct IndexBufferTag {};
 	struct FramebufferTag {};
 	struct VertexLayoutTag {};
+	struct BufferTag {};
 
 	using ProgramHandle = Handle<ProgramTag>;
 	using ShaderHandle = Handle<ShaderTag>;
@@ -33,6 +34,7 @@ namespace Voidstar
 	using IndexBufferHandle = Handle<IndexBufferTag>;
 	using FrameBufferHandle = Handle<FramebufferTag>;
 	using VertexLayoutHandle = Handle<VertexLayoutTag>;
+	using BufferHandle = Handle<BufferTag>;
 	using PassID = uint16_t;
 
 }
@@ -65,6 +67,51 @@ namespace Voidstar
 		VertexBufferHandle VertexHandle;
 		VertexLayoutHandle LayoutHandle;
 	};
+
+
+	enum class Topology { TriList, TriStrip, LineList, LineStrip, Point };
+	enum class Culling { None, Back, Front };
+	enum class Polygon { Fill, Line, Point };
+
+	enum class BlendOp { Add, Subtract, ReverseSubtract, Min, Max };
+	enum class CompareOp { Never, Less, Equal, LessEqual, Greater, NotEqual, GreaterEqual, Always };
+	enum class StencilOp { Keep, Zero, Replace, IncrClamp, DecrClamp, Invert, IncrWrap, DecrWrap };
+
+	enum class BlendFactor {
+		Zero, One,
+		SrcColor, OneMinusSrcColor,
+		DstColor, OneMinusDstColor,
+		SrcAlpha, OneMinusSrcAlpha,
+		DstAlpha, OneMinusDstAlpha,
+		ConstColor, OneMinusConstColor,
+		ConstAlpha, OneMinusConstAlpha,
+		SrcAlphaSaturate
+	};
+
+	struct BlendMode {
+		bool        enabled = false;
+		BlendFactor srcColor = BlendFactor::One;
+		BlendFactor dstColor = BlendFactor::Zero;
+		BlendOp     colorOp = BlendOp::Add;
+		BlendFactor srcAlpha = BlendFactor::One;
+		BlendFactor dstAlpha = BlendFactor::Zero;
+		BlendOp     alphaOp = BlendOp::Add;
+	};
+
+	struct RenderState {
+		
+		Topology topology = Topology::TriList;
+		Polygon  polygon = Polygon::Fill;
+		Culling     cull = Culling::None;		
+		bool      depthTest = true;
+		bool      depthWrite = true;
+		CompareOp depthFunc = CompareOp::LessEqual;
+		// depends on amount of colour targets
+		BlendMode blend[1]{};
+		//StencilMode stencil{};
+
+	};
+
 	// render items learns about the view at submit
 	struct RenderItem
 	{
@@ -72,17 +119,7 @@ namespace Voidstar
 		PassID View;
 		VertexBinding Bindings[10];
 		IndexBufferHandle IndexBuffer;
-	};
-
-	struct Frame
-	{
-
-		RenderItem m_renderItem[256];
-
-		// command to execute before Render/Compute API calls
-		ResourceCommandBuffer CmdPre;
-		// command to execute after Render/Compute API calls
-		ResourceCommandBuffer CmdPost;
+		RenderState State;
 	};
 	struct View
 	{
@@ -90,6 +127,25 @@ namespace Voidstar
 		glm::mat4 View;
 		glm::mat4 Proj;
 		FrameBufferHandle Fbh;
+	};
+
+	struct Frame
+	{
+		int  currentRenderItem = 0;
+		RenderItem* CurrentRenderItem;
+		RenderItem m_renderItem[256];
+		View Views[256];
+
+		void NextItem()
+		{
+			currentRenderItem++;
+			CurrentRenderItem = &m_renderItem[currentRenderItem];
+		}
+
+		// command to execute before Render/Compute API calls
+		ResourceCommandBuffer CmdPre;
+		// command to execute after Render/Compute API calls
+		ResourceCommandBuffer CmdPost;
 	};
 	
 
@@ -105,15 +161,6 @@ namespace Voidstar
 			return cmdBuf;
 		}
 
-		void NextItem()
-		{
-			currentFrame++;
-			CurrentRenderItem = Frames[currentFrame].m_renderItem;
-		}
-
-		View Views[256];
-		RenderItem* CurrentRenderItem = Frames[currentFrame].m_renderItem;
-
 		std::unordered_map<VertexBufferHandle, VertexLayoutHandle> VertexLayoutMap;
 		std::unordered_map<VertexLayoutHandle, VertexLayout> Layouts;
 		// am not sure how we treat it in multithreading
@@ -123,8 +170,7 @@ namespace Voidstar
 		Frame* Submit;
 		// the one doing API calls
 		Frame* Render;
-	private:
-		int  currentFrame = 0;
+		
 	};
 
 	
@@ -157,7 +203,7 @@ namespace Voidstar
 	VertexBufferHandle CreateVertexBuffer(Memory mem, VertexLayout& layout);
 	IndexBufferHandle CreateIndexBuffer(Memory mem);
 
-	void ExecuteFrame();
+	void ExecuteFrame(float deltaTime);
 
 }
 
