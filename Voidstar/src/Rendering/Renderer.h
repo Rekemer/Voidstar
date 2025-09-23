@@ -28,6 +28,12 @@
 #include "SparseSet.h"
 #include "ShaderCompiler.h"
 #include "AttachmentManager.h"
+#include "Keys.h"
+
+
+
+
+
 
 struct ImGui_ImplVulkanH_Window;
 namespace Voidstar
@@ -76,6 +82,7 @@ namespace Voidstar
 	public:
 		void Init(size_t screenWidth, size_t screenHeight, std::shared_ptr<Window> window);
 		static Renderer* Instance();
+		
 		void BeginFrame(Camera& camera, size_t viewportWidth, 
 			size_t viewportHeight);
 		void RenderFrame(Frame* render, float deltaTime);
@@ -83,6 +90,8 @@ namespace Voidstar
 		void LinkShaders(ProgramHandle handle, uint8_t shaderAmount);
 		void CreateVertexBuffer(Memory& mem, VertexBufferHandle vertHandle, UpdateHint hint = UpdateHint::Static);
 		void CreateIndexBuffer(Memory& mem, IndexBufferHandle indexHandle);
+		void CreateDescriptorLayout(const DescriptorLayoutKey& key);
+
 
 		void EndFrame();
 		void UserInit();
@@ -199,6 +208,16 @@ namespace Voidstar
 
 		AttachmentManager m_AttachmentManager;
 		ShaderCompiler m_Compiler;
+		RenderPassHandle_ DEFAULT_RENDER_PASS;
+		std::vector<void*> m_UniformBuffersMapped;
+
+		DescriptorLayoutKey SystemDescriptorLayoutKey;
+
+		std::unordered_map<DescriptorLayoutKey, vk::DescriptorSetLayout, DescriptorLayoutKeyHash> m_DescriptorLayout;
+
+		std::unordered_map<PipelineLayoutKey, vk::PipelineLayout, PipelineLayoutKeyHash> m_PipelineLayout;
+
+		std::unordered_map<DescriptorWriteKey, vk::DescriptorSet, DescriptorWriteKeyHash> m_DescriptorSet;
 
 		std::unordered_map<VertexBufferHandle, SPtr<Buffer>> m_VertexBuffers;
 		std::unordered_map<IndexBufferHandle, SPtr<IndexBuffer>> m_IndexBuffers;

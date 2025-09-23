@@ -172,8 +172,6 @@ namespace Voidstar
 	}
 	void Renderer::AllocateSets()
 	{
-		std::variant<vk::DescriptorSet, std::vector<vk::DescriptorSet>> a;
-		a = std::vector<vk::DescriptorSet>();
 		for (auto [key, value] : m_Layout)
 		{
 			std::vector<vk::DescriptorSetLayout> layouts(m_SetsAmount[key], value->GetLayout());
@@ -186,10 +184,7 @@ namespace Voidstar
 			{
 				m_Sets[key] = sets;
 			}
-			
 		}
-		
-
 	}
 	void Renderer::CleanUpLayouts()
 	{
@@ -453,6 +448,45 @@ namespace Voidstar
 		m_ComputeCommandBuffer = CommandBuffer::CreateBuffers(m_FrameCommandPool, vk::CommandBufferLevel::ePrimary, frameAmount);
 		
 		
+
+
+		// get frame amount
+		auto framesAmount = RenderContext::GetFrameAmount();
+		auto m_Device = RenderContext::GetDevice();
+		auto bufferSize = sizeof(UniformBufferObject);
+		m_UniformBuffers.resize(framesAmount);
+		m_UniformBuffersMapped.resize(framesAmount);
+
+
+		BufferInputChunk inputBuffer;
+		inputBuffer.size = bufferSize;
+		inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+		inputBuffer.usage = vk::BufferUsageFlagBits::eUniformBuffer;
+
+		for (size_t i = 0; i < framesAmount; i++)
+		{
+			m_UniformBuffers[i] = CreateUPtr<Buffer>(inputBuffer);
+			m_UniformBuffersMapped[i] = m_Device->GetDevice().mapMemory(m_UniformBuffers[i]->GetMemory(), 0, bufferSize);
+		}
+
+
+
+		SystemDescriptorLayoutKey.set = 0;
+		SystemDescriptorLayoutKey.access = ShaderType::ALL;
+		BindingDesc desc;
+		desc.binding = 0;
+		desc.set = 0;
+		desc.stage = ShaderType::ALL;
+		desc.kind = ResourceType::UniformBuffer;
+		desc.count = 1;
+		SystemDescriptorLayoutKey.bindings.insert(desc);
+		
+		CreateDescriptorLayout(SystemDescriptorLayoutKey);
+
+
+
+
+
 		m_AttachmentManager.Init(RenderContext::GetFrames());
 
 
@@ -468,7 +502,7 @@ namespace Voidstar
 			frameAmount);
 
 
-		auto defaultRenderPass = g_RenderPassAllocator.GetId() ;
+		DEFAULT_RENDER_PASS = g_RenderPassAllocator.GetId() ;
 		
 
 		RenderPassBuilder builder;
@@ -519,7 +553,11 @@ namespace Voidstar
 		vk::ClearValue clearColor = { std::array<float, 4>{137.f / 255.f, 189.f / 255.f, 199.f / 255.f, 1.0f} };
 		vk::ClearValue clearDepth = vk::ClearDepthStencilValue{ 1.0f, 0 };
 		std::vector<vk::ClearValue> clearValues{ clearColor ,clearDepth, clearColor };
-		m_RenderPasses[defaultRenderPass] = builder.Build(m_AttachmentManager, RenderContext::GetFrameAmount(), extent, clearValues);
+		m_RenderPasses[DEFAULT_RENDER_PASS] = builder.Build(m_AttachmentManager, RenderContext::GetFrameAmount(), extent, clearValues);
+
+
+
+
 
 #if 0
 		quad = GeneratePlane(1);
@@ -666,24 +704,7 @@ namespace Voidstar
 
 		}
 
-		// get frame amount
-		auto framesAmount = RenderContext::GetFrameAmount();
-		auto m_Device = RenderContext::GetDevice();
-		auto bufferSize = sizeof(UniformBufferObject);
-		m_UniformBuffers.resize(framesAmount);
-		uniformBuffersMapped.resize(framesAmount);
-
-
-		BufferInputChunk inputBuffer;
-		inputBuffer.size = bufferSize;
-		inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
-		inputBuffer.usage = vk::BufferUsageFlagBits::eUniformBuffer;
-
-		for (size_t i = 0; i < framesAmount; i++)
-		{
-			m_UniformBuffers[i] = CreateUPtr<Buffer>(inputBuffer);
-			uniformBuffersMapped[i] = m_Device->GetDevice().mapMemory(m_UniformBuffers[i]->GetMemory(), 0, bufferSize);
-		}
+		
 #endif // 0
 			
 	}
@@ -903,6 +924,13 @@ namespace Voidstar
 
 			auto& meta = m_Compiler.m_Programs.at(renderItem.Program);
 
+			if (!view.Fbh.Valid())
+			{
+				auto& renderPass = m_RenderPasses.at(DEFAULT_RENDER_PASS);
+
+				
+
+			}
 
 			// get pipeline
 
@@ -1000,7 +1028,91 @@ namespace Voidstar
 		//}
 	}
 
+	static vk::DescriptorSetLayout CreateDescriptorSetLayout(std::vector<vk::DescriptorSetLayoutBinding>& bindings)
+	{
 
+
+		auto device = RenderContext::GetDevice();
+
+		vk::DescriptorSetLayoutCreateInfo layoutInfo;
+		layoutInfo.flags = vk::DescriptorSetLayoutCreateFlagBits();
+		layoutInfo.bindingCount = bindings.size();
+		layoutInfo.pBindings = bindings.data();
+
+		try
+		{
+			return device->GetDevice().createDescriptorSetLayout(layoutInfo);
+		}
+		catch (vk::SystemError err)
+		{
+
+			Log::GetLog()->error("Failed to create Descriptor Set Layout");
+			return nullptr;
+		}
+	}
+
+	vk::ShaderStageFlags To(ShaderType type)
+	{
+		switch (type)	
+		{
+		case Voidstar::ShaderType::VERTEX:
+			return vk::ShaderStageFlagBits::eVertex;
+			break;
+		case Voidstar::ShaderType::FRAGMENT:
+			return vk::ShaderStageFlagBits::eFragment;
+			break;
+		case Voidstar::ShaderType::COMPUTE:
+			return vk::ShaderStageFlagBits::eCompute;
+			break;
+		case Voidstar::ShaderType::TESS_CONTROL:
+			return vk::ShaderStageFlagBits::eTessellationControl;
+			break;
+		case Voidstar::ShaderType::TESS_EVALUATION:
+			return vk::ShaderStageFlagBits::eTessellationEvaluation;
+			break;
+		default:
+			assert(false);
+			break;
+		}
+	}
+
+	inline vk::DescriptorType To(ResourceType type)
+	{
+		switch (type)
+		{
+		case ResourceType::UniformBuffer:
+			return vk::DescriptorType::eUniformBuffer;
+
+		case ResourceType::StorageBuffer:
+			return vk::DescriptorType::eStorageBuffer;
+
+		case ResourceType::SampledImage:
+			return vk::DescriptorType::eSampledImage;
+
+		case ResourceType::StorageImage:
+			return vk::DescriptorType::eStorageImage;
+
+		case ResourceType::Sampler:
+			return vk::DescriptorType::eSampler;
+
+		default:
+			assert(false && "Unknown ResourceType");
+		}
+	}
+
+	void Renderer::CreateDescriptorLayout(const DescriptorLayoutKey& key)
+	{
+
+		
+		auto& bindings = key.bindings;
+		std::vector<vk::DescriptorSetLayoutBinding> vkBindings;
+		for (auto& v : bindings)
+		{
+			vkBindings.push_back(DescriptorBindingDescription(v.binding, To(v.kind), To(v.stage), v.count));
+		}
+
+		m_DescriptorLayout[key] = CreateDescriptorSetLayout(vkBindings);
+	}
 	
 
 

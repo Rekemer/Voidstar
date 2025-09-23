@@ -173,6 +173,7 @@
     <ClInclude Include="src\Rendering\IndexBuffer.h" />
     <ClInclude Include="src\Rendering\Initializers.h" />
     <ClInclude Include="src\Rendering\Instance.h" />
+    <ClInclude Include="src\Rendering\Keys.h" />
     <ClInclude Include="src\Rendering\Model.h" />
     <ClInclude Include="src\Rendering\Pipeline.h" />
     <ClInclude Include="src\Rendering\RenderContext.h" />

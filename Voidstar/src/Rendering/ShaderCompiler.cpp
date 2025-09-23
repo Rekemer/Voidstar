@@ -7,8 +7,10 @@
 
 #include <fstream>
 #include <string_view>
-
 #include "spirv_cross.hpp"
+#include "Renderer.h"
+#include "Keys.h"
+
 namespace Voidstar
 {
 
@@ -161,9 +163,6 @@ namespace Voidstar
 		}
 		spirv_cross::Compiler comp(spirv.data(), spirv.size());
 
-
-		auto shaderType = GetShaderType(comp.get_execution_model());
-
 		// we can encode everything the shader uses amd then later create it when it is needed
 
 		auto res = comp.get_shader_resources();
@@ -171,6 +170,8 @@ namespace Voidstar
 		// UB, Textures, SB,
 
 		StageMeta meta;
+		meta.stage = GetShaderType(comp.get_execution_model());
+		meta.path = path;
 		// --- Uniform buffers ---
 		for (auto& ub : res.uniform_buffers) {
 			uint32_t set = comp.get_decoration(ub.id, spv::DecorationDescriptorSet);
@@ -179,7 +180,7 @@ namespace Voidstar
 			uint32_t count = array_size(comp.get_type(ub.type_id)); // descriptor array on the variable
 			// total struct size (std140/std430 layout is reflected as declared)
 			uint32_t blockSize = uint32_t(comp.get_declared_struct_size(t));
-			meta.bindings.push_back(CreateBindingDesc(set, binding, ResourceType::UniformBuffer,
+			meta.bindings[set].push_back(CreateBindingDesc(set, binding, ResourceType::UniformBuffer,
 				meta.stage, count, /*stride*/0, /*elemSize*/blockSize));
 		}
 
@@ -202,7 +203,7 @@ namespace Voidstar
 					elemSize = uint32_t(comp.get_declared_struct_size(mt)); // for scalars/vectors this is fine too
 				}
 			}
-			meta.bindings.push_back(CreateBindingDesc(set, binding, ResourceType::StorageBuffer,
+			meta.bindings[set].push_back(CreateBindingDesc(set, binding, ResourceType::StorageBuffer,
 				meta.stage, count, stride, elemSize));
 		}
 
@@ -216,7 +217,7 @@ namespace Voidstar
 			const auto& ty = comp.get_type(si.type_id);
 			uint32_t fmt = 0; // spv::ImageFormat (enum) if needed: ty.image.format
 
-			meta.bindings.push_back(CreateBindingDesc(set, binding, ResourceType::SampledImage,
+			meta.bindings[set].push_back(CreateBindingDesc(set, binding, ResourceType::SampledImage,
 				meta.stage, count, 0, 0, fmt));
 		}
 
@@ -225,7 +226,7 @@ namespace Voidstar
 			uint32_t set = comp.get_decoration(img.id, spv::DecorationDescriptorSet);
 			uint32_t binding = comp.get_decoration(img.id, spv::DecorationBinding);
 			uint32_t count = array_size(comp.get_type(img.type_id));
-			meta.bindings.push_back(CreateBindingDesc(set, binding, ResourceType::SampledImage,
+			meta.bindings[set].push_back(CreateBindingDesc(set, binding, ResourceType::SampledImage,
 				meta.stage, count));
 		}
 
@@ -234,7 +235,7 @@ namespace Voidstar
 			uint32_t set = comp.get_decoration(smp.id, spv::DecorationDescriptorSet);
 			uint32_t binding = comp.get_decoration(smp.id, spv::DecorationBinding);
 			uint32_t count = array_size(comp.get_type(smp.type_id));
-			meta.bindings.push_back(CreateBindingDesc(set, binding, ResourceType::Sampler,
+			meta.bindings[set].push_back(CreateBindingDesc(set, binding, ResourceType::Sampler,
 				meta.stage, count));
 		}
 
@@ -245,7 +246,7 @@ namespace Voidstar
 			uint32_t count = array_size(comp.get_type(si.type_id));
 			const auto& ty = comp.get_type(si.type_id);
 			uint32_t fmt = uint32_t(ty.image.format); // spv::ImageFormat enum
-			meta.bindings.push_back(CreateBindingDesc(set, binding, ResourceType::StorageImage,
+			meta.bindings[set].push_back(CreateBindingDesc(set, binding, ResourceType::StorageImage,
 				meta.stage, count, 0, 0, fmt));
 		}
 
@@ -280,17 +281,30 @@ namespace Voidstar
 	}
 	void ShaderCompiler::Link(ProgramHandle handle, uint8_t shaderAmount)
 	{
-		//std::vector<StageMeta> metas;
+		assert(shaderAmount == m_StageMetas.size());
 		ProgramMeta meta;
+		// number of set and its key
+		std::unordered_map<int, DescriptorLayoutKey> keys;
 		for (int i = 0; i < shaderAmount; i++)
 		{
-			auto sMeta = m_StageMetas.top();
+			auto& sMeta = m_StageMetas.top();
+			for (auto& [set, bindings] : sMeta.bindings)
+			{
+				auto& descKey = keys[set];
+				descKey.set = set;
+				descKey.bindings.insert(bindings.begin(), bindings.end());
+				descKey.access |= sMeta.stage;
+
+			}
 			meta.stages.push_back(sMeta);
 			m_StageMetas.pop();
 		}
-
-		auto id = handle;
-		m_Programs[id] = meta;
+		for (auto& [k, v] : keys)
+		{
+			meta.descriptorKey.push_back(v);
+			Renderer::Instance()->CreateDescriptorLayout(v);
+		}
+		m_Programs[handle] = meta;
 	}
 
 
@@ -326,7 +340,7 @@ namespace Voidstar
 
 
 
-	void ShaderCompiler::Compile(std::filesystem::path path)
+	void ShaderCompiler::Compile(const std::filesystem::path& path)
 	{
 
 		auto ext = path.extension().string();
@@ -338,20 +352,20 @@ namespace Voidstar
 		auto type = ShaderExtensionsToType.at(ext.c_str());
 
 		auto folder = ShaderFolders[type];
-		auto shaderName = path.filename().string();
-		auto shaderPath = BASE_SHADER_PATH + folder + "/" + shaderName.data();
+		auto shaderName = path.filename();
+		auto shaderPath = BASE_SHADER_PATH + folder + "/" + shaderName.string().data();
 		auto isExist = std::filesystem::exists(shaderPath);
 		if (!isExist)
 		{
 			Log::GetLog()->error("SHADER COMPILATOIN: Path {0} is not found ", shaderPath);
 			return;
 		}
-		auto shaderOutput = BASE_SPIRV_OUTPUT + ShaderFolders.at(type) + shaderName  + ShaderBinaryExtensions[type];
+		auto shaderOutput = BASE_SPIRV_OUTPUT + ShaderFolders.at(type) + shaderName.replace_extension().string() + ShaderBinaryExtensions[type];
 		auto command= CreateCommand(shaderPath ,shaderOutput);
 		int result = std::system(command.c_str());
 		if (result != 0)
 		{
-			Log::GetLog()->error("shader {0} is not compiled! ", shaderName.data());
+			Log::GetLog()->error("shader {0} is not compiled! ", shaderName.string().data());
 			return;
 		}
 
@@ -359,13 +373,26 @@ namespace Voidstar
 #if 1
 		auto [stageMeta,sprivCode]= Reflect(shaderOutput);
 		
-		try {
+		try
+		{
 			stageMeta.module = CreateModule(sprivCode,RenderContext::GetDevice()->GetDevice());
 		}
 		catch (vk::SystemError err) {
 			Log::GetLog()->error("Failed to create shader module for {0}", path.string());
 		}
 		
+		/*std::sort(stageMeta.bindings.begin(), stageMeta.bindings.end(),
+			[](const BindingDesc& descA, const BindingDesc& descB)
+
+			{
+				if (descA.set == descB.set)
+				{
+					return descA.binding == descB.binding;
+				}
+				return descA.set < descB.set;
+			});*/
+
+
 		m_StageMetas.push(stageMeta);
 #endif
 		

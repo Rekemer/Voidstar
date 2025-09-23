@@ -166,6 +166,7 @@
     <ClInclude Include="src\Rendering\Vertex_.h" />
     <ClInclude Include="src\VertexLayout.h" />
     <ClInclude Include="src\Handle.h" />
+    <ClInclude Include="src\Rendering\Keys.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Dependencies\Tracy\public\TracyClient.cpp">

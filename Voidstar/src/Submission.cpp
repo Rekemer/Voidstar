@@ -25,7 +25,7 @@ namespace Voidstar
 	ProgramHandle LoadProgram(std::string_view vertex, std::string_view fragment)
 	{ 
 		LoadShader(vertex, ShaderType::VERTEX);
-		LoadShader(vertex, ShaderType::FRAGMENT);
+		LoadShader(fragment, ShaderType::FRAGMENT);
 
 		auto programHandle =g_ProgramHandleAllocator.GetId();
 		auto& cmd = g_Submission->GetCommandBuffer(ResourceCommand::CreateProgram);
