@@ -28,7 +28,6 @@
 #include "SparseSet.h"
 #include "ShaderCompiler.h"
 #include "AttachmentManager.h"
-#include "Keys.h"
 
 
 
@@ -193,7 +192,7 @@ namespace Voidstar
 	private:
 		void CreateInstance();
 		void RecreateSwapchain();
-		void AllocateSets();
+		std::vector<vk::DescriptorSet>  AllocateSets(size_t amount, const DescriptorLayoutKey& key);
 		void CreateLayouts();
 		void CleanUpLayouts();
 	private:
@@ -217,7 +216,7 @@ namespace Voidstar
 
 		std::unordered_map<PipelineLayoutKey, vk::PipelineLayout, PipelineLayoutKeyHash> m_PipelineLayout;
 
-		std::unordered_map<DescriptorWriteKey, vk::DescriptorSet, DescriptorWriteKeyHash> m_DescriptorSet;
+		std::unordered_map<DescriptorLayoutKey, std::vector<vk::DescriptorSet>, DescriptorLayoutKeyHash> m_DescriptorSet;
 
 		std::unordered_map<VertexBufferHandle, SPtr<Buffer>> m_VertexBuffers;
 		std::unordered_map<IndexBufferHandle, SPtr<IndexBuffer>> m_IndexBuffers;
@@ -226,6 +225,8 @@ namespace Voidstar
 		
 		// 0 handle is default render pass
 		std::unordered_map<RenderPassHandle_, UPtr<IExecute>> m_RenderPasses;
+
+		//std::unordered_map<PipelineKey, UPtr<IExecute>> m_RenderPasses;
 
 
 

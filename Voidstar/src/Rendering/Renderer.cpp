@@ -170,21 +170,15 @@ namespace Voidstar
 			m_Layout[key] = DescriptorSetLayout::Create(value);
 		}
 	}
-	void Renderer::AllocateSets()
+	std::vector<vk::DescriptorSet> Renderer::AllocateSets(size_t amount, const DescriptorLayoutKey& key)
 	{
-		for (auto [key, value] : m_Layout)
+		if (m_DescriptorSet.find(key) == m_DescriptorSet.end())
 		{
-			std::vector<vk::DescriptorSetLayout> layouts(m_SetsAmount[key], value->GetLayout());
-			auto sets = m_UniversalPool->AllocateDescriptorSets(m_SetsAmount[key], layouts.data());
-			if (m_SetsAmount[key] == 1)
-			{
-				m_Sets[key] = sets[0];
-			}
-			else
-			{
-				m_Sets[key] = sets;
-			}
+			auto& layout = m_DescriptorLayout.at(key);
+			std::vector<vk::DescriptorSetLayout> layouts{amount, layout};
+			m_DescriptorSet[key] = m_UniversalPool->AllocateDescriptorSets(amount, layouts.data());
 		}
+		return  m_DescriptorSet[key];
 	}
 	void Renderer::CleanUpLayouts()
 	{
@@ -472,7 +466,6 @@ namespace Voidstar
 
 
 		SystemDescriptorLayoutKey.set = 0;
-		SystemDescriptorLayoutKey.access = ShaderType::ALL;
 		BindingDesc desc;
 		desc.binding = 0;
 		desc.set = 0;
@@ -484,7 +477,15 @@ namespace Voidstar
 		CreateDescriptorLayout(SystemDescriptorLayoutKey);
 
 
+		auto sets = AllocateSets(frameAmount, SystemDescriptorLayoutKey);
 
+		for (auto i = 0; i < frameAmount; i++)
+		{
+			for (auto binding : SystemDescriptorLayoutKey.bindings)
+			{
+				m_Device->UpdateDescriptorSet(sets[i], binding.binding, binding.count, *m_UniformBuffers[i], binding.kind);
+			}
+		}
 
 
 		m_AttachmentManager.Init(RenderContext::GetFrames());
@@ -729,7 +730,7 @@ namespace Voidstar
 	void Renderer::UserInit()
 	{
 		CreateLayouts();
-		AllocateSets();
+		//AllocateSets();
 
 	}
 	void Renderer::CreateSyncObjects()
@@ -1051,54 +1052,7 @@ namespace Voidstar
 		}
 	}
 
-	vk::ShaderStageFlags To(ShaderType type)
-	{
-		switch (type)	
-		{
-		case Voidstar::ShaderType::VERTEX:
-			return vk::ShaderStageFlagBits::eVertex;
-			break;
-		case Voidstar::ShaderType::FRAGMENT:
-			return vk::ShaderStageFlagBits::eFragment;
-			break;
-		case Voidstar::ShaderType::COMPUTE:
-			return vk::ShaderStageFlagBits::eCompute;
-			break;
-		case Voidstar::ShaderType::TESS_CONTROL:
-			return vk::ShaderStageFlagBits::eTessellationControl;
-			break;
-		case Voidstar::ShaderType::TESS_EVALUATION:
-			return vk::ShaderStageFlagBits::eTessellationEvaluation;
-			break;
-		default:
-			assert(false);
-			break;
-		}
-	}
-
-	inline vk::DescriptorType To(ResourceType type)
-	{
-		switch (type)
-		{
-		case ResourceType::UniformBuffer:
-			return vk::DescriptorType::eUniformBuffer;
-
-		case ResourceType::StorageBuffer:
-			return vk::DescriptorType::eStorageBuffer;
-
-		case ResourceType::SampledImage:
-			return vk::DescriptorType::eSampledImage;
-
-		case ResourceType::StorageImage:
-			return vk::DescriptorType::eStorageImage;
-
-		case ResourceType::Sampler:
-			return vk::DescriptorType::eSampler;
-
-		default:
-			assert(false && "Unknown ResourceType");
-		}
-	}
+	
 
 	void Renderer::CreateDescriptorLayout(const DescriptorLayoutKey& key)
 	{

@@ -1,5 +1,6 @@
 #pragma once
 #include "vulkan/vulkan.hpp"
+#include "ShaderCompiler.h"
 namespace Voidstar
 {
 	class Instance;
@@ -18,10 +19,11 @@ namespace Voidstar
 		size_t GetPresentsIndex() { return m_PresentFamily; }
 		uint32_t FindMemoryTypeIndex (uint32_t supportedMemoryIndices, vk::MemoryPropertyFlags requestedProperties);
 		vk::SampleCountFlagBits GetSamples() { return m_MsaaSamples; }
-		void UpdateDescriptorSet(vk::DescriptorSet dscSet, int binding, int descriptorCount, Image& image, vk::ImageLayout layout, vk::DescriptorType descType);
-		void UpdateDescriptorSet(vk::DescriptorSet dscSet, int binding, std::vector<vk::DescriptorImageInfo> images, vk::DescriptorType descType);
-		void UpdateDescriptorSet(vk::DescriptorSet dscSet, int binding, int descriptorCount, Buffer& buffer, vk::DescriptorType type);
-		void UpdateDescriptorSet(vk::DescriptorSet dscSet, int binding, int descriptorCount, vk::DescriptorImageInfo& imageInfo, vk::DescriptorType type); 
+
+		void UpdateDescriptorSet(vk::DescriptorSet dscSet, int binding, int descriptorCount, Image& image, vk::ImageLayout layout, ResourceType type);
+		void UpdateDescriptorSet(vk::DescriptorSet dscSet, int binding, std::vector<vk::DescriptorImageInfo> images, ResourceType type);
+		void UpdateDescriptorSet(vk::DescriptorSet dscSet, int binding, int descriptorCount, Buffer& buffer, ResourceType type);
+		void UpdateDescriptorSet(vk::DescriptorSet dscSet, int binding, int descriptorCount, vk::DescriptorImageInfo& imageInfo, ResourceType type);
 	private:
 		vk::PhysicalDevice m_PhysicalDevice = VK_NULL_HANDLE;
 		vk::Device m_Device = VK_NULL_HANDLE;

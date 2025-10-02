@@ -1288,8 +1288,8 @@ public:
 			memcpy(ptr, &m_AddData, sizeof (AdditionalData));
 			RenderContext::GetDevice()->GetDevice().unmapMemory(m_AddInfo->GetMemory());
 			RenderContext::GetDevice()->GetDevice().waitIdle();
-			RenderContext::GetDevice()->UpdateDescriptorSet(m_DescriptorSetDebug, 1, 1,
-				*m_AddInfo, vk::DescriptorType::eUniformBuffer);
+			//RenderContext::GetDevice()->UpdateDescriptorSet(m_DescriptorSetDebug, 1, 1,
+//				*m_AddInfo, vk::DescriptorType::eUniformBuffer);
 		}
 		
 		auto mousePos = Input::GetMousePos();

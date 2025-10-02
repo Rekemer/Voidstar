@@ -192,7 +192,7 @@ namespace Voidstar
 
 		return 0;
 	}
-	void Device::UpdateDescriptorSet(vk::DescriptorSet dscSet, int binding, int descriptorCount, Image& image, vk::ImageLayout layout, vk::DescriptorType descType)
+	void Device::UpdateDescriptorSet(vk::DescriptorSet dscSet, int binding, int descriptorCount, Image& image, vk::ImageLayout layout, ResourceType type)
 	{
 		vk::DescriptorImageInfo imageDescriptor;
 		imageDescriptor.imageLayout = layout;
@@ -203,14 +203,14 @@ namespace Voidstar
 		descriptorWrite.dstSet = dscSet;
 		descriptorWrite.dstBinding = binding;
 		descriptorWrite.dstArrayElement = 0;
-		descriptorWrite.descriptorType = descType;
+		descriptorWrite.descriptorType = To(type);
 		descriptorWrite.descriptorCount = descriptorCount;
 		descriptorWrite.pImageInfo = &imageDescriptor;
 		m_Device.updateDescriptorSets(descriptorWrite, nullptr);
 	}
 
 	// to have an array of textures for example
-	void Device::UpdateDescriptorSet(vk::DescriptorSet dscSet, int binding, std::vector<vk::DescriptorImageInfo> images, vk::DescriptorType descType)
+	void Device::UpdateDescriptorSet(vk::DescriptorSet dscSet, int binding, std::vector<vk::DescriptorImageInfo> images, ResourceType type)
 	{
 
 
@@ -218,7 +218,7 @@ namespace Voidstar
 		descriptorWrite.dstSet = dscSet;
 		descriptorWrite.dstBinding = binding;
 		descriptorWrite.dstArrayElement = 0;
-		descriptorWrite.descriptorType = descType;
+		descriptorWrite.descriptorType = To(type);
 		descriptorWrite.descriptorCount = images.size();
 		descriptorWrite.pImageInfo = images.data();
 		m_Device.updateDescriptorSets(descriptorWrite, nullptr);
@@ -228,11 +228,11 @@ namespace Voidstar
 
 	}
 
-	void Device::UpdateDescriptorSet(vk::DescriptorSet dscSet, int binding, int descriptorCount, vk::DescriptorImageInfo& imageInfo, vk::DescriptorType type)
+	void Device::UpdateDescriptorSet(vk::DescriptorSet dscSet, int binding, int descriptorCount, vk::DescriptorImageInfo& imageInfo, ResourceType type)
 	{
 		vk::WriteDescriptorSet descriptorWrite;
 		descriptorWrite.dstSet = dscSet;
-		descriptorWrite.descriptorType = type;
+		descriptorWrite.descriptorType = To(type);
 		descriptorWrite.descriptorCount = descriptorCount;
 		descriptorWrite.dstBinding = binding;
 		descriptorWrite.pImageInfo = &imageInfo;
@@ -240,7 +240,7 @@ namespace Voidstar
 
 	}
 	
-	void Device::UpdateDescriptorSet(vk::DescriptorSet dscSet, int binding, int descriptorCount, Buffer& buffer, vk::DescriptorType type)
+	void Device::UpdateDescriptorSet(vk::DescriptorSet dscSet, int binding, int descriptorCount, Buffer& buffer, ResourceType type)
 	{
 		vk::WriteDescriptorSet writeInfo;
 		vk::DescriptorBufferInfo bufferInfo{};
@@ -252,7 +252,7 @@ namespace Voidstar
 		writeInfo.dstBinding = binding;
 		writeInfo.dstArrayElement = 0; //byte offset within binding for inline uniform blocks
 		writeInfo.descriptorCount = descriptorCount;
-		writeInfo.descriptorType = type;
+		writeInfo.descriptorType = To(type);
 		writeInfo.pBufferInfo = &bufferInfo;
 
 		m_Device.updateDescriptorSets(writeInfo, nullptr);

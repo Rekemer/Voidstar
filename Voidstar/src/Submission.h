@@ -7,6 +7,7 @@
 #include "Window.h"
 #include "VertexLayout.h"
 #include "Handle.h"
+#include "Util.h"
 #include "glm.hpp"
 #include <unordered_map>
 #include <cstdint>
@@ -96,6 +97,31 @@ namespace Voidstar
 		BlendFactor srcAlpha = BlendFactor::One;
 		BlendFactor dstAlpha = BlendFactor::Zero;
 		BlendOp     alphaOp = BlendOp::Add;
+
+		bool operator==(const BlendMode& o) const {
+			return enabled == o.enabled
+				&& srcColor == o.srcColor
+				&& dstColor == o.dstColor
+				&& colorOp == o.colorOp
+				&& srcAlpha == o.srcAlpha
+				&& dstAlpha == o.dstAlpha
+				&& alphaOp == o.alphaOp;
+		}
+	};
+
+
+	struct BlendModeHash {
+		std::size_t operator()(const BlendMode& b) const noexcept {
+			std::size_t h = 0;
+			util::hash_combine(h, b.enabled);
+			util::hash_combine(h, util::hash_enum(b.srcColor));
+			util::hash_combine(h, util::hash_enum(b.dstColor));
+			util::hash_combine(h, util::hash_enum(b.colorOp));
+			util::hash_combine(h, util::hash_enum(b.srcAlpha));
+			util::hash_combine(h, util::hash_enum(b.dstAlpha));
+			util::hash_combine(h, util::hash_enum(b.alphaOp));
+			return h;
+		}
 	};
 
 	struct RenderState {
@@ -110,6 +136,31 @@ namespace Voidstar
 		BlendMode blend[1]{};
 		//StencilMode stencil{};
 
+		bool operator==(const RenderState& o) const noexcept {
+			return topology == o.topology
+				&& polygon == o.polygon
+				&& cull == o.cull
+				&& depthTest == o.depthTest
+				&& depthWrite == o.depthWrite
+				&& depthFunc == o.depthFunc
+				&& blend[0] == o.blend[0];
+		}
+	};
+
+
+	struct RenderStateHash {
+		std::size_t operator()(const RenderState& rs) const noexcept {
+			std::size_t h = 0;
+			util::hash_combine(h, util::hash_enum(rs.topology));
+			util::hash_combine(h, util::hash_enum(rs.polygon));
+			util::hash_combine(h, util::hash_enum(rs.cull));
+			util::hash_combine(h, rs.depthTest);
+			util::hash_combine(h, rs.depthWrite);
+			util::hash_combine(h, util::hash_enum(rs.depthFunc));
+			// If you later support N util::color targets, iterate N and combine each.
+			util::hash_combine(h, BlendModeHash{}(rs.blend[0]));
+			return h;
+		}
 	};
 
 	// render items learns about the view at submit

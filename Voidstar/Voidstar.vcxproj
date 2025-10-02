@@ -173,7 +173,6 @@
     <ClInclude Include="src\Rendering\IndexBuffer.h" />
     <ClInclude Include="src\Rendering\Initializers.h" />
     <ClInclude Include="src\Rendering\Instance.h" />
-    <ClInclude Include="src\Rendering\Keys.h" />
     <ClInclude Include="src\Rendering\Model.h" />
     <ClInclude Include="src\Rendering\Pipeline.h" />
     <ClInclude Include="src\Rendering\RenderContext.h" />
@@ -185,6 +184,7 @@
     <ClInclude Include="src\Rendering\SupportStruct.h" />
     <ClInclude Include="src\Rendering\Swapchain.h" />
     <ClInclude Include="src\Rendering\Sync.h" />
+    <ClInclude Include="src\Util.h" />
     <ClInclude Include="src\Rendering\Vertex_.h" />
     <ClInclude Include="src\ResourceCommandBuffer.h" />
     <ClInclude Include="src\Rendering\ShaderCompiler.h" />

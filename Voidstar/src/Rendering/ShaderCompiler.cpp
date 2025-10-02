@@ -9,7 +9,7 @@
 #include <string_view>
 #include "spirv_cross.hpp"
 #include "Renderer.h"
-#include "Keys.h"
+
 
 namespace Voidstar
 {
@@ -293,8 +293,6 @@ namespace Voidstar
 				auto& descKey = keys[set];
 				descKey.set = set;
 				descKey.bindings.insert(bindings.begin(), bindings.end());
-				descKey.access |= sMeta.stage;
-
 			}
 			meta.stages.push_back(sMeta);
 			m_StageMetas.pop();

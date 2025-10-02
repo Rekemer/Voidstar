@@ -3,20 +3,17 @@
 #include <unordered_map>
 #include <filesystem>
 #include <stack>
+#include <set>
 #include <vector>
 #include "ShaderType.h"
 #include "Submission.h"
+#include "../Util.h"
 #include "vulkan/vulkan.hpp"
+
 
 namespace Voidstar
 {
-    namespace util {
-        template <class T>
-        inline void hash_combine(std::size_t& seed, const T& v) {
-            std::hash<T> h;
-            seed ^= h(v) + 0x9e3779b97f4a7c15ULL + (seed << 6) + (seed >> 2);
-        }
-    }
+    
 
     enum class ResourceType : uint8_t
     {
@@ -54,21 +51,188 @@ namespace Voidstar
         uint32_t localSize[3] = { 1,1,1 }; // compute only
     };
 
-    struct ProgramMeta {
-        std::vector<StageMeta> stages;
+   
 
-        std::vector<BindingDesc> merged;
-        std::vector<PushConstRange> pushes;
+    inline vk::ShaderStageFlags To(ShaderType type)
+    {
+        switch (type)
+        {
+        case Voidstar::ShaderType::VERTEX:
+            return vk::ShaderStageFlagBits::eVertex;
+            break;
+        case Voidstar::ShaderType::FRAGMENT:
+            return vk::ShaderStageFlagBits::eFragment;
+            break;
+        case Voidstar::ShaderType::COMPUTE:
+            return vk::ShaderStageFlagBits::eCompute;
+            break;
+        case Voidstar::ShaderType::TESS_CONTROL:
+            return vk::ShaderStageFlagBits::eTessellationControl;
+            break;
+        case Voidstar::ShaderType::TESS_EVALUATION:
+            return vk::ShaderStageFlagBits::eTessellationEvaluation;
+            break;
+		case Voidstar::ShaderType::ALL :
+			return vk::ShaderStageFlagBits::eTessellationEvaluation |
+			vk::ShaderStageFlagBits::eTessellationControl |
+			vk::ShaderStageFlagBits::eFragment |
+			vk::ShaderStageFlagBits::eVertex |
+			vk::ShaderStageFlagBits::eCompute;
+        default:
+            assert(false);
+            break;
+        }
+    }
 
 
-        std::vector <DescriptorLayoutKey> descriptorKey;
-        
-        //PipelineLayoutKey pipelineKey;
 
-        //uint64_t layoutKey = 0;             
-    };
+	struct DescriptorLayoutKey
+	{
+		int set;
+		std::set <BindingDesc> bindings;
+	};
+
+	struct PipelineLayoutKey
+	{
+		// multiple sets
+		std::vector<DescriptorLayoutKey> descriptorsSetLayouts;
+	};
 
 
+	struct PipelineKey
+	{
+		ProgramHandle program;
+		RenderState rs;
+		PipelineLayoutKey layout;
+	};
+
+	
+
+	
+
+
+	inline bool operator==(const BindingDesc& a, const BindingDesc& b) {
+		return a.set == b.set && a.binding == b.binding && a.kind == b.kind &&
+			a.count == b.count && a.stride == b.stride && a.elemSize == b.elemSize &&
+			a.format == b.format && a.stage == b.stage;
+	}
+	inline bool operator<(const BindingDesc& a, const BindingDesc& b)
+	{
+		if (a.set != b.set)      return a.set < b.set;
+		if (a.binding != b.binding)  return a.binding < b.binding;
+		return static_cast<uint32_t>(a.stage) < static_cast<uint32_t>(b.stage);
+	}
+	inline bool operator==(const PushConstRange& a, const PushConstRange& b) {
+		return a.offset == b.offset && a.size == b.size && a.stage == b.stage;
+	}
+
+	inline bool operator==(const DescriptorLayoutKey& a, const DescriptorLayoutKey& b) {
+		return a.set == b.set && a.bindings == b.bindings; // relies on BindingDesc::operator==
+	}
+
+	inline bool operator==(const PipelineLayoutKey& a, const PipelineLayoutKey& b) {
+		return a.descriptorsSetLayouts == b.descriptorsSetLayouts;
+	}
+	inline bool operator==(const PipelineKey& a ,const PipelineKey& b) noexcept {
+		return a.program == b.program
+			&& a.rs == b.rs
+			&& a.layout == b.layout;
+	}
+
+	struct BindingDescHash {
+		size_t operator()(const BindingDesc& b) const noexcept {
+			size_t h = 0;
+			util::hash_combine(h, b.set);
+			util::hash_combine(h, b.binding);
+			util::hash_combine(h, static_cast<uint32_t>(b.kind));
+			util::hash_combine(h, b.count);
+			util::hash_combine(h, b.stride);
+			util::hash_combine(h, b.elemSize);
+			util::hash_combine(h, b.format);
+			util::hash_combine(h, static_cast<uint32_t>(b.stage));
+			return h;
+		}
+	};
+
+	struct DescriptorLayoutKeyHash {
+		size_t operator()(const DescriptorLayoutKey& k) const noexcept {
+			size_t h = 0;
+			util::hash_combine(h, k.set);
+			for (auto const& b : k.bindings) {
+				util::hash_combine(h, BindingDescHash{}(b));
+			}
+			return h;
+		}
+	};
+
+	struct PushConstRangeHash {
+		size_t operator()(const PushConstRange& p) const noexcept {
+			size_t h = 0;
+			util::hash_combine(h, p.offset);
+			util::hash_combine(h, p.size);
+			util::hash_combine(h, static_cast<uint32_t>(p.stage));
+			return h;
+		}
+	};
+
+	struct PipelineLayoutKeyHash {
+		size_t operator()(const PipelineLayoutKey& k) const noexcept {
+			size_t h = 0;
+			for (auto const& d : k.descriptorsSetLayouts) {
+				util::hash_combine(h, DescriptorLayoutKeyHash{}(d));
+			}
+
+			return h;
+		}
+	};
+	struct PipelineKeyHash {
+		std::size_t operator()(const PipelineKey& k) const noexcept {
+			std::size_t h = 0;
+			util::hash_combine(h, std::hash<ProgramHandle>{}(k.program));
+			util::hash_combine(h, RenderStateHash{}(k.rs));
+			util::hash_combine(h, PipelineLayoutKeyHash{}(k.layout));
+			return h;
+		}
+	};
+
+	inline static  std::unordered_map<PipelineKey, int, PipelineKeyHash> msdsdap;
+
+	struct ProgramMeta {
+		std::vector<StageMeta> stages;
+
+		std::vector<BindingDesc> merged;
+		std::vector<PushConstRange> pushes;
+
+
+		std::vector <DescriptorLayoutKey> descriptorKey;
+
+		//PipelineLayoutKey pipelineKey;
+
+		//uint64_t layoutKey = 0;             
+	};
+    inline vk::DescriptorType To(ResourceType type)
+    {
+        switch (type)
+        {
+        case ResourceType::UniformBuffer:
+            return vk::DescriptorType::eUniformBuffer;
+
+        case ResourceType::StorageBuffer:
+            return vk::DescriptorType::eStorageBuffer;
+
+        case ResourceType::SampledImage:
+            return vk::DescriptorType::eSampledImage;
+
+        case ResourceType::StorageImage:
+            return vk::DescriptorType::eStorageImage;
+
+        case ResourceType::Sampler:
+            return vk::DescriptorType::eSampler;
+
+        default:
+            assert(false && "Unknown ResourceType");
+        }
+    }
 
 	class ShaderCompiler
 	{
@@ -79,11 +243,7 @@ namespace Voidstar
 
         std::unordered_map<ProgramHandle, ProgramMeta> m_Programs;
 
-
 	private:
-
         std::stack<StageMeta> m_StageMetas;
-
-
 	};
 }
