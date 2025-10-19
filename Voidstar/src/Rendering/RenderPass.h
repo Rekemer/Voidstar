@@ -27,43 +27,15 @@ namespace Voidstar
 	class AttachmentSpec;
 	class SwapchainImage;
 	
+
 	
-	class VOIDSTAR_API RenderPass : public IExecute
+	struct VOIDSTAR_API RenderPass 
 	{
-	public:
-		RenderPass( vk::RenderPass renderPass,
-			vk::Extent2D extent, std::vector<vk::ClearValue> clearValues,
-			FrameBufferHandle handle) :
-			m_Extent{extent},
-			m_ClearValues{ clearValues },
-			m_RenderPass{ renderPass },
-			m_FrameBufferHandle{ handle }
-
-		{
-
-		}
-		RenderPass(RenderPass&& pass)
-		{
-
-		}
-		RenderPass(const RenderPass& pass) = delete;
-		RenderPass& operator=(const RenderPass& pass) = delete;
-		
-		void Execute(CommandBuffer& cmd, size_t frameIndex) override;
-		
-		vk::RenderPass GetRaw()
-		{
-			return m_RenderPass;
-		}
-
-		~RenderPass();
-	private:
-		friend class RenderPassBuilder;
+		vk::SampleCountFlagBits samples;
 		vk::RenderPass m_RenderPass;
 		vk::Extent2D m_Extent;
 		std::vector<vk::ClearValue> m_ClearValues;
 		FrameBufferHandle m_FrameBufferHandle;
-		
 	};
 
 	class VOIDSTAR_API RenderPassBuilder
@@ -90,7 +62,7 @@ namespace Voidstar
 		void AddSubpass(std::vector<int> indexColor, std::vector<int> indexDepth, std::vector<int> indexResolve);
 		void AddSubpassDependency(vk::SubpassDependency subpassDependency);
 
-		UPtr<IExecute> Build(
+		RenderPass Build(
 			AttachmentManager& manager,
 			size_t framebufferAmount,
 			vk::Extent2D extent,

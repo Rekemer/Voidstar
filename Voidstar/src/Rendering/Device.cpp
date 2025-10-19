@@ -203,7 +203,7 @@ namespace Voidstar
 		descriptorWrite.dstSet = dscSet;
 		descriptorWrite.dstBinding = binding;
 		descriptorWrite.dstArrayElement = 0;
-		descriptorWrite.descriptorType = To(type);
+		descriptorWrite.descriptorType = map(type);
 		descriptorWrite.descriptorCount = descriptorCount;
 		descriptorWrite.pImageInfo = &imageDescriptor;
 		m_Device.updateDescriptorSets(descriptorWrite, nullptr);
@@ -218,7 +218,7 @@ namespace Voidstar
 		descriptorWrite.dstSet = dscSet;
 		descriptorWrite.dstBinding = binding;
 		descriptorWrite.dstArrayElement = 0;
-		descriptorWrite.descriptorType = To(type);
+		descriptorWrite.descriptorType = map(type);
 		descriptorWrite.descriptorCount = images.size();
 		descriptorWrite.pImageInfo = images.data();
 		m_Device.updateDescriptorSets(descriptorWrite, nullptr);
@@ -232,7 +232,7 @@ namespace Voidstar
 	{
 		vk::WriteDescriptorSet descriptorWrite;
 		descriptorWrite.dstSet = dscSet;
-		descriptorWrite.descriptorType = To(type);
+		descriptorWrite.descriptorType = map(type);
 		descriptorWrite.descriptorCount = descriptorCount;
 		descriptorWrite.dstBinding = binding;
 		descriptorWrite.pImageInfo = &imageInfo;
@@ -252,7 +252,7 @@ namespace Voidstar
 		writeInfo.dstBinding = binding;
 		writeInfo.dstArrayElement = 0; //byte offset within binding for inline uniform blocks
 		writeInfo.descriptorCount = descriptorCount;
-		writeInfo.descriptorType = To(type);
+		writeInfo.descriptorType = map(type);
 		writeInfo.pBufferInfo = &bufferInfo;
 
 		m_Device.updateDescriptorSets(writeInfo, nullptr);

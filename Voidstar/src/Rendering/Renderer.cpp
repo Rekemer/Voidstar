@@ -60,6 +60,377 @@ namespace std
 
 namespace Voidstar
 {
+	class  PipelineBuilder
+	{
+	public:
+		void AddShader(vk::ShaderModule module, vk::ShaderStageFlagBits type);
+		void AddBindingDescription(const vk::VertexInputBindingDescription& bindings);
+		void AddBindingDescription(const std::vector<vk::VertexInputBindingDescription>& bindings);
+		void AddAttributeDescription(const std::vector<vk::VertexInputAttributeDescription>& attributes);
+		void AddAttributeDescription(const vk::VertexInputAttributeDescription& attribute);
+		void AddDescriptorSetLayouts(std::vector<vk::DescriptorSetLayout>& layouts);
+		void AddExtent(vk::Extent2D);
+		void SetTopology(vk::PrimitiveTopology topology);
+		void SetPolygoneMode(vk::PolygonMode polygon);
+		void AddPipelineLayout(vk::PipelineLayout layout);
+		void SetControlPoints(int amountPoints);
+		void WriteToDepthBuffer(bool wrtite);
+		void EnableStencilTest(bool test);
+		void StencilTestOp(vk::CompareOp op, vk::StencilOp fail, vk::StencilOp pass, vk::StencilOp depthFailOp);
+		void SetSamples(vk::SampleCountFlagBits samples);
+		void SetRenderPass(vk::RenderPass renderPass);
+		void SetSubpassIndex(int amount);
+		void EnableBlend(bool state)
+		{
+			m_BlendEnable = state;
+		}
+		void SetStencilRefNumber(uint32_t number)
+		{
+			m_StencilRefNumber = number;
+		}
+		void SetDepthTest(bool test)
+		{
+			m_DepthTest = test;
+		}
+		void SetMasks(uint32_t compare, uint32_t write)
+		{
+			m_WriteMask = write;
+			m_CompareMask = compare;
+		}
+		void SetBlendOp(vk::BlendOp op, vk::BlendFactor src, vk::BlendFactor dst)
+		{
+			m_BlendOp = op;
+			m_BlendSrc = src;
+			m_BlendDst = dst;
+		}
+		void SetSampleShading(vk::Bool32 state)
+		{
+			m_SampleShadingEnable = state; // enable sample shading in the pipeline
+		}
+		vk::Pipeline Build();
+		~PipelineBuilder();
+	private:
+		std::vector<vk::ShaderModule> m_Modules;
+		vk::PrimitiveTopology m_Topology;
+		vk::PolygonMode m_PolygonMode;
+		vk::PipelineLayout m_PipelineLayout;
+		std::vector<vk::PipelineShaderStageCreateInfo> m_ShaderStages;
+		std::vector<vk::VertexInputBindingDescription> m_Bindings;
+		std::vector<vk::VertexInputAttributeDescription> m_Attributes;
+		std::vector<vk::DescriptorSetLayout> m_DescriptorSetLayouts;
+		vk::Extent2D m_Extent;
+		vk::SampleCountFlagBits m_Samples;
+		int m_PatchControlPoints = -1;
+		bool m_WriteToDepthBuffer = false;
+		bool m_StencilTest = false;
+		bool m_DepthTest = false;
+		uint32_t m_WriteMask = 0xff;
+		uint32_t m_CompareMask = 0xff;
+		vk::CompareOp  m_StencilOp = vk::CompareOp::eLess;
+		vk::StencilOp m_StencilFailOp = vk::StencilOp::eReplace;
+		vk::StencilOp m_StencilPassOp = vk::StencilOp::eReplace;
+		vk::StencilOp m_DepthFailOp = vk::StencilOp::eReplace;
+		uint32_t m_StencilRefNumber = 0;
+		vk::RenderPass m_RenderPass;
+		int m_SubpassNumber = 0;
+
+		vk::Bool32 m_BlendEnable = VK_TRUE;
+		vk::Bool32 m_SampleShadingEnable = VK_FALSE;
+		float m_MinSampleShading = .2f;
+		vk::BlendOp m_BlendOp = vk::BlendOp::eAdd;
+		vk::BlendFactor m_BlendSrc = vk::BlendFactor::eSrcAlpha;
+		vk::BlendFactor m_BlendDst = vk::BlendFactor::eOneMinusSrcAlpha;
+
+	};
+
+
+	void PipelineBuilder::AddShader(vk::ShaderModule module, vk::ShaderStageFlagBits type)
+	{
+		m_Modules.push_back(module);
+		{
+			vk::PipelineShaderStageCreateInfo vertexShaderInfo = {};
+			vertexShaderInfo.flags = vk::PipelineShaderStageCreateFlags();
+			vertexShaderInfo.stage = type;
+			vertexShaderInfo.module = module;
+			vertexShaderInfo.pName = "main";
+			m_ShaderStages.push_back(vertexShaderInfo);
+		}
+	}
+
+
+	void PipelineBuilder::AddBindingDescription(const vk::VertexInputBindingDescription& bindings)
+	{
+		m_Bindings.push_back(bindings);
+	}
+	void PipelineBuilder::AddBindingDescription(const std::vector<vk::VertexInputBindingDescription>& bindings)
+	{
+		m_Bindings.insert(m_Bindings.end(), bindings.begin(), bindings.end());
+	}
+	void PipelineBuilder::AddAttributeDescription(const std::vector<vk::VertexInputAttributeDescription>& attributes)
+	{
+		m_Attributes = attributes;
+	}
+	void PipelineBuilder::AddAttributeDescription(const vk::VertexInputAttributeDescription& attribute)
+	{
+		m_Attributes.push_back(attribute);
+	}
+	void PipelineBuilder::AddDescriptorSetLayouts(std::vector<vk::DescriptorSetLayout>& layouts)
+	{
+		m_DescriptorSetLayouts = layouts;
+	}
+
+	void PipelineBuilder::AddExtent(vk::Extent2D size)
+	{
+		m_Extent = size;
+	}
+
+	void PipelineBuilder::SetTopology(vk::PrimitiveTopology topology)
+	{
+		m_Topology = topology;
+	}
+
+	void PipelineBuilder::SetPolygoneMode(vk::PolygonMode polygon)
+	{
+		m_PolygonMode = polygon;
+	}
+
+	void PipelineBuilder::AddPipelineLayout(vk::PipelineLayout layout)
+	{
+		m_PipelineLayout = layout;
+	}
+
+	void PipelineBuilder::SetControlPoints(int amountPoints)
+	{
+		assert(amountPoints > 0);
+		m_PatchControlPoints = amountPoints;
+	}
+
+	void PipelineBuilder::WriteToDepthBuffer(bool wrtite)
+	{
+		m_WriteToDepthBuffer = write;
+	}
+
+	void PipelineBuilder::EnableStencilTest(bool test)
+	{
+		m_StencilTest = test;
+	}
+
+	void PipelineBuilder::StencilTestOp(vk::CompareOp op, vk::StencilOp fail, vk::StencilOp pass, vk::StencilOp depthFailOp)
+	{
+		m_StencilOp = op;
+		m_StencilFailOp = fail;
+		m_StencilPassOp = pass;
+		m_DepthFailOp = depthFailOp;
+	}
+	
+	PipelineBuilder::~PipelineBuilder()
+	{
+	
+	}
+	void PipelineBuilder::SetSamples(vk::SampleCountFlagBits samples)
+	{
+		m_Samples = samples;
+	}
+
+	void PipelineBuilder::SetRenderPass(vk::RenderPass renderPass)
+	{
+		m_RenderPass = renderPass;
+	}
+
+	void PipelineBuilder::SetSubpassIndex(int numberOfSubpass)
+	{
+		m_SubpassNumber = numberOfSubpass;
+	}
+
+	vk::Pipeline PipelineBuilder::Build()
+	{
+
+
+		auto pipeline = CreateUPtr<Pipeline>();
+		/*
+		* Build and return a graphics pipeline based on the given info.
+		*/
+
+		//The info for the graphics pipeline
+		vk::GraphicsPipelineCreateInfo pipelineInfo = {};
+		pipelineInfo.flags = vk::PipelineCreateFlags();
+
+
+		vk::PipelineVertexInputStateCreateInfo vertexInputInfo = {};
+
+		vertexInputInfo.flags = vk::PipelineVertexInputStateCreateFlags();
+		vertexInputInfo.vertexBindingDescriptionCount = m_Bindings.size();
+		vertexInputInfo.pVertexBindingDescriptions = m_Bindings.data();
+
+		vertexInputInfo.vertexAttributeDescriptionCount = m_Attributes.size();
+		vertexInputInfo.pVertexAttributeDescriptions = m_Attributes.data();
+
+		pipelineInfo.pVertexInputState = &vertexInputInfo;
+
+		//Input Assembly
+		vk::PipelineInputAssemblyStateCreateInfo inputAssemblyInfo = {};
+		inputAssemblyInfo.flags = vk::PipelineInputAssemblyStateCreateFlags();
+		inputAssemblyInfo.topology = m_Topology;
+		pipelineInfo.pInputAssemblyState = &inputAssemblyInfo;
+
+		vk::PipelineTessellationStateCreateInfo tesselationState;
+		if (m_PatchControlPoints != -1)
+		{
+			tesselationState.patchControlPoints = m_PatchControlPoints;
+
+			pipelineInfo.pTessellationState = &tesselationState;
+		}
+
+
+
+
+
+
+
+
+
+		//Viewport and Scissor
+		vk::Viewport viewport = {};
+		viewport.x = 0.0f;
+		viewport.y = 0.0f;
+		viewport.width = m_Extent.width;
+		viewport.height = m_Extent.height;
+		viewport.minDepth = 0.0f;
+		viewport.maxDepth = 1.0f;
+		vk::Rect2D scissor = {};
+		scissor.offset.x = 0.0f;
+		scissor.offset.y = 0.0f;
+		scissor.extent = m_Extent;
+		vk::PipelineViewportStateCreateInfo viewportState = {};
+		viewportState.flags = vk::PipelineViewportStateCreateFlags();
+		viewportState.viewportCount = 1;
+		viewportState.pViewports = &viewport;
+		viewportState.scissorCount = 1;
+		viewportState.pScissors = &scissor;
+		pipelineInfo.pViewportState = &viewportState;
+
+		const vk::DynamicState dynamicStates[] = {
+		vk::DynamicState::eViewport,
+		vk::DynamicState::eScissor
+		};
+		vk::PipelineDynamicStateCreateInfo createInfo{};
+		createInfo.pNext = nullptr;
+		createInfo.flags = {};
+		createInfo.dynamicStateCount = 2;
+		createInfo.pDynamicStates = &dynamicStates[0];
+
+		pipelineInfo.pDynamicState = &createInfo;
+
+
+		//Rasterizer
+		vk::PipelineRasterizationStateCreateInfo rasterizer = {};
+		rasterizer.flags = vk::PipelineRasterizationStateCreateFlags();
+		rasterizer.depthClampEnable = VK_FALSE; //discard out of bounds fragments, don't clamp them
+		rasterizer.rasterizerDiscardEnable = VK_FALSE; //This flag would disable fragment output
+		rasterizer.polygonMode = m_PolygonMode;
+		rasterizer.lineWidth = 1.0f;
+		rasterizer.cullMode = vk::CullModeFlagBits::eNone;
+		rasterizer.frontFace = vk::FrontFace::eClockwise;
+		rasterizer.depthBiasEnable = VK_FALSE; //Depth bias can be useful in shadow maps.
+		pipelineInfo.pRasterizationState = &rasterizer;
+
+
+
+
+
+
+		pipelineInfo.stageCount = m_ShaderStages.size();
+		pipelineInfo.pStages = m_ShaderStages.data();
+
+
+
+
+		vk::PipelineDepthStencilStateCreateInfo depthState;
+		depthState.flags = vk::PipelineDepthStencilStateCreateFlags();
+		depthState.depthTestEnable = m_DepthTest;
+		depthState.depthWriteEnable = m_WriteToDepthBuffer;
+		depthState.depthCompareOp = vk::CompareOp::eLess;
+		depthState.depthBoundsTestEnable = false;
+		depthState.stencilTestEnable = m_StencilTest;
+		depthState.back.compareOp = m_StencilOp;
+		depthState.back.failOp = m_StencilFailOp;
+		depthState.back.passOp = m_StencilPassOp;
+		depthState.back.compareMask = m_CompareMask;
+		depthState.back.writeMask = m_WriteMask;
+		depthState.back.reference = m_StencilRefNumber;
+		depthState.front = depthState.back;
+
+		pipelineInfo.pDepthStencilState = &depthState;
+
+		//Multisampling
+		vk::PipelineMultisampleStateCreateInfo multisampling = {};
+		multisampling.flags = vk::PipelineMultisampleStateCreateFlags();
+		multisampling.sampleShadingEnable = m_SampleShadingEnable;
+		multisampling.minSampleShading = m_MinSampleShading;
+		multisampling.rasterizationSamples = m_Samples;
+		pipelineInfo.pMultisampleState = &multisampling;
+
+		//Color Blend
+		vk::PipelineColorBlendAttachmentState colorBlendAttachment = {};
+		colorBlendAttachment.colorWriteMask = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA;
+
+
+		colorBlendAttachment.blendEnable = m_BlendEnable;
+		colorBlendAttachment.colorBlendOp = m_BlendOp;
+		colorBlendAttachment.srcColorBlendFactor = m_BlendSrc;
+		colorBlendAttachment.dstColorBlendFactor = m_BlendDst;
+
+
+
+		vk::PipelineColorBlendStateCreateInfo colorBlending = {};
+		colorBlending.flags = vk::PipelineColorBlendStateCreateFlags();
+		colorBlending.logicOpEnable = VK_FALSE;
+		colorBlending.logicOp = vk::LogicOp::eCopy;
+		colorBlending.attachmentCount = 1;
+		colorBlending.pAttachments = &colorBlendAttachment;
+		colorBlending.blendConstants[0] = 0.0f;
+		colorBlending.blendConstants[1] = 0.0f;
+		colorBlending.blendConstants[2] = 0.0f;
+		colorBlending.blendConstants[3] = 0.0f;
+		pipelineInfo.pColorBlendState = &colorBlending;
+
+		pipelineInfo.layout = m_PipelineLayout;
+
+
+
+
+		//Renderpass
+
+		pipelineInfo.renderPass = m_RenderPass;
+		pipelineInfo.subpass = m_SubpassNumber;
+
+
+		//Extra stuff
+		pipelineInfo.basePipelineHandle = nullptr;
+
+		//Make the Pipeline
+
+		vk::Pipeline graphicsPipeline;
+		try
+		{
+			auto pipeline = RenderContext::GetDevice()->GetDevice().createGraphicsPipeline(nullptr, pipelineInfo).value;
+			Log::GetLog()->info("Pipeline is Created!");
+			return pipeline;
+		}
+		catch (vk::SystemError err)
+		{
+			Log::GetLog()->error("Failed to create Pipeline");
+			return {};
+		}
+
+	}
+
+
+}
+
+
+namespace Voidstar
+{
 
 
 	static vk::BlendFactor map(BlendFactor f) {
@@ -151,7 +522,18 @@ namespace Voidstar
 		return vk::StencilOp::eKeep;
 	}
 
-
+	static vk::Format map(ShaderDataType type)
+	{
+		switch (type)
+		{
+		case ShaderDataType::FLOAT:  return vk::Format::eR32Sfloat;
+		case ShaderDataType::FLOAT2: return vk::Format::eR32G32Sfloat;
+		case ShaderDataType::FLOAT3: return vk::Format::eR32G32B32Sfloat;
+		case ShaderDataType::FLOAT4: return vk::Format::eR32G32B32A32Sfloat;
+		default:
+			throw std::runtime_error("Unknown ShaderDataType");
+		}
+	}
 
 
 
@@ -401,6 +783,9 @@ namespace Voidstar
 		//m_QuadIndex += 6;
 	}
 	
+
+
+
 	
 	void Renderer::Init(size_t screenWidth, size_t screenHeight, std::shared_ptr<Window> window) 
 		
@@ -469,7 +854,7 @@ namespace Voidstar
 		BindingDesc desc;
 		desc.binding = 0;
 		desc.set = 0;
-		desc.stage = ShaderType::ALL;
+		desc.access = ShaderType::ALL;
 		desc.kind = ResourceType::UniformBuffer;
 		desc.count = 1;
 		SystemDescriptorLayoutKey.bindings.insert(desc);
@@ -913,27 +1298,123 @@ namespace Voidstar
 		m_Framebuffers[handle] = framebuffers;
 	}
 
+	vk::Pipeline Renderer::GetPipeline(const PipelineKey& key, 
+		std::array<VertexBinding, RenderItem::MAX_BINDING>& bindings,
+		int bindingAmount)
+	{
+		if (m_Pipelines.find(key) != m_Pipelines.end())
+			return m_Pipelines.at(key);
+
+		/*
+		struct PipelineKey
+		{
+			ProgramHandle program;
+			RenderState rs;
+			PipelineLayoutKey layout;
+			RenderPassHandle_ renderPass;
+		};
+		*/
+
+		PipelineBuilder builder;
+		auto& rs = key.rs;
+		builder.EnableStencilTest(rs.stencilTest);
+		builder.SetDepthTest(rs.depthTest);
+		builder.EnableBlend(rs.blend);
+		auto& renderPass = m_RenderPasses.at(key.renderPass);
+
+		builder.SetRenderPass(renderPass.m_RenderPass);
+		builder.AddExtent(renderPass.m_Extent);
+
+		builder.WriteToDepthBuffer(rs.depthWrite);
+		builder.SetSamples(renderPass.samples);
+		auto shaderMeta = m_Compiler.m_Programs.at(key.program);
+		for (auto& stage : shaderMeta.stages)
+		{
+			builder.AddShader(stage.module, map(stage.stage));
+		}
+
+		builder.SetTopology(map(rs.topology));
+		builder.SetPolygoneMode(map(rs.polygon));
+		{
+			std::vector<vk::DescriptorSetLayout> layouts;
+			for (DescriptorLayoutKey& key: shaderMeta.descriptorKey)
+			{
+				auto& layout = m_DescriptorLayout.at(key);
+				layouts.push_back(layout);
+
+			}
+			builder.AddDescriptorSetLayouts(layouts);
+		}
+
+		for (int i = 0; i < bindingAmount; i++)
+		{
+			VertexBinding& binding = bindings[i];
+			
+			auto& vertexLayout = GetVertexLayout(binding.LayoutHandle);
+			auto vInputBindDescription = VertexBindingDescription(i, vertexLayout.m_CurrentOffset, vk::VertexInputRate::eVertex);
+			
+			builder.AddBindingDescription(vInputBindDescription);
+
+			for (int ii =0; ii < vertexLayout.m_Elements.size(); ii++)
+			{
+				auto& element = vertexLayout.m_Elements[ii];
+				auto desc = VertexInputAttributeDescription(i, ii, map(element.type), element.offset);
+				builder.AddAttributeDescription(desc);
+			}
+		}
+
+		
+
+		// for now just 1 - potentially we can merge render passes into one
+		builder.SetSubpassIndex(0);
+
+
+
+
+		builder.AddPipelineLayout(m_PipelineLayout.at(key.layout));
+		m_Pipelines[key] = builder.Build();
+		//void StencilTestOp(vk::CompareOp op, vk::StencilOp fail, vk::StencilOp pass, vk::StencilOp //depthFailOp);
+
+		//void SetControlPoints(int amountPoints);
+		//buil
+		
+	}
+
 	void Renderer::RenderFrame(Frame* render, float deltaTime)
 	{
 
 
-		for (int i = 0; i < render->currentRenderItem; i++)
+		for (int i = 0; i < render->CurrentRenderItemIndex; i++)
 		{
 			auto& renderItem = render->m_renderItem[i];
 
 			auto& view = render->Views[renderItem.View];
-
+			assert(renderItem.Program.Valid());
 			auto& meta = m_Compiler.m_Programs.at(renderItem.Program);
 
 			if (!view.Fbh.Valid())
 			{
 				auto& renderPass = m_RenderPasses.at(DEFAULT_RENDER_PASS);
 
-				
+				//struct PipelineKey
+				//{
+				//	ProgramHandle program;
+				//	RenderState rs;
+				//	PipelineLayoutKey layout;
+				//	RenderPassHandle_ renderPass;
+				//};
 
 			}
-
 			// get pipeline
+			std::vector<DescriptorLayoutKey>  keys{};
+			
+			keys.insert(keys.end(),meta.descriptorKey.begin(),meta.descriptorKey.end());
+
+			PipelineKey key ={ renderItem.Program,renderItem.State,keys,DEFAULT_RENDER_PASS};
+			
+			vk::Pipeline pipeline = GetPipeline(key, renderItem.Bindings, renderItem.currentBinding);
+			
+
 
 		}
 
@@ -1052,9 +1533,18 @@ namespace Voidstar
 		}
 	}
 
-	
 
-	void Renderer::CreateDescriptorLayout(const DescriptorLayoutKey& key)
+	void Renderer::CreatePipelineLayout(PipelineLayoutKey& key)
+	{
+		std::vector<vk::DescriptorSetLayout> layouts;
+		for (auto key : key.layoutKeys)
+		{
+			layouts.push_back(m_DescriptorLayout.at(key));
+		}
+		m_PipelineLayout[key] = MakePipelineLayout(RenderContext::GetDevice()->GetDevice(), layouts);
+	}
+
+	vk::DescriptorSetLayout Renderer::CreateDescriptorLayout(const DescriptorLayoutKey& key)
 	{
 
 		
@@ -1062,31 +1552,15 @@ namespace Voidstar
 		std::vector<vk::DescriptorSetLayoutBinding> vkBindings;
 		for (auto& v : bindings)
 		{
-			vkBindings.push_back(DescriptorBindingDescription(v.binding, To(v.kind), To(v.stage), v.count));
+			vkBindings.push_back(DescriptorBindingDescription(v.binding, map(v.kind), mapAccess(v.access), v.count));
 		}
 
 		m_DescriptorLayout[key] = CreateDescriptorSetLayout(vkBindings);
+		return m_DescriptorLayout[key];
 	}
 	
 
 
-	vk::PipelineLayout MakePipelineLayout(vk::Device device, std::vector<vk::DescriptorSetLayout> layout) {
-
-		vk::PipelineLayoutCreateInfo layoutInfo;
-		layoutInfo.flags = vk::PipelineLayoutCreateFlags();
-		layoutInfo.setLayoutCount = layout.size();
-		layoutInfo.pSetLayouts = layout.data();
-
-		layoutInfo.pushConstantRangeCount = 0;
-		try 
-		{
-			return device.createPipelineLayout(layoutInfo);
-		}
-		catch (vk::SystemError err) 
-		{
-			Log::GetLog()->error("Failed to create pipeline layout!");	
-		}
-	}
 
 
 	

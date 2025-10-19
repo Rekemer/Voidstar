@@ -10,9 +10,8 @@ namespace Voidstar
 		VERTEX = 1 << 0,
 		FRAGMENT = 1 << 1,
 		COMPUTE = 1 << 2,
-		TESS_CONTROL =  1 << 3,
+		TESS_CONTROL = 1 << 3,
 		TESS_EVALUATION = 1 << 4,
-
 		ALL = VERTEX | FRAGMENT | COMPUTE | TESS_CONTROL | TESS_EVALUATION,
 	};
 

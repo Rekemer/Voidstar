@@ -463,6 +463,11 @@ public:
 	ExampleApplication(std::string appName, size_t screenWidth, size_t screenHeight) : Voidstar::Application(appName, screenWidth, screenHeight)
 	{
 		
+
+
+		
+
+
 		Settings params{3};
 		m_ClickPoints.resize(MAX_POINTS, glm::vec2(-1, -1));
 
@@ -1132,7 +1137,7 @@ public:
 
 	~ExampleApplication()
 	{
-		callables.cleanUp();
+		
 	}
 	void LoadFont(std::string_view str, SPtr<Image> fontAtlas)
 	{
@@ -1437,7 +1442,6 @@ private:
 		float pageX, pageY, mipMap, isValid;
 	};
 	std::vector<FeedbackRes> m_FeedbackRes;
-	Callables callables;
 
 	Quad m_Plane;
 	glm::mat4 iden{ 1 };

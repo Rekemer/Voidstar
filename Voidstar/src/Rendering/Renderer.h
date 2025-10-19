@@ -29,6 +29,7 @@
 #include "ShaderCompiler.h"
 #include "AttachmentManager.h"
 
+#include <array>
 
 
 
@@ -42,21 +43,10 @@ namespace Voidstar
 	class Buffer;
 	class Camera;
 	struct Frame;
-	class Application;
 	class Image;
 	class DescriptorPool;
 	class Model;
 	class Pipeline;
-	struct VOIDSTAR_API Callables
-	{
-		std::function<void()> bindingsInit;
-		std::function<void()> createResources;
-		std::function<void()> bindResources;
-		std::function<void()> createPipelines;
-		std::function<void()> cleanUp;
-	};
-
-	
 
 	struct VOIDSTAR_API UniformBufferObject {
 		glm::mat4 view;
@@ -89,7 +79,10 @@ namespace Voidstar
 		void LinkShaders(ProgramHandle handle, uint8_t shaderAmount);
 		void CreateVertexBuffer(Memory& mem, VertexBufferHandle vertHandle, UpdateHint hint = UpdateHint::Static);
 		void CreateIndexBuffer(Memory& mem, IndexBufferHandle indexHandle);
-		void CreateDescriptorLayout(const DescriptorLayoutKey& key);
+		void CreatePipelineLayout(PipelineLayoutKey& key);
+		vk::DescriptorSetLayout CreateDescriptorLayout(const DescriptorLayoutKey& key);
+
+
 
 
 		void EndFrame();
@@ -152,16 +145,6 @@ namespace Voidstar
 		{
 			m_Graphs.emplace_back(std::move(graph));
 		}
-
-	
-		Pipeline* GetPipeline(std::string_view pipeline)
-		{
-			return m_Pipelines.at(pipeline.data()).get();
-		}
-		void AddPipeline(std::string_view name,UPtr<Pipeline> pipeline)
-		{
-			m_Pipelines[name.data()] = std::move(pipeline);
-		}
 		void AddDrawable(std::string_view renderPassName, const Drawable& drawable)
 		{
 			auto& drawables = m_Drawables[renderPassName.data()];
@@ -190,14 +173,13 @@ namespace Voidstar
 		void UpdateUniformBuffer(const glm::mat4& proj, Camera& camera);
 		void AddFramebuffers(FrameBufferHandle handle, std::vector<vk::Framebuffer>& framebuffers);
 	private:
+		vk::Pipeline GetPipeline(const PipelineKey& key, std::array<VertexBinding, RenderItem::MAX_BINDING>& bindings,
+			int bindingAmount);
 		void CreateInstance();
 		void RecreateSwapchain();
 		std::vector<vk::DescriptorSet>  AllocateSets(size_t amount, const DescriptorLayoutKey& key);
 		void CreateLayouts();
 		void CleanUpLayouts();
-	private:
-		struct RenderPassTag {};
-		using RenderPassHandle_ = Handle<RenderPassTag>;
 		SparseSet<RenderPassHandle_> g_RenderPassAllocator;
 	private:
 		Voidstar::Instance* m_Instance;
@@ -212,19 +194,20 @@ namespace Voidstar
 
 		DescriptorLayoutKey SystemDescriptorLayoutKey;
 
-		std::unordered_map<DescriptorLayoutKey, vk::DescriptorSetLayout, DescriptorLayoutKeyHash> m_DescriptorLayout;
+		Map<DescriptorLayoutKey, vk::DescriptorSetLayout, DescriptorLayoutKeyHash> m_DescriptorLayout;
 
-		std::unordered_map<PipelineLayoutKey, vk::PipelineLayout, PipelineLayoutKeyHash> m_PipelineLayout;
+		Map<PipelineLayoutKey, vk::PipelineLayout, PipelineLayoutKeyHash> m_PipelineLayout;
+		Map<PipelineKey, vk::Pipeline, PipelineKeyHash> m_Pipelines;
 
-		std::unordered_map<DescriptorLayoutKey, std::vector<vk::DescriptorSet>, DescriptorLayoutKeyHash> m_DescriptorSet;
+		Map<DescriptorLayoutKey, std::vector<vk::DescriptorSet>, DescriptorLayoutKeyHash> m_DescriptorSet;
 
-		std::unordered_map<VertexBufferHandle, SPtr<Buffer>> m_VertexBuffers;
-		std::unordered_map<IndexBufferHandle, SPtr<IndexBuffer>> m_IndexBuffers;
-		//std::unordered_map<VertexLayoutHandle, > m_BufferLayouts;
-		std::unordered_map<FrameBufferHandle, std::vector<vk::Framebuffer>> m_Framebuffers;
+		Map<VertexBufferHandle, SPtr<Buffer>> m_VertexBuffers;
+		Map<IndexBufferHandle, SPtr<IndexBuffer>> m_IndexBuffers;
+		//unordered_map<VertexLayoutHandle, > m_BufferLayouts;
+		Map<FrameBufferHandle, std::vector<vk::Framebuffer>> m_Framebuffers;
 		
 		// 0 handle is default render pass
-		std::unordered_map<RenderPassHandle_, UPtr<IExecute>> m_RenderPasses;
+		Map<RenderPassHandle_, RenderPass> m_RenderPasses;
 
 		//std::unordered_map<PipelineKey, UPtr<IExecute>> m_RenderPasses;
 
@@ -267,7 +250,7 @@ namespace Voidstar
 		std::unordered_map<std::string,std::vector<Drawable>> m_Drawables;
 		std::unordered_map<std::string,std::vector<Drawable>> m_StaticDrawables;
 
-		std::unordered_map<std::string, UPtr<Pipeline>> m_Pipelines;
+		
 	
 	};
 

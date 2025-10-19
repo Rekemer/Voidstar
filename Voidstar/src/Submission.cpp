@@ -20,6 +20,12 @@ namespace Voidstar
 
 
 
+
+	VertexLayout GetVertexLayout(VertexLayoutHandle handle)
+	{
+		return g_Submission->Layouts.at(handle);
+	}
+
 	ProgramHandle LoadProgram(std::string_view vertex, std::string_view fragment, std::string_view geometry) { return {}; }
 
 	ProgramHandle LoadProgram(std::string_view vertex, std::string_view fragment)
@@ -206,6 +212,7 @@ namespace Voidstar
 
 		// execute postrender commands
 		ExecuteCommands(g_Submission->Render->CmdPost);
+		g_Submission->Render->Reset();
 	}
 	void BindIndexBuffer(IndexBufferHandle handle)
 	{
@@ -215,6 +222,7 @@ namespace Voidstar
 	{
 		g_Submission->Submit->CurrentRenderItem->Bindings[location].VertexHandle = handle;
 		g_Submission->Submit->CurrentRenderItem->Bindings[location].LayoutHandle = g_Submission->VertexLayoutMap.at(handle);
+		g_Submission->Submit->CurrentRenderItem->currentBinding++;
 	};
 
 

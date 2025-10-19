@@ -11,15 +11,10 @@
 #include "glm.hpp"
 #include <unordered_map>
 #include <cstdint>
+#include <array>
 
 namespace Voidstar
 {
-
-
-
-
-
-
 
 	struct ProgramTag {};
 	struct ShaderTag {};
@@ -38,7 +33,19 @@ namespace Voidstar
 	using BufferHandle = Handle<BufferTag>;
 	using PassID = uint16_t;
 
+
+	struct RenderPassTag {};
+	using RenderPassHandle_ = Handle<RenderPassTag>;
+	template<
+		class Key,
+		class T,
+		class Hash = std::hash<Key>,
+		class KeyEqual = std::equal_to<Key>,
+		class Allocator = std::allocator<std::pair<const Key, T>>
+	>
+	using Map = std::unordered_map<Key, T, Hash, KeyEqual, Allocator>;
 }
+
 namespace std {
 	template <class Tag>
 	struct hash<Voidstar::Handle<Tag>> {
@@ -131,6 +138,7 @@ namespace Voidstar
 		Culling     cull = Culling::None;		
 		bool      depthTest = true;
 		bool      depthWrite = true;
+		bool	  stencilTest = false;
 		CompareOp depthFunc = CompareOp::LessEqual;
 		// depends on amount of colour targets
 		BlendMode blend[1]{};
@@ -168,7 +176,10 @@ namespace Voidstar
 	{
 		ProgramHandle Program;
 		PassID View;
-		VertexBinding Bindings[10];
+		// buffers binded for draw call
+		static constexpr int MAX_BINDING = 10;
+		std::array<VertexBinding, MAX_BINDING > Bindings = {};
+		int currentBinding = 0;
 		IndexBufferHandle IndexBuffer;
 		RenderState State;
 	};
@@ -182,17 +193,21 @@ namespace Voidstar
 
 	struct Frame
 	{
-		int  currentRenderItem = 0;
-		RenderItem* CurrentRenderItem;
+		int  CurrentRenderItemIndex = 0;
 		RenderItem m_renderItem[256];
+		RenderItem* CurrentRenderItem =&m_renderItem[CurrentRenderItemIndex];
 		View Views[256];
 
 		void NextItem()
 		{
-			currentRenderItem++;
-			CurrentRenderItem = &m_renderItem[currentRenderItem];
+			CurrentRenderItemIndex++;
+			CurrentRenderItem = &m_renderItem[CurrentRenderItemIndex];
 		}
-
+		void Reset() 
+		{
+			CurrentRenderItemIndex = 0;
+			CurrentRenderItem = &m_renderItem[CurrentRenderItemIndex];
+		};
 		// command to execute before Render/Compute API calls
 		ResourceCommandBuffer CmdPre;
 		// command to execute after Render/Compute API calls
@@ -212,8 +227,8 @@ namespace Voidstar
 			return cmdBuf;
 		}
 
-		std::unordered_map<VertexBufferHandle, VertexLayoutHandle> VertexLayoutMap;
-		std::unordered_map<VertexLayoutHandle, VertexLayout> Layouts;
+		Map<VertexBufferHandle, VertexLayoutHandle> VertexLayoutMap;
+		Map<VertexLayoutHandle, VertexLayout> Layouts;
 		// am not sure how we treat it in multithreading
 		SPtr<Window> Window;
 		Frame  Frames[1];
@@ -225,12 +240,9 @@ namespace Voidstar
 	};
 
 	
+	VertexLayout GetVertexLayout(VertexLayoutHandle handle);
 
 	
-
-
-	
-
 
 	ProgramHandle LoadProgram(std::string_view vertex, std::string_view fragment);
 

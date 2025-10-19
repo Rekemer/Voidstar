@@ -25,7 +25,6 @@ namespace Voidstar
 			m_CurrentOffset += GetSize(type);
 			return *this;
 		}
-
 	private:
 		int GetSize(ShaderDataType type)
 		{
@@ -49,6 +48,7 @@ namespace Voidstar
 				break;
 			}
 		}
+		friend class Renderer;
 		std::vector<VertexLayoutElement> m_Elements;
 		size_t m_CurrentOffset = 0;
 	};

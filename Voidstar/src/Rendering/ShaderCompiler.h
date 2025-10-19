@@ -24,7 +24,7 @@ namespace Voidstar
         Sampler,
     };
 
-
+	
     struct BindingDesc {
         uint32_t set;
         uint32_t binding;
@@ -33,7 +33,7 @@ namespace Voidstar
         uint32_t stride;       // for SSBO runtime array (arrayStride); 0 if N/A
         uint32_t elemSize;     // sizeof one struct in SSBO; 0 if N/A
         uint32_t format;
-        ShaderType    stage;    // who uses it; helps build stage flags
+        ShaderType   access;    // who uses it; helps build stage flags
     };
 
     struct PushConstRange {
@@ -52,8 +52,21 @@ namespace Voidstar
     };
 
    
-
-    inline vk::ShaderStageFlags To(ShaderType type)
+	inline vk::ShaderStageFlags mapAccess(ShaderType type) {
+		vk::ShaderStageFlags out{};
+		if (type == ShaderType::VERTEX)   
+			out |= vk::ShaderStageFlagBits::eVertex;
+		if (type == ShaderType::TESS_CONTROL)
+			out |= vk::ShaderStageFlagBits::eTessellationControl;
+		if (type == ShaderType::TESS_EVALUATION)
+			out |= vk::ShaderStageFlagBits::eTessellationEvaluation;
+		if (type == ShaderType::FRAGMENT)
+			out |= vk::ShaderStageFlagBits::eFragment;
+		if (type == ShaderType::COMPUTE)
+			out |= vk::ShaderStageFlagBits::eCompute;
+		return out;
+	}
+    inline vk::ShaderStageFlagBits map(ShaderType type)
     {
         switch (type)
         {
@@ -72,18 +85,11 @@ namespace Voidstar
         case Voidstar::ShaderType::TESS_EVALUATION:
             return vk::ShaderStageFlagBits::eTessellationEvaluation;
             break;
-		case Voidstar::ShaderType::ALL :
-			return vk::ShaderStageFlagBits::eTessellationEvaluation |
-			vk::ShaderStageFlagBits::eTessellationControl |
-			vk::ShaderStageFlagBits::eFragment |
-			vk::ShaderStageFlagBits::eVertex |
-			vk::ShaderStageFlagBits::eCompute;
         default:
             assert(false);
             break;
         }
     }
-
 
 
 	struct DescriptorLayoutKey
@@ -95,7 +101,7 @@ namespace Voidstar
 	struct PipelineLayoutKey
 	{
 		// multiple sets
-		std::vector<DescriptorLayoutKey> descriptorsSetLayouts;
+		std::vector<DescriptorLayoutKey> layoutKeys;
 	};
 
 
@@ -104,6 +110,7 @@ namespace Voidstar
 		ProgramHandle program;
 		RenderState rs;
 		PipelineLayoutKey layout;
+		RenderPassHandle_ renderPass;
 	};
 
 	
@@ -114,13 +121,13 @@ namespace Voidstar
 	inline bool operator==(const BindingDesc& a, const BindingDesc& b) {
 		return a.set == b.set && a.binding == b.binding && a.kind == b.kind &&
 			a.count == b.count && a.stride == b.stride && a.elemSize == b.elemSize &&
-			a.format == b.format && a.stage == b.stage;
+			a.format == b.format && a.access == b.access;
 	}
 	inline bool operator<(const BindingDesc& a, const BindingDesc& b)
 	{
 		if (a.set != b.set)      return a.set < b.set;
 		if (a.binding != b.binding)  return a.binding < b.binding;
-		return static_cast<uint32_t>(a.stage) < static_cast<uint32_t>(b.stage);
+		return static_cast<uint32_t>(a.access) < static_cast<uint32_t>(b.access);
 	}
 	inline bool operator==(const PushConstRange& a, const PushConstRange& b) {
 		return a.offset == b.offset && a.size == b.size && a.stage == b.stage;
@@ -131,11 +138,12 @@ namespace Voidstar
 	}
 
 	inline bool operator==(const PipelineLayoutKey& a, const PipelineLayoutKey& b) {
-		return a.descriptorsSetLayouts == b.descriptorsSetLayouts;
+		return a.layoutKeys == b.layoutKeys;
 	}
 	inline bool operator==(const PipelineKey& a ,const PipelineKey& b) noexcept {
 		return a.program == b.program
 			&& a.rs == b.rs
+			&& a.renderPass == b.renderPass
 			&& a.layout == b.layout;
 	}
 
@@ -149,7 +157,7 @@ namespace Voidstar
 			util::hash_combine(h, b.stride);
 			util::hash_combine(h, b.elemSize);
 			util::hash_combine(h, b.format);
-			util::hash_combine(h, static_cast<uint32_t>(b.stage));
+			util::hash_combine(h, static_cast<uint32_t>(b.access));
 			return h;
 		}
 	};
@@ -178,7 +186,7 @@ namespace Voidstar
 	struct PipelineLayoutKeyHash {
 		size_t operator()(const PipelineLayoutKey& k) const noexcept {
 			size_t h = 0;
-			for (auto const& d : k.descriptorsSetLayouts) {
+			for (auto const& d : k.layoutKeys) {
 				util::hash_combine(h, DescriptorLayoutKeyHash{}(d));
 			}
 
@@ -191,11 +199,12 @@ namespace Voidstar
 			util::hash_combine(h, std::hash<ProgramHandle>{}(k.program));
 			util::hash_combine(h, RenderStateHash{}(k.rs));
 			util::hash_combine(h, PipelineLayoutKeyHash{}(k.layout));
+			util::hash_combine(h, k.renderPass);
 			return h;
 		}
 	};
 
-	inline static  std::unordered_map<PipelineKey, int, PipelineKeyHash> msdsdap;
+
 
 	struct ProgramMeta {
 		std::vector<StageMeta> stages;
@@ -210,7 +219,7 @@ namespace Voidstar
 
 		//uint64_t layoutKey = 0;             
 	};
-    inline vk::DescriptorType To(ResourceType type)
+    inline vk::DescriptorType map(ResourceType type)
     {
         switch (type)
         {
@@ -240,7 +249,6 @@ namespace Voidstar
 		void Init();
 		void Compile(const std::filesystem::path& shaderPath);
         void Link(ProgramHandle handle, uint8_t shaderAmount);
-
         std::unordered_map<ProgramHandle, ProgramMeta> m_Programs;
 
 	private:

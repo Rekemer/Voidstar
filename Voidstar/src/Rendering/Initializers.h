@@ -143,4 +143,23 @@ namespace Voidstar
 	{
 		return { VertexBindingDescription(0, sizeof(Voidstar::Vertex_), vk::VertexInputRate::eVertex) };
 	}
+
+	inline vk::PipelineLayout MakePipelineLayout(vk::Device device, std::vector<vk::DescriptorSetLayout>& layout) {
+
+		vk::PipelineLayoutCreateInfo layoutInfo;
+		layoutInfo.flags = vk::PipelineLayoutCreateFlags();
+		layoutInfo.setLayoutCount = layout.size();
+		layoutInfo.pSetLayouts = layout.data();
+
+		layoutInfo.pushConstantRangeCount = 0;
+		try
+		{
+			return device.createPipelineLayout(layoutInfo);
+		}
+		catch (vk::SystemError err)
+		{
+			Log::GetLog()->error("Failed to create pipeline layout!");
+		}
+	}
+
 }

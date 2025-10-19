@@ -137,7 +137,7 @@ namespace Voidstar
 	
 
 
-	UPtr<IExecute> RenderPassBuilder::Build(
+	RenderPass RenderPassBuilder::Build(
 		AttachmentManager& manager,
 		size_t framebufferAmount,
 		vk::Extent2D extent,
@@ -163,6 +163,7 @@ namespace Voidstar
 
 		auto handle = g_FrameBufferAllocator.GetId();
 		std::vector<vk::Framebuffer> framebuffers(framebufferAmount);
+		auto samples = m_Color[0][0]->GetSample();
 		try
 		{
 			auto vkRenderPass = device->GetDevice().createRenderPass(renderpassInfo);
@@ -194,7 +195,7 @@ namespace Voidstar
 
 			}
 			Renderer::Instance()->AddFramebuffers(handle, framebuffers);
-			UPtr<IExecute> renderPass = CreateUPtr<RenderPass>(vkRenderPass, extent, clearValues, handle);
+			auto renderPass = RenderPass{ samples, vkRenderPass, extent, clearValues, handle };
 			m_DepthReferences.clear();
 			m_ColorReferences.clear();
 			m_ResolveReferences.clear();
@@ -202,7 +203,7 @@ namespace Voidstar
 			m_Color.clear();
 			m_Resolve.clear();
 			m_IsMSAA = false;
-			return std::move(renderPass);
+			return renderPass;
 		}
 		catch (vk::SystemError err)
 		{
@@ -211,27 +212,6 @@ namespace Voidstar
 	}
 
 
-	void RenderPass::Execute(CommandBuffer& cmd, size_t frameIndex)
-	{
-		assert(false);
-		//cmd.BeginRendering();
-		//cmd.BeginRenderPass(m_RenderPass, m_Framebuffers[frameIndex], m_Extent, m_ClearValues);
-		//
-		//
-		//
-		//cmd.EndRenderPass();
-		//
-		//cmd.EndRendering();
-	}
-
-
-	RenderPass::~RenderPass()
-	{
-		auto device = RenderContext::GetDevice()->GetDevice();
-		device.waitIdle();
-		device.destroyRenderPass(m_RenderPass);
-	
-	}
 
 }
 

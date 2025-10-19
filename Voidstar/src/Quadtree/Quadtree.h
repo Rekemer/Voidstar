@@ -9,8 +9,6 @@ namespace Voidstar
     constexpr size_t size = 64;
     #define F_32 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
     #define F_16 0xFFFFFFFFFFFFFFFF
-    template<typename U ,typename T>
-    using Map = std::unordered_map<U,T>;
     using Coordinate = uint32_t;
     static constexpr float inf = std::numeric_limits<float>::infinity();
     static constexpr Coordinate null = Coordinate(-1);
@@ -52,7 +50,7 @@ namespace Voidstar
     {
     public:
         Node root;
-        Map<int,std::vector<Node>> nodes;
+        std::unordered_map<int,std::vector<Node>> nodes;
 
         static Quadtree Build(glm::vec3 posPlayer);
         std::optional<Node*> GetNode(std::bitset<size> node, int depth);

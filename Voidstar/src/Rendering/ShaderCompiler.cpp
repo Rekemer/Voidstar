@@ -136,7 +136,7 @@ namespace Voidstar
 		d.stride = stride;
 		d.elemSize = elemSize;
 		d.format = format;
-		d.stage = stage;
+		d.access = stage;
 		return d;
 	}
 
@@ -284,24 +284,26 @@ namespace Voidstar
 		assert(shaderAmount == m_StageMetas.size());
 		ProgramMeta meta;
 		// number of set and its key
-		std::unordered_map<int, DescriptorLayoutKey> keys;
+		std::unordered_map<int, DescriptorLayoutKey> keysMap;
 		for (int i = 0; i < shaderAmount; i++)
 		{
 			auto& sMeta = m_StageMetas.top();
 			for (auto& [set, bindings] : sMeta.bindings)
 			{
-				auto& descKey = keys[set];
+				auto& descKey = keysMap[set];
 				descKey.set = set;
 				descKey.bindings.insert(bindings.begin(), bindings.end());
 			}
 			meta.stages.push_back(sMeta);
 			m_StageMetas.pop();
 		}
-		for (auto& [k, v] : keys)
+		std::vector<vk::DescriptorSetLayout> layouts;
+		for (auto& [k, v] : keysMap)
 		{
+			layouts.push_back(Renderer::Instance()->CreateDescriptorLayout(v));
 			meta.descriptorKey.push_back(v);
-			Renderer::Instance()->CreateDescriptorLayout(v);
 		}
+		Renderer::Instance()->CreatePipelineLayout(PipelineLayoutKey{ meta.descriptorKey });
 		m_Programs[handle] = meta;
 	}
 
@@ -378,20 +380,9 @@ namespace Voidstar
 		catch (vk::SystemError err) {
 			Log::GetLog()->error("Failed to create shader module for {0}", path.string());
 		}
-		
-		/*std::sort(stageMeta.bindings.begin(), stageMeta.bindings.end(),
-			[](const BindingDesc& descA, const BindingDesc& descB)
-
-			{
-				if (descA.set == descB.set)
-				{
-					return descA.binding == descB.binding;
-				}
-				return descA.set < descB.set;
-			});*/
-
-
 		m_StageMetas.push(stageMeta);
+
+
 #endif
 		
 
