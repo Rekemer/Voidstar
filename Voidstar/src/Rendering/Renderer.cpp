@@ -787,9 +787,10 @@ namespace Voidstar
 
 
 	
-	void Renderer::Init(size_t screenWidth, size_t screenHeight, std::shared_ptr<Window> window) 
+	void Renderer::Init(size_t screenWidth, size_t screenHeight, std::shared_ptr<Window> window, Application* app) 
 		
 	{
+		m_App = app;
 		m_Window=window; 
 		m_ViewportWidth = screenWidth;  
 		m_ViewportHeight = screenHeight;
@@ -800,6 +801,8 @@ namespace Voidstar
 
 		RenderContext::CreateSurface(window.get());
 		RenderContext::CreateDevice();
+
+		m_Fence = std::move(Fence::Create());
 		m_Device = RenderContext::GetDevice();
 
 		RenderContext::CreateSwapchain(vk::Format::eB8G8R8A8Unorm,
@@ -1370,25 +1373,32 @@ namespace Voidstar
 
 
 
+		//void StencilTestOp(vk::CompareOp op, vk::StencilOp fail, vk::StencilOp pass, vk::StencilOp //depthFailOp);
+		//void SetControlPoints(int amountPoints);
 
 		builder.AddPipelineLayout(m_PipelineLayout.at(key.layout));
 		m_Pipelines[key] = builder.Build();
-		//void StencilTestOp(vk::CompareOp op, vk::StencilOp fail, vk::StencilOp pass, vk::StencilOp //depthFailOp);
-
-		//void SetControlPoints(int amountPoints);
-		//buil
-		
+		return m_Pipelines[key];
 	}
 
 	void Renderer::RenderFrame(Frame* render, float deltaTime)
 	{
 
+		uint32_t imageIndex;
+		auto swapchain = RenderContext::GetSwapchain();
+		m_Device->GetDevice().acquireNextImageKHR(swapchain->m_Swapchain, UINT64_MAX, m_ImageAvailableSemaphore[m_CurrentFrame].GetSemaphore(), nullptr, &imageIndex);
+		Renderer::Instance()->Wait(m_Fence.GetFence());
+		Renderer::Instance()->Reset(m_Fence.GetFence());
+
+
+		auto& cmd = m_RenderCommandBuffer[imageIndex];
+		cmd.BeginRendering();
 
 		for (int i = 0; i < render->CurrentRenderItemIndex; i++)
 		{
-			auto& renderItem = render->m_renderItem[i];
+			RenderItem& renderItem = render->m_renderItem[i];
 
-			auto& view = render->Views[renderItem.View];
+			View& view = render->Views[renderItem.View];
 			assert(renderItem.Program.Valid());
 			auto& meta = m_Compiler.m_Programs.at(renderItem.Program);
 
@@ -1413,19 +1423,63 @@ namespace Voidstar
 			PipelineKey key ={ renderItem.Program,renderItem.State,keys,DEFAULT_RENDER_PASS};
 			
 			vk::Pipeline pipeline = GetPipeline(key, renderItem.Bindings, renderItem.currentBinding);
-			
+			vk::PipelineLayout layout = m_PipelineLayout.at(key.layout);
+			auto& renderPass = m_RenderPasses.at(key.renderPass);
+			auto frameBuffer = m_Framebuffers.at(renderPass.m_FrameBufferHandle)[imageIndex];
 
+			cmd.BeginRenderPass(renderPass.m_RenderPass, frameBuffer, renderPass.m_Extent, renderPass.m_ClearValues);
+			auto vkCmd = cmd.GetCommandBuffer();
+			vkCmd.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
+
+			UpdateUniformBuffer(view.Proj, view.View, m_App->GetExeTime());
+
+			for (int i = 0; i < keys.size(); i++)
+			{
+
+				auto& descSet = m_DescriptorSet.at(keys.at(i));
+				vkCmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, layout, i, descSet[imageIndex], nullptr);
+			}
+			vk::Viewport viewport;
+			viewport.x = view.Rect[0];
+			viewport.y = view.Rect[1];
+			viewport.width = view.Rect[2];
+			viewport.height = view.Rect[3];
+			viewport.minDepth = 0;
+			viewport.maxDepth = 1;
+			vk::Rect2D scissors;
+			scissors.offset = vk::Offset2D{ static_cast<int32_t>(view.Rect[0]),static_cast<int32_t>(view.Rect[1]) };
+			scissors.extent = vk::Extent2D{ static_cast<uint32_t>(view.Rect[2]),static_cast<uint32_t>(view.Rect[3]) };
+			vkCmd.setViewport(0, 1, &viewport);
+			vkCmd.setScissor(0, 1, &scissors);
+
+			std::vector<vk::Buffer> vertexBuffers;
+			vertexBuffers.reserve(renderItem.currentBinding);
+			std::vector<vk::DeviceSize> offsets(0, renderItem.currentBinding);
+
+			for (auto i = 0; i < renderItem.currentBinding; i++)
+			{
+				auto buffer = m_VertexBuffers.at(renderItem.Bindings.at(i).VertexHandle)->GetBuffer();
+				vertexBuffers.push_back(buffer);
+			}
+			vkCmd.bindVertexBuffers(0,1,vertexBuffers.data(), offsets.data());
+			if (renderItem.IndexBuffer.Valid())
+			{
+				auto buffer = m_IndexBuffers.at(renderItem.IndexBuffer);
+				vkCmd.bindIndexBuffer(buffer->GetBuffer(), 0, buffer->GetIndexType());
+				vkCmd.drawIndexed(buffer->GetIndexAmount(), 1, 0, 0, 0);
+			}
+			else
+			{
+				// draw without index
+			}
+
+
+			cmd.EndRenderPass();
 
 		}
 
-		return;
-
-		uint32_t imageIndex;
-		auto swapchain = RenderContext::GetSwapchain();
-		{
-			ZoneScopedN("Acquiring new Image");
-			m_Device->GetDevice().acquireNextImageKHR(swapchain->m_Swapchain, UINT64_MAX, m_ImageAvailableSemaphore[m_CurrentFrame].GetSemaphore(), nullptr, &imageIndex);
-		}
+		cmd.EndRendering();
+		
 		vk::Semaphore renderFinished;
 		renderFinished = m_Graphs[0]->Execute(m_RenderCommandBuffer[m_CurrentFrame], m_CurrentFrame, m_ImageAvailableSemaphore[m_CurrentFrame]);
 		
@@ -1477,30 +1531,22 @@ namespace Voidstar
 	void Renderer::Flush(std::vector<vk::CommandBuffer> commandBuffers)
 	{
 		assert(false);
-
-
 	}
-	void Renderer::UpdateUniformBuffer(const glm::mat4& proj,Camera& camera)
+	void Renderer::UpdateUniformBuffer(const glm::mat4& proj, const glm::mat4& view, float time)
 	{
 		UniformBufferObject ubo{};
 
-		auto cameraView = camera.GetView();
-		auto cameraProj = camera.GetProj();
-		ubo.view = cameraView;
-		ubo.proj = cameraProj;
-		//ubo.time = m_App->GetExeTime();
-		//memcpy(uniformBuffersMapped[m_CurrentFrame], &ubo, sizeof(ubo));
-		//auto ans = cameraProj * cameraView * glm::vec4{ 1,0,1,1 };
-		//ans /= ans.w;
-		//std::cout << "sd";
-
+		ubo.view = view;
+		ubo.proj = proj;
+		ubo.time = time;
+		memcpy(m_UniformBuffersMapped[m_CurrentFrame], &ubo, sizeof(ubo));
 	}
 
 	void Renderer::BeginFrame(Camera& camera, size_t viewportWidth,
 		size_t viewportHeight)
 	{
-		auto proj = glm::ortho(0.0f, (float)viewportWidth, (float)viewportHeight,0.f);
-		UpdateUniformBuffer(camera.GetProj(), camera);
+		//auto proj = glm::ortho(0.0f, (float)viewportWidth, (float)//viewportHeight,0.f);
+		//UpdateUniformBuffer(camera.GetProj(), camera);
 	}
 	void Renderer::EndFrame()
 	{

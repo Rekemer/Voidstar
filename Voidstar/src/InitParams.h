@@ -2,17 +2,19 @@
 #include<string_view>
 namespace Voidstar 
 {
+	class Application;
 	struct InitParams
 	{
 		char appName[256];
 		size_t width, height;
+		Application* app;
 		InitParams() = default;
 
-		InitParams(size_t width, size_t height)
+		InitParams(size_t width, size_t height, Application* app )
 		{
 			this->width = width;
 			this->height= height;
-			
+			this->app = app;
 			std::string_view name = "example";
 			std::memcpy(appName, name.data(), name.size());
 			appName[name.size()] = '\0';

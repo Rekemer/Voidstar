@@ -107,7 +107,7 @@ namespace Voidstar
 			{
 				auto init = commandBuffer.ReadObject<InitParams>();
 
-				Renderer::Instance()->Init(init.width, init.height, g_Submission->Window);
+				Renderer::Instance()->Init(init.width, init.height, g_Submission->Window,init.app);
 				
 				break;
 			}

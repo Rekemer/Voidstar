@@ -7,18 +7,25 @@ namespace Voidstar
 	class VOIDSTAR_API Fence
 	{
 	public:
-		Fence()
+		static Fence Create()
 		{
+			Fence fence;
 			vk::FenceCreateInfo fenceInfo = {};
 			fenceInfo.flags = vk::FenceCreateFlags() | vk::FenceCreateFlagBits::eSignaled;
-			m_Fence =RenderContext::GetDevice()->GetDevice().createFence(fenceInfo);
-		};
+			fence.m_Fence = RenderContext::GetDevice()->GetDevice().createFence(fenceInfo);
+			return fence;
+		}
+		Fence() = default;
 		Fence(const Fence& fence) = delete;
+		void operator= (Fence&& fence)
+		{
+			m_Fence = fence.m_Fence;
+			fence.m_Fence = VK_NULL_HANDLE;
+		}
 		Fence(Fence&& fence)
 		{
 			m_Fence = fence.m_Fence;
 			fence.m_Fence = VK_NULL_HANDLE;
-
 		};
 		~Fence()
 		{

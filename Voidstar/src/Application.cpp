@@ -20,7 +20,7 @@ namespace Voidstar
 		m_Camera = CreateSPtr<Camera>();
 		m_Camera->UpdateProj(screenWidth, screenHeight,m_Camera->GetFov());
 
-		InitParams init{screenWidth,screenHeight};
+		InitParams init{screenWidth,screenHeight, this};
 		init.SetName(appName);
 		
 		
@@ -30,7 +30,6 @@ namespace Voidstar
 		Input::Init(m_Window);
 		SubmitInit(init);
 		Frame();
-
 	}
 	Application::~Application()
 	{

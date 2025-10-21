@@ -11,7 +11,7 @@ namespace Voidstar
 		}
 		
 		m_Semaphores.clear();
-		m_Fence.~Fence();
+		//m_Fence.~Fence();
 	}
 	void RenderPassGraph::AddExec(UPtr<IExecute> pass)
 	{

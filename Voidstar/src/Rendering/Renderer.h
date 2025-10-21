@@ -59,6 +59,7 @@ namespace Voidstar
 	class Instance;
 	class Device;
 	class Swapchain;
+	class Application;
 	class DescriptorSetLayout;
 	class CommandPoolManager;
 	class VOIDSTAR_API Renderer
@@ -69,7 +70,7 @@ namespace Voidstar
 			Sets;
 
 	public:
-		void Init(size_t screenWidth, size_t screenHeight, std::shared_ptr<Window> window);
+		void Init(size_t screenWidth, size_t screenHeight, std::shared_ptr<Window> window, Application* app);
 		static Renderer* Instance();
 		
 		void BeginFrame(Camera& camera, size_t viewportWidth, 
@@ -170,7 +171,7 @@ namespace Voidstar
 		void Draw(Quad& quad, glm::mat4& world);
 		void Draw(Sphere& drawable);
 		void Draw(QuadRangle& drawable);
-		void UpdateUniformBuffer(const glm::mat4& proj, Camera& camera);
+		void UpdateUniformBuffer(const glm::mat4& proj, const glm::mat4& view,float time);
 		void AddFramebuffers(FrameBufferHandle handle, std::vector<vk::Framebuffer>& framebuffers);
 	private:
 		vk::Pipeline GetPipeline(const PipelineKey& key, std::array<VertexBinding, RenderItem::MAX_BINDING>& bindings,
@@ -182,11 +183,11 @@ namespace Voidstar
 		void CleanUpLayouts();
 		SparseSet<RenderPassHandle_> g_RenderPassAllocator;
 	private:
+		Application* m_App;
 		Voidstar::Instance* m_Instance;
 		Device* m_Device;
 		int m_ViewportWidth, m_ViewportHeight;
 		size_t m_CurrentFrame = 0;
-
 		AttachmentManager m_AttachmentManager;
 		ShaderCompiler m_Compiler;
 		RenderPassHandle_ DEFAULT_RENDER_PASS;
@@ -208,8 +209,8 @@ namespace Voidstar
 		
 		// 0 handle is default render pass
 		Map<RenderPassHandle_, RenderPass> m_RenderPasses;
+		Fence m_Fence;
 
-		//std::unordered_map<PipelineKey, UPtr<IExecute>> m_RenderPasses;
 
 
 
