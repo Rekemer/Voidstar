@@ -12,7 +12,7 @@ void main()
 {
     
     vec3 worldPos = in_pos;
-    vec4 clipSpace = ubo.proj * vec4(worldPos,1);
+    vec4 clipSpace = ubo.proj * ubo.view * vec4(worldPos,1);
     gl_Position = clipSpace;
 
 }

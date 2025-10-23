@@ -209,7 +209,6 @@ namespace Voidstar
 		
 		// 0 handle is default render pass
 		Map<RenderPassHandle_, RenderPass> m_RenderPasses;
-		Fence m_Fence;
 
 
 

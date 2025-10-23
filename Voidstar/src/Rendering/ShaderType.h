@@ -15,6 +15,12 @@ namespace Voidstar
 		ALL = VERTEX | FRAGMENT | COMPUTE | TESS_CONTROL | TESS_EVALUATION,
 	};
 
+
+	inline bool HasFlag(ShaderType value, ShaderType flag)
+	{
+		return (static_cast<uint32_t>(value) & static_cast<uint32_t>(flag)) != 0;
+	}
+
 	inline ShaderType operator|(ShaderType a, ShaderType b)
 	{
 		return static_cast<ShaderType>(

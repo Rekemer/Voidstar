@@ -81,7 +81,6 @@ namespace Voidstar
 			BASE_SPIRV_OUTPUT = BASE_SHADER_PATH + "Binary/";
 			BASE_VIRT_PATH = executablePath.parent_path().string() + "../../../../mipMaps_virtualTex4.tiff/";
 		}
-
 		return baseShaderPath;
 	}
 	void ShaderCompiler::Init()
@@ -172,8 +171,21 @@ namespace Voidstar
 		StageMeta meta;
 		meta.stage = GetShaderType(comp.get_execution_model());
 		meta.path = path;
+		if (res.uniform_buffers.size() > 0)
+		{
+			auto ub = res.uniform_buffers[0];
+			const auto& t = comp.get_type(ub.base_type_id);
+			uint32_t count = array_size(comp.get_type(ub.type_id));
+			uint32_t blockSize = uint32_t(comp.get_declared_struct_size(t));
+			assert(blockSize == sizeof(UniformBufferObject));
+			meta.bindings[0].push_back(CreateBindingDesc(0, 0, ResourceType::UniformBuffer,
+				ShaderType::ALL, 1, 0, blockSize));
+		}
+		
+
 		// --- Uniform buffers ---
-		for (auto& ub : res.uniform_buffers) {
+		for (int i = 1; i < res.uniform_buffers.size(); i++) {
+			auto& ub = res.uniform_buffers[i];
 			uint32_t set = comp.get_decoration(ub.id, spv::DecorationDescriptorSet);
 			uint32_t binding = comp.get_decoration(ub.id, spv::DecorationBinding);
 			const auto& t = comp.get_type(ub.base_type_id);

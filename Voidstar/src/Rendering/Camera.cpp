@@ -184,7 +184,7 @@ namespace Voidstar
         // Rotates the Orientation left and right
         m_Front = glm::rotate(m_Front, glm::radians(-rotY), m_Up);
         // Sets mouse cursor to the middle of the screen so that it doesn't end up roaming around
-       // Input::SetMousePos((screenWidth / 2), (screenHeight / 2));
+        Input::SetMousePos((screenWidth / 2), (screenHeight / 2));
 #else
         
 #endif // 0

@@ -795,6 +795,7 @@ namespace Voidstar
 		m_ViewportWidth = screenWidth;  
 		m_ViewportHeight = screenHeight;
 		m_CommandPoolManager = CreateUPtr<CommandPoolManager>();
+		m_Compiler.Init();
 		// create instance
 		CreateInstance();
 
@@ -802,13 +803,13 @@ namespace Voidstar
 		RenderContext::CreateSurface(window.get());
 		RenderContext::CreateDevice();
 
-		m_Fence = std::move(Fence::Create());
 		m_Device = RenderContext::GetDevice();
 
 		RenderContext::CreateSwapchain(vk::Format::eB8G8R8A8Unorm,
 			m_ViewportWidth, m_ViewportHeight,
 			vk::PresentModeKHR::eFifo, vk::ColorSpaceKHR::eSrgbNonlinear) ;
 		
+		CreateSyncObjects();
 
 
 		std::vector<vk::DescriptorPoolSize> pool_sizes =
@@ -860,8 +861,9 @@ namespace Voidstar
 		desc.access = ShaderType::ALL;
 		desc.kind = ResourceType::UniformBuffer;
 		desc.count = 1;
+		desc.elemSize = sizeof(UniformBufferObject);
+		desc.stride = 0;
 		SystemDescriptorLayoutKey.bindings.insert(desc);
-		
 		CreateDescriptorLayout(SystemDescriptorLayoutKey);
 
 
@@ -1383,12 +1385,13 @@ namespace Voidstar
 
 	void Renderer::RenderFrame(Frame* render, float deltaTime)
 	{
+		if (render->CurrentRenderItemIndex == 0) return;
 
 		uint32_t imageIndex;
 		auto swapchain = RenderContext::GetSwapchain();
 		m_Device->GetDevice().acquireNextImageKHR(swapchain->m_Swapchain, UINT64_MAX, m_ImageAvailableSemaphore[m_CurrentFrame].GetSemaphore(), nullptr, &imageIndex);
-		Renderer::Instance()->Wait(m_Fence.GetFence());
-		Renderer::Instance()->Reset(m_Fence.GetFence());
+		Renderer::Instance()->Wait(m_InFlightFence[m_CurrentFrame].GetFence());
+		Renderer::Instance()->Reset(m_InFlightFence[m_CurrentFrame].GetFence());
 
 
 		auto& cmd = m_RenderCommandBuffer[imageIndex];
@@ -1435,8 +1438,8 @@ namespace Voidstar
 
 			for (int i = 0; i < keys.size(); i++)
 			{
-
-				auto& descSet = m_DescriptorSet.at(keys.at(i));
+				auto k = keys.at(i);
+				auto& descSet = m_DescriptorSet.at(k);
 				vkCmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, layout, i, descSet[imageIndex], nullptr);
 			}
 			vk::Viewport viewport;
@@ -1454,13 +1457,14 @@ namespace Voidstar
 
 			std::vector<vk::Buffer> vertexBuffers;
 			vertexBuffers.reserve(renderItem.currentBinding);
-			std::vector<vk::DeviceSize> offsets(0, renderItem.currentBinding);
+			std::vector<vk::DeviceSize> offsets(renderItem.currentBinding,0);
 
 			for (auto i = 0; i < renderItem.currentBinding; i++)
 			{
-				auto buffer = m_VertexBuffers.at(renderItem.Bindings.at(i).VertexHandle)->GetBuffer();
+				auto& buffer = m_VertexBuffers.at(renderItem.Bindings.at(i).VertexHandle)->GetBuffer();
 				vertexBuffers.push_back(buffer);
 			}
+			renderItem.currentBinding = 0;
 			vkCmd.bindVertexBuffers(0,1,vertexBuffers.data(), offsets.data());
 			if (renderItem.IndexBuffer.Valid())
 			{
@@ -1480,20 +1484,19 @@ namespace Voidstar
 
 		cmd.EndRendering();
 		
-		vk::Semaphore renderFinished;
-		renderFinished = m_Graphs[0]->Execute(m_RenderCommandBuffer[m_CurrentFrame], m_CurrentFrame, m_ImageAvailableSemaphore[m_CurrentFrame]);
-		
-		
-		auto& semaphore = m_ImageAvailableSemaphore[m_CurrentFrame].GetSemaphore();
-		vk::Semaphore waitSemaphore[] = { renderFinished};
 	
-			
+
+		auto waitSemaphore = m_ImageAvailableSemaphore[m_CurrentFrame].GetSemaphore();
+		auto signalSemaphore = m_RenderFinishedSemaphore[m_CurrentFrame].GetSemaphore();
+
+		cmd.Submit(&waitSemaphore,&signalSemaphore,&m_InFlightFence[m_CurrentFrame].GetFence());
 
 		
-
+		vk::Semaphore waitSemaphores[] = { signalSemaphore };
 		vk::PresentInfoKHR presentInfo = {};
+
 		presentInfo.waitSemaphoreCount = 1;
-		presentInfo.pWaitSemaphores = waitSemaphore;
+		presentInfo.pWaitSemaphores = waitSemaphores;
 
 		vk::SwapchainKHR swapChains[] = { swapchain->m_Swapchain };
 		presentInfo.swapchainCount = 1;

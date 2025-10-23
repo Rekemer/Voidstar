@@ -32,7 +32,7 @@ namespace Voidstar
         uint32_t count;        // array size (1 for non-array)
         uint32_t stride;       // for SSBO runtime array (arrayStride); 0 if N/A
         uint32_t elemSize;     // sizeof one struct in SSBO; 0 if N/A
-        uint32_t format;
+        uint32_t format = 0;
         ShaderType   access;    // who uses it; helps build stage flags
     };
 
@@ -54,15 +54,15 @@ namespace Voidstar
    
 	inline vk::ShaderStageFlags mapAccess(ShaderType type) {
 		vk::ShaderStageFlags out{};
-		if (type == ShaderType::VERTEX)   
+		if (HasFlag(type , ShaderType::VERTEX))
 			out |= vk::ShaderStageFlagBits::eVertex;
-		if (type == ShaderType::TESS_CONTROL)
+		if (HasFlag(type , ShaderType::TESS_CONTROL))
 			out |= vk::ShaderStageFlagBits::eTessellationControl;
-		if (type == ShaderType::TESS_EVALUATION)
+		if (HasFlag(type , ShaderType::TESS_EVALUATION))
 			out |= vk::ShaderStageFlagBits::eTessellationEvaluation;
-		if (type == ShaderType::FRAGMENT)
+		if (HasFlag(type, ShaderType::FRAGMENT))
 			out |= vk::ShaderStageFlagBits::eFragment;
-		if (type == ShaderType::COMPUTE)
+		if (HasFlag(type , ShaderType::COMPUTE))
 			out |= vk::ShaderStageFlagBits::eCompute;
 		return out;
 	}
@@ -121,13 +121,14 @@ namespace Voidstar
 	inline bool operator==(const BindingDesc& a, const BindingDesc& b) {
 		return a.set == b.set && a.binding == b.binding && a.kind == b.kind &&
 			a.count == b.count && a.stride == b.stride && a.elemSize == b.elemSize &&
-			a.format == b.format && a.access == b.access;
+			a.format == b.format ;
 	}
+
 	inline bool operator<(const BindingDesc& a, const BindingDesc& b)
 	{
 		if (a.set != b.set)      return a.set < b.set;
 		if (a.binding != b.binding)  return a.binding < b.binding;
-		return static_cast<uint32_t>(a.access) < static_cast<uint32_t>(b.access);
+		return true;
 	}
 	inline bool operator==(const PushConstRange& a, const PushConstRange& b) {
 		return a.offset == b.offset && a.size == b.size && a.stage == b.stage;
@@ -157,7 +158,7 @@ namespace Voidstar
 			util::hash_combine(h, b.stride);
 			util::hash_combine(h, b.elemSize);
 			util::hash_combine(h, b.format);
-			util::hash_combine(h, static_cast<uint32_t>(b.access));
+			/*util::hash_combine(h, static_cast<uint32_t>(b.access));*/
 			return h;
 		}
 	};
