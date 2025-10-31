@@ -5,23 +5,6 @@
 
 namespace Voidstar
 {
-	struct  VOIDSTAR_API SphereCoords
-	{
-		float pitch = 0;
-		float yaw = 0;
-		float r = 4;
-		//x = ρsinφ cosθ
-		//y = ρsinφsinθ
-		//z = ρcosφ
-		glm::vec3 ToCart()
-		{
-			glm::vec3 cart;
-			cart.x = r * glm::sin(yaw) * glm::cos(pitch);
-			cart.y = r * glm::sin(yaw) * glm::sin(pitch);
-			cart.z = r * glm::cos(yaw) ;
-			return cart;
-		}
-	};
 	class VOIDSTAR_API Camera
 	{
 	public:
@@ -43,18 +26,18 @@ namespace Voidstar
 		friend class Renderer;
 	private:
 		glm::vec3 m_Up {0.0f, 1.0f, 0.0f};
-		glm::vec3 m_Front{ 0.0f, 0.0f, 1.0f };
-		glm::vec3 m_Position{0,0,-15};
+		glm::vec3 m_Front{ 0.0f, 0.0f, -1.0f };
+		glm::vec3 m_Position{0,0,0};
 		glm::mat4 m_Proj;
 		glm::mat4 m_View;
 		float m_Fov = glm::radians(45.f);;
 		float m_Yaw = 90.0f; // around y axis
 		float m_Pitch = 0.f; // around x axis
 		float speed = 10.f;
-		bool m_IsControlEnabled = true;
+		//bool m_IsControlEnabled = true;
 		float width;
 		float height;
 		const float farPlane = 100;
-		const float nearPlane = 0.00001;
+		const float nearPlane = 0.1;
 	};
 }

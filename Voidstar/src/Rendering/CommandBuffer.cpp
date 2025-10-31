@@ -159,6 +159,7 @@ namespace Voidstar
 		auto device = RenderContext::GetDevice();
 		auto memory = device->GetDevice().mapMemory(src->GetMemory(), 0, dataSize);
 		memcpy(memory, data, dataSize);
+
 		device->GetDevice().unmapMemory(src->GetMemory());
 
 

@@ -489,7 +489,7 @@ public:
 		,m_VertexLayout);
 		m_IndexCubeHandle = CreateIndexBuffer
 		(
-			Memory{ reinterpret_cast<uint8_t*>(m_Cube.data()), m_Cube.size() * sizeof(m_Cube[0]) }
+			Memory{ reinterpret_cast<uint8_t*>(m_IndexCube.data()), m_IndexCube.size() * sizeof(m_IndexCube[0]) }
 		);
 
 		//m_QuadBuffer = CreateVerte

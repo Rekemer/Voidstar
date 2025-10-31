@@ -3,10 +3,10 @@
 struct Vertex
 {
 	glm::vec3 Position;
-	glm::vec4 Color;
+	//glm::vec4 Color;
 	glm::vec2 UV;
-	alignas(4)
-	float textureID;
+	//alignas(4)
+	//float textureID;
 };
 struct InstanceData
 {

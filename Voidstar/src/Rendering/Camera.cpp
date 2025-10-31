@@ -19,31 +19,28 @@ namespace Voidstar
 
 	void Camera::Update(float deltaTime)
 	{
-        if (m_IsControlEnabled)
-        {
-            ProcessInput(deltaTime);
-            ProcessMouse();
-            UpdateView();
-           // LookAt({0,0,0});
-        }
+       ProcessInput(deltaTime);
+       ProcessMouse();
+       UpdateView();
+       //LookAt({0,0,0});
       //Log::GetLog()->info("camera pos: {0} {1} {2}\n", m_Position.x, m_Position.y, m_Position.z);
         //if (Input::IsKeyTyped(VS_KEY_C))
         //{
         //    m_IsControlEnabled = !m_IsControlEnabled;
         //}
-        auto delta = .125/6;
-        if (Input::IsKeyPressed(VS_KEY_F))
-        {
-
-            m_Fov -= delta;
-            UpdateProj();
-        }
-        if (Input::IsKeyPressed(VS_KEY_G))
-        {
-
-            m_Fov += delta;
-            UpdateProj();
-        }
+       // auto delta = .125/6;
+       // if (Input::IsKeyPressed(VS_KEY_F))
+       // {
+       //
+       //     m_Fov -= delta;
+       //     UpdateProj();
+       // }
+       // if (Input::IsKeyPressed(VS_KEY_G))
+       // {
+       //
+       //     m_Fov += delta;
+       //     UpdateProj();
+       // }
 
 	}
     void Camera::UpdateProj()
@@ -57,7 +54,12 @@ namespace Voidstar
                                 0,-1,0,0,
                                 0,0,-1,0,
                                 0,0,0,1});
-        m_View = glm::lookAt(m_Position, m_Position + m_Front, m_Up);
+        x = glm::inverse(x);
+        glm::vec3 front = glm::normalize(m_Front);    // ensure non-zero
+        glm::vec3 up = glm::normalize(m_Up);       // ensure non-zero
+        m_View = glm::lookAtRH(m_Position, m_Position + front, up);
+        
+        //m_View *= x;
         //auto invertedView = glm::inverse(m_View);
         //vec3(inverse(ubo.view)[3]);
        // Log::GetLog()->info("front {0} {1} {2}", m_Front.x , m_Front.y, m_Front.z);
@@ -81,9 +83,10 @@ namespace Voidstar
                         0,1/tan,0,0,
                         0,0,farPlane/(farPlane - nearPlane),1,
                         0,0,(-nearPlane*farPlane)/(farPlane-nearPlane),0};
-       m_Proj = glm::perspective(m_Fov, aspect, nearPlane, farPlane);
-       m_Proj[1][1] *= -1;
-      // m_Proj = p;
+       m_Proj = p;
+       m_Proj = glm::perspectiveRH_ZO(m_Fov, width / height, nearPlane, farPlane);
+       //m_Proj = glm::perspective(m_Fov, aspect, nearPlane, farPlane);
+       //m_Proj[1][1] *= -1;
        //m_Proj = glm::ortho(-width / 16,width/16, -height / 16,height/16,0.f,1000.f);
        //m_Proj = glm::ortho(0.0f, 800.0f,600.0f, 0.0f);
        //float zoom = 1000;
@@ -141,54 +144,31 @@ namespace Voidstar
         m_View = glm::lookAt(m_Position, pos, m_Up);
     }
    
-    void Camera::ProcessMouse()
-    {
+    void Camera::ProcessMouse() {
+        auto [mx, my] = Input::GetMousePos();
 
-        if (Input::IsMousePressed(1))
-        {
+        if (firstMouse) { lastX = mx; lastY = my; firstMouse = false; return; }
 
-        }
+        float dx = mx - lastX;         // right  = positive
+        float dy = my - lastY;         // down   = positive (screen origin top-left)
+        lastX = mx; lastY = my;
+        float sens = 0.54;
+        // Signs you can flip if it "feels" wrong:
+        m_Yaw += sens * dx;            // invert yaw? change to 'yaw -= sens * dx'
+        m_Pitch += sens * dy;            // invert pitch? change to 'pitch += sens * dy'
 
-       if (firstMouse)
-       {
-         
-           auto position = Input::GetMousePos();
-           lastX = std::get<0>(position);
-           lastY = std::get<1>(position);
-           firstMouse = false;
-       }
+        // Clamp pitch (avoid gimbal flip)
+        m_Pitch = glm::clamp(m_Pitch, -89.0f, 89.0f);
 
-        
-        auto position =  Input::GetMousePos();
-        float res = 90;
-        float screenWidth = 16 * res;
-        float screenHeight = 9 * res;
-        glm::vec2 currentPos = { std::get<0>(position),std::get<1>(position) };
-       // float  clipX = (2 * currentXPos / screenWidth) - 1;
-       // float   clipY = 1 - (2 * currentYPos / screenHeight);
-        float sens = 20.f;
-        float rotX = sens * (float)(currentPos.y - (screenHeight / 2)) / screenHeight;
-        float rotY = sens * (float)(currentPos.x- (screenWidth / 2)) / screenWidth;
-        
-#if 1
+        // Recompute forward from yaw/pitch (RH, -Z forward when yaw=-90)
+        float cy = glm::cos(glm::radians(m_Yaw));
+        float sy = glm::sin(glm::radians(m_Yaw));
+        float cp = glm::cos(glm::radians(m_Pitch));
+        float sp = glm::sin(glm::radians(m_Pitch));
 
-        // Calculates upcoming vertical change in the Orientation
-        glm::vec3 newOrientation = glm::rotate(m_Front, glm::radians(-rotX), glm::normalize(glm::cross(m_Front, m_Up)));
-
-        // Decides whether or not the next vertical Orientation is legal or not
-        if (abs(glm::angle(newOrientation, m_Up) - glm::radians(90.0f)) <= glm::radians(85.0f))
-        {
-            m_Front = newOrientation;
-        }
-
-        // Rotates the Orientation left and right
-        m_Front = glm::rotate(m_Front, glm::radians(-rotY), m_Up);
-        // Sets mouse cursor to the middle of the screen so that it doesn't end up roaming around
-        Input::SetMousePos((screenWidth / 2), (screenHeight / 2));
-#else
-        
-#endif // 0
-
-
+        m_Front = glm::normalize(glm::vec3(cy * cp, sp, sy * cp));
+        // If your world is Z-up or something exotic, adjust this math accordingly.
     }
-}
+
+};
+

@@ -111,7 +111,7 @@ namespace Voidstar
 		~PipelineBuilder();
 	private:
 		std::vector<vk::ShaderModule> m_Modules;
-		vk::PrimitiveTopology m_Topology;
+		vk::PrimitiveTopology m_Topology = vk::PrimitiveTopology::eTriangleList;
 		vk::PolygonMode m_PolygonMode;
 		vk::PipelineLayout m_PipelineLayout;
 		std::vector<vk::PipelineShaderStageCreateInfo> m_ShaderStages;
@@ -1274,7 +1274,7 @@ namespace Voidstar
 		m_TransferCommandBuffer[0].BeginTransfering();
 		m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), buffer.get(), mem.data, mem.size);
 		m_TransferCommandBuffer[0].EndTransfering();
-
+		m_TransferCommandBuffer[0].SubmitSingle();
 	}
 
 	void Renderer::CreateIndexBuffer(Memory& mem, IndexBufferHandle indexHandle)
@@ -1291,6 +1291,7 @@ namespace Voidstar
 		m_TransferCommandBuffer[0].BeginTransfering();
 		m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), buffer.get(), mem.data, mem.size);
 		m_TransferCommandBuffer[0].EndTransfering();
+		m_TransferCommandBuffer[0].SubmitSingle();
 
 	}
 
@@ -1323,14 +1324,14 @@ namespace Voidstar
 		PipelineBuilder builder;
 		auto& rs = key.rs;
 		builder.EnableStencilTest(rs.stencilTest);
-		builder.SetDepthTest(rs.depthTest);
+		builder.SetDepthTest(true);
 		builder.EnableBlend(rs.blend);
 		auto& renderPass = m_RenderPasses.at(key.renderPass);
 
 		builder.SetRenderPass(renderPass.m_RenderPass);
 		builder.AddExtent(renderPass.m_Extent);
 
-		builder.WriteToDepthBuffer(rs.depthWrite);
+		builder.WriteToDepthBuffer(true);
 		builder.SetSamples(renderPass.samples);
 		auto shaderMeta = m_Compiler.m_Programs.at(key.program);
 		for (auto& stage : shaderMeta.stages)
@@ -1356,7 +1357,17 @@ namespace Voidstar
 			VertexBinding& binding = bindings[i];
 			
 			auto& vertexLayout = GetVertexLayout(binding.LayoutHandle);
-			auto vInputBindDescription = VertexBindingDescription(i, vertexLayout.m_CurrentOffset, vk::VertexInputRate::eVertex);
+
+			struct Vertex
+			{
+				glm::vec3 Position;
+				//glm::vec4 Color;
+				glm::vec2 UV;
+				//alignas(4)
+				//float textureID;
+			};
+			auto size = sizeof Vertex;
+			auto vInputBindDescription = VertexBindingDescription(0, vertexLayout.m_CurrentOffset, vk::VertexInputRate::eVertex);
 			
 			builder.AddBindingDescription(vInputBindDescription);
 
@@ -1367,7 +1378,7 @@ namespace Voidstar
 				builder.AddAttributeDescription(desc);
 			}
 		}
-
+		
 		
 
 		// for now just 1 - potentially we can merge render passes into one
@@ -1390,8 +1401,9 @@ namespace Voidstar
 		uint32_t imageIndex;
 		auto swapchain = RenderContext::GetSwapchain();
 		m_Device->GetDevice().acquireNextImageKHR(swapchain->m_Swapchain, UINT64_MAX, m_ImageAvailableSemaphore[m_CurrentFrame].GetSemaphore(), nullptr, &imageIndex);
-		Renderer::Instance()->Wait(m_InFlightFence[m_CurrentFrame].GetFence());
-		Renderer::Instance()->Reset(m_InFlightFence[m_CurrentFrame].GetFence());
+		auto& currentFence = m_InFlightFence[imageIndex];
+		Renderer::Instance()->Wait(currentFence.GetFence());
+		Renderer::Instance()->Reset(currentFence.GetFence());
 
 
 		auto& cmd = m_RenderCommandBuffer[imageIndex];
@@ -1469,7 +1481,7 @@ namespace Voidstar
 			if (renderItem.IndexBuffer.Valid())
 			{
 				auto buffer = m_IndexBuffers.at(renderItem.IndexBuffer);
-				vkCmd.bindIndexBuffer(buffer->GetBuffer(), 0, buffer->GetIndexType());
+				vkCmd.bindIndexBuffer(buffer->GetBuffer(), vk::DeviceSize{ 0 }, buffer->GetIndexType());
 				vkCmd.drawIndexed(buffer->GetIndexAmount(), 1, 0, 0, 0);
 			}
 			else
@@ -1489,7 +1501,7 @@ namespace Voidstar
 		auto waitSemaphore = m_ImageAvailableSemaphore[m_CurrentFrame].GetSemaphore();
 		auto signalSemaphore = m_RenderFinishedSemaphore[m_CurrentFrame].GetSemaphore();
 
-		cmd.Submit(&waitSemaphore,&signalSemaphore,&m_InFlightFence[m_CurrentFrame].GetFence());
+		cmd.Submit(&waitSemaphore,&signalSemaphore,&currentFence.GetFence());
 
 		
 		vk::Semaphore waitSemaphores[] = { signalSemaphore };
