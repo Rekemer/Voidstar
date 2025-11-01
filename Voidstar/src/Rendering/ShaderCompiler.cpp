@@ -15,13 +15,7 @@ namespace Voidstar
 {
 
 
-	inline std::string BASE_SHADER_PATH = "../Shaders/";
-	inline std::string BASE_RES_PATH = "res";
-	inline std::string BASE_VIRT_PATH = "E:/dev/Voidstar/mipMaps_virtualTex4.tiff/";
-	const std::string SPIRV_COMPILER_PATH = std::string(std::string(std::getenv("VULKAN_SDK")) + std::string("/Bin/glslangvalidator.exe"));
 	
-	inline std::string BASE_SPIRV_OUTPUT = BASE_SHADER_PATH + "Binary/";
-
 
 	ShaderType GetShaderType(spv::ExecutionModel m) {
 		switch (m) {
@@ -59,33 +53,10 @@ namespace Voidstar
 		{ShaderType::COMPUTE,".spvCmp"}
 	};
 
-	std::string InitFilePath()
-	{
-		std::string baseShaderPath = "";
-
-		// Check if running within Visual Studio
-		const char* visualStudioEnvVar = std::getenv("VSLANG");
-		if (visualStudioEnvVar != nullptr)
-		{
-			// Set the base shader path relative to the project directory
-			BASE_SHADER_PATH = "../Shaders/";
-			BASE_RES_PATH = "../res/";
-
-		}
-		else
-		{
-			// Set the base shader path relative to the executable directory
-			std::filesystem::path executablePath = std::filesystem::current_path();
-			BASE_SHADER_PATH = executablePath.parent_path().string() + "../../../Shaders/";
-			BASE_RES_PATH = executablePath.parent_path().string() + "../../../res/";
-			BASE_SPIRV_OUTPUT = BASE_SHADER_PATH + "Binary/";
-			BASE_VIRT_PATH = executablePath.parent_path().string() + "../../../../mipMaps_virtualTex4.tiff/";
-		}
-		return baseShaderPath;
-	}
+	
 	void ShaderCompiler::Init()
 	{
-		InitFilePath();
+		
 	}
 
 
@@ -224,12 +195,15 @@ namespace Voidstar
 			uint32_t set = comp.get_decoration(si.id, spv::DecorationDescriptorSet);
 			uint32_t binding = comp.get_decoration(si.id, spv::DecorationBinding);
 			uint32_t count = array_size(comp.get_type(si.type_id));
-
 			// Optional: capture image format if specified (for storage images this matters more)
 			const auto& ty = comp.get_type(si.type_id);
 			uint32_t fmt = 0; // spv::ImageFormat (enum) if needed: ty.image.format
 
-			meta.bindings[set].push_back(CreateBindingDesc(set, binding, ResourceType::SampledImage,
+			auto name = comp.get_name(si.id);
+
+			meta.uniforms[name] = { set,binding };
+
+			meta.bindings[set].push_back(CreateBindingDesc(set, binding, ResourceType::CombinedSampler,
 				meta.stage, count, 0, 0, fmt));
 		}
 
@@ -247,7 +221,7 @@ namespace Voidstar
 			uint32_t set = comp.get_decoration(smp.id, spv::DecorationDescriptorSet);
 			uint32_t binding = comp.get_decoration(smp.id, spv::DecorationBinding);
 			uint32_t count = array_size(comp.get_type(smp.type_id));
-			meta.bindings[set].push_back(CreateBindingDesc(set, binding, ResourceType::Sampler,
+			meta.bindings[set].push_back(CreateBindingDesc(set, binding, ResourceType::SampledImage,
 				meta.stage, count));
 		}
 
@@ -306,6 +280,13 @@ namespace Voidstar
 				descKey.set = set;
 				descKey.bindings.insert(bindings.begin(), bindings.end());
 			}
+
+			// we can have only one same set thorughouta all shader in render pass
+			for (auto [k, v] : sMeta.uniforms)
+			{
+				meta.uniforms[k] = v.first;
+			}
+
 			meta.stages.push_back(sMeta);
 			m_StageMetas.pop();
 		}
@@ -313,9 +294,13 @@ namespace Voidstar
 		for (auto& [k, v] : keysMap)
 		{
 			layouts.push_back(Renderer::Instance()->CreateDescriptorLayout(v));
-			meta.descriptorKey.push_back(v);
+			meta.descriptorKey.insert(meta.descriptorKey.begin(), v);
 		}
+		
 		Renderer::Instance()->CreatePipelineLayout(PipelineLayoutKey{ meta.descriptorKey });
+
+		
+
 		m_Programs[handle] = meta;
 	}
 

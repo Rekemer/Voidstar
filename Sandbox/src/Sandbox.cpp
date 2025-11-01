@@ -462,31 +462,39 @@ public:
 
 	ExampleApplication(std::string appName, size_t screenWidth, size_t screenHeight) : Voidstar::Application(appName, screenWidth, screenHeight)
 	{
-		
 
 
-		
 
 
-		Settings params{3};
+
+
+		Settings params{ 3 };
 		m_ClickPoints.resize(MAX_POINTS, glm::vec2(-1, -1));
 
 		feedbackSize = { Application::GetScreenWidth() / 70 ,Application::GetScreenHeight() / 70 };
 
 
+
+		//m_TextureUniform = CreateUniform("u_Texture", ResourceType::Sampler);
+
 		m_FeedbackShader = LoadProgram("feedback.vert", "feedback.frag");
-		m_DefaultShader = LoadProgram("basic.vert", "basic.frag");
+		m_DefaultShader = LoadProgram("basic.vert", "texture.frag");
+
+
+		m_TestTexture = LoadTexture("coffee.jpg");
+		m_TestTexture1 = LoadTexture("dos_2_noise.png");
+
 		m_VertexLayout.Add(ShaderDataType::FLOAT3)
-					  .Add(ShaderDataType::FLOAT2);
+			.Add(ShaderDataType::FLOAT2);
 		auto [verts, indices] = GenerateCube<Vertex>();
 		m_Cube = verts;
 		m_IndexCube = indices;
-		
 
-		
+
+
 		m_VertexCubeHandle = CreateVertexBuffer({
 			reinterpret_cast<uint8_t*>(m_Cube.data()),m_Cube.size() * sizeof(m_Cube[0]) }
-		,m_VertexLayout);
+		, m_VertexLayout);
 		m_IndexCubeHandle = CreateIndexBuffer
 		(
 			Memory{ reinterpret_cast<uint8_t*>(m_IndexCube.data()), m_IndexCube.size() * sizeof(m_IndexCube[0]) }
@@ -495,7 +503,7 @@ public:
 		//m_QuadBuffer = CreateVerte
 
 		ExecuteFrame(0);
-
+	}
 #if OLD
 
 		auto bindingsInit = [this]()
@@ -1132,13 +1140,9 @@ public:
 
 		Renderer::Instance()->SetCallables(callables);
 		Renderer::Instance()->UserInit();
-#endif	
 	}
 
-	~ExampleApplication()
-	{
-		
-	}
+	
 	void LoadFont(std::string_view str, SPtr<Image> fontAtlas)
 	{
 
@@ -1280,66 +1284,14 @@ public:
 
 
 	}
+#endif	
+	~ExampleApplication()
+	{
 
+	}
 	void PreUpdate(Camera& camera) override
 	{
-		static size_t currentFrame = 0;
-
-		const auto scale = glm::vec3(glm::vec3(400, 512, 0));
-		if (Input::IsKeyTyped(VS_KEY_I))
-		{
-			m_AddData.Debug  = !m_AddData.Debug;
-			auto ptr = RenderContext::GetDevice()->GetDevice().mapMemory(m_AddInfo->GetMemory(), 0, sizeof (AdditionalData));
-			memcpy(ptr, &m_AddData, sizeof (AdditionalData));
-			RenderContext::GetDevice()->GetDevice().unmapMemory(m_AddInfo->GetMemory());
-			RenderContext::GetDevice()->GetDevice().waitIdle();
-			//RenderContext::GetDevice()->UpdateDescriptorSet(m_DescriptorSetDebug, 1, 1,
-//				*m_AddInfo, vk::DescriptorType::eUniformBuffer);
-		}
-		
-		auto mousePos = Input::GetMousePos();
-		glm::vec2 currentPos = { std::get<0>(mousePos),std::get<1>(mousePos) };
-		static glm::vec2 prevPos;
-		//if (Input::IsMousePressed(0))
-		//{
-		//	auto direction = currentPos - prevPos;
-		//
-		//
-		//}
-		//else
-		//{
-		//	prevPos = currentPos;
-		//}
-
-		float speed = 50;
-
-		/*if (Input::IsKeyPressed(VS_KEY_W))
-		{
-			m_SphereRot.x += 0.01f * speed;
-		}
-
-		if (Input::IsKeyPressed(VS_KEY_S))
-		{
-			m_SphereRot.x-= 0.01f * speed;
-		}
-
-		if (Input::IsKeyPressed(VS_KEY_A))
-		{
-
-			m_SphereRot.y-= 0.01f * speed;
-		}
-
-		if (Input::IsKeyPressed(VS_KEY_D))
-		{
-			m_SphereRot.y+= 0.01f * speed;
-		}
-		m_Sphere.Rot = m_SphereRot;*/
-		
-		
-		
-		currentFrame++;
-		currentFrame %= RenderContext::GetFrameAmount();
-		
+			
 	}
 
 	void Update(float deltaTime) override
@@ -1353,6 +1305,8 @@ public:
 
 		BindVertexBuffer(0, m_VertexCubeHandle);
 		BindIndexBuffer(m_IndexCubeHandle);
+		BindTexture("u_Texture", m_TestTexture);
+		//BindTexture("u_Texture1", m_TestTexture1);
 
 		Submit(m_CubeRenderPass, m_DefaultShader);
 		
@@ -1394,19 +1348,15 @@ private:
 		
 	ProgramHandle m_DefaultShader;
 	VertexLayout m_VertexLayout;
+	
+	TextureHandle m_TestTexture;
+	TextureHandle m_TestTexture1;
+	UniformHandle m_TextureUniform;
+
 	std::vector<Vertex> m_Cube;
 	std::vector<IndexType> m_IndexCube;
 
-	vk::ClearValue clearColor = { std::array<float, 4>{137.f / 255.f, 189.f / 255.f, 199.f / 255.f, 1.0f} };
-	vk::ClearValue depthClear{ vk::ClearDepthStencilValue({ 1.0f, 0 }) };
-	std::vector<vk::ClearValue> clearValues = { {clearColor, depthClear,clearColor} };
 
-	struct AdditionalData
-	{
-		bool Debug = true;
-	};
-	SPtr<Buffer> m_FillBuffer;
-	AdditionalData m_AddData;
 	int m_BaseDesc = 0;
 	int m_PageTableDescCompute = 0;
 	int m_PageTableDescFinalCompute= 0;

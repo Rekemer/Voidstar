@@ -48,6 +48,42 @@ namespace Voidstar
 	class Model;
 	class Pipeline;
 
+
+
+	inline std::string BASE_SHADER_PATH = "../Shaders/";
+	inline std::string BASE_RES_PATH = "res";
+	inline std::string BASE_VIRT_PATH = "E:/dev/Voidstar/mipMaps_virtualTex4.tiff/";
+	const std::string SPIRV_COMPILER_PATH = std::string(std::string(std::getenv("VULKAN_SDK")) + std::string("/Bin/glslangvalidator.exe"));
+
+	inline std::string BASE_SPIRV_OUTPUT = BASE_SHADER_PATH + "Binary/";
+	inline std::string InitFilePath()
+	{
+		std::string baseShaderPath = "";
+
+		// Check if running within Visual Studio
+		const char* visualStudioEnvVar = std::getenv("VSLANG");
+		if (visualStudioEnvVar != nullptr)
+		{
+			// Set the base shader path relative to the project directory
+			BASE_SHADER_PATH = "../Shaders/";
+			BASE_RES_PATH = "../res/";
+
+		}
+		else
+		{
+			// Set the base shader path relative to the executable directory
+			std::filesystem::path executablePath = std::filesystem::current_path();
+			BASE_SHADER_PATH = executablePath.parent_path().string() + "../../../Shaders/";
+			BASE_RES_PATH = executablePath.parent_path().string() + "../../../res/";
+			BASE_SPIRV_OUTPUT = BASE_SHADER_PATH + "Binary/";
+			BASE_VIRT_PATH = executablePath.parent_path().string() + "../../../../mipMaps_virtualTex4.tiff/";
+		}
+		return baseShaderPath;
+	}
+
+
+
+
 	struct VOIDSTAR_API UniformBufferObject {
 		glm::mat4 view;
 		glm::mat4 proj;
@@ -78,10 +114,16 @@ namespace Voidstar
 		void RenderFrame(Frame* render, float deltaTime);
 		void CompileShader(std::string_view shader);
 		void LinkShaders(ProgramHandle handle, uint8_t shaderAmount);
+
+		void CreateTexture(TextureHandle handle, std::string_view path);
+		void CreateUniform(UniformHandle handle, ResourceType type, size_t num) {};
+		
 		void CreateVertexBuffer(Memory& mem, VertexBufferHandle vertHandle, UpdateHint hint = UpdateHint::Static);
 		void CreateIndexBuffer(Memory& mem, IndexBufferHandle indexHandle);
 		void CreatePipelineLayout(PipelineLayoutKey& key);
 		vk::DescriptorSetLayout CreateDescriptorLayout(const DescriptorLayoutKey& key);
+
+
 
 
 
@@ -174,7 +216,7 @@ namespace Voidstar
 		void UpdateUniformBuffer(const glm::mat4& proj, const glm::mat4& view,float time);
 		void AddFramebuffers(FrameBufferHandle handle, std::vector<vk::Framebuffer>& framebuffers);
 	private:
-		vk::Pipeline GetPipeline(const PipelineKey& key, std::array<VertexBinding, RenderItem::MAX_BINDING>& bindings,
+		vk::Pipeline GetPipeline(const PipelineKey& key, std::array<VertexBinding, RenderItem::MAX_VERTEX_BINDING>& bindings,
 			int bindingAmount);
 		void CreateInstance();
 		void RecreateSwapchain();
@@ -209,7 +251,7 @@ namespace Voidstar
 		
 		// 0 handle is default render pass
 		Map<RenderPassHandle_, RenderPass> m_RenderPasses;
-
+		Map<TextureHandle, SPtr<Image>> m_Textures;
 
 
 

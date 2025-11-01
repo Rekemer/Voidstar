@@ -790,6 +790,7 @@ namespace Voidstar
 	void Renderer::Init(size_t screenWidth, size_t screenHeight, std::shared_ptr<Window> window, Application* app) 
 		
 	{
+		InitFilePath();
 		m_App = app;
 		m_Window=window; 
 		m_ViewportWidth = screenWidth;  
@@ -1239,6 +1240,12 @@ namespace Voidstar
 	}
 
 
+	void Renderer::CreateTexture(TextureHandle handle, std::string_view path)
+	{
+		auto image = Image::CreateImage(BASE_RES_PATH + std::string{path});
+		m_Textures[handle] = image;
+	}
+
 	vk::MemoryPropertyFlags GetMemoryFlags(UpdateHint hint)
 	{
 		switch (hint)	
@@ -1305,7 +1312,7 @@ namespace Voidstar
 	}
 
 	vk::Pipeline Renderer::GetPipeline(const PipelineKey& key, 
-		std::array<VertexBinding, RenderItem::MAX_BINDING>& bindings,
+		std::array<VertexBinding, RenderItem::MAX_VERTEX_BINDING>& bindings,
 		int bindingAmount)
 	{
 		if (m_Pipelines.find(key) != m_Pipelines.end())
@@ -1442,17 +1449,64 @@ namespace Voidstar
 			auto& renderPass = m_RenderPasses.at(key.renderPass);
 			auto frameBuffer = m_Framebuffers.at(renderPass.m_FrameBufferHandle)[imageIndex];
 
+
+			for (int i = 0; i < keys.size(); i++)
+			{
+				auto k = keys.at(i);
+				if (m_DescriptorSet.find(k) == m_DescriptorSet.end())
+				{
+					AllocateSets(RenderContext::GetFrameAmount(), k);
+				}
+
+			}
+
+			// updating uniforms
+			//struct ResourceBinding
+			//{
+			//	std::string uniform;
+			//	TextureHandle handle;
+			//	bool dirty;
+			//};
+			for (int i = 0; i < renderItem.currentResBinding; i++)
+			{
+				auto& bind = renderItem.ResBindings[i];
+				if (bind.dirty)
+				{
+					// update descriptor
+					auto setNumber = meta.uniforms.at(bind.uniform);
+					auto k = keys.at(setNumber);
+
+					auto image = m_Textures.at(bind.handle);
+
+
+					if (image->GetLayout() != vk::ImageLayout::eShaderReadOnlyOptimal)
+					{
+						cmd.ChangeImageLayout(image.get(), image->GetLayout(), vk::ImageLayout::eShaderReadOnlyOptimal,image->m_MipMapLevels);
+					}
+					vk::DescriptorImageInfo imageDescriptor1;
+					imageDescriptor1.imageLayout = image->GetLayout();
+					imageDescriptor1.imageView = image->GetImageView();
+					imageDescriptor1.sampler = image->GetSampler();
+
+					m_Device->UpdateDescriptorSet(m_DescriptorSet.at(k)[m_CurrentFrame], i, 1, imageDescriptor1, ResourceType::CombinedSampler);
+					bind.dirty = false;
+				}
+			}
+
+
 			cmd.BeginRenderPass(renderPass.m_RenderPass, frameBuffer, renderPass.m_Extent, renderPass.m_ClearValues);
 			auto vkCmd = cmd.GetCommandBuffer();
 			vkCmd.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
 
 			UpdateUniformBuffer(view.Proj, view.View, m_App->GetExeTime());
 
+			
 			for (int i = 0; i < keys.size(); i++)
 			{
 				auto k = keys.at(i);
 				auto& descSet = m_DescriptorSet.at(k);
-				vkCmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, layout, i, descSet[imageIndex], nullptr);
+				vkCmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, layout, i, descSet[m_CurrentFrame], nullptr);
+
 			}
 			vk::Viewport viewport;
 			viewport.x = view.Rect[0];
@@ -1476,7 +1530,6 @@ namespace Voidstar
 				auto& buffer = m_VertexBuffers.at(renderItem.Bindings.at(i).VertexHandle)->GetBuffer();
 				vertexBuffers.push_back(buffer);
 			}
-			renderItem.currentBinding = 0;
 			vkCmd.bindVertexBuffers(0,1,vertexBuffers.data(), offsets.data());
 			if (renderItem.IndexBuffer.Valid())
 			{
@@ -1491,6 +1544,7 @@ namespace Voidstar
 
 
 			cmd.EndRenderPass();
+			renderItem.Reset();
 
 		}
 

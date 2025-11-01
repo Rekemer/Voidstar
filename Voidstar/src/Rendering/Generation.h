@@ -55,6 +55,7 @@ namespace Voidstar
 	template<typename T> 
 	std::tuple<std::vector<T>,std::vector<IndexType>> GenerateCube()
 	{
+#if 0
 		const std::vector<IndexType> indices =
 		{
 			0, 1, 3, 3, 1, 2,
@@ -126,7 +127,50 @@ namespace Voidstar
 		CubeVerticies[7].UV[0] = 0.0f;
 		CubeVerticies[7].UV[1] = 1.0f;
 		return { CubeVerticies ,indices };
-	}
+#else
+		std::vector<T> v(24);
+	std::vector<IndexType> indices;
+	indices.reserve(36);
+
+	auto quad = [&](int faceIndex, glm::vec3 v0, glm::vec3 v1, glm::vec3 v2, glm::vec3 v3) {
+		int base = faceIndex * 4;
+		v[base + 0].Position = { v0.x, v0.y, v0.z };
+		v[base + 1].Position = { v1.x, v1.y, v1.z };
+		v[base + 2].Position = { v2.x, v2.y, v2.z };
+		v[base + 3].Position = { v3.x, v3.y, v3.z };
+
+		// Per-face UVs (rectangle 0..1)
+		v[base + 0].UV = { 0, 0 };
+		v[base + 1].UV = { 1, 0 };
+		v[base + 2].UV = { 1, 1 };
+		v[base + 3].UV = { 0, 1 };
+
+		// Two triangles
+		indices.push_back(base + 0);
+		indices.push_back(base + 1);
+		indices.push_back(base + 2);
+		indices.push_back(base + 2);
+		indices.push_back(base + 3);
+		indices.push_back(base + 0);
+		};
+
+	// +X
+	quad(0, { 1,-1,-1 }, { 1,-1, 1 }, { 1, 1, 1 }, { 1, 1,-1 });
+	// -X
+	quad(1, { -1,-1, 1 }, { -1,-1,-1 }, { -1, 1,-1 }, { -1, 1, 1 });
+	// +Y
+	quad(2, { -1, 1,-1 }, { 1, 1,-1 }, { 1, 1, 1 }, { -1, 1, 1 });
+	// -Y
+	quad(3, { -1,-1, 1 }, { 1,-1, 1 }, { 1,-1,-1 }, { -1,-1,-1 });
+	// +Z
+	quad(4, { -1,-1, 1 }, { -1, 1, 1 }, { 1, 1, 1 }, { 1,-1, 1 });
+	// -Z
+	quad(5, { 1,-1,-1 }, { 1, 1,-1 }, { -1, 1,-1 }, { -1,-1,-1 });
+
+	return { v, indices };
+#endif 
+		
+}
 
 
 	

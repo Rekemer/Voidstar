@@ -17,6 +17,8 @@ namespace Voidstar
 	SparseSet<VertexBufferHandle> g_VertexBufferHandleAllocator;
 	SparseSet<IndexBufferHandle> g_IndexBufferHandleAllocator;
 	SparseSet<VertexLayoutHandle> g_LayoutHandleAllocator;
+	SparseSet<TextureHandle> g_TextureHandleAllocator;
+	SparseSet<UniformHandle> g_UniformHandleAllocator;
 
 
 
@@ -50,13 +52,44 @@ namespace Voidstar
 		auto handle = g_ShaderHandleAllocator.GetId();
 		auto& cmd = g_Submission->GetCommandBuffer(ResourceCommand::CreateShader);
 
-		cmd.WriteByte(static_cast<uint8_t>(handle.idx & 0x00FF));
-		cmd.WriteByte(static_cast<uint8_t>(handle.idx >> 8));
-
+		cmd.WriteObject(handle);
 		cmd.WriteString(shader);
-		return ShaderHandle{ handle };
+		return handle;
 	}
 
+
+	TextureHandle LoadTexture(std::string_view texture)
+	{
+		auto handle = g_TextureHandleAllocator.GetId();
+
+		auto& cmd = g_Submission->GetCommandBuffer(ResourceCommand::CreateTexture);
+		cmd.WriteObject(handle);
+		cmd.WriteString(texture);
+
+		return handle;
+
+	}
+	UniformHandle CreateUniform(std::string_view name, ResourceType kind, size_t num)
+	{
+		auto handle = g_UniformHandleAllocator.GetId();
+
+		auto& cmd = g_Submission->GetCommandBuffer(ResourceCommand::CreateUniform);
+		cmd.WriteObject(kind);
+		cmd.WriteObject(num);
+
+		return handle;
+
+	}
+
+
+	void BindTexture(std::string_view uniformName, TextureHandle handle)
+	{
+		auto& bind = g_Submission->Submit->CurrentRenderItem->ResBindings[g_Submission->Submit->CurrentRenderItem->currentResBinding++];
+
+		bind.uniform = uniformName;
+		bind.dirty = true;
+		bind.handle = handle;
+	}
 	void SetViewTransform(PassID id, glm::mat4& view, glm::mat4& proj)
 	{
 		g_Submission->Submit->Views[id].View = view;
@@ -154,7 +187,13 @@ namespace Voidstar
 				break;
 			}
 			case Voidstar::ResourceCommand::CreateTexture:
+			{
+
+				auto handle = commandBuffer.ReadObject<TextureHandle>();
+				auto path = commandBuffer.ReadString();
+				Renderer::Instance()->CreateTexture(handle, path);
 				break;
+			}
 			case Voidstar::ResourceCommand::UpdateTexture:
 				break;
 			case Voidstar::ResourceCommand::ResizeTexture:
@@ -162,7 +201,14 @@ namespace Voidstar
 			case Voidstar::ResourceCommand::CreateFrameBuffer:
 				break;
 			case Voidstar::ResourceCommand::CreateUniform:
+			{
+
+				auto handle = commandBuffer.ReadObject<UniformHandle>();
+				auto type = commandBuffer.ReadObject<ResourceType>();
+				auto num = commandBuffer.Read<size_t>();
+				Renderer::Instance()->CreateUniform(handle, type, num);
 				break;
+			}
 			case Voidstar::ResourceCommand::UpdateViewName:
 				break;
 			case Voidstar::ResourceCommand::SetName:

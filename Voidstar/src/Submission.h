@@ -15,6 +15,14 @@
 
 namespace Voidstar
 {
+	enum class ResourceType : uint8_t
+	{
+		UniformBuffer,
+		StorageBuffer,
+		SampledImage,
+		StorageImage,
+		CombinedSampler,
+	};
 
 	struct ProgramTag {};
 	struct ShaderTag {};
@@ -23,6 +31,8 @@ namespace Voidstar
 	struct FramebufferTag {};
 	struct VertexLayoutTag {};
 	struct BufferTag {};
+	struct TextureTag {};
+	struct UniformTag {};
 
 	using ProgramHandle = Handle<ProgramTag>;
 	using ShaderHandle = Handle<ShaderTag>;
@@ -31,6 +41,8 @@ namespace Voidstar
 	using FrameBufferHandle = Handle<FramebufferTag>;
 	using VertexLayoutHandle = Handle<VertexLayoutTag>;
 	using BufferHandle = Handle<BufferTag>;
+	using TextureHandle = Handle<TextureTag>;
+	using UniformHandle = Handle<UniformTag>;
 	using PassID = uint16_t;
 
 
@@ -171,17 +183,36 @@ namespace Voidstar
 		}
 	};
 
+
+	struct ResourceBinding
+	{
+		std::string uniform;
+		TextureHandle handle;
+		bool dirty;
+	};
+
 	// render items learns about the view at submit
 	struct RenderItem
 	{
 		ProgramHandle Program;
 		PassID View;
 		// buffers binded for draw call
-		static constexpr int MAX_BINDING = 10;
-		std::array<VertexBinding, MAX_BINDING > Bindings = {};
+		static constexpr int MAX_VERTEX_BINDING = 10;
+		static constexpr int MAX_RES_BINDING = 10;
+		std::array<VertexBinding, MAX_VERTEX_BINDING> Bindings = {};
 		int currentBinding = 0;
 		IndexBufferHandle IndexBuffer;
 		RenderState State;
+		std::array<ResourceBinding, MAX_RES_BINDING> ResBindings= {};
+		int currentResBinding = 0;
+
+
+		void Reset()
+		{
+			currentResBinding = 0;
+			currentBinding = 0;
+		}
+
 	};
 	struct View
 	{
@@ -251,6 +282,15 @@ namespace Voidstar
 	ProgramHandle LoadProgram(std::string_view program, ShaderType type);
 
 	ShaderHandle LoadShader(std::string_view shader, ShaderType type);
+
+	TextureHandle LoadTexture(std::string_view texture);
+
+	UniformHandle CreateUniform(std::string_view name,
+		ResourceType kind, size_t num = 1);
+
+
+	void BindTexture(std::string_view uniform, TextureHandle handle);
+	
 	void SetWindow(SPtr<Window> window);
 	void SubmitInit(InitParams);
 

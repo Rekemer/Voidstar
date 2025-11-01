@@ -36,7 +36,7 @@ namespace Voidstar
 		static vk::Sampler CreateSampler(vk::Filter min, vk::Filter mag);
 		static vk::Image CreateVKImage(ImageSpecs& specs, vk::SampleCountFlagBits samples = vk::SampleCountFlagBits::e1, int mipmap = 1);
 		static vk::DeviceMemory CreateMemory(vk::Image& image, ImageSpecs& specs);
-		static SPtr<Image> CreateImage(std::string path);
+		static SPtr<Image> CreateImage(std::string_view path);
 		static SPtr<Image> CreateCubemap(std::vector<std::string> pathes);
 		void Fill(glm::vec4  value, CommandBuffer& cmd, SPtr<Buffer> stageBuffer, int bufferOffset);
 		static SPtr<Image> CreateEmptyImage( int width, int height,vk::Format format,

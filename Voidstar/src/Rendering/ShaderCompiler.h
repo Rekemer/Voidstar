@@ -15,15 +15,7 @@ namespace Voidstar
 {
     
 
-    enum class ResourceType : uint8_t
-    {
-        UniformBuffer,
-        StorageBuffer,
-        SampledImage,
-        StorageImage,
-        Sampler,
-    };
-
+  
 	
     struct BindingDesc {
         uint32_t set;
@@ -46,6 +38,7 @@ namespace Voidstar
         std::string path;
         ShaderType stage;
         std::unordered_map<int, std::vector<BindingDesc>> bindings;
+		std::unordered_map<std::string, std::pair<int,int>>uniforms;
         std::vector<PushConstRange> pushConsts;
         vk::ShaderModule module;
         uint32_t localSize[3] = { 1,1,1 }; // compute only
@@ -121,14 +114,14 @@ namespace Voidstar
 	inline bool operator==(const BindingDesc& a, const BindingDesc& b) {
 		return a.set == b.set && a.binding == b.binding && a.kind == b.kind &&
 			a.count == b.count && a.stride == b.stride && a.elemSize == b.elemSize &&
-			a.format == b.format ;
+			a.format == b.format && a.access == b.access;
 	}
 
 	inline bool operator<(const BindingDesc& a, const BindingDesc& b)
 	{
 		if (a.set != b.set)      return a.set < b.set;
 		if (a.binding != b.binding)  return a.binding < b.binding;
-		return true;
+		return false;
 	}
 	inline bool operator==(const PushConstRange& a, const PushConstRange& b) {
 		return a.offset == b.offset && a.size == b.size && a.stage == b.stage;
@@ -216,6 +209,10 @@ namespace Voidstar
 
 		std::vector <DescriptorLayoutKey> descriptorKey;
 
+		
+		// uniform to index of descriptorKey
+		std::unordered_map<std::string, int> uniforms;
+
 		//PipelineLayoutKey pipelineKey;
 
 		//uint64_t layoutKey = 0;             
@@ -236,8 +233,8 @@ namespace Voidstar
         case ResourceType::StorageImage:
             return vk::DescriptorType::eStorageImage;
 
-        case ResourceType::Sampler:
-            return vk::DescriptorType::eSampler;
+        case ResourceType::CombinedSampler:
+            return vk::DescriptorType::eCombinedImageSampler;
 
         default:
             assert(false && "Unknown ResourceType");
