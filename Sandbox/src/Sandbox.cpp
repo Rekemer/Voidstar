@@ -477,8 +477,8 @@ public:
 
 		//m_TextureUniform = CreateUniform("u_Texture", ResourceType::Sampler);
 
-		m_FeedbackShader = LoadProgram("feedback.vert", "feedback.frag");
-		m_DefaultShader = LoadProgram("basic.vert", "texture.frag");
+	//m_FeedbackShader = LoadProgram("feedback.vert", "feedback.frag");
+	 m_DefaultShader = LoadProgram("basic.vert", "texture.frag");
 
 
 		m_TestTexture = LoadTexture("coffee.jpg");
@@ -1306,7 +1306,7 @@ public:
 		BindVertexBuffer(0, m_VertexCubeHandle);
 		BindIndexBuffer(m_IndexCubeHandle);
 		BindTexture("u_Texture", m_TestTexture);
-		//BindTexture("u_Texture1", m_TestTexture1);
+		BindTexture("u_Texture1", m_TestTexture1);
 
 		Submit(m_CubeRenderPass, m_DefaultShader);
 		

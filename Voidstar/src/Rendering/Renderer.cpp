@@ -38,6 +38,7 @@
 #include <gtc/matrix_transform.hpp>
 #include <gtc/quaternion.hpp>
 #include <fstream>
+#include <algorithm>
 
 
 
@@ -1473,8 +1474,9 @@ namespace Voidstar
 				if (bind.dirty)
 				{
 					// update descriptor
-					auto setNumber = meta.uniforms.at(bind.uniform);
-					auto k = keys.at(setNumber);
+					auto setNumber = meta.uniforms.at(bind.uniform).first;
+					auto bindNumber = meta.uniforms.at(bind.uniform).second;
+					auto& k = *std::find_if(keys.begin(), keys.end(), [=](auto key) {return key.set == setNumber; })	;
 
 					auto image = m_Textures.at(bind.handle);
 
@@ -1488,7 +1490,7 @@ namespace Voidstar
 					imageDescriptor1.imageView = image->GetImageView();
 					imageDescriptor1.sampler = image->GetSampler();
 
-					m_Device->UpdateDescriptorSet(m_DescriptorSet.at(k)[m_CurrentFrame], i, 1, imageDescriptor1, ResourceType::CombinedSampler);
+					m_Device->UpdateDescriptorSet(m_DescriptorSet.at(k)[m_CurrentFrame], bindNumber, 1, imageDescriptor1, ResourceType::CombinedSampler);
 					bind.dirty = false;
 				}
 			}
@@ -1652,9 +1654,9 @@ namespace Voidstar
 	void Renderer::CreatePipelineLayout(PipelineLayoutKey& key)
 	{
 		std::vector<vk::DescriptorSetLayout> layouts;
-		for (auto key : key.layoutKeys)
+		for (auto k : key.layoutKeys)
 		{
-			layouts.push_back(m_DescriptorLayout.at(key));
+			layouts.push_back(m_DescriptorLayout.at(k));
 		}
 		m_PipelineLayout[key] = MakePipelineLayout(RenderContext::GetDevice()->GetDevice(), layouts);
 	}

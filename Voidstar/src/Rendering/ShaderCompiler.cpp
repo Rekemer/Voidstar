@@ -284,7 +284,7 @@ namespace Voidstar
 			// we can have only one same set thorughouta all shader in render pass
 			for (auto [k, v] : sMeta.uniforms)
 			{
-				meta.uniforms[k] = v.first;
+				meta.uniforms[k] = v;
 			}
 
 			meta.stages.push_back(sMeta);
@@ -294,10 +294,12 @@ namespace Voidstar
 		for (auto& [k, v] : keysMap)
 		{
 			layouts.push_back(Renderer::Instance()->CreateDescriptorLayout(v));
-			meta.descriptorKey.insert(meta.descriptorKey.begin(), v);
+			meta.descriptorKey.push_back(v);
 		}
-		
-		Renderer::Instance()->CreatePipelineLayout(PipelineLayoutKey{ meta.descriptorKey });
+		std::sort(meta.descriptorKey.begin(), meta.descriptorKey.end(), [](DescriptorLayoutKey a, DescriptorLayoutKey  b) { return a.set < b.set; });
+		PipelineLayoutKey key;
+		key.layoutKeys =  meta.descriptorKey ;
+		Renderer::Instance()->CreatePipelineLayout(key);
 
 		
 

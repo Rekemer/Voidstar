@@ -211,7 +211,7 @@ namespace Voidstar
 
 		
 		// uniform to index of descriptorKey
-		std::unordered_map<std::string, int> uniforms;
+		std::unordered_map<std::string, std::pair<int,int>> uniforms;
 
 		//PipelineLayoutKey pipelineKey;
 
