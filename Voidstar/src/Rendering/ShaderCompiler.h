@@ -103,11 +103,16 @@ namespace Voidstar
 		ProgramHandle program;
 		RenderState rs;
 		PipelineLayoutKey layout;
-		RenderPassHandle_ renderPass;
+		FrameBufferHandle fb;
 	};
 
 	
-
+	struct RenderPassKey
+	{
+		SampleCount samples;
+		std::vector<TextureFormat> formats;   
+		bool operator==(const RenderPassKey&) const;
+	};
 	
 
 
@@ -137,7 +142,7 @@ namespace Voidstar
 	inline bool operator==(const PipelineKey& a ,const PipelineKey& b) noexcept {
 		return a.program == b.program
 			&& a.rs == b.rs
-			&& a.renderPass == b.renderPass
+			&& a.fb == b.fb
 			&& a.layout == b.layout;
 	}
 
@@ -193,7 +198,7 @@ namespace Voidstar
 			util::hash_combine(h, std::hash<ProgramHandle>{}(k.program));
 			util::hash_combine(h, RenderStateHash{}(k.rs));
 			util::hash_combine(h, PipelineLayoutKeyHash{}(k.layout));
-			util::hash_combine(h, k.renderPass);
+			util::hash_combine(h, k.fb);
 			return h;
 		}
 	};

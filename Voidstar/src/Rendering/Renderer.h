@@ -238,7 +238,7 @@ namespace Voidstar
 		AttachmentHandle m_DefaultDepthAttachment;
 
 		ShaderCompiler m_Compiler;
-		RenderPassHandle_ DEFAULT_RENDER_PASS;
+		FrameBufferHandle DEFAULT_FRAME_BUFFER;
 		std::vector<void*> m_UniformBuffersMapped;
 
 		DescriptorLayoutKey SystemDescriptorLayoutKey;
@@ -253,12 +253,18 @@ namespace Voidstar
 		Map<VertexBufferHandle, SPtr<Buffer>> m_VertexBuffers;
 		Map<IndexBufferHandle, SPtr<IndexBuffer>> m_IndexBuffers;
 		//unordered_map<VertexLayoutHandle, > m_BufferLayouts;
-		Map<FrameBufferHandle, std::vector<vk::Framebuffer>> m_Framebuffers;
-		
-		// 0 handle is default render pass
-		Map<RenderPassHandle_, RenderPass> m_RenderPasses;
-		Map<TextureHandle, SPtr<Image>> m_Textures;
 
+		Map<FrameBufferHandle, std::vector<vk::Framebuffer>> m_Framebuffers;
+		Map<FrameBufferHandle, std::vector<AttachmentHandle>> m_FBAttachments;
+
+		Map<AttachmentHandle, AttachmentInfo_> m_AttachmentInfo;
+
+		// 0 handle is default render pass
+		Map<FrameBufferHandle, RenderPass> m_RenderPasses;
+
+
+
+		Map<TextureHandle, SPtr<Image>> m_Textures;
 
 
 		std::vector<CommandBuffer> m_RenderCommandBuffer,

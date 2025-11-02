@@ -16,7 +16,7 @@ namespace Voidstar
 {
 
 
-	static SparseSet<FrameBufferHandle> g_FrameBufferAllocator;
+	
 
 
 	void RenderPassBuilder::SetLoadOp(vk::AttachmentLoadOp loadOp)
@@ -135,7 +135,16 @@ namespace Voidstar
 		m_Dependencies.push_back(subpassDependency);
 	}
 	
-
+	void RenderPassBuilder::Reset()
+	{
+		m_DepthReferences.clear();
+		m_ColorReferences.clear();
+		m_ResolveReferences.clear();
+		m_DepthStencil.clear();
+		m_Color.clear();
+		m_Resolve.clear();
+		m_IsMSAA = false;
+	}
 
 	RenderPass RenderPassBuilder::Build(
 		AttachmentManager& manager,
@@ -160,50 +169,15 @@ namespace Voidstar
 		renderpassInfo.pSubpasses = m_Subpasses.data();
 		renderpassInfo.dependencyCount = m_Dependencies.size();
 		renderpassInfo.pDependencies = m_Dependencies.data();
-
-		auto handle = g_FrameBufferAllocator.GetId();
-		std::vector<vk::Framebuffer> framebuffers(framebufferAmount);
+		
 		auto samples = m_Color[0][0]->GetSample();
 		try
 		{
 			auto vkRenderPass = device->GetDevice().createRenderPass(renderpassInfo);
-
-			for (int i = 0; i < framebufferAmount; i++)
-			{
-				int colorOutputOverall = 0;
-				std::vector<vk::ImageView> views;
-				for (auto type : m_OutputTypes)
-				{
-					if (type == OutputType::COLOR)
-					{
-						views.push_back(m_Color[colorOutputOverall][i]->GetImageView());
-						colorOutputOverall++;
-					}
-					else if (type == OutputType::DEPTH)
-					{
-						views.push_back(m_DepthStencil[0]->GetImageView());
-					}
-					else if (type == OutputType::RESOLVE)
-					{
-						views.push_back(m_Resolve[i]->GetImageView());
-
-					}
-				}
-
-				// width and height for all images are supposed to be equal to each other
-				framebuffers[i] = CreateFramebuffer(views, vkRenderPass, m_Color[0][0]->GetWidth(), m_Color[0][0]->GetHeight());
-
-			}
-			Renderer::Instance()->AddFramebuffers(handle, framebuffers);
-			auto renderPass = RenderPass{ samples, vkRenderPass, extent, clearValues, handle };
-			m_DepthReferences.clear();
-			m_ColorReferences.clear();
-			m_ResolveReferences.clear();
-			m_DepthStencil.clear();
-			m_Color.clear();
-			m_Resolve.clear();
-			m_IsMSAA = false;
+			auto renderPass = RenderPass{ samples, vkRenderPass, extent, clearValues};
 			return renderPass;
+
+			
 		}
 		catch (vk::SystemError err)
 		{

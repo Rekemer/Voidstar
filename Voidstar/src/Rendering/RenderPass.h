@@ -67,12 +67,13 @@ namespace Voidstar
 			vk::Extent2D extent,
 			std::vector<vk::ClearValue> clearValues
 		);
-
-	private:
-		size_t m_FrameBufferAmount;
+		void Reset();
 		std::vector<std::vector<SPtr<Image>>> m_Color;
 		std::vector<SPtr<Image>> m_DepthStencil;
 		std::vector<SPtr<Image>> m_Resolve;
+		std::vector<OutputType>m_OutputTypes;
+	private:
+		size_t m_FrameBufferAmount;
 		vk::Format m_Format;
 		vk::SampleCountFlagBits m_Samples;
 		vk::AttachmentLoadOp m_LoadOp;
@@ -88,7 +89,6 @@ namespace Voidstar
 		std::vector<vk::AttachmentReference> m_ColorReferences;
 		std::vector<vk::AttachmentReference> m_DepthReferences;
 		std::vector<vk::AttachmentReference> m_ResolveReferences;
-		std::vector<OutputType>m_OutputTypes;
 
 		bool m_IsMSAA = false;
 		std::vector<vk::SubpassDescription> m_Subpasses;

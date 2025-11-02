@@ -41,7 +41,7 @@ namespace Voidstar
 	using VertexBufferHandle = Handle<VertexBufferTag>;
 	using IndexBufferHandle = Handle<IndexBufferTag>;
 	using FrameBufferHandle = Handle<FramebufferTag>;
-	using AttachmentHandle = Handle<AttachmentTag >;
+	using AttachmentHandle = Handle<AttachmentTag>;
 	using VertexLayoutHandle = Handle<VertexLayoutTag>;
 	using BufferHandle = Handle<BufferTag>;
 	using TextureHandle = Handle<TextureTag>;

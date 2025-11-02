@@ -72,7 +72,7 @@ namespace Voidstar
 	}
 	
 	
-	inline vk::Framebuffer CreateFramebuffer(std::vector < vk::ImageView> attachments, vk::RenderPass renderPass,size_t width,	size_t height )
+	inline vk::Framebuffer CreateVkFramebuffer(std::vector < vk::ImageView> attachments, vk::RenderPass renderPass,size_t width,	size_t height )
 	{
 		auto device = Voidstar::RenderContext::GetDevice();
 		vk::FramebufferCreateInfo framebufferInfo;

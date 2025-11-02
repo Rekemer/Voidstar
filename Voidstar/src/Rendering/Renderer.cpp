@@ -61,7 +61,7 @@ namespace std
 
 namespace Voidstar
 {
-
+	static SparseSet<FrameBufferHandle> g_FrameBufferAllocator;
 
 	vk::Format map(TextureFormat f) {
 		switch (f) {
@@ -984,7 +984,43 @@ namespace Voidstar
 	
 
 
+	std::vector<vk::Framebuffer> _CreateFramebuffer(
+		vk::RenderPass renderPass,
+		int width, int height,
+		RenderPassBuilder& builder,
+		const std::vector<AttachmentHandle> handles)
+	{
 
+		std::vector<vk::Framebuffer> framebuffers;
+		for (int i = 0; i < RenderContext::GetFrameAmount(); i++)
+		{
+
+			int colorOutputOverall = 0;
+			std::vector<vk::ImageView> views;
+			for (auto  type: builder.m_OutputTypes)
+			{
+			
+
+				if (type == OutputType::COLOR)
+				{
+					views.push_back(builder.m_Color[colorOutputOverall][i]->GetImageView());
+					colorOutputOverall++;
+				}
+				else if (type == OutputType::DEPTH)
+				{
+					views.push_back(builder.m_DepthStencil[0]->GetImageView());
+				}
+				else if (type == OutputType::RESOLVE)
+				{
+					views.push_back(builder.m_Resolve[i]->GetImageView());
+
+				}
+			}
+			auto framebuffer = CreateVkFramebuffer(views, renderPass, width, height);
+			framebuffers.push_back(framebuffer);
+		}
+		return framebuffers;
+	}
 	
 	void Renderer::Init(size_t screenWidth, size_t screenHeight, std::shared_ptr<Window> window, Application* app) 
 		
@@ -1097,7 +1133,7 @@ namespace Voidstar
 			frameAmount);
 
 
-		DEFAULT_RENDER_PASS = g_RenderPassAllocator.GetId() ;
+		DEFAULT_FRAME_BUFFER = g_FrameBufferAllocator.GetId() ;
 		
 
 		RenderPassBuilder builder;
@@ -1148,9 +1184,14 @@ namespace Voidstar
 		vk::ClearValue clearColor = { std::array<float, 4>{137.f / 255.f, 189.f / 255.f, 199.f / 255.f, 1.0f} };
 		vk::ClearValue clearDepth = vk::ClearDepthStencilValue{ 1.0f, 0 };
 		std::vector<vk::ClearValue> clearValues{ clearColor ,clearDepth, clearColor };
-		m_RenderPasses[DEFAULT_RENDER_PASS] = builder.Build(m_AttachmentManager, RenderContext::GetFrameAmount(), extent, clearValues);
+		m_RenderPasses[DEFAULT_FRAME_BUFFER] = builder.Build(m_AttachmentManager, RenderContext::GetFrameAmount(), extent, clearValues);
 
 
+		//AttachmentInfo_ info{ type,format,width,height,samples,hints };
+		//m_AttachmentInfo[m_DefaultColorAttachment] = AttachmentInfo_{AttachmentType::COLOR,}
+		m_Framebuffers[DEFAULT_FRAME_BUFFER] = _CreateFramebuffer(m_RenderPasses[DEFAULT_FRAME_BUFFER].m_RenderPass,
+			extent.width, extent.height, builder,
+			{ m_DefaultMSAAAttachment,m_DefaultDepthAttachment, m_DefaultColorAttachment });
 
 
 
@@ -1433,14 +1474,80 @@ namespace Voidstar
 		return renderer;
 	}
 
-	void Renderer::CreateFramebuffer(FrameBufferHandle handle, const std::vector<AttachmentHandle>& info)
+
+	
+
+
+	
+	void Renderer::CreateFramebuffer(
+		FrameBufferHandle handle, const std::vector<AttachmentHandle>& handles)
 	{
 
+		m_FBAttachments[handle] = handles;
+		RenderPassBuilder builder;
+		std::vector<int> color, depth, resolve;
+		for (int i = 0; i < handles.size(); i++)
+		{
+			auto attachmentHandle = handles[i];
+			auto& infoAttachment= m_AttachmentInfo[attachmentHandle];
+
+			if (infoAttachment.type == AttachmentType::RESOLVE)
+			{
+				resolve.push_back(i);
+			}
+
+			if (infoAttachment.type == AttachmentType::COLOR)
+			{
+				builder.ColorOutput(m_DefaultMSAAAttachment, m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
+				color.push_back(i);
+			}
+			else if (infoAttachment.type == AttachmentType::DEPTH_STENCIL)
+			{
+				builder.DepthStencilOutput(m_DefaultDepthAttachment, m_AttachmentManager, vk::ImageLayout::eDepthStencilAttachmentOptimal);
+				depth.push_back(i);
+			}
+			builder.SetLoadOp(vk::AttachmentLoadOp::eLoad);
+			builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
+			builder.SetStencilLoadOp(vk::AttachmentLoadOp::eLoad);
+			builder.SetStencilSaveOp(vk::AttachmentStoreOp::eStore);
+			if (infoAttachment.type == AttachmentType::COLOR)
+			{
+				builder.SetInitialLayout(vk::ImageLayout::eColorAttachmentOptimal);
+				builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
+			}
+			else  if (infoAttachment.type == AttachmentType::DEPTH_STENCIL)
+			{
+				builder.SetInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+				builder.SetFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+			}
+			builder.BuildAttachmentDesc();
+		}
+		builder.AddSubpass(color, depth, resolve);
+		vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0,
+			vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests, vk::AccessFlagBits::eColorAttachmentWrite,
+			vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests, vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eDepthStencilAttachmentWrite);
+		builder.AddSubpassDependency(dependency0);
+
+		std::vector<vk::ClearValue> clearValues;
+		clearValues.reserve(handles.size());
+		for (auto h : handles) {
+			if (m_AttachmentInfo[h].type == AttachmentType::DEPTH_STENCIL)
+				clearValues.push_back(vk::ClearDepthStencilValue{ 1.0f, 0 });
+			else
+				clearValues.push_back(vk::ClearColorValue(std::array<float, 4>{0, 0, 0, 1}));
+		}
+
+		vk::Extent2D extent = { static_cast<uint32_t>(m_AttachmentInfo[handles[0]].width),static_cast<uint32_t>(m_AttachmentInfo[handles[0]].height) };
+		auto renderPass = builder.Build(m_AttachmentManager, RenderContext::GetFrameAmount(), extent, clearValues);
+		//auto renderPassHandle = g_RenderPassAllocator.GetId();
+		m_RenderPasses[handle] = renderPass;
+		m_Framebuffers[handle] = _CreateFramebuffer(renderPass.m_RenderPass,extent.width,extent.height, builder, handles);
 	}
 
 	void Renderer::CreateAttachment(AttachmentHandle handle, AttachmentInfo_ info)
 	{
 		auto usage = map(info.hints);
+		m_AttachmentInfo[handle] = info;
 		switch (info.type)	
 		{
 		case AttachmentType::COLOR:
@@ -1568,7 +1675,7 @@ namespace Voidstar
 		builder.EnableStencilTest(rs.stencilTest);
 		builder.SetDepthTest(true);
 		builder.EnableBlend(rs.blend);
-		auto& renderPass = m_RenderPasses.at(key.renderPass);
+		auto& renderPass = m_RenderPasses.at(key.fb);
 
 		builder.SetRenderPass(renderPass.m_RenderPass);
 		builder.AddExtent(renderPass.m_Extent);
@@ -1661,7 +1768,7 @@ namespace Voidstar
 
 			if (!view.Fbh.Valid())
 			{
-				auto& renderPass = m_RenderPasses.at(DEFAULT_RENDER_PASS);
+				auto& renderPass = m_RenderPasses.at(DEFAULT_FRAME_BUFFER);
 
 				//struct PipelineKey
 				//{
@@ -1677,12 +1784,15 @@ namespace Voidstar
 			
 			keys.insert(keys.end(),meta.descriptorKey.begin(),meta.descriptorKey.end());
 
-			PipelineKey key ={ renderItem.Program,renderItem.State,keys,DEFAULT_RENDER_PASS};
+
+			//auto renderPass = GetRenderPass();
+
+			PipelineKey key ={ renderItem.Program,renderItem.State,keys,DEFAULT_FRAME_BUFFER};
 			
 			vk::Pipeline pipeline = GetPipeline(key, renderItem.Bindings, renderItem.currentBinding);
 			vk::PipelineLayout layout = m_PipelineLayout.at(key.layout);
-			auto& renderPass = m_RenderPasses.at(key.renderPass);
-			auto frameBuffer = m_Framebuffers.at(renderPass.m_FrameBufferHandle)[imageIndex];
+			auto& renderPass = m_RenderPasses.at(key.fb);
+			auto frameBuffer = m_Framebuffers.at(key.fb)[imageIndex];
 
 
 			for (int i = 0; i < keys.size(); i++)
