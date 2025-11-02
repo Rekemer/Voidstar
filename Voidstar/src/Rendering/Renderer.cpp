@@ -61,6 +61,205 @@ namespace std
 
 namespace Voidstar
 {
+
+
+	vk::Format map(TextureFormat f) {
+		switch (f) {
+		case TextureFormat::R8_UNORM:   return vk::Format::eR8Unorm;
+		case TextureFormat::R8_SNORM:   return vk::Format::eR8Snorm;
+		case TextureFormat::R8_UINT:    return vk::Format::eR8Uint;
+		case TextureFormat::R8_SINT:    return vk::Format::eR8Sint;
+		case TextureFormat::R8_SRGB:    return vk::Format::eR8Srgb;
+
+		case TextureFormat::RG8_UNORM:  return vk::Format::eR8G8Unorm;
+		case TextureFormat::RG8_SNORM:  return vk::Format::eR8G8Snorm;
+		case TextureFormat::RG8_UINT:   return vk::Format::eR8G8Uint;
+		case TextureFormat::RG8_SINT:   return vk::Format::eR8G8Sint;
+
+		case TextureFormat::RGBA8_UNORM:return vk::Format::eR8G8B8A8Unorm;
+		case TextureFormat::RGBA8_SNORM:return vk::Format::eR8G8B8A8Snorm;
+		case TextureFormat::RGBA8_UINT: return vk::Format::eR8G8B8A8Uint;
+		case TextureFormat::RGBA8_SINT: return vk::Format::eR8G8B8A8Sint;
+		case TextureFormat::RGBA8_SRGB: return vk::Format::eR8G8B8A8Srgb;
+
+		case TextureFormat::BGRA8_UNORM:return vk::Format::eB8G8R8A8Unorm;
+		case TextureFormat::BGRA8_SRGB: return vk::Format::eB8G8R8A8Srgb;
+
+		case TextureFormat::RGB10A2_UNORM:   return vk::Format::eA2B10G10R10UnormPack32;
+		case TextureFormat::R11G11B10_UFLOAT:return vk::Format::eB10G11R11UfloatPack32;
+
+		case TextureFormat::R16_UNORM:  return vk::Format::eR16Unorm;
+		case TextureFormat::R16_SNORM:  return vk::Format::eR16Snorm;
+		case TextureFormat::R16_UINT:   return vk::Format::eR16Uint;
+		case TextureFormat::R16_SINT:   return vk::Format::eR16Sint;
+		case TextureFormat::R16_SFLOAT: return vk::Format::eR16Sfloat;
+
+		case TextureFormat::RG16_UNORM: return vk::Format::eR16G16Unorm;
+		case TextureFormat::RG16_SNORM: return vk::Format::eR16G16Snorm;
+		case TextureFormat::RG16_UINT:  return vk::Format::eR16G16Uint;
+		case TextureFormat::RG16_SINT:  return vk::Format::eR16G16Sint;
+		case TextureFormat::RG16_SFLOAT:return vk::Format::eR16G16Sfloat;
+
+		case TextureFormat::RGBA16_UNORM:return vk::Format::eR16G16B16A16Unorm;
+		case TextureFormat::RGBA16_SNORM:return vk::Format::eR16G16B16A16Snorm;
+		case TextureFormat::RGBA16_UINT: return vk::Format::eR16G16B16A16Uint;
+		case TextureFormat::RGBA16_SINT: return vk::Format::eR16G16B16A16Sint;
+		case TextureFormat::RGBA16_SFLOAT:return vk::Format::eR16G16B16A16Sfloat;
+
+		case TextureFormat::R32_UINT:   return vk::Format::eR32Uint;
+		case TextureFormat::R32_SINT:   return vk::Format::eR32Sint;
+		case TextureFormat::R32_SFLOAT: return vk::Format::eR32Sfloat;
+
+		case TextureFormat::RG32_UINT:  return vk::Format::eR32G32Uint;
+		case TextureFormat::RG32_SINT:  return vk::Format::eR32G32Sint;
+		case TextureFormat::RG32_SFLOAT:return vk::Format::eR32G32Sfloat;
+
+		case TextureFormat::RGB32_UINT: return vk::Format::eR32G32B32Uint;
+		case TextureFormat::RGB32_SINT: return vk::Format::eR32G32B32Sint;
+		case TextureFormat::RGB32_SFLOAT:return vk::Format::eR32G32B32Sfloat;
+
+		case TextureFormat::RGBA32_UINT:return vk::Format::eR32G32B32A32Uint;
+		case TextureFormat::RGBA32_SINT:return vk::Format::eR32G32B32A32Sint;
+		case TextureFormat::RGBA32_SFLOAT:return vk::Format::eR32G32B32A32Sfloat;
+
+		case TextureFormat::D16_UNORM:        return vk::Format::eD16Unorm;
+		case TextureFormat::X8_D24_UNORM:     return vk::Format::eX8D24UnormPack32;
+		case TextureFormat::D32_SFLOAT:       return vk::Format::eD32Sfloat;
+		case TextureFormat::D24_UNORM_S8_UINT:return vk::Format::eD24UnormS8Uint;
+		case TextureFormat::D32_SFLOAT_S8_UINT:return vk::Format::eD32SfloatS8Uint;
+		case TextureFormat::S8_UINT:          return vk::Format::eS8Uint;
+
+		case TextureFormat::BC1_RGBA_UNORM:   return vk::Format::eBc1RgbaUnormBlock;
+		case TextureFormat::BC1_RGBA_SRGB:    return vk::Format::eBc1RgbaSrgbBlock;
+		case TextureFormat::BC3_RGBA_UNORM:   return vk::Format::eBc3UnormBlock;
+		case TextureFormat::BC3_RGBA_SRGB:    return vk::Format::eBc3SrgbBlock;
+		case TextureFormat::BC4_R_UNORM:      return vk::Format::eBc4UnormBlock;
+		case TextureFormat::BC4_R_SNORM:      return vk::Format::eBc4SnormBlock;
+		case TextureFormat::BC5_RG_UNORM:     return vk::Format::eBc5UnormBlock;
+		case TextureFormat::BC5_RG_SNORM:     return vk::Format::eBc5SnormBlock;
+		case TextureFormat::BC7_RGBA_UNORM:   return vk::Format::eBc7UnormBlock;
+		case TextureFormat::BC7_RGBA_SRGB:    return vk::Format::eBc7SrgbBlock;
+
+		default: return vk::Format::eUndefined;
+		}
+	}
+	vk::SampleCountFlagBits map(SampleCount samples)
+	{
+		switch (samples)
+		{
+		case SampleCount::e1:  return vk::SampleCountFlagBits::e1;
+		case SampleCount::e2:  return vk::SampleCountFlagBits::e2;
+		case SampleCount::e4:  return vk::SampleCountFlagBits::e4;
+		case SampleCount::e8:  return vk::SampleCountFlagBits::e8;
+		case SampleCount::e16: return vk::SampleCountFlagBits::e16;
+		case SampleCount::e32: return vk::SampleCountFlagBits::e32;
+		case SampleCount::e64: return vk::SampleCountFlagBits::e64;
+		default:               return vk::SampleCountFlagBits::e1;
+		}
+	}
+
+	inline vk::MemoryPropertyFlags DeriveAttachmentMemoryPrefs(AttachmentHint hint) {
+		
+		vk::MemoryPropertyFlags flags;
+		// Attachments are GPU-written; keep them device-local.
+		flags = vk::MemoryPropertyFlagBits::eDeviceLocal;
+
+		
+
+		//// Transient attachments: try lazily allocated if supported.
+		//if (HasFlag (hint, AttachmentHint::Transient)) {
+		//	// Only valid with VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT (you already set that).
+		//	// Prefer lazy, but don’t *require* it so we can gracefully fall back.
+		//	p.preferred |= VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT;
+		//}
+
+		//// If we will sample / use as storage / input / read back later,
+		//// we must *not* use lazy memory (can’t be lazily allocated).
+		//if (Has(hint, AttachmentHint::SampledLater) ||
+		//	Has(hint, AttachmentHint::Storage) ||
+		//	Has(hint, AttachmentHint::InputAttachment) ||
+		//	Has(hint, AttachmentHint::Readback)) {
+		//	p.banned |= VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT;
+		//}
+
+		//// Large render targets (e.g., 4K MSAA) often benefit from dedicated allocs.
+		//if (Has(hint, AttachmentHint::ResolveSrc) || Has(hint, AttachmentHint::ResolveDst) ||
+		//	Has(hint, AttachmentHint::Storage)) {
+		//	p.dedicatedPreferred = true;
+		//}
+
+		// Presentable images: you don’t allocate/bind; swapchain does it.
+		// (No prefs needed.) Just skip using prefs for Presentable.
+		return flags;
+	}
+	vk::ImageUsageFlags  map(AttachmentHint hint)
+	{
+		vk::ImageUsageFlags  usage{};
+
+		//const bool isDS = IsDepthStencilFormat(format);
+		//usage |= isDS ? vk::ImageUsageFlagBits::eDepthStencilAttachment
+		//	: vk::ImageUsageFlagBits::eColorAttachment;
+
+		// Transient attachments (don’t need to preserve contents)
+		if (HasFlag(hint, AttachmentHint::Transient)) {
+			usage |= vk::ImageUsageFlagBits::eTransientAttachment;
+			//preferLazyMemory = true;   // try lazily-allocated heap if supported
+		}
+
+		// Will be sampled in a later pass
+		if (HasFlag(hint, AttachmentHint::SampledLater)) {
+			usage |= vk::ImageUsageFlagBits::eSampled;
+			//d.preferLazyMemory = false;  // sampling requires residency
+		}
+
+		// Storage image (compute/raster UAV)
+		if (HasFlag(hint, AttachmentHint::Storage)) {
+			usage |= vk::ImageUsageFlagBits::eStorage;
+			//d.peferLazyMemory = false;  // storage cannot be lazy
+		}
+
+		// ResolveSrc: no special usage bit needed for subpass resolve.
+		// If you plan to manual-resolve via blit/copy, enable TransferSrc:
+		if (HasFlag(hint, AttachmentHint::ResolveSrc)) {
+			usage |= vk::ImageUsageFlagBits::eTransferSrc;
+		}
+
+		// ResolveDst: renderpass resolve (no bit), but often useful to allow TransferDst
+		// for manual resolve or clears via copy.
+		if (HasFlag(hint, AttachmentHint::ResolveDst)) {
+			usage |= vk::ImageUsageFlagBits::eTransferDst;
+		}
+
+		// Readback: you’ll copy from this image to a staging resource → needs TransferSrc
+		if (HasFlag(hint, AttachmentHint::Readback)) {
+			usage |= vk::ImageUsageFlagBits::eTransferSrc;
+			//d.preferLazyMemory = false;
+		}
+
+		// Subpass input attachment
+		if (HasFlag(hint, AttachmentHint::InputAttachment)) {
+			usage |= vk::ImageUsageFlagBits::eInputAttachment;
+			//d.preferLazyMemory = false;
+		}
+
+		// Presentable: swapchain manages the image; you don't create it.
+		if (HasFlag(hint, AttachmentHint::Presentable)) {
+			//handledBySwapchain = true;
+			// (You generally won’t use this path with vk::ImageCreateInfo.)
+			// If you do reuse the same struct for bookkeeping, keep defaults and skip creation.
+		}
+
+		// If anything requires real access (sampled/storage/input/readback), disable lazy pref.
+		if (HasFlag(hint, AttachmentHint::SampledLater) ||
+			HasFlag(hint, AttachmentHint::Storage) ||
+			HasFlag(hint, AttachmentHint::InputAttachment) ||
+			HasFlag(hint, AttachmentHint::Readback)) {
+			//preferLazyMemory = false;
+		}
+
+		return usage;
+	}
+
 	class  PipelineBuilder
 	{
 	public:
@@ -539,7 +738,6 @@ namespace Voidstar
 
 
 
-	QuadData quad;
 	std::vector<Vertex_> sphere;
 	std::vector<IndexType> sphereIndicies;
 	
@@ -880,16 +1078,20 @@ namespace Voidstar
 		}
 
 
-		m_AttachmentManager.Init(RenderContext::GetFrames());
+		m_DefaultColorAttachment = GetAttachmentHandle();
+		m_DefaultMSAAAttachment = GetAttachmentHandle();
+		m_DefaultDepthAttachment = GetAttachmentHandle();
+
+		m_AttachmentManager.Init(RenderContext::GetFrames(), m_DefaultColorAttachment);
 
 
 		auto samples = RenderContext::GetDevice()->GetSamples();
-		m_AttachmentManager.CreateColor("MSAA", m_AttachmentManager, vk::Format::eB8G8R8A8Unorm,
+		m_AttachmentManager.CreateColor(m_DefaultMSAAAttachment, vk::Format::eB8G8R8A8Unorm,
 			screenWidth, screenHeight,
 			samples, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransientAttachment,
 			frameAmount);
 
-		m_AttachmentManager.CreateDepthStencil("DepthStencil", m_AttachmentManager,
+		m_AttachmentManager.CreateDepthStencil(m_DefaultDepthAttachment,
 			screenWidth, screenHeight, 
 			samples, vk::ImageUsageFlagBits::eDepthStencilAttachment,
 			frameAmount);
@@ -900,7 +1102,7 @@ namespace Voidstar
 
 		RenderPassBuilder builder;
 
-		builder.ColorOutput("MSAA", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
+		builder.ColorOutput(m_DefaultMSAAAttachment, m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
 		builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
 		builder.SetSaveOp(vk::AttachmentStoreOp::eDontCare);
 		builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
@@ -910,7 +1112,7 @@ namespace Voidstar
 
 		builder.BuildAttachmentDesc();
 
-		builder.DepthStencilOutput("DepthStencil", m_AttachmentManager, vk::ImageLayout::eDepthStencilAttachmentOptimal);
+		builder.DepthStencilOutput(m_DefaultDepthAttachment, m_AttachmentManager, vk::ImageLayout::eDepthStencilAttachmentOptimal);
 		builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
 		builder.SetSaveOp(vk::AttachmentStoreOp::eDontCare);
 		builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
@@ -919,7 +1121,7 @@ namespace Voidstar
 		builder.SetFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
 		builder.BuildAttachmentDesc();
 
-		builder.ResolveOutput("Default", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
+		builder.ResolveOutput(m_DefaultColorAttachment, m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
 		builder.SetLoadOp(vk::AttachmentLoadOp::eDontCare);
 		builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
 		builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
@@ -1231,6 +1433,38 @@ namespace Voidstar
 		return renderer;
 	}
 
+	void Renderer::CreateFramebuffer(FrameBufferHandle handle, const std::vector<AttachmentHandle>& info)
+	{
+
+	}
+
+	void Renderer::CreateAttachment(AttachmentHandle handle, AttachmentInfo_ info)
+	{
+		auto usage = map(info.hints);
+		switch (info.type)	
+		{
+		case AttachmentType::COLOR:
+		{
+			auto mem = DeriveAttachmentMemoryPrefs(info.hints);
+			m_AttachmentManager.CreateColor(handle,map(info.format),info.width,info.height,map(info.samples),usage, RenderContext::GetFrameAmount(), mem);
+			break;
+
+		}
+		case AttachmentType::DEPTH_STENCIL:
+		{
+			m_AttachmentManager.CreateDepthStencil(handle, info.width, info.height, map(info.samples), usage, RenderContext::GetFrameAmount());
+			break;
+		}
+		case AttachmentType::RESOLVE:
+		{
+
+			break;
+		}
+		default:
+			break;
+		}
+		
+	}
 	void Renderer::CompileShader(std::string_view path)
 	{
 		m_Compiler.Compile(std::filesystem::path{path});
@@ -1478,7 +1712,7 @@ namespace Voidstar
 					auto bindNumber = meta.uniforms.at(bind.uniform).second;
 					auto& k = *std::find_if(keys.begin(), keys.end(), [=](auto key) {return key.set == setNumber; })	;
 
-					auto image = m_Textures.at(bind.handle);
+					auto image = m_Textures.at(bind.handles[0]);
 
 
 					if (image->GetLayout() != vk::ImageLayout::eShaderReadOnlyOptimal)

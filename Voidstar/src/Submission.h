@@ -12,6 +12,7 @@
 #include <unordered_map>
 #include <cstdint>
 #include <array>
+#include <vector>
 
 namespace Voidstar
 {
@@ -33,12 +34,14 @@ namespace Voidstar
 	struct BufferTag {};
 	struct TextureTag {};
 	struct UniformTag {};
+	struct AttachmentTag {};
 
 	using ProgramHandle = Handle<ProgramTag>;
 	using ShaderHandle = Handle<ShaderTag>;
 	using VertexBufferHandle = Handle<VertexBufferTag>;
 	using IndexBufferHandle = Handle<IndexBufferTag>;
 	using FrameBufferHandle = Handle<FramebufferTag>;
+	using AttachmentHandle = Handle<AttachmentTag >;
 	using VertexLayoutHandle = Handle<VertexLayoutTag>;
 	using BufferHandle = Handle<BufferTag>;
 	using TextureHandle = Handle<TextureTag>;
@@ -74,6 +77,99 @@ namespace Voidstar
 		Static,      // updated occasionally (loading screen, level change)
 		Dynamic,     // updated frequently (per frame or per few frames)
 		Readback     // GPU → CPU reads (screenshots, queries)
+	};
+
+	enum class TextureFormat {
+		Unknown,
+
+		// 8-bit
+		R8_UNORM, R8_SNORM, R8_UINT, R8_SINT, R8_SRGB,
+		RG8_UNORM, RG8_SNORM, RG8_UINT, RG8_SINT,
+		RGBA8_UNORM, RGBA8_SNORM, RGBA8_UINT, RGBA8_SINT, RGBA8_SRGB,
+		BGRA8_UNORM, BGRA8_SRGB,
+
+		// packed / special
+		RGB10A2_UNORM,
+		R11G11B10_UFLOAT,
+
+		// 16-bit
+		R16_UNORM, R16_SNORM, R16_UINT, R16_SINT, R16_SFLOAT,
+		RG16_UNORM, RG16_SNORM, RG16_UINT, RG16_SINT, RG16_SFLOAT,
+		RGBA16_UNORM, RGBA16_SNORM, RGBA16_UINT, RGBA16_SINT, RGBA16_SFLOAT,
+
+		// 32-bit
+		R32_UINT, R32_SINT, R32_SFLOAT,
+		RG32_UINT, RG32_SINT, RG32_SFLOAT,
+		RGB32_UINT, RGB32_SINT, RGB32_SFLOAT,
+		RGBA32_UINT, RGBA32_SINT, RGBA32_SFLOAT,
+
+		// depth/stencil
+		D16_UNORM,
+		X8_D24_UNORM,
+		D32_SFLOAT,
+		D24_UNORM_S8_UINT,
+		D32_SFLOAT_S8_UINT,
+		S8_UINT,
+
+		// compressed (BC)
+		BC1_RGBA_UNORM, BC1_RGBA_SRGB,
+		BC3_RGBA_UNORM, BC3_RGBA_SRGB,
+		BC4_R_UNORM, BC4_R_SNORM,
+		BC5_RG_UNORM, BC5_RG_SNORM,
+		BC7_RGBA_UNORM, BC7_RGBA_SRGB,
+	};
+
+	
+
+
+	enum class SampleCount
+	{
+		e1 = 1,
+		e2 = 2,
+		e4 = 4,
+		e8 = 8,
+		e16 = 16,
+		e32 = 32,
+		e64 = 64,
+	};
+	
+	enum class AttachmentType
+	{
+		COLOR,
+		DEPTH_STENCIL,
+		RESOLVE
+	};
+
+	
+
+
+
+	enum class AttachmentHint : uint32_t {
+		None = 0,
+		Transient = 1 << 0,  // don’t preserve; prefer lazily allocated if available
+		SampledLater = 1 << 1,  // used as sampled input in a later pass
+		Storage = 1 << 2,  // used as storage image (compute or raster UAV)
+		ResolveSrc = 1 << 3,  // multisampled source to be resolved
+		ResolveDst = 1 << 4,  // single-sample resolve target
+		Readback = 1 << 5,  // will be copied to a staging buffer/image
+		Presentable = 1 << 6,  // swapchain image (special case; you won’t create it)
+		InputAttachment = 1 << 7,  // subpass input attachment
+	};
+	inline AttachmentHint operator|(AttachmentHint a, AttachmentHint b) {
+		return static_cast<AttachmentHint>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+	}
+	inline bool HasFlag(AttachmentHint h, AttachmentHint bit) {
+		return (static_cast<uint32_t>(h) & static_cast<uint32_t>(bit)) != 0;
+	}
+
+	struct AttachmentInfo_
+	{
+		AttachmentType type;
+		TextureFormat format;
+		int width;
+		int height;
+		SampleCount samples;
+		AttachmentHint hints;
 	};
 
 	struct Memory
@@ -187,7 +283,7 @@ namespace Voidstar
 	struct ResourceBinding
 	{
 		std::string uniform;
-		TextureHandle handle;
+		std::vector<TextureHandle> handles;
 		bool dirty;
 	};
 
@@ -272,8 +368,7 @@ namespace Voidstar
 
 	
 	VertexLayout GetVertexLayout(VertexLayoutHandle handle);
-
-	
+	AttachmentHandle GetAttachmentHandle();
 
 	ProgramHandle LoadProgram(std::string_view vertex, std::string_view fragment);
 
@@ -288,9 +383,14 @@ namespace Voidstar
 	UniformHandle CreateUniform(std::string_view name,
 		ResourceType kind, size_t num = 1);
 
+	AttachmentHandle CreateAttachment(AttachmentType type, TextureFormat format, int width, int height, SampleCount samples, AttachmentHint hints);
+
+	FrameBufferHandle CreateFramebuffer(const std::vector<AttachmentHandle>& attachments);
+
 
 	void BindTexture(std::string_view uniform, TextureHandle handle);
-	
+	void BindTextures(std::string_view uniformName, const std::vector<TextureHandle>& handle);
+
 	void SetWindow(SPtr<Window> window);
 	void SubmitInit(InitParams);
 

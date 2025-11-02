@@ -4,17 +4,62 @@
 #include "IndexBuffer.h"
 namespace Voidstar
 {
+	template<typename T>
 	struct  QuadData
 	{
-		std::vector<Vertex_> verticies;
+		std::vector<T> verticies;
 		std::vector<IndexType> indicies;
 	};
 
-	QuadData GeneratePlane(float detail);
-	//std::vector<Vertex_> GenerateSphere(float radius, float prec, std::vector<IndexType>& indices);
-	//std::vector<Vertex_> GenerateCube();
+	template<typename T>
+	QuadData<T> GeneratePlane(float detail) 
+	{
+		uint32_t seg = detail < 1 ? 1u : static_cast<uint32_t>(detail);
+		uint32_t vx = seg + 1;
+		uint32_t vy = seg + 1;
 
+		QuadData<T> out;
+		out.verticies.resize(vx * vy);
+		out.indicies.reserve(seg * seg * 6);
 
+		// XY plane, Z = 0, coords in [-1,1], UV in [0,1]
+		for (uint32_t y = 0; y < vy; ++y) {
+			float v = (float)y / (float)seg;
+			float py = -1.0f + 2.0f * v;
+			for (uint32_t x = 0; x < vx; ++x) {
+				float u = (float)x / (float)seg;
+				float px = -1.0f + 2.0f * u;
+
+				uint32_t i = y * vx + x;
+				out.verticies[i].Position[0] = px;
+				out.verticies[i].Position[1] = py;
+				out.verticies[i].Position[2] = 0.0f;
+				out.verticies[i].UV[0] = u;
+				out.verticies[i].UV[1] = v;
+				// if T has Normal: set to (0,0,1)
+				// out.verticies[i].Normal[0]=0; out.verticies[i].Normal[1]=0; out.verticies[i].Normal[2]=1;
+			}
+		}
+
+		for (uint32_t y = 0; y < seg; ++y) {
+			for (uint32_t x = 0; x < seg; ++x) {
+				uint32_t i0 = y * vx + x;
+				uint32_t i1 = y * vx + (x + 1);
+				uint32_t i2 = (y + 1) * vx + (x + 1);
+				uint32_t i3 = (y + 1) * vx + x;
+
+				// two triangles (CCW)
+				out.indicies.push_back(i0);
+				out.indicies.push_back(i1);
+				out.indicies.push_back(i2);
+				out.indicies.push_back(i2);
+				out.indicies.push_back(i3);
+				out.indicies.push_back(i0);
+			}
+		}
+		return out;
+	}
+;
 	inline float toRadians(float degrees) { return (degrees * 2.0f * 3.14159f) / 360.0f; }
 	template<typename T>
 	std::vector<T> GenerateSphere(float radius, float prec, std::vector<IndexType>& indices)

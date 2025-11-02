@@ -6,16 +6,15 @@
 namespace Voidstar
 {
 
-	void AttachmentManager::Init(const std::vector<SPtr<Image>>& swapchainImages)
+	void AttachmentManager::Init(const std::vector<SPtr<Image>>& swapchainImages, AttachmentHandle handle)
 	{
 		// default can be used as resolve after MSAA
-		m_Resolve["Default"] = swapchainImages;
+		m_Resolve[handle] = swapchainImages;
 		// or as direct render targert
-		m_Color["Default"] = swapchainImages;
+		m_Color[handle] = swapchainImages;
 	}
 
-	void AttachmentManager::CreateColor(std::string_view attachmentName,
-		AttachmentManager& manager, vk::Format format, size_t width, size_t height,
+	void AttachmentManager::CreateColor(AttachmentHandle attachmentName,vk::Format format, size_t width, size_t height,
 		vk::SampleCountFlagBits samples,
 		vk::ImageUsageFlags usage, size_t attachmentAmount, vk::MemoryPropertyFlags flags)
 	{
@@ -54,10 +53,10 @@ namespace Voidstar
 			images[i]->SetWidth(width);
 			images[i]->SetHeight(height);
 		}
-		m_Color[attachmentName.data()] = images;
+		m_Color[attachmentName] = images;
 	}
-	void AttachmentManager::CreateDepthStencil(std::string_view attachmentName,
-		AttachmentManager& manager, size_t width, size_t height,
+	void AttachmentManager::CreateDepthStencil(AttachmentHandle attachmentName,
+		 size_t width, size_t height,
 		vk::SampleCountFlagBits samples,
 		vk::ImageUsageFlags usage,size_t attachmentAmount)
 	{
@@ -103,7 +102,7 @@ namespace Voidstar
 			images[i]->SetHeight(height);
 			
 		}
-		m_DepthStencil[attachmentName.data()] = images;
+		m_DepthStencil[attachmentName] = images;
 	}
 	void AttachmentManager::Destroy()
 	{

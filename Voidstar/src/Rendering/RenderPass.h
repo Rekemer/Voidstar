@@ -52,10 +52,9 @@ namespace Voidstar
 		vk::AttachmentDescription BuildAttachmentDesc();
 
 
-		void PresentOutput();
-		void ColorOutput(std::string_view attachmentName, AttachmentManager&, vk::ImageLayout);
-		void DepthStencilOutput(std::string_view attachmentName, AttachmentManager&, vk::ImageLayout);
-		void ResolveOutput(std::string_view attachmentName, AttachmentManager&, vk::ImageLayout);
+		void ColorOutput(AttachmentHandle, AttachmentManager&, vk::ImageLayout);
+		void DepthStencilOutput(AttachmentHandle, AttachmentManager&, vk::ImageLayout);
+		void ResolveOutput(AttachmentHandle, AttachmentManager&, vk::ImageLayout);
 
 		void AddAttachment(vk::AttachmentDescription description);
 		void AddSubpass(vk::SubpassDescription subpass);

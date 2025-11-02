@@ -20,6 +20,7 @@ namespace Voidstar
 		CreateTexture,
 		UpdateTexture,
 		ResizeTexture,
+		CreateAttachment,
 		CreateFrameBuffer,
 		CreateUniform,
 		UpdateViewName, // ?

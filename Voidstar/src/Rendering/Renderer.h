@@ -117,7 +117,8 @@ namespace Voidstar
 
 		void CreateTexture(TextureHandle handle, std::string_view path);
 		void CreateUniform(UniformHandle handle, ResourceType type, size_t num) {};
-		
+		void CreateAttachment(AttachmentHandle handle, AttachmentInfo_ info);
+		void CreateFramebuffer(FrameBufferHandle handle, const std::vector<AttachmentHandle>& info);
 		void CreateVertexBuffer(Memory& mem, VertexBufferHandle vertHandle, UpdateHint hint = UpdateHint::Static);
 		void CreateIndexBuffer(Memory& mem, IndexBufferHandle indexHandle);
 		void CreatePipelineLayout(PipelineLayoutKey& key);
@@ -231,6 +232,11 @@ namespace Voidstar
 		int m_ViewportWidth, m_ViewportHeight;
 		size_t m_CurrentFrame = 0;
 		AttachmentManager m_AttachmentManager;
+
+		AttachmentHandle m_DefaultColorAttachment;
+		AttachmentHandle m_DefaultMSAAAttachment;
+		AttachmentHandle m_DefaultDepthAttachment;
+
 		ShaderCompiler m_Compiler;
 		RenderPassHandle_ DEFAULT_RENDER_PASS;
 		std::vector<void*> m_UniformBuffersMapped;

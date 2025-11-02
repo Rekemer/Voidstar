@@ -5,7 +5,6 @@ namespace Voidstar
 {
 	class Device;
 	class CommandBuffer;
-	struct Attachment;
 	struct Swapchain;
 	class Window;
 	class InstanceInfo;

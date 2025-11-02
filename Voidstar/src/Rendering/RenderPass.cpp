@@ -55,7 +55,7 @@ namespace Voidstar
 		return desc;
 	}
 
-	void RenderPassBuilder::ColorOutput(std::string_view attachmentName,
+	void RenderPassBuilder::ColorOutput(AttachmentHandle attachmentName,
 		AttachmentManager& manager, vk::ImageLayout referenceLayout)
 	{
 		auto views = manager.GetColor({ attachmentName });
@@ -70,7 +70,7 @@ namespace Voidstar
 		}
 	}
 		
-	void RenderPassBuilder::DepthStencilOutput(std::string_view attachmentName, AttachmentManager& manager, vk::ImageLayout referenceLayout)
+	void RenderPassBuilder::DepthStencilOutput(AttachmentHandle attachmentName, AttachmentManager& manager, vk::ImageLayout referenceLayout)
 	{
 		auto views = manager.GetDepth({ attachmentName });
 		m_DepthStencil = views;
@@ -79,7 +79,7 @@ namespace Voidstar
 		m_Format = views[0]->GetFormat();
 		m_Samples = views[0]->GetSample();
 	}
-	void RenderPassBuilder::ResolveOutput(std::string_view attachmentName, AttachmentManager& manager, vk::ImageLayout referenceLayout)
+	void RenderPassBuilder::ResolveOutput(AttachmentHandle attachmentName, AttachmentManager& manager, vk::ImageLayout referenceLayout)
 	{
 		auto views = manager.GetResolve({ attachmentName });
 		m_Resolve = views;

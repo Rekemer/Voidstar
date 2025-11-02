@@ -19,9 +19,16 @@ namespace Voidstar
 	SparseSet<VertexLayoutHandle> g_LayoutHandleAllocator;
 	SparseSet<TextureHandle> g_TextureHandleAllocator;
 	SparseSet<UniformHandle> g_UniformHandleAllocator;
+	SparseSet<FrameBufferHandle> g_FramebufferHandleAllocator;
+	SparseSet<AttachmentHandle> g_AttachmentrHandleAllocator;
 
 
+	
 
+	AttachmentHandle GetAttachmentHandle()
+	{
+		return g_AttachmentrHandleAllocator.GetId();
+	}
 
 	VertexLayout GetVertexLayout(VertexLayoutHandle handle)
 	{
@@ -69,6 +76,8 @@ namespace Voidstar
 		return handle;
 
 	}
+
+
 	UniformHandle CreateUniform(std::string_view name, ResourceType kind, size_t num)
 	{
 		auto handle = g_UniformHandleAllocator.GetId();
@@ -80,7 +89,38 @@ namespace Voidstar
 		return handle;
 
 	}
+	AttachmentHandle CreateAttachment(AttachmentType type, TextureFormat format, int width, int height, SampleCount samples, AttachmentHint hints)
+	{
+		auto handle = g_AttachmentrHandleAllocator.GetId();
+		auto& cmd = g_Submission->GetCommandBuffer(ResourceCommand::CreateAttachment);
+		cmd.WriteObject(handle);
+		AttachmentInfo_ info{ type,format,width,height,samples,hints };
+		cmd.WriteObject(info);
+		return handle;
+	}
+	FrameBufferHandle CreateFramebuffer(const std::vector<AttachmentHandle>& handles)
+	{
+		auto handle = g_FramebufferHandleAllocator.GetId();
+		auto& cmd = g_Submission->GetCommandBuffer(ResourceCommand::CreateFrameBuffer);
+		cmd.WriteObject(handle);
+		cmd.WriteObject(handles.size());
+		for (auto h : handles)
+		{
+			cmd.WriteObject(h);
+		}
+		return handle;
+	}
 
+
+	void BindTextures(std::string_view uniformName, const std::vector<TextureHandle>& handles)
+	{
+		assert(false);
+		auto& bind = g_Submission->Submit->CurrentRenderItem->ResBindings[g_Submission->Submit->CurrentRenderItem->currentResBinding++];
+
+		bind.uniform = uniformName;
+		bind.dirty = true;
+		bind.handles = handles;
+	}
 
 	void BindTexture(std::string_view uniformName, TextureHandle handle)
 	{
@@ -88,7 +128,7 @@ namespace Voidstar
 
 		bind.uniform = uniformName;
 		bind.dirty = true;
-		bind.handle = handle;
+		bind.handles.push_back(handle);
 	}
 	void SetViewTransform(PassID id, glm::mat4& view, glm::mat4& proj)
 	{
@@ -198,8 +238,26 @@ namespace Voidstar
 				break;
 			case Voidstar::ResourceCommand::ResizeTexture:
 				break;
-			case Voidstar::ResourceCommand::CreateFrameBuffer:
+			case Voidstar::ResourceCommand::CreateAttachment:
+			{
+				auto handle = commandBuffer.ReadObject<AttachmentHandle>();
+				auto info = commandBuffer.ReadObject<AttachmentInfo_>();
+				Renderer::Instance()->CreateAttachment(handle,info);
 				break;
+			}
+			case Voidstar::ResourceCommand::CreateFrameBuffer:
+			{
+				auto handle = commandBuffer.ReadObject<FrameBufferHandle>();
+				auto amount= commandBuffer.ReadObject<size_t>();
+				std::vector<AttachmentHandle> handles;
+				handles.reserve(amount);
+				for (int i = 0; i < amount; i++)
+				{
+					handles.push_back(commandBuffer.ReadObject<AttachmentHandle>());
+				}
+				Renderer::Instance()->CreateFramebuffer(handle,handles);
+				break;
+			}
 			case Voidstar::ResourceCommand::CreateUniform:
 			{
 
