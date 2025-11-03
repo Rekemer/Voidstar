@@ -478,8 +478,8 @@ public:
 		//m_TextureUniform = CreateUniform("u_Texture", ResourceType::Sampler);
 
 		m_FeedbackShader = LoadProgram("feedback.vert", "feedback.frag");
-		m_DefaultShader = LoadProgram("basic.vert", "texture.frag");
-
+		//m_DefaultShader = LoadProgram("basic.vert", "texture.frag");
+		m_FinalShader = LoadProgram("render_screen_quad.vert","render_attachment.frag");
 
 		m_TestTexture = LoadTexture("coffee.jpg");
 		m_TestTexture1 = LoadTexture("dos_2_noise.png");
@@ -1408,11 +1408,19 @@ public:
 #if 1 
 		//SetFramebuffer(m_CubeRenderPass)
 		SetViewRect(m_FeedbackRenderPass, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
-		
+		SetFramebuffer(m_FeedbackRenderPass, m_FeedbackFramebuffer);
 		SetViewTransform(m_FeedbackRenderPass, GetCamera()->GetView(), GetCamera()->GetProj());
 		BindVertexBuffer(0, m_VertexCubeHandle);
 		BindIndexBuffer(m_IndexCubeHandle);
 		Submit(m_FeedbackRenderPass, m_FeedbackShader);
+
+		//SetFramebuffer(m_FinalRenderPass, {0});
+		auto scene = GetColorTexture(m_FeedbackFramebuffer);
+		BindAttachmentAsTexture("u_Scene", scene);
+		SetViewRect(m_FinalRenderPass, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
+		SetViewTransform(m_FinalRenderPass, GetCamera()->GetView(), GetCamera()->GetProj());
+		Submit(m_FinalRenderPass, m_FinalShader);
+
 
 #else
 		// update page table pass
@@ -1425,8 +1433,8 @@ public:
 		Submit(m_DebugRenderPass, m_DebugShader);
 
 
-		ExecuteFrame(deltaTime);
 #endif
+		ExecuteFrame(deltaTime);
 
 	}
 

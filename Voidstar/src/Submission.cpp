@@ -24,7 +24,10 @@ namespace Voidstar
 
 
 	
-
+	TextureHandle GetTextureHandle()
+	{
+		return g_TextureHandleAllocator.GetId();
+	}
 	AttachmentHandle GetAttachmentHandle()
 	{
 		return g_AttachmentrHandleAllocator.GetId();
@@ -98,6 +101,22 @@ namespace Voidstar
 		cmd.WriteObject(info);
 		return handle;
 	}
+
+	void BindAttachmentAsTexture(std::string_view name, TextureHandle handle)
+	{
+		auto& bind = g_Submission->Submit->CurrentRenderItem->ResBindings[g_Submission->Submit->CurrentRenderItem->currentResBinding++];
+
+		bind.uniform = name;
+		bind.dirty = true;
+		bind.handles.push_back(handle);
+	}
+	TextureHandle GetColorTexture(FrameBufferHandle fb)
+	{
+		auto handle = Renderer::Instance()->GetFBTextureHandle(fb);
+		if (!handle.Valid()) assert(false);
+		return handle;
+	}
+
 	FrameBufferHandle CreateFramebuffer(const std::vector<AttachmentHandle>& handles)
 	{
 		auto handle = g_FramebufferHandleAllocator.GetId();
@@ -134,6 +153,10 @@ namespace Voidstar
 	{
 		g_Submission->Submit->Views[id].View = view;
 		g_Submission->Submit->Views[id].Proj= proj;
+	}
+	void SetFramebuffer(PassID id ,FrameBufferHandle handle)
+	{
+		g_Submission->Submit->Views[id].Fbh= handle;
 	}
 	void SetViewRect(PassID id, size_t x, size_t y, size_t width, size_t height)
 	{

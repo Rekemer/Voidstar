@@ -15,7 +15,7 @@ namespace Voidstar
 	class AttachmentManager
 	{
 	public:
-		void Init(const std::vector<SPtr<Image>>& swapchainImages, AttachmentHandle handle);
+		void Init(const std::vector<TextureHandle>& handles, AttachmentHandle handle);
 		std::vector<SPtr<Image>> GetColor(std::vector<AttachmentHandle> names)
 		{
 			auto attachments = GetAttachhmentsFrom(m_Color, names);
@@ -41,29 +41,20 @@ namespace Voidstar
 			vk::SampleCountFlagBits samples,
 			vk::ImageUsageFlags usage,size_t attachmentAmount);
 		
+		TextureHandle GetColorTexture(AttachmentHandle handle, size_t frameNumber);
+
 		void Destroy();
 	private:
-		std::vector<SPtr<Image>> GetAttachhmentsFrom(std::unordered_map<AttachmentHandle, std::vector<SPtr<Image>>>& from,
-			std::vector< AttachmentHandle> names)
-		{
-			std::vector<SPtr<Image>> attachments;
-			for (auto name : names)
-			{
-				auto& attachment = from.at(name);
-				for (auto& image : attachment)
-				{
-
-					attachments.push_back(image);
-
-				}
-
-			}
-			return attachments;
-		}
+		std::vector<SPtr<Image>> GetAttachhmentsFrom(std::unordered_map<AttachmentHandle,
+			std::vector<TextureHandle>>& from,
+			std::vector<AttachmentHandle> names);
+		
 	private:
 		// image or swapchain image
-		std::unordered_map<AttachmentHandle, std::vector<SPtr<Image>>> m_Color;
-		std::unordered_map<AttachmentHandle, std::vector<SPtr<Image>>> m_Resolve;
-		std::unordered_map<AttachmentHandle, std::vector<SPtr<Image>>> m_DepthStencil;
+		Map<AttachmentHandle, std::vector<TextureHandle>> m_Color;
+		Map<AttachmentHandle, std::vector<TextureHandle>> m_Resolve;
+		Map<AttachmentHandle, std::vector<TextureHandle>> m_DepthStencil;
+
+		
 	};
 }

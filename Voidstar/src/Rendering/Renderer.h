@@ -123,9 +123,9 @@ namespace Voidstar
 		void CreateIndexBuffer(Memory& mem, IndexBufferHandle indexHandle);
 		void CreatePipelineLayout(PipelineLayoutKey& key);
 		vk::DescriptorSetLayout CreateDescriptorLayout(const DescriptorLayoutKey& key);
-
-
-
+		
+		TextureHandle GetFBTextureHandle(FrameBufferHandle fb);
+		SPtr<Image> GetTexture(TextureHandle handle);
 
 
 
@@ -216,6 +216,7 @@ namespace Voidstar
 		void Draw(QuadRangle& drawable);
 		void UpdateUniformBuffer(const glm::mat4& proj, const glm::mat4& view,float time);
 		void AddFramebuffers(FrameBufferHandle handle, std::vector<vk::Framebuffer>& framebuffers);
+		size_t m_CurrentFrame = 0;
 	private:
 		vk::Pipeline GetPipeline(const PipelineKey& key, std::array<VertexBinding, RenderItem::MAX_VERTEX_BINDING>& bindings,
 			int bindingAmount);
@@ -230,9 +231,8 @@ namespace Voidstar
 		Voidstar::Instance* m_Instance;
 		Device* m_Device;
 		int m_ViewportWidth, m_ViewportHeight;
-		size_t m_CurrentFrame = 0;
 		AttachmentManager m_AttachmentManager;
-
+		friend class AttachmentManager;
 		AttachmentHandle m_DefaultColorAttachment;
 		AttachmentHandle m_DefaultMSAAAttachment;
 		AttachmentHandle m_DefaultDepthAttachment;

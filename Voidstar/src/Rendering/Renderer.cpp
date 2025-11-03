@@ -1118,7 +1118,17 @@ namespace Voidstar
 		m_DefaultMSAAAttachment = GetAttachmentHandle();
 		m_DefaultDepthAttachment = GetAttachmentHandle();
 
-		m_AttachmentManager.Init(RenderContext::GetFrames(), m_DefaultColorAttachment);
+		{
+			auto images = RenderContext::GetFrames();
+			std::vector<TextureHandle> handles{ {GetTextureHandle(),GetTextureHandle() ,GetTextureHandle() } };
+			for (int i = 0; i < handles.size(); i++)
+			{
+				auto handle = handles[i];
+				m_Textures[handle] = images[i];
+			}
+
+			m_AttachmentManager.Init(handles, m_DefaultColorAttachment);
+		}
 
 
 		auto samples = RenderContext::GetDevice()->GetSamples();
@@ -1465,7 +1475,10 @@ namespace Voidstar
 	}
 
 
-	
+	SPtr<Image> Renderer::GetTexture(TextureHandle handle)
+	{
+		return m_Textures.at(handle);
+	}
 
 	
 	Renderer* Renderer::Instance()
@@ -1474,7 +1487,11 @@ namespace Voidstar
 		return renderer;
 	}
 
-
+	TextureHandle Renderer::GetFBTextureHandle(FrameBufferHandle fb)
+	{
+		auto attHandle = m_FBAttachments.at(fb)[0];
+		return m_AttachmentManager.GetColorTexture(attHandle,m_CurrentFrame);
+	}
 	
 
 
@@ -1553,13 +1570,14 @@ namespace Voidstar
 		case AttachmentType::COLOR:
 		{
 			auto mem = DeriveAttachmentMemoryPrefs(info.hints);
-			m_AttachmentManager.CreateColor(handle,map(info.format),info.width,info.height,map(info.samples),usage, RenderContext::GetFrameAmount(), mem);
+			m_AttachmentManager.CreateColor(handle,map(info.format),info.width,info.height,map(info.samples),
+				usage | vk::ImageUsageFlagBits::eColorAttachment, RenderContext::GetFrameAmount(), mem);
 			break;
 
 		}
 		case AttachmentType::DEPTH_STENCIL:
 		{
-			m_AttachmentManager.CreateDepthStencil(handle, info.width, info.height, map(info.samples), usage, RenderContext::GetFrameAmount());
+			m_AttachmentManager.CreateDepthStencil(handle, info.width, info.height, map(info.samples), usage | vk::ImageUsageFlagBits::eDepthStencilAttachment, RenderContext::GetFrameAmount());
 			break;
 		}
 		case AttachmentType::RESOLVE:
@@ -1742,14 +1760,15 @@ namespace Voidstar
 		m_Pipelines[key] = builder.Build();
 		return m_Pipelines[key];
 	}
-
+	
 	void Renderer::RenderFrame(Frame* render, float deltaTime)
 	{
 		if (render->CurrentRenderItemIndex == 0) return;
 
-		uint32_t imageIndex;
+		uint32_t imageIndex = m_CurrentFrame;
 		auto swapchain = RenderContext::GetSwapchain();
 		m_Device->GetDevice().acquireNextImageKHR(swapchain->m_Swapchain, UINT64_MAX, m_ImageAvailableSemaphore[m_CurrentFrame].GetSemaphore(), nullptr, &imageIndex);
+
 		auto& currentFence = m_InFlightFence[imageIndex];
 		Renderer::Instance()->Wait(currentFence.GetFence());
 		Renderer::Instance()->Reset(currentFence.GetFence());
@@ -1768,8 +1787,7 @@ namespace Voidstar
 
 			if (!view.Fbh.Valid())
 			{
-				auto& renderPass = m_RenderPasses.at(DEFAULT_FRAME_BUFFER);
-
+				view.Fbh = DEFAULT_FRAME_BUFFER;
 				//struct PipelineKey
 				//{
 				//	ProgramHandle program;
@@ -1787,7 +1805,7 @@ namespace Voidstar
 
 			//auto renderPass = GetRenderPass();
 
-			PipelineKey key ={ renderItem.Program,renderItem.State,keys,DEFAULT_FRAME_BUFFER};
+			PipelineKey key ={ renderItem.Program,renderItem.State,keys,view.Fbh};
 			
 			vk::Pipeline pipeline = GetPipeline(key, renderItem.Bindings, renderItem.currentBinding);
 			vk::PipelineLayout layout = m_PipelineLayout.at(key.layout);
@@ -1795,9 +1813,9 @@ namespace Voidstar
 			auto frameBuffer = m_Framebuffers.at(key.fb)[imageIndex];
 
 
-			for (int i = 0; i < keys.size(); i++)
+			for (int ii = 0; ii < keys.size(); ii++)
 			{
-				auto k = keys.at(i);
+				auto k = keys.at(ii);
 				if (m_DescriptorSet.find(k) == m_DescriptorSet.end())
 				{
 					AllocateSets(RenderContext::GetFrameAmount(), k);
@@ -1812,9 +1830,9 @@ namespace Voidstar
 			//	TextureHandle handle;
 			//	bool dirty;
 			//};
-			for (int i = 0; i < renderItem.currentResBinding; i++)
+			for (int ii = 0; ii < renderItem.currentResBinding; ii++)
 			{
-				auto& bind = renderItem.ResBindings[i];
+				auto& bind = renderItem.ResBindings[ii];
 				if (bind.dirty)
 				{
 					// update descriptor
@@ -1847,11 +1865,11 @@ namespace Voidstar
 			UpdateUniformBuffer(view.Proj, view.View, m_App->GetExeTime());
 
 			
-			for (int i = 0; i < keys.size(); i++)
+			for (int ii = 0; ii < keys.size(); ii++)
 			{
-				auto k = keys.at(i);
+				auto k = keys.at(ii);
 				auto& descSet = m_DescriptorSet.at(k);
-				vkCmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, layout, i, descSet[m_CurrentFrame], nullptr);
+				vkCmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, layout, ii, descSet[m_CurrentFrame], nullptr);
 
 			}
 			vk::Viewport viewport;
@@ -1871,11 +1889,12 @@ namespace Voidstar
 			vertexBuffers.reserve(renderItem.currentBinding);
 			std::vector<vk::DeviceSize> offsets(renderItem.currentBinding,0);
 
-			for (auto i = 0; i < renderItem.currentBinding; i++)
+			for (auto ii = 0; ii < renderItem.currentBinding; ii++)
 			{
-				auto& buffer = m_VertexBuffers.at(renderItem.Bindings.at(i).VertexHandle)->GetBuffer();
+				auto& buffer = m_VertexBuffers.at(renderItem.Bindings.at(ii).VertexHandle)->GetBuffer();
 				vertexBuffers.push_back(buffer);
 			}
+			if (vertexBuffers.size() > 0)
 			vkCmd.bindVertexBuffers(0,1,vertexBuffers.data(), offsets.data());
 			if (renderItem.IndexBuffer.Valid())
 			{
@@ -1886,6 +1905,7 @@ namespace Voidstar
 			else
 			{
 				// draw without index
+				vkCmd.draw(6,1,0,0);
 			}
 
 
@@ -1896,14 +1916,10 @@ namespace Voidstar
 
 		cmd.EndRendering();
 		
-	
 
 		auto waitSemaphore = m_ImageAvailableSemaphore[m_CurrentFrame].GetSemaphore();
 		auto signalSemaphore = m_RenderFinishedSemaphore[m_CurrentFrame].GetSemaphore();
-
-		cmd.Submit(&waitSemaphore,&signalSemaphore,&currentFence.GetFence());
-
-		
+		cmd.Submit(&waitSemaphore, &signalSemaphore, &currentFence.GetFence());
 		vk::Semaphore waitSemaphores[] = { signalSemaphore };
 		vk::PresentInfoKHR presentInfo = {};
 

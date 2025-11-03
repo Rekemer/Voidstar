@@ -369,6 +369,8 @@ namespace Voidstar
 	
 	VertexLayout GetVertexLayout(VertexLayoutHandle handle);
 	AttachmentHandle GetAttachmentHandle();
+	TextureHandle GetTextureHandle();
+
 
 	ProgramHandle LoadProgram(std::string_view vertex, std::string_view fragment);
 
@@ -386,7 +388,9 @@ namespace Voidstar
 	AttachmentHandle CreateAttachment(AttachmentType type, TextureFormat format, int width, int height, SampleCount samples, AttachmentHint hints);
 
 	FrameBufferHandle CreateFramebuffer(const std::vector<AttachmentHandle>& attachments);
-
+	
+	TextureHandle GetColorTexture(FrameBufferHandle fb);
+	void BindAttachmentAsTexture(std::string_view name, TextureHandle tex);
 
 	void BindTexture(std::string_view uniform, TextureHandle handle);
 	void BindTextures(std::string_view uniformName, const std::vector<TextureHandle>& handle);
@@ -397,6 +401,7 @@ namespace Voidstar
 
 	void SetViewTransform(PassID id, glm::mat4& view, glm::mat4& proj);
 	void SetViewRect(PassID id , size_t x, size_t y, size_t width, size_t height);
+	void SetFramebuffer(PassID id, FrameBufferHandle handle);
 
 	void Submit(PassID id, ProgramHandle program);
 	void BindIndexBuffer(IndexBufferHandle handle);

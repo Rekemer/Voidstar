@@ -3,18 +3,22 @@
 #include "RenderContext.h"
 #include "SupportStruct.h"
 #include "Device.h"
+#include "Renderer.h"
+
 namespace Voidstar
 {
 
-	void AttachmentManager::Init(const std::vector<SPtr<Image>>& swapchainImages, AttachmentHandle handle)
+	void AttachmentManager::Init(const std::vector<TextureHandle>& handles, AttachmentHandle handle)
 	{
 		// default can be used as resolve after MSAA
-		m_Resolve[handle] = swapchainImages;
+		m_Resolve[handle] = handles;
 		// or as direct render targert
-		m_Color[handle] = swapchainImages;
+		m_Color[handle] = handles;
+
 	}
 
-	void AttachmentManager::CreateColor(AttachmentHandle attachmentName,vk::Format format, size_t width, size_t height,
+	void AttachmentManager::CreateColor(AttachmentHandle attachmentName,
+		vk::Format format, size_t width, size_t height,
 		vk::SampleCountFlagBits samples,
 		vk::ImageUsageFlags usage, size_t attachmentAmount, vk::MemoryPropertyFlags flags)
 	{
@@ -32,27 +36,36 @@ namespace Voidstar
 		msaa.Samples = samples;
 
 		auto specs = msaa.Specs;
+		//then transfer it to image memory
+		auto commandBuffer = Renderer::Instance()->GetTransferCommandBuffer(Renderer::Instance()->m_CurrentFrame);
 
-		std::vector<SPtr<Image>> images;
+
+		commandBuffer.BeginTransfering();
+		std::vector<TextureHandle> images;
 		images.resize(msaa.Amount);
 		for (int i = 0; i < images.size(); i++)
 		{
 			auto msaaImage = Image::CreateVKImage(specs, msaa.Samples);
 			auto msaaImageMemory = Image::CreateMemory(msaaImage, specs);
 			auto msaaImageView = Image::CreateImageView(msaaImage, specs.format, specs.imageAspect);
-			images[i] = CreateSPtr<Image>();
+			images[i] = GetTextureHandle();
+			auto& image = Renderer::Instance()->m_Textures[images[i]];
+			image = CreateSPtr<Image>();
 			if (usage & vk::ImageUsageFlagBits::eSampled)
 			{
-				images[i]->m_Sampler = Image::CreateSampler(vk::Filter::eLinear, vk::Filter::eLinear);
+				image->m_Sampler = Image::CreateSampler(vk::Filter::eLinear, vk::Filter::eLinear);
 			}
-			images[i]->SetFormat(specs.format);
-			images[i]->SetSample(msaa.Samples);
-			images[i]->SetView(msaaImageView);
-			images[i]->SetMemory(msaaImageMemory);
-			images[i]->SetImage(msaaImage);
-			images[i]->SetWidth(width);
-			images[i]->SetHeight(height);
+			image->SetFormat(specs.format);
+			image->SetSample(msaa.Samples);
+			image->SetView(msaaImageView);
+			image->SetMemory(msaaImageMemory);
+			image->SetImage(msaaImage);
+			image->SetWidth(width);
+			image->SetHeight(height);
+			commandBuffer.ChangeImageLayout(image.get(), vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal, 1);
 		}
+		commandBuffer.EndTransfering();
+		commandBuffer.SubmitSingle();
 		m_Color[attachmentName] = images;
 	}
 	void AttachmentManager::CreateDepthStencil(AttachmentHandle attachmentName,
@@ -84,59 +97,87 @@ namespace Voidstar
 			depth.Specs.tiling,
 			depth.FormatFeature
 		);
-		std::vector<SPtr<Image>> images;
-		depth.Specs.format = depthFormat;
+		std::vector<TextureHandle> images;
 		images.resize(depth.Amount);
+		depth.Specs.format = depthFormat;
 		for (int i = 0; i < depth.Amount; i++)
 		{
+			images[i] = GetTextureHandle();
+			auto& image = Renderer::Instance()->m_Textures[images[i]];
+			image = CreateSPtr<Image>();
 			auto vkImage = Image::CreateVKImage(depth.Specs, depth.Samples);
 			auto imageMemory = Image::CreateMemory(vkImage, depth.Specs);
 			auto imageView = Image::CreateImageView(vkImage, depthFormat, depth.Specs.imageAspect);
-			images[i] = CreateSPtr<Image>();
-			images[i]->SetFormat(depth.Specs.format);
-			images[i]->SetSample( depth.Samples);
-			images[i]->SetView(imageView);
-			images[i]->SetMemory(imageMemory);
-			images[i]->SetImage(vkImage);
-			images[i]->SetWidth(width);
-			images[i]->SetHeight(height);
+			image = CreateSPtr<Image>();
+			image->SetFormat(depth.Specs.format);
+			image->SetSample( depth.Samples);
+			image->SetView(imageView);
+			image->SetMemory(imageMemory);
+			image->SetImage(vkImage);
+			image->SetWidth(width);
+			image->SetHeight(height);
 			
 		}
 		m_DepthStencil[attachmentName] = images;
 	}
+
+	std::vector<SPtr<Image>> AttachmentManager::GetAttachhmentsFrom(std::unordered_map<AttachmentHandle, std::vector<TextureHandle>>& from,
+		std::vector<AttachmentHandle> names)
+	{
+		std::vector<SPtr<Image>> attachments;
+		for (auto name : names)
+		{
+			auto& attachment = from.at(name);
+			for (auto& handle : attachment)
+			{
+
+				attachments.push_back(Renderer::Instance()->GetTexture(handle));
+
+			}
+
+		}
+		return attachments;
+	}
+
+
+	TextureHandle AttachmentManager::GetColorTexture(AttachmentHandle handle, size_t frameNumber)
+	{
+		return m_Color.at(handle).at(frameNumber);
+	}
+
 	void AttachmentManager::Destroy()
 	{
-		auto device = RenderContext::GetDevice()->GetDevice();
-		device.waitIdle();
-		for (auto& e : m_Color)
-		{
-			std::for_each(e.second.begin(),
-				e.second.end(),
-				[](SPtr<Image>& image)
-				{
-					image.reset();
-				});
-		}
-		for (auto& e : m_DepthStencil)
-		{
-
-			std::for_each(e.second.begin(),
-				e.second.end(),
-				[](SPtr<Image>& image)
-				{
-					image.reset();
-				});
-		}
-		for (auto& e : m_Resolve)
-		{
-
-			std::for_each(e.second.begin(),
-				e.second.end(),
-				[](SPtr<Image>& image)
-				{
-					image.reset();
-				});
-		}
+		//auto device = RenderContext::GetDevice()->GetDevice();
+		//device.waitIdle();
+		//for (auto& e : m_Color)
+		//{
+		//	std::for_each(e.second.begin(),
+		//		e.second.end(),
+		//		[](SPtr<Image>& image)
+		//		{
+		//			image.reset();
+		//		});
+		//}
+		//for (auto& e : m_DepthStencil)
+		//{
+		//
+		//	std::for_each(e.second.begin(),
+		//		e.second.end(),
+		//		[](SPtr<Image>& image)
+		//		{
+		//			image.reset();
+		//		});
+		//}
+		//for (auto& e : m_Resolve)
+		//{
+		//
+		//	std::for_each(e.second.begin(),
+		//		e.second.end(),
+		//		[](SPtr<Image>& image)
+		//		{
+		//			image.reset();
+		//		});
+		//}
 	}
 	
 }

@@ -66,14 +66,14 @@ namespace Voidstar
 		vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput,vk::PipelineStageFlagBits::eVertexInput };
 		vk::SubmitInfo submitInfo = {};
 
-		submitInfo.waitSemaphoreCount = 1;
+		submitInfo.waitSemaphoreCount = waitSemaphores == nullptr ? 0 : 1;
 		submitInfo.pWaitSemaphores = waitSemaphores;
 		submitInfo.pWaitDstStageMask = waitStages;
 
 		submitInfo.commandBufferCount = 1;
 		submitInfo.pCommandBuffers = &m_CommandBuffer;
 
-		submitInfo.signalSemaphoreCount = 1;
+		submitInfo.signalSemaphoreCount = signalSemaphores == nullptr ? 0 : 1;
 		submitInfo.pSignalSemaphores = signalSemaphores;
 		auto device = RenderContext::GetDevice();
 		device->GetGraphicsQueue().submit(submitInfo, *fence);
