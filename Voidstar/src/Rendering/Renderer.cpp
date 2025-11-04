@@ -1203,6 +1203,8 @@ namespace Voidstar
 			{ m_DefaultMSAAAttachment,m_DefaultDepthAttachment, m_DefaultColorAttachment });
 
 
+		updateBack.resize(RenderContext::GetFrameAmount());
+
 
 #if 0
 		quad = GeneratePlane(1);
@@ -1783,7 +1785,14 @@ namespace Voidstar
 			View& view = render->Views[renderItem.View];
 			assert(renderItem.Program.Valid());
 			auto& meta = m_Compiler.m_Programs.at(renderItem.Program);
-
+			auto& updateQueue = updateBack.at(imageIndex);
+			while (updateQueue.size() > 0)
+			{
+				auto& update = updateQueue.top();
+				auto image = m_Textures.at(update.texture);
+				cmd.ChangeImageLayout(image.get(), image->GetLayout(), update.to, image->m_MipMapLevels);
+				updateQueue.pop();
+			}
 			if (!view.Fbh.Valid())
 			{
 				view.Fbh = DEFAULT_FRAME_BUFFER;
@@ -1796,6 +1805,8 @@ namespace Voidstar
 				//};
 
 			}
+
+
 			// get pipeline
 			std::vector<DescriptorLayoutKey>  keys{};
 			
@@ -1851,6 +1862,9 @@ namespace Voidstar
 
 					m_Device->UpdateDescriptorSet(m_DescriptorSet.at(k)[m_CurrentFrame], bindNumber, 1, imageDescriptor1, ResourceType::CombinedSampler);
 					bind.dirty = false;
+
+					updateBack[imageIndex].push({bind.handles[0],vk::ImageLayout::eColorAttachmentOptimal});
+
 				}
 			}
 

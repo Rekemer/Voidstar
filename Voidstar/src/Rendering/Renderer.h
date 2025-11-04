@@ -266,12 +266,20 @@ namespace Voidstar
 
 		Map<TextureHandle, SPtr<Image>> m_Textures;
 
+		struct UpdateBack
+		{
+			TextureHandle texture;
+			vk::ImageLayout to;
+		};
+		std::vector<std::stack<UpdateBack>> updateBack;
+
 
 		std::vector<CommandBuffer> m_RenderCommandBuffer,
 			m_TransferCommandBuffer, m_ComputeCommandBuffer;
 		vk::CommandPool m_FrameCommandPool;
 		
 				
+
 
 
 
