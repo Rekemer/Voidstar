@@ -595,7 +595,9 @@ public:
 			vk::SampleCountFlagBits::e1, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferSrc,
 			m_ActualFrameAmount, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent)*/
 
-		m_FeedbackAttachments[0] = CreateAttachment(AttachmentType::COLOR,TextureFormat::RGBA32_SFLOAT, feedbackSize.x, feedbackSize.y,SampleCount::e1,AttachmentHint::SampledLater | AttachmentHint::Readback );
+		//feedbackSize = { Application::GetScreenWidth()+9, Application::GetScreenHeight()+9 };
+		m_FeedbackAttachments[0] = CreateAttachment(AttachmentType::COLOR,TextureFormat::RGBA32_SFLOAT,
+			feedbackSize.x,feedbackSize.y, SampleCount::e1, AttachmentHint::SampledLater | AttachmentHint::Readback);
 
 	
 		m_FeedbackFramebuffer = CreateFramebuffer( {m_FeedbackAttachments[0]});

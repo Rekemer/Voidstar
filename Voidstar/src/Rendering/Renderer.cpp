@@ -1514,12 +1514,12 @@ namespace Voidstar
 
 			if (infoAttachment.type == AttachmentType::COLOR)
 			{
-				builder.ColorOutput(m_DefaultMSAAAttachment, m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
-				color.push_back(i);
+				builder.ColorOutput(attachmentHandle, m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
+				color.push_back(i); 
 			}
 			else if (infoAttachment.type == AttachmentType::DEPTH_STENCIL)
 			{
-				builder.DepthStencilOutput(m_DefaultDepthAttachment, m_AttachmentManager, vk::ImageLayout::eDepthStencilAttachmentOptimal);
+				builder.DepthStencilOutput(attachmentHandle, m_AttachmentManager, vk::ImageLayout::eDepthStencilAttachmentOptimal);
 				depth.push_back(i);
 			}
 			builder.SetLoadOp(vk::AttachmentLoadOp::eLoad);
@@ -1856,6 +1856,8 @@ namespace Voidstar
 
 			auto& renderPass = m_RenderPasses.at(key.fb);
 			auto frameBuffer = m_Framebuffers.at(key.fb)[imageIndex];
+
+			auto test = m_FBAttachments[key.fb];
 
 			cmd.BeginRenderPass(renderPass.m_RenderPass, frameBuffer, renderPass.m_Extent, renderPass.m_ClearValues);
 			auto vkCmd = cmd.GetCommandBuffer();
