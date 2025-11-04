@@ -370,7 +370,7 @@ namespace Voidstar
 	VertexLayout GetVertexLayout(VertexLayoutHandle handle);
 	AttachmentHandle GetAttachmentHandle();
 	TextureHandle GetTextureHandle();
-
+	FrameBufferHandle GetFrameBufferHandle();
 
 	ProgramHandle LoadProgram(std::string_view vertex, std::string_view fragment);
 

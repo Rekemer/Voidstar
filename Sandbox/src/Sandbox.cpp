@@ -478,7 +478,7 @@ public:
 		//m_TextureUniform = CreateUniform("u_Texture", ResourceType::Sampler);
 
 		m_FeedbackShader = LoadProgram("feedback.vert", "feedback.frag");
-		//m_DefaultShader = LoadProgram("basic.vert", "texture.frag");
+		m_DefaultShader = LoadProgram("basic.vert", "texture.frag");
 		m_FinalShader = LoadProgram("render_screen_quad.vert","render_attachment.frag");
 
 		m_TestTexture = LoadTexture("coffee.jpg");
@@ -486,7 +486,7 @@ public:
 
 		m_VertexLayout.Add(ShaderDataType::FLOAT3)
 			.Add(ShaderDataType::FLOAT2);
-		auto [verts, indices] = GeneratePlane<Vertex>(10);
+		auto [verts, indices] = GeneratePlane<Vertex>(1);
 		m_Cube = verts;
 		m_IndexCube = indices;
 
@@ -1405,9 +1405,23 @@ public:
 
 		Submit(m_CubeRenderPass, m_DefaultShader);
 #endif	
-#if 1 
+
+#if 0
+
+		SetViewRect(m_CubeRenderPass, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
 		//SetFramebuffer(m_CubeRenderPass)
-		SetViewRect(m_FeedbackRenderPass, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
+		SetViewTransform(m_CubeRenderPass, GetCamera()->GetView(), GetCamera()->GetProj());
+
+		BindVertexBuffer(0, m_VertexCubeHandle);
+		BindIndexBuffer(m_IndexCubeHandle);
+
+		Submit(m_CubeRenderPass, m_DefaultShader);
+
+#endif 
+
+#if 1
+		//SetFramebuffer(m_CubeRenderPass)
+		SetViewRect(m_FeedbackRenderPass, 0, 0, feedbackSize.x, feedbackSize.y);
 		SetFramebuffer(m_FeedbackRenderPass, m_FeedbackFramebuffer);
 		SetViewTransform(m_FeedbackRenderPass, GetCamera()->GetView(), GetCamera()->GetProj());
 		BindVertexBuffer(0, m_VertexCubeHandle);
@@ -1423,14 +1437,14 @@ public:
 
 
 #else
-		// update page table pass
-		Submit(m_UpdatePageTablePass[0], m_ComputeShaders[0]);
-		Submit(m_UpdatePageTablePass[1], m_ComputeShaders[1]);
-		// final render pass
-
-		Submit(m_FinalRenderPass, m_FinalShader);
-		// debug render pass
-		Submit(m_DebugRenderPass, m_DebugShader);
+		//// update page table pass
+		//Submit(m_UpdatePageTablePass[0], m_ComputeShaders[0]);
+		//Submit(m_UpdatePageTablePass[1], m_ComputeShaders[1]);
+		//// final render pass
+		//
+		//Submit(m_FinalRenderPass, m_FinalShader);
+		//// debug render pass
+		//Submit(m_DebugRenderPass, m_DebugShader);
 
 
 #endif

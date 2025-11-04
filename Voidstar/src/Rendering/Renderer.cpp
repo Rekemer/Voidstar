@@ -61,7 +61,6 @@ namespace std
 
 namespace Voidstar
 {
-	static SparseSet<FrameBufferHandle> g_FrameBufferAllocator;
 
 	vk::Format map(TextureFormat f) {
 		switch (f) {
@@ -1143,7 +1142,7 @@ namespace Voidstar
 			frameAmount);
 
 
-		DEFAULT_FRAME_BUFFER = g_FrameBufferAllocator.GetId() ;
+		DEFAULT_FRAME_BUFFER = GetFrameBufferHandle();
 		
 
 		RenderPassBuilder builder;
@@ -1809,8 +1808,6 @@ namespace Voidstar
 			
 			vk::Pipeline pipeline = GetPipeline(key, renderItem.Bindings, renderItem.currentBinding);
 			vk::PipelineLayout layout = m_PipelineLayout.at(key.layout);
-			auto& renderPass = m_RenderPasses.at(key.fb);
-			auto frameBuffer = m_Framebuffers.at(key.fb)[imageIndex];
 
 
 			for (int ii = 0; ii < keys.size(); ii++)
@@ -1857,6 +1854,8 @@ namespace Voidstar
 				}
 			}
 
+			auto& renderPass = m_RenderPasses.at(key.fb);
+			auto frameBuffer = m_Framebuffers.at(key.fb)[imageIndex];
 
 			cmd.BeginRenderPass(renderPass.m_RenderPass, frameBuffer, renderPass.m_Extent, renderPass.m_ClearValues);
 			auto vkCmd = cmd.GetCommandBuffer();

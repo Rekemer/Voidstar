@@ -28,11 +28,14 @@ namespace Voidstar
 	{
 		return g_TextureHandleAllocator.GetId();
 	}
+	FrameBufferHandle GetFrameBufferHandle()
+	{
+		return g_FramebufferHandleAllocator.GetId();
+	}
 	AttachmentHandle GetAttachmentHandle()
 	{
 		return g_AttachmentrHandleAllocator.GetId();
 	}
-
 	VertexLayout GetVertexLayout(VertexLayoutHandle handle)
 	{
 		return g_Submission->Layouts.at(handle);
