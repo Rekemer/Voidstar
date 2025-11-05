@@ -1138,7 +1138,7 @@ namespace Voidstar
 
 		m_AttachmentManager.CreateDepthStencil(m_DefaultDepthAttachment,
 			screenWidth, screenHeight, 
-			samples, vk::ImageUsageFlagBits::eDepthStencilAttachment,
+			vk::SampleCountFlagBits::e1, vk::ImageUsageFlagBits::eDepthStencilAttachment,
 			frameAmount);
 
 
@@ -1147,13 +1147,13 @@ namespace Voidstar
 
 		RenderPassBuilder builder;
 
-		builder.ColorOutput(m_DefaultMSAAAttachment, m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
+		builder.ColorOutput(m_DefaultColorAttachment, m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
 		builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
-		builder.SetSaveOp(vk::AttachmentStoreOp::eDontCare);
+		builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
 		builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
 		builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
 		builder.SetInitialLayout(vk::ImageLayout::eUndefined);
-		builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
+		builder.SetFinalLayout(vk::ImageLayout::ePresentSrcKHR);
 
 		builder.BuildAttachmentDesc();
 
@@ -1166,15 +1166,15 @@ namespace Voidstar
 		builder.SetFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
 		builder.BuildAttachmentDesc();
 
-		builder.ResolveOutput(m_DefaultColorAttachment, m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
-		builder.SetLoadOp(vk::AttachmentLoadOp::eDontCare);
-		builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
-		builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-		builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
-		builder.SetInitialLayout(vk::ImageLayout::eUndefined);
-		//builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
-		builder.SetFinalLayout(vk::ImageLayout::ePresentSrcKHR);
-		builder.BuildAttachmentDesc();
+		//builder.ResolveOutput(m_DefaultColorAttachment, m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
+		//builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
+		//builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
+		//builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+		//builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
+		//builder.SetInitialLayout(vk::ImageLayout::eUndefined);
+		////builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
+		//builder.SetFinalLayout(vk::ImageLayout::ePresentSrcKHR);
+		//builder.BuildAttachmentDesc();
 
 		vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0,
 			vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests, vk::AccessFlagBits::eColorAttachmentWrite,
@@ -1182,7 +1182,8 @@ namespace Voidstar
 
 
 
-		builder.AddSubpass({ 0 }, { 1 }, { 2 });
+		//builder.AddSubpass({ 0 }, { 1 }, { 2 });
+		builder.AddSubpass({ 0 }, { 1 }, {});
 
 		builder.AddSubpassDependency(dependency0);
 
@@ -1200,7 +1201,7 @@ namespace Voidstar
 		//m_AttachmentInfo[m_DefaultColorAttachment] = AttachmentInfo_{AttachmentType::COLOR,}
 		m_Framebuffers[DEFAULT_FRAME_BUFFER] = _CreateFramebuffer(m_RenderPasses[DEFAULT_FRAME_BUFFER].m_RenderPass,
 			extent.width, extent.height, builder,
-			{ m_DefaultMSAAAttachment,m_DefaultDepthAttachment, m_DefaultColorAttachment });
+			{ m_DefaultColorAttachment,m_DefaultDepthAttachment  });
 
 
 		updateBack.resize(RenderContext::GetFrameAmount());
@@ -1524,7 +1525,7 @@ namespace Voidstar
 				builder.DepthStencilOutput(attachmentHandle, m_AttachmentManager, vk::ImageLayout::eDepthStencilAttachmentOptimal);
 				depth.push_back(i);
 			}
-			builder.SetLoadOp(vk::AttachmentLoadOp::eLoad);
+			builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
 			builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
 			builder.SetStencilLoadOp(vk::AttachmentLoadOp::eLoad);
 			builder.SetStencilSaveOp(vk::AttachmentStoreOp::eStore);
@@ -1552,7 +1553,7 @@ namespace Voidstar
 			if (m_AttachmentInfo[h].type == AttachmentType::DEPTH_STENCIL)
 				clearValues.push_back(vk::ClearDepthStencilValue{ 1.0f, 0 });
 			else
-				clearValues.push_back(vk::ClearColorValue(std::array<float, 4>{0, 0, 0, 1}));
+				clearValues.push_back(vk::ClearColorValue(std::array<float, 4>{137.f / 255.f, 189.f / 255.f, 199.f / 255.f, 1}));
 		}
 
 		vk::Extent2D extent = { static_cast<uint32_t>(m_AttachmentInfo[handles[0]].width),static_cast<uint32_t>(m_AttachmentInfo[handles[0]].height) };
@@ -1693,7 +1694,7 @@ namespace Voidstar
 		auto& rs = key.rs;
 		builder.EnableStencilTest(rs.stencilTest);
 		builder.SetDepthTest(true);
-		builder.EnableBlend(rs.blend);
+		builder.EnableBlend(rs.blend->enabled);
 		auto& renderPass = m_RenderPasses.at(key.fb);
 
 		builder.SetRenderPass(renderPass.m_RenderPass);
@@ -1764,18 +1765,19 @@ namespace Voidstar
 	
 	void Renderer::RenderFrame(Frame* render, float deltaTime)
 	{
+		
 		if (render->CurrentRenderItemIndex == 0) return;
 
-		uint32_t imageIndex = m_CurrentFrame;
+		uint32_t imageIndex = 0;
 		auto swapchain = RenderContext::GetSwapchain();
 		m_Device->GetDevice().acquireNextImageKHR(swapchain->m_Swapchain, UINT64_MAX, m_ImageAvailableSemaphore[m_CurrentFrame].GetSemaphore(), nullptr, &imageIndex);
 
-		auto& currentFence = m_InFlightFence[imageIndex];
+		auto& currentFence = m_InFlightFence[m_CurrentFrame];
 		Renderer::Instance()->Wait(currentFence.GetFence());
 		Renderer::Instance()->Reset(currentFence.GetFence());
 
 
-		auto& cmd = m_RenderCommandBuffer[imageIndex];
+		auto& cmd = m_RenderCommandBuffer[m_CurrentFrame];
 		cmd.BeginRendering();
 
 		for (int i = 0; i < render->CurrentRenderItemIndex; i++)
@@ -1785,7 +1787,7 @@ namespace Voidstar
 			View& view = render->Views[renderItem.View];
 			assert(renderItem.Program.Valid());
 			auto& meta = m_Compiler.m_Programs.at(renderItem.Program);
-			auto& updateQueue = updateBack.at(imageIndex);
+			auto& updateQueue = updateBack.at(m_CurrentFrame);
 			while (updateQueue.size() > 0)
 			{
 				auto& update = updateQueue.top();
@@ -1808,9 +1810,7 @@ namespace Voidstar
 
 
 			// get pipeline
-			std::vector<DescriptorLayoutKey>  keys{};
-			
-			keys.insert(keys.end(),meta.descriptorKey.begin(),meta.descriptorKey.end());
+			std::vector<DescriptorLayoutKey>&  keys = meta.descriptorKey;
 
 
 			//auto renderPass = GetRenderPass();
@@ -1838,6 +1838,7 @@ namespace Voidstar
 			//	TextureHandle handle;
 			//	bool dirty;
 			//};
+			bool first = false;
 			for (int ii = 0; ii < renderItem.currentResBinding; ii++)
 			{
 				auto& bind = renderItem.ResBindings[ii];
@@ -1863,13 +1864,13 @@ namespace Voidstar
 					m_Device->UpdateDescriptorSet(m_DescriptorSet.at(k)[m_CurrentFrame], bindNumber, 1, imageDescriptor1, ResourceType::CombinedSampler);
 					bind.dirty = false;
 
-					updateBack[imageIndex].push({bind.handles[0],vk::ImageLayout::eColorAttachmentOptimal});
+					updateBack[m_CurrentFrame].push({bind.handles[0],vk::ImageLayout::eColorAttachmentOptimal});
 
 				}
 			}
 
 			auto& renderPass = m_RenderPasses.at(key.fb);
-			auto frameBuffer = m_Framebuffers.at(key.fb)[imageIndex];
+			auto frameBuffer = m_Framebuffers.at(key.fb)[m_CurrentFrame];
 
 			auto test = m_FBAttachments[key.fb];
 
@@ -1910,7 +1911,7 @@ namespace Voidstar
 				vertexBuffers.push_back(buffer);
 			}
 			if (vertexBuffers.size() > 0)
-			vkCmd.bindVertexBuffers(0,1,vertexBuffers.data(), offsets.data());
+			vkCmd.bindVertexBuffers(0, static_cast<uint32_t>(vertexBuffers.size()),vertexBuffers.data(), offsets.data());
 			if (renderItem.IndexBuffer.Valid())
 			{
 				auto buffer = m_IndexBuffers.at(renderItem.IndexBuffer);

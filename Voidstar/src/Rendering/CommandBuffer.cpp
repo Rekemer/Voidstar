@@ -63,7 +63,7 @@ namespace Voidstar
 
 	void CommandBuffer::Submit(vk::Semaphore* waitSemaphores, vk::Semaphore* signalSemaphores, vk::Fence* fence)
 	{
-		vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput,vk::PipelineStageFlagBits::eVertexInput };
+		vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
 		vk::SubmitInfo submitInfo = {};
 
 		submitInfo.waitSemaphoreCount = waitSemaphores == nullptr ? 0 : 1;

@@ -486,7 +486,7 @@ public:
 
 		m_VertexLayout.Add(ShaderDataType::FLOAT3)
 			.Add(ShaderDataType::FLOAT2);
-		auto [verts, indices] = GeneratePlane<Vertex>(1);
+		auto [verts, indices] = GenerateCube<Vertex>();
 		m_Cube = verts;
 		m_IndexCube = indices;
 
@@ -1428,7 +1428,7 @@ public:
 		SetViewTransform(m_FeedbackRenderPass, GetCamera()->GetView(), GetCamera()->GetProj());
 		BindVertexBuffer(0, m_VertexCubeHandle);
 		BindIndexBuffer(m_IndexCubeHandle);
-		Submit(m_FeedbackRenderPass, m_FeedbackShader);
+		Submit(m_FeedbackRenderPass, m_DefaultShader);
 
 		//SetFramebuffer(m_FinalRenderPass, {0});
 		auto scene = GetColorTexture(m_FeedbackFramebuffer);
