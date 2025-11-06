@@ -1763,20 +1763,185 @@ namespace Voidstar
 		return m_Pipelines[key];
 	}
 	
+
+
+		struct ProfileResult
+		{
+			std::string name;
+			long long start, end;
+		};
+		class Profiler
+		{
+		public:
+			void BeginSession(const std::string& name, const std::string& filepath)
+			{
+				m_outputStream.open(filepath);
+				WriteHeader();
+			}
+
+			void WriteProfile(const ProfileResult& result)
+			{
+				if (m_profileCount++ > 0)
+					m_outputStream << ",";
+
+				std::string name = result.name;
+				std::replace(name.begin(), name.end(), '"', '\'');
+
+				m_outputStream << "{";
+				m_outputStream << "\"cat\":\"function\",";
+				m_outputStream << "\"dur\":" << (result.end - result.start) << ',';
+				m_outputStream << "\"name\":\"" << name << "\",";
+				m_outputStream << "\"ph\":\"X\",";
+				m_outputStream << "\"pid\":0,";
+				m_outputStream << "\"tid\":0,";
+				m_outputStream << "\"ts\":" << result.start;
+				m_outputStream << "}";
+
+				m_outputStream.flush();
+			}
+
+			void WriteHeader()
+			{
+				m_outputStream << "{\"otherData\": {},\"traceEvents\":[";
+				m_outputStream.flush();
+			}
+
+			void WriteFooter()
+			{
+				m_outputStream << "]}";
+				m_outputStream.flush();
+			}
+
+			static Profiler& Get()
+			{
+				static Profiler instance;
+				return instance;
+			}
+
+			void EndSession()
+			{
+				WriteFooter();
+				m_outputStream.close();
+				m_profileCount = 0;
+			}
+		private:
+			std::ofstream m_outputStream;
+			int m_profileCount;
+		};
+
+
+
+		class ProfileTimer
+		{
+		public:
+
+			ProfileTimer() : m_name{ "no name" }
+			{
+				m_startPoint = std::chrono::high_resolution_clock::now();
+			}
+
+			ProfileTimer(const char* name) : m_name{ name }
+			{
+				m_startPoint = std::chrono::high_resolution_clock::now();
+			}
+			~ProfileTimer()
+			{
+				Stop();
+			}
+			void Stop()
+			{
+				auto endPoint = std::chrono::high_resolution_clock::now();
+
+				auto start = std::chrono::time_point_cast<std::chrono::microseconds>(m_startPoint)
+					.time_since_epoch().count();
+				auto end = std::chrono::time_point_cast<std::chrono::microseconds>(endPoint)
+					.time_since_epoch().count();
+				auto duration = end - start;
+				double ms = duration * 0.001;
+
+				Profiler::Get().WriteProfile({ m_name, start, end });
+			}
+
+
+			double Elapsed()
+			{
+				auto endPoint = std::chrono::high_resolution_clock::now();
+
+				auto start = std::chrono::time_point_cast<std::chrono::microseconds>(m_startPoint)
+					.time_since_epoch().count();
+				auto end = std::chrono::time_point_cast<std::chrono::microseconds>(endPoint)
+					.time_since_epoch().count();
+				auto duration = end - start;
+				double ms = duration * 0.001;
+				return ms;
+			}
+		private:
+			std::chrono::time_point<std::chrono::high_resolution_clock> m_startPoint;
+			std::string m_name;
+		};
+
+
+		class Timer
+		{
+		public:
+
+			Timer()
+			{
+				m_startPoint = std::chrono::high_resolution_clock::now();
+			}
+
+			double Elapsed()
+			{
+				auto endPoint = std::chrono::high_resolution_clock::now();
+
+				auto start = std::chrono::time_point_cast<std::chrono::microseconds>(m_startPoint)
+					.time_since_epoch().count();
+				auto end = std::chrono::time_point_cast<std::chrono::microseconds>(endPoint)
+					.time_since_epoch().count();
+				auto duration = end - start;
+				double ms = duration * 0.001;
+				return ms;
+			}
+		private:
+			std::chrono::time_point<std::chrono::high_resolution_clock> m_startPoint;
+
+		};
+
+	
+
 	void Renderer::RenderFrame(Frame* render, float deltaTime)
 	{
-		
+		Timer timer;
 		if (render->CurrentRenderItemIndex == 0) return;
-
-		uint32_t imageIndex = 0;
-		auto swapchain = RenderContext::GetSwapchain();
-		m_Device->GetDevice().acquireNextImageKHR(swapchain->m_Swapchain, UINT64_MAX, m_ImageAvailableSemaphore[m_CurrentFrame].GetSemaphore(), nullptr, &imageIndex);
 
 		auto& currentFence = m_InFlightFence[m_CurrentFrame];
 		Renderer::Instance()->Wait(currentFence.GetFence());
 		Renderer::Instance()->Reset(currentFence.GetFence());
+		
+		
+		uint32_t imageIndex = 0;
+		auto swapchain = RenderContext::GetSwapchain();
+		m_Device->GetDevice().acquireNextImageKHR(swapchain->m_Swapchain, UINT64_MAX, m_ImageAvailableSemaphore[m_CurrentFrame].GetSemaphore(), nullptr, &imageIndex);
 
 
+
+		{
+			auto& cmd = m_TransferCommandBuffer[m_CurrentFrame];
+			auto& updateQueue = updateBack.at(m_CurrentFrame);
+			if (!updateQueue.empty())
+			{
+				cmd.BeginTransfering();
+				while (updateQueue.size() > 0)
+				{
+					auto& update = updateQueue.top();
+					auto image = m_Textures.at(update.texture);
+					cmd.ChangeImageLayout(image.get(), image->GetLayout(), update.to, image->m_MipMapLevels);
+					updateQueue.pop();
+				}
+				cmd.EndTransfering();
+				cmd.SubmitSingle();
+			}
+		}
 		auto& cmd = m_RenderCommandBuffer[m_CurrentFrame];
 		cmd.BeginRendering();
 
@@ -1787,14 +1952,6 @@ namespace Voidstar
 			View& view = render->Views[renderItem.View];
 			assert(renderItem.Program.Valid());
 			auto& meta = m_Compiler.m_Programs.at(renderItem.Program);
-			auto& updateQueue = updateBack.at(m_CurrentFrame);
-			while (updateQueue.size() > 0)
-			{
-				auto& update = updateQueue.top();
-				auto image = m_Textures.at(update.texture);
-				cmd.ChangeImageLayout(image.get(), image->GetLayout(), update.to, image->m_MipMapLevels);
-				updateQueue.pop();
-			}
 			if (!view.Fbh.Valid())
 			{
 				view.Fbh = DEFAULT_FRAME_BUFFER;
@@ -1847,7 +2004,7 @@ namespace Voidstar
 					// update descriptor
 					auto setNumber = meta.uniforms.at(bind.uniform).first;
 					auto bindNumber = meta.uniforms.at(bind.uniform).second;
-					auto& k = *std::find_if(keys.begin(), keys.end(), [=](auto key) {return key.set == setNumber; })	;
+					auto& k = *std::find_if(keys.begin(), keys.end(), [=](auto key) {return key.set == setNumber; });
 
 					auto image = m_Textures.at(bind.handles[0]);
 
@@ -1870,7 +2027,7 @@ namespace Voidstar
 			}
 
 			auto& renderPass = m_RenderPasses.at(key.fb);
-			auto frameBuffer = m_Framebuffers.at(key.fb)[m_CurrentFrame];
+			auto frameBuffer = m_Framebuffers.at(key.fb)[imageIndex];
 
 			auto test = m_FBAttachments[key.fb];
 
@@ -1961,7 +2118,7 @@ namespace Voidstar
 			RecreateSwapchain();
 		}
 		m_CurrentFrame = (m_CurrentFrame + 1) % RenderContext::GetFrameAmount();
-		
+		std::cout << timer.Elapsed() << std::endl;
 		FrameMark;
 	}
 

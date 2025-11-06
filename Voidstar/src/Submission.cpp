@@ -111,7 +111,7 @@ namespace Voidstar
 
 		bind.uniform = name;
 		bind.dirty = true;
-		bind.handles.push_back(handle);
+		bind.handles[bind.currentHandle++] = handle;
 	}
 	TextureHandle GetColorTexture(FrameBufferHandle fb)
 	{
@@ -137,11 +137,11 @@ namespace Voidstar
 	void BindTextures(std::string_view uniformName, const std::vector<TextureHandle>& handles)
 	{
 		assert(false);
-		auto& bind = g_Submission->Submit->CurrentRenderItem->ResBindings[g_Submission->Submit->CurrentRenderItem->currentResBinding++];
+		/*auto& bind = g_Submission->Submit->CurrentRenderItem->ResBindings[g_Submission->Submit->CurrentRenderItem->currentResBinding++];
 
 		bind.uniform = uniformName;
 		bind.dirty = true;
-		bind.handles = handles;
+		bind.handles = handles;*/
 	}
 
 	void BindTexture(std::string_view uniformName, TextureHandle handle)
@@ -150,7 +150,7 @@ namespace Voidstar
 
 		bind.uniform = uniformName;
 		bind.dirty = true;
-		bind.handles.push_back(handle);
+		bind.handles[bind.currentHandle++] = handle;
 	}
 	void SetViewTransform(PassID id, glm::mat4& view, glm::mat4& proj)
 	{

@@ -283,7 +283,8 @@ namespace Voidstar
 	struct ResourceBinding
 	{
 		std::string uniform;
-		std::vector<TextureHandle> handles;
+		std::array<TextureHandle,8> handles;
+		int currentHandle = 0;
 		bool dirty;
 	};
 
@@ -307,6 +308,10 @@ namespace Voidstar
 		{
 			currentResBinding = 0;
 			currentBinding = 0;
+			for (auto& bind : ResBindings)
+			{
+				bind.currentHandle = 0;
+			}
 		}
 
 	};

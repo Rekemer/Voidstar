@@ -252,6 +252,13 @@ namespace Voidstar
 			sourceStage = vk::PipelineStageFlagBits::eColorAttachmentOutput;
 			destinationStage = vk::PipelineStageFlagBits::eFragmentShader;
 		}
+		else if (oldLayout == vk::ImageLayout::eShaderReadOnlyOptimal && newLayout == vk::ImageLayout::eColorAttachmentOptimal)
+		{
+			barrier.srcAccessMask = vk::AccessFlagBits::eShaderRead;
+			barrier.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
+			sourceStage = vk::PipelineStageFlagBits::eFragmentShader;
+			destinationStage = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+		}
 		else {
 
 			barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
