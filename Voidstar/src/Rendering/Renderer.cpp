@@ -1204,7 +1204,7 @@ namespace Voidstar
 			{ m_DefaultColorAttachment,m_DefaultDepthAttachment  });
 
 
-		updateBack.resize(RenderContext::GetFrameAmount());
+		
 
 
 #if 0
@@ -1925,26 +1925,11 @@ namespace Voidstar
 
 
 
-		{
-			auto& cmd = m_TransferCommandBuffer[m_CurrentFrame];
-			auto& updateQueue = updateBack.at(m_CurrentFrame);
-			if (!updateQueue.empty())
-			{
-				cmd.BeginTransfering();
-				while (updateQueue.size() > 0)
-				{
-					auto& update = updateQueue.top();
-					auto image = m_Textures.at(update.texture);
-					cmd.ChangeImageLayout(image.get(), image->GetLayout(), update.to, image->m_MipMapLevels);
-					updateQueue.pop();
-				}
-				cmd.EndTransfering();
-				cmd.SubmitSingle();
-			}
-		}
 		auto& cmd = m_RenderCommandBuffer[m_CurrentFrame];
 		cmd.BeginRendering();
 
+
+	
 		for (int i = 0; i < render->CurrentRenderItemIndex; i++)
 		{
 			RenderItem& renderItem = render->m_renderItem[i];
@@ -1968,9 +1953,6 @@ namespace Voidstar
 
 			// get pipeline
 			std::vector<DescriptorLayoutKey>&  keys = meta.descriptorKey;
-
-
-			//auto renderPass = GetRenderPass();
 
 			PipelineKey key ={ renderItem.Program,renderItem.State,keys,view.Fbh};
 			
@@ -2009,11 +1991,10 @@ namespace Voidstar
 					auto image = m_Textures.at(bind.handles[0]);
 
 
-					if (image->GetLayout() != vk::ImageLayout::eShaderReadOnlyOptimal)
-					{
-						cmd.ChangeImageLayout(image.get(), image->GetLayout(), vk::ImageLayout::eShaderReadOnlyOptimal,image->m_MipMapLevels);
-					}
+					cmd.ChangeImageLayout(image.get(), image->GetLayout(), vk::ImageLayout::eShaderReadOnlyOptimal,image->m_MipMapLevels);
+					
 					vk::DescriptorImageInfo imageDescriptor1;
+					assert(image->GetLayout() == vk::ImageLayout::eShaderReadOnlyOptimal);
 					imageDescriptor1.imageLayout = image->GetLayout();
 					imageDescriptor1.imageView = image->GetImageView();
 					imageDescriptor1.sampler = image->GetSampler();
@@ -2021,7 +2002,7 @@ namespace Voidstar
 					m_Device->UpdateDescriptorSet(m_DescriptorSet.at(k)[m_CurrentFrame], bindNumber, 1, imageDescriptor1, ResourceType::CombinedSampler);
 					bind.dirty = false;
 
-					updateBack[m_CurrentFrame].push({bind.handles[0],vk::ImageLayout::eColorAttachmentOptimal});
+					
 
 				}
 			}
@@ -2029,7 +2010,16 @@ namespace Voidstar
 			auto& renderPass = m_RenderPasses.at(key.fb);
 			auto frameBuffer = m_Framebuffers.at(key.fb)[imageIndex];
 
-			auto test = m_FBAttachments[key.fb];
+
+			auto& test = m_FBAttachments[key.fb];
+
+			for (auto handle : test)
+			{
+				auto texHandle = m_AttachmentManager.GetColorTexture(handle, imageIndex);
+				auto image = m_Textures.at(texHandle);
+				cmd.ChangeImageLayout(image.get(), image->GetLayout(), vk::ImageLayout::eColorAttachmentOptimal, image->m_MipMapLevels);
+			}
+
 
 			cmd.BeginRenderPass(renderPass.m_RenderPass, frameBuffer, renderPass.m_Extent, renderPass.m_ClearValues);
 			auto vkCmd = cmd.GetCommandBuffer();
@@ -2117,6 +2107,7 @@ namespace Voidstar
 			ZoneScopedN("Recreating swapchain");
 			RecreateSwapchain();
 		}
+		//m_Device->GetDevice().waitIdle();
 		m_CurrentFrame = (m_CurrentFrame + 1) % RenderContext::GetFrameAmount();
 		std::cout << timer.Elapsed() << std::endl;
 		FrameMark;
