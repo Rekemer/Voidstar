@@ -1384,9 +1384,10 @@ namespace Voidstar
 	{	
 		auto frameAmount = RenderContext::GetFrameAmount();
 		m_ComputeInFlightFences.resize(frameAmount);
-		m_ComputeFinishedSemaphores.resize(frameAmount);
-		m_ImageAvailableSemaphore.resize(frameAmount);
-		m_RenderFinishedSemaphore.resize(frameAmount);
+		m_ComputeFinishedSemaphores = Semaphore::CreateBinarySemaphore(RenderContext::GetFrameAmount());
+		m_ImageAvailableSemaphore = Semaphore::CreateBinarySemaphore(RenderContext::GetFrameAmount());
+		m_RenderFinishedSemaphore = Semaphore::CreateBinarySemaphore(RenderContext::GetFrameAmount());
+		m_TransferSemaphore = Semaphore::CreateTimelineSemaphore(RenderContext::GetFrameAmount(),0);
 		m_InFlightFence.resize(frameAmount);
 	
 	}
@@ -2201,7 +2202,20 @@ namespace Voidstar
 	}
 	
 
+	void Renderer::CopyImageToBuffer(SPtr<Image> image, SPtr<Buffer> buffer)
+	{
+		auto& transferBuffer = Renderer::Instance()->GetTransferCommandBuffer(m_CurrentFrame);
+		Fence fence;
+		auto semaphore = m_TransferSemaphore[m_CurrentFrame].GetSemaphore();
+		transferBuffer.BeginTransfering();
+		transferBuffer.CopyImageToBuffer(image, buffer);
+		transferBuffer.EndTransfering();
+		//vk::Semaphore wait [] = {m_Semap  [m_CurrentFrame].GetSemaphore()};
+		vk::Semaphore signal [] = { m_TransferSemaphore[m_CurrentFrame].GetSemaphore() };
+		transferBuffer.Submit(nullptr, signal, &fence.GetFence());
 
+			
+	}
 
 
 	

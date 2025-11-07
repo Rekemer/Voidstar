@@ -48,12 +48,39 @@ namespace Voidstar
 	class VOIDSTAR_API Semaphore
 	{
 	public:
-		Semaphore()
+
+		static std::vector<Semaphore> CreateBinarySemaphore(size_t amount)
 		{
+			std::vector<Semaphore> sem{};
 			vk::SemaphoreCreateInfo semaphoreInfo = {};
 			semaphoreInfo.flags = vk::SemaphoreCreateFlags();
-			m_Semaphore =RenderContext::GetDevice()->GetDevice().createSemaphore(semaphoreInfo);
+			for (int i = 0; i < amount; i++)
+			{
+				Semaphore s;
+				s.m_Semaphore = RenderContext::GetDevice()->GetDevice().createSemaphore(semaphoreInfo);
+				sem.push_back(std::move(s));
+			}
+			return sem;
 		};
+
+		static std::vector<Semaphore> CreateTimelineSemaphore(size_t amount, size_t initValue)
+		{
+			vk::SemaphoreTypeCreateInfo typeInfo = { vk::SemaphoreType::eTimeline , initValue};
+			std::vector<Semaphore> sem{};
+			vk::SemaphoreCreateInfo semaphoreInfo = {};
+			semaphoreInfo.flags = vk::SemaphoreCreateFlags();
+			semaphoreInfo.sType = vk::StructureType::eSemaphoreCreateInfo;
+			semaphoreInfo.pNext = static_cast<void*>(&typeInfo);
+			for (int i = 0; i < amount; i++)
+			{
+				Semaphore s;
+				s.m_Semaphore = RenderContext::GetDevice()->GetDevice().createSemaphore(semaphoreInfo);
+				sem.push_back(std::move(s));
+			}
+			return sem;
+		};
+	
+		Semaphore() = default;
 		Semaphore(const Semaphore& fence) = delete;
 		Semaphore(Semaphore&& semaphore)
 		{

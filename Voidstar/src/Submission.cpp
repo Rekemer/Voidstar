@@ -82,7 +82,16 @@ namespace Voidstar
 		return handle;
 
 	}
-
+	size_t ReadTexture(TextureHandle handle, void* data)
+	{
+		auto& cmd = g_Submission->GetCommandBuffer(ResourceCommand::ReadTexture);
+		cmd.WriteObject(handle);
+		cmd.WriteObject(data);
+		// current frame user asks
+		// next frame - copy data
+		// after that should be available
+		return g_Submission->Submit->FrameNumber + 2;
+	}
 
 	UniformHandle CreateUniform(std::string_view name, ResourceType kind, size_t num)
 	{
@@ -322,7 +331,20 @@ namespace Voidstar
 			case Voidstar::ResourceCommand::DestroyUniform:
 				break;
 			case Voidstar::ResourceCommand::ReadTexture:
+			{
+				auto handle = commandBuffer.ReadObject<TextureHandle>();
+				auto data = commandBuffer.ReadObject<void*>();
+				
+				auto image = Renderer::Instance()->GetTexture(handle);
+				auto size = image->GetSize();
+
+				auto buffer = Buffer::CreateStagingBuffer(size);
+
+
+				Renderer::Instance()->CopyImageToBuffer(image,buffer);
+
 				break;
+			}
 			default:
 				break;
 			}
@@ -334,6 +356,7 @@ namespace Voidstar
 	void ExecuteFrame(float deltaTime)
 	{
 		std::swap(g_Submission->Submit, g_Submission->Render);
+		g_Submission->Submit->FrameNumber++;
 		// execute prerender commands
 		ExecuteCommands(g_Submission->Render->CmdPre);
 		// render commands

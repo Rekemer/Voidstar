@@ -123,7 +123,7 @@ namespace Voidstar
 		void CreateIndexBuffer(Memory& mem, IndexBufferHandle indexHandle);
 		void CreatePipelineLayout(PipelineLayoutKey& key);
 		vk::DescriptorSetLayout CreateDescriptorLayout(const DescriptorLayoutKey& key);
-		
+		void CopyImageToBuffer(SPtr<Image> image, SPtr<Buffer> buffer);
 		TextureHandle GetFBTextureHandle(FrameBufferHandle fb);
 		SPtr<Image> GetTexture(TextureHandle handle);
 
@@ -290,6 +290,11 @@ namespace Voidstar
 
 		std::vector<Semaphore> m_ImageAvailableSemaphore;
 		std::vector<Semaphore> m_RenderFinishedSemaphore;
+		std::vector<Semaphore> m_TransferSemaphore;
+		
+		std::vector<Semaphore> m_TimelineSemaphore;
+
+
 		std::vector<Fence> m_InFlightFence;
 
 		std::vector<Semaphore> m_ComputeFinishedSemaphores;

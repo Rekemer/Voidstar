@@ -107,6 +107,8 @@ namespace Voidstar
 
 		deviceFeatures.fillModeNonSolid = true;
 		deviceFeatures.tessellationShader = true;
+	
+
 		//deviceFeatures.sampleRateShading = true;
 		std::vector<const char*> enabledLayers;
 
@@ -127,6 +129,10 @@ namespace Voidstar
 		// for read only optimal image layout of attachment 
 		vk::PhysicalDeviceSynchronization2Features sync2;
 		sync2.synchronization2 = true;
+		vk::PhysicalDeviceTimelineSemaphoreFeatures timelineEnable{};
+		timelineEnable.timelineSemaphore = true;
+
+		sync2.pNext = &timelineEnable;
 		deviceInfo.pNext = &sync2;
 		try {
 			device->m_Device = device->m_PhysicalDevice.createDevice(deviceInfo);

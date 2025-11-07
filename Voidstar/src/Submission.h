@@ -329,7 +329,7 @@ namespace Voidstar
 		RenderItem m_renderItem[256];
 		RenderItem* CurrentRenderItem =&m_renderItem[CurrentRenderItemIndex];
 		View Views[256];
-
+		size_t FrameNumber = 0;
 		void NextItem()
 		{
 			CurrentRenderItemIndex++;
@@ -386,6 +386,9 @@ namespace Voidstar
 	ShaderHandle LoadShader(std::string_view shader, ShaderType type);
 
 	TextureHandle LoadTexture(std::string_view texture);
+
+	size_t ReadTexture(TextureHandle handle, void* data);
+
 
 	UniformHandle CreateUniform(std::string_view name,
 		ResourceType kind, size_t num = 1);
