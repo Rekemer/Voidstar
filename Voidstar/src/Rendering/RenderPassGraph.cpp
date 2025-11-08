@@ -21,7 +21,7 @@ namespace Voidstar
 	}
 	vk::Semaphore RenderPassGraph::Execute(CommandBuffer& cmd, size_t frameIndex, Semaphore& imageIsAvailable)
 	{
-		for (int i = 0; i < m_Transitions.size() ; i++)
+		for (int i = 0; i < m_Transitions.size(); i++)
 		{
 			Renderer::Instance()->Wait(m_Fence.GetFence());
 			Renderer::Instance()->Reset(m_Fence.GetFence());
@@ -30,26 +30,27 @@ namespace Voidstar
 			{
 				m_Transitions[i]->Execute(compute, frameIndex);
 			}
-			else 
+			else
 				m_Transitions[i]->Execute(cmd, frameIndex);
-			
+
 			if (i == 0)
 			{
-				
-				cmd.Submit(&imageIsAvailable.GetSemaphore(),
-				&m_Semaphores[i].GetSemaphore(), &m_Fence.GetFence());
+
+				/*cmd.Submit(&imageIsAvailable.GetSemaphore(),
+				&m_Semaphores[i].GetSemaphore(), &m_Fence.GetFence());*/
 			}
 			else
 			{
 				if (m_Transitions[i]->IsCompute())
 				{
-					compute.Submit(&m_Semaphores[i - 1].GetSemaphore(),
-						&m_Semaphores[i].GetSemaphore(), &m_Fence.GetFence());
+					/*compute.Submit(&m_Semaphores[i - 1].GetSemaphore(),
+						&m_Semaphores[i].GetSemaphore(), &m_Fence.GetFence());*/
 				}
-				else
-				cmd.Submit(&m_Semaphores[i-1].GetSemaphore(),
-					&m_Semaphores[i ].GetSemaphore(), &m_Fence.GetFence());
+				/*else
+					cmd.Submit(&m_Semaphores[i-1].GetSemaphore(),
+						&m_Semaphores[i ].GetSemaphore(), &m_Fence.GetFence());*/
 			}
+		
 		}
 		return m_Semaphores[m_Transitions.size()-1].GetSemaphore();
 	}

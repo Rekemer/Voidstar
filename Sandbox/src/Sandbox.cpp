@@ -471,8 +471,7 @@ public:
 		Settings params{ 3 };
 		m_ClickPoints.resize(MAX_POINTS, glm::vec2(-1, -1));
 
-		feedbackSize = { Application::GetScreenWidth() / 70 ,Application::GetScreenHeight() / 70 };
-
+		
 
 
 		//m_TextureUniform = CreateUniform("u_Texture", ResourceType::Sampler);
@@ -501,107 +500,17 @@ public:
 		);
 
 
-
-		/*m_AttachmentManager.CreateColor("MSAA", m_AttachmentManager, vk::Format::eB8G8R8A8Unorm,
-			Application::GetScreenWidth(), Application::GetScreenHeight(),
-			samples, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransientAttachment,
-			m_ActualFrameAmount);
-
-		m_AttachmentManager.CreateColor("FeedbackBuffer", m_AttachmentManager, vk::Format::eR32G32B32A32Sfloat,
-			feedbackSize.x, feedbackSize.y,
-			vk::SampleCountFlagBits::e1, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferSrc,
-			m_ActualFrameAmount, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-		auto stageSize = feedbackSize.x * feedbackSize.y * sizeof(FeedbackRes);
-		m_StageBuffers.resize(m_ActualFrameAmount);
-		for (int i = 0; i < m_ActualFrameAmount; i++)
-		{
-			m_StageBuffers[i] = Buffer::CreateStagingBuffer(stageSize);
-		}
-
-		m_AttachmentManager.CreateDepthStencil("DepthStencil", m_AttachmentManager,
-			Application::GetScreenWidth(), Application::GetScreenHeight(),
-			samples, vk::ImageUsageFlagBits::eDepthStencilAttachment,
-			1);
-
-		m_AttachmentManager.CreateDepthStencil("FeedbackDepthStencil", m_AttachmentManager,
-			Application::GetScreenWidth(), Application::GetScreenHeight(),
-			vk::SampleCountFlagBits::e1, vk::ImageUsageFlagBits::eDepthStencilAttachment,
-			1);*/
-
-
-		//m_QuadBuffer = CreateVerte
-
-
-		//auto samples = RenderContext::GetDevice()->GetSamples();
-		//RenderPassBuilder builder;
-		//builder.ColorOutput("FeedbackBuffer", m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
-		//builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
-		//builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
-		//builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-		//builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
-		//builder.SetInitialLayout(vk::ImageLayout::eUndefined);
-		//builder.SetFinalLayout(vk::ImageLayout::eTransferSrcOptimal);
-		//builder.BuildAttachmentDesc();
-
-		//builder.DepthStencilOutput("FeedbackDepthStencil", m_AttachmentManager, vk::ImageLayout::eDepthStencilAttachmentOptimal);
-		//builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
-		//builder.SetSaveOp(vk::AttachmentStoreOp::eDontCare);
-		//builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
-		//builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
-		//builder.SetInitialLayout(vk::ImageLayout::eUndefined);
-		//builder.SetFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
-		//auto depth = builder.BuildAttachmentDesc();
-		//vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0,
-		//	vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite,
-		//	vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlagBits::eColorAttachmentWrite);
-		//builder.AddSubpass({ 0 }, { 1 }, { 2 });
-		//builder.AddSubpassDependency(dependency0);
-		//Func exe1 = [this](CommandBuffer& commandBuffer, size_t frameIndex)
-		//	{
-		//		ZoneScopedN("feedback pass ");
-		//		auto camera = GetCamera();
-		//		camera->UpdateProj(feedbackSize.x, feedbackSize.y, glm::radians(55.f));
-		//		Renderer::Instance()->UpdateUniformBuffer(camera->GetProj(), *camera);
-		//		auto vkCommandBuffer = commandBuffer.GetCommandBuffer();
-		//		auto tracyContext = Renderer::Instance()->GetTracyCtx();
-		//		TracyVkZone(tracyContext, vkCommandBuffer, "feedback pass ");
-		//		//tracyCmd.EndRendering();
-		//		Renderer::Instance()->BeginBatch();
-		//		auto pipeline = Renderer::Instance()->GetPipeline(FEEDBACK_RENDER_PASS);
-		//		vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 0, m_DescriptorSets[frameIndex], nullptr);
-		//		//vkCommandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline->GetLayout(), 1, m_DescriptorSetTex, nullptr);
-		//		vkCommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline->GetPipeline());
-		//		vk::Viewport viewport;
-		//		viewport.x = 0.0f;
-		//		viewport.y = 0.0f;
-		//		viewport.minDepth = 0;
-		//		viewport.maxDepth = 1;
-		//		viewport.width = feedbackSize.x;
-		//		viewport.height = feedbackSize.y;
-		//		vk::Rect2D scissors;
-		//		scissors.offset = vk::Offset2D{ (uint32_t)0,(uint32_t)0 };
-		//		scissors.extent = vk::Extent2D{ (uint32_t)viewport.width,(uint32_t)viewport.height };
-		//		vkCommandBuffer.setViewport(0, 1, &viewport);
-		//		vkCommandBuffer.setScissor(0, 1, &scissors);
-		//		Renderer::Instance()->Draw(m_Plane, iden);
-		//		Renderer::Instance()->DrawBatch(vkCommandBuffer);
-
-		//	};
-		//m_FeedbackRenderPass = builder.Build(FEEDBACK_RENDER_PASS, m_AttachmentManager, m_ActualFrameAmount, feedbackExtent, { {std::array<float, 4>{137.f / 255.f, 189.f / 255.f, 199.f / 255.f, 0.0f} }, depthClear }, exe1);
-	
-
-		/*"FeedbackBuffer", m_AttachmentManager, vk::Format::eR32G32B32A32Sfloat,
-			feedbackSize.x, feedbackSize.y,
-			vk::SampleCountFlagBits::e1, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferSrc,
-			m_ActualFrameAmount, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent)*/
-
+		feedbackSize = { Application::GetScreenWidth() / 70 ,Application::GetScreenHeight() / 70 };
 		feedbackSize = { Application::GetScreenWidth(), Application::GetScreenHeight()};
+
+
 		m_FeedbackAttachments[0] = CreateAttachment(AttachmentType::COLOR,TextureFormat::RGBA32_SFLOAT,
 			feedbackSize.x,feedbackSize.y, SampleCount::e1, AttachmentHint::SampledLater | AttachmentHint::Readback);
 
 	
 		m_FeedbackFramebuffer = CreateFramebuffer( {m_FeedbackAttachments[0]});
 		ExecuteFrame(0);
+		data = std::make_unique<uint8_t[]>(sizeof(FeedbackRes) * feedbackSize.x * feedbackSize.y);
 	}
 #if OLD
 
@@ -1431,7 +1340,7 @@ public:
 		SetViewTransform(m_FeedbackRenderPass, GetCamera()->GetView(), GetCamera()->GetProj());
 		BindVertexBuffer(0, m_VertexCubeHandle);
 		BindIndexBuffer(m_IndexCubeHandle);
-		Submit(m_FeedbackRenderPass, m_DefaultShader);
+		Submit(m_FeedbackRenderPass, m_FeedbackShader);
 
 		
 		auto scene = GetColorTexture(m_FeedbackFramebuffer);
@@ -1441,8 +1350,34 @@ public:
 		Submit(m_FinalRenderPass, m_FinalShader);
 
 
-		void* data;
-		auto frameWait = ReadTexture(scene, data);
+		static uint64_t lastProcessed = 0;
+
+		ReadTexture(scene, data.get());
+		ExecuteFrame(deltaTime);
+		//ExecuteFrame(deltaTime);
+		
+		auto currentFrame = GetCurrentFrame();
+		////if (frameWait > lastProcessed)
+		////{
+		//	
+		//	auto ptr = reinterpret_cast<float*>(data.get());
+		//	uint64_t bufferSize = sizeof(FeedbackRes) * feedbackSize.x * feedbackSize.y;
+
+		//	for (int i = 0, memoryRead = 0; memoryRead < bufferSize; memoryRead += sizeof(FeedbackRes), i++)
+		//	{
+		//		auto r = *(float*)(ptr);
+		//		ptr++;
+		//		auto g = *(float*)(ptr);
+		//		ptr++;
+		//		auto b = *(float*)(ptr);
+		//		ptr++;
+		//		auto a = *(float*)(ptr);
+		//		ptr++;
+		//		m_FeedbackRes[i] = { r,g,b,a };
+		//	}
+		////}
+		int a = 2;
+
 #else
 
 		Func exe = [=](CommandBuffer& cmd, size_t frameIndex)
@@ -1713,7 +1648,7 @@ public:
 
 
 #endif
-		ExecuteFrame(deltaTime);
+		//ExecuteFrame(deltaTime);
 
 	}
 
@@ -1725,8 +1660,8 @@ private:
 	PassID m_FinalRenderPass = 3;
 	PassID m_DebugRenderPass = 4;
 	PassID m_CubeRenderPass = 5;
-
-
+	UPtr<uint8_t[]>data;
+	std::vector<size_t> ticket{ 3, 0 };
 	ProgramHandle m_FeedbackShader;
 	ProgramHandle m_ComputeShaders[2];
 	ProgramHandle m_FinalShader;

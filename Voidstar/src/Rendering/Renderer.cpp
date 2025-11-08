@@ -1374,12 +1374,7 @@ namespace Voidstar
 	{
 		drawable.m_Self->Draw();
 	}
-	void Renderer::UserInit()
-	{
-		CreateLayouts();
-		//AllocateSets();
 
-	}
 	void Renderer::CreateSyncObjects()
 	{	
 		auto frameAmount = RenderContext::GetFrameAmount();
@@ -1387,7 +1382,7 @@ namespace Voidstar
 		m_ComputeFinishedSemaphores = Semaphore::CreateBinarySemaphore(RenderContext::GetFrameAmount());
 		m_ImageAvailableSemaphore = Semaphore::CreateBinarySemaphore(RenderContext::GetFrameAmount());
 		m_RenderFinishedSemaphore = Semaphore::CreateBinarySemaphore(RenderContext::GetFrameAmount());
-		m_TransferSemaphore = Semaphore::CreateTimelineSemaphore(RenderContext::GetFrameAmount(),0);
+		m_TimelineSemaphore = Semaphore::CreateTimelineSemaphore(RenderContext::GetFrameAmount(),0);
 		m_InFlightFence.resize(frameAmount);
 	
 	}
@@ -1914,16 +1909,16 @@ namespace Voidstar
 	{
 		Timer timer;
 		if (render->CurrentRenderItemIndex == 0) return;
-
-		auto& currentFence = m_InFlightFence[m_CurrentFrame];
-		Renderer::Instance()->Wait(currentFence.GetFence());
-		Renderer::Instance()->Reset(currentFence.GetFence());
+		
 		
 		
 		uint32_t imageIndex = 0;
 		auto swapchain = RenderContext::GetSwapchain();
 		m_Device->GetDevice().acquireNextImageKHR(swapchain->m_Swapchain, UINT64_MAX, m_ImageAvailableSemaphore[m_CurrentFrame].GetSemaphore(), nullptr, &imageIndex);
 
+		auto& currentFence = m_InFlightFence[imageIndex];
+		Renderer::Instance()->Wait(currentFence.GetFence());
+		Renderer::Instance()->Reset(currentFence.GetFence());
 
 
 		auto& cmd = m_RenderCommandBuffer[m_CurrentFrame];
@@ -2082,9 +2077,19 @@ namespace Voidstar
 		
 
 		auto waitSemaphore = m_ImageAvailableSemaphore[m_CurrentFrame].GetSemaphore();
-		auto signalSemaphore = m_RenderFinishedSemaphore[m_CurrentFrame].GetSemaphore();
-		cmd.Submit(&waitSemaphore, &signalSemaphore, &currentFence.GetFence());
-		vk::Semaphore waitSemaphores[] = { signalSemaphore };
+
+
+		std::vector<vk::Semaphore> signal = { m_RenderFinishedSemaphore[m_CurrentFrame].GetSemaphore(), m_TimelineSemaphore[0].GetSemaphore() };
+
+		vk::TimelineSemaphoreSubmitInfo info{};
+		info.signalSemaphoreValueCount = 2;
+		size_t value = m_FrameNumber + 1;
+		uint64_t    signalVals[2] = { 0,  value };  
+		info.pSignalSemaphoreValues = signalVals;
+		cmd.Submit({waitSemaphore}, signal, &currentFence.GetFence(), &info);
+		
+		
+		vk::Semaphore waitSemaphores[] = { signal[0]};
 		vk::PresentInfoKHR presentInfo = {};
 
 		presentInfo.waitSemaphoreCount = 1;
@@ -2108,8 +2113,8 @@ namespace Voidstar
 			ZoneScopedN("Recreating swapchain");
 			RecreateSwapchain();
 		}
-		//m_Device->GetDevice().waitIdle();
-		m_CurrentFrame = (m_CurrentFrame + 1) % RenderContext::GetFrameAmount();
+		m_Device->GetDevice().waitIdle();
+		
 		std::cout << timer.Elapsed() << std::endl;
 		FrameMark;
 	}
@@ -2138,18 +2143,13 @@ namespace Voidstar
 		memcpy(m_UniformBuffersMapped[m_CurrentFrame], &ubo, sizeof(ubo));
 	}
 
-	void Renderer::BeginFrame(Camera& camera, size_t viewportWidth,
-		size_t viewportHeight)
+	void Renderer::BeginFrame(Frame* frame)
 	{
-		//auto proj = glm::ortho(0.0f, (float)viewportWidth, (float)//viewportHeight,0.f);
-		//UpdateUniformBuffer(camera.GetProj(), camera);
+		m_FrameNumber = frame->FrameNumber;
 	}
-	void Renderer::EndFrame()
+	void Renderer::EndFrame(Frame* frame)
 	{
-		//for (auto& e : m_Drawables)
-		//{
-		//	e.second.clear();
-		//}
+		m_CurrentFrame = (m_CurrentFrame + 1) % RenderContext::GetFrameAmount();
 	}
 
 	static vk::DescriptorSetLayout CreateDescriptorSetLayout(std::vector<vk::DescriptorSetLayoutBinding>& bindings)
@@ -2201,19 +2201,31 @@ namespace Voidstar
 		return m_DescriptorLayout[key];
 	}
 	
-
+	void Renderer::CopyBufferToPtr(SPtr<Buffer> buffer, void* data, size_t offset)
+	{
+		auto bufferSize = buffer->GetSize();
+		auto ptr = m_Device->GetDevice().mapMemory(buffer->GetMemory(), (uint64_t)0, buffer->GetSize());
+	
+		std::memcpy(data, ptr, bufferSize);
+		m_Device->GetDevice().unmapMemory(buffer->GetMemory());
+	}
 	void Renderer::CopyImageToBuffer(SPtr<Image> image, SPtr<Buffer> buffer)
 	{
 		auto& transferBuffer = Renderer::Instance()->GetTransferCommandBuffer(m_CurrentFrame);
+
+		auto value = m_FrameNumber;
+		vk::TimelineSemaphoreSubmitInfo info{
+			 1, &(value),
+			 0, nullptr,
+		};
 		Fence fence;
-		auto semaphore = m_TransferSemaphore[m_CurrentFrame].GetSemaphore();
+		Renderer::Instance()->Reset(fence.GetFence());
 		transferBuffer.BeginTransfering();
 		transferBuffer.CopyImageToBuffer(image, buffer);
 		transferBuffer.EndTransfering();
-		//vk::Semaphore wait [] = {m_Semap  [m_CurrentFrame].GetSemaphore()};
-		vk::Semaphore signal [] = { m_TransferSemaphore[m_CurrentFrame].GetSemaphore() };
-		transferBuffer.Submit(nullptr, signal, &fence.GetFence());
 
+		transferBuffer.Submit({ m_TimelineSemaphore[0].GetSemaphore() }, {}, &fence.GetFence(), &info);
+		Renderer::Instance()->Wait(fence.GetFence());
 			
 	}
 

@@ -342,7 +342,8 @@ namespace Voidstar
 
 
 				Renderer::Instance()->CopyImageToBuffer(image,buffer);
-
+				Renderer::Instance()->CopyBufferToPtr(buffer, data, FormatToSize(image->GetFormat()));
+				
 				break;
 			}
 			default:
@@ -358,6 +359,7 @@ namespace Voidstar
 		std::swap(g_Submission->Submit, g_Submission->Render);
 		g_Submission->Submit->FrameNumber++;
 		// execute prerender commands
+		Renderer::Instance()->BeginFrame(g_Submission->Render);
 		ExecuteCommands(g_Submission->Render->CmdPre);
 		// render commands
 
@@ -365,6 +367,7 @@ namespace Voidstar
 
 		// execute postrender commands
 		ExecuteCommands(g_Submission->Render->CmdPost);
+		Renderer::Instance()->EndFrame(g_Submission->Render);
 		g_Submission->Render->Reset();
 	}
 	void BindIndexBuffer(IndexBufferHandle handle)
@@ -406,6 +409,11 @@ namespace Voidstar
 		//auto me = cmd.ReadObject<Memory>();
 		cmd.WriteObject(bufferHandle);
 		return { bufferHandle };
+	}
+
+	size_t GetCurrentFrame()
+	{
+		return g_Submission->Submit->FrameNumber;
 	}
 
 }

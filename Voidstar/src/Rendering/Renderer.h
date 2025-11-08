@@ -109,8 +109,7 @@ namespace Voidstar
 		void Init(size_t screenWidth, size_t screenHeight, std::shared_ptr<Window> window, Application* app);
 		static Renderer* Instance();
 		
-		void BeginFrame(Camera& camera, size_t viewportWidth, 
-			size_t viewportHeight);
+		
 		void RenderFrame(Frame* render, float deltaTime);
 		void CompileShader(std::string_view shader);
 		void LinkShaders(ProgramHandle handle, uint8_t shaderAmount);
@@ -126,11 +125,11 @@ namespace Voidstar
 		void CopyImageToBuffer(SPtr<Image> image, SPtr<Buffer> buffer);
 		TextureHandle GetFBTextureHandle(FrameBufferHandle fb);
 		SPtr<Image> GetTexture(TextureHandle handle);
+		void CopyBufferToPtr(SPtr<Buffer> buffer, void* data, size_t offset);
 
-
-
-		void EndFrame();
-		void UserInit();
+		void BeginFrame(Frame* frame);
+		void EndFrame(Frame* frame);
+	
 
 		CommandPoolManager* GetCommandPoolManager()
 		{
@@ -236,7 +235,7 @@ namespace Voidstar
 		AttachmentHandle m_DefaultColorAttachment;
 		AttachmentHandle m_DefaultMSAAAttachment;
 		AttachmentHandle m_DefaultDepthAttachment;
-
+		size_t m_FrameNumber = 0;
 		ShaderCompiler m_Compiler;
 		FrameBufferHandle DEFAULT_FRAME_BUFFER;
 		std::vector<void*> m_UniformBuffersMapped;
@@ -290,8 +289,6 @@ namespace Voidstar
 
 		std::vector<Semaphore> m_ImageAvailableSemaphore;
 		std::vector<Semaphore> m_RenderFinishedSemaphore;
-		std::vector<Semaphore> m_TransferSemaphore;
-		
 		std::vector<Semaphore> m_TimelineSemaphore;
 
 

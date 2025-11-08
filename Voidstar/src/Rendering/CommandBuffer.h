@@ -48,7 +48,11 @@ namespace Voidstar
 		void BeginRenderPass(vk::RenderPass& renderPass, vk::Framebuffer& framebuffer, vk::Extent2D& extent, std::vector<vk::ClearValue>& clearValues);
 	
 		void EndRenderPass();
-		void Submit(vk::Semaphore* waitSemaphores, vk::Semaphore* signalSemaphores, vk::Fence* fence);
+		void Submit(
+			const std::vector<vk::Semaphore>& waitSemaphores,
+			const std::vector<vk::Semaphore>& signalSemaphores, 
+			vk::Fence* fence,
+			vk::TimelineSemaphoreSubmitInfo* timelineInfo = nullptr);
 		void Submit(vk::Fence* fence);
 	
 		void EndRendering();

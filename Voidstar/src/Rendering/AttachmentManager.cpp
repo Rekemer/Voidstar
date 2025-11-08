@@ -62,6 +62,7 @@ namespace Voidstar
 			image->SetImage(msaaImage);
 			image->SetWidth(width);
 			image->SetHeight(height);
+			image->m_Size = GetImageSize(image->m_Width, image->m_Height, specs.format);
 			commandBuffer.ChangeImageLayout(image.get(), vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal, 1);
 		}
 		commandBuffer.EndTransfering();

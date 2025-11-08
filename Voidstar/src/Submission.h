@@ -418,7 +418,7 @@ namespace Voidstar
 
 	VertexBufferHandle CreateVertexBuffer(Memory mem, VertexLayout& layout);
 	IndexBufferHandle CreateIndexBuffer(Memory mem);
-
+	size_t GetCurrentFrame();
 	void ExecuteFrame(float deltaTime);
 
 }

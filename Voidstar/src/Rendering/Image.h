@@ -24,7 +24,96 @@ namespace Voidstar
 		vk::ImageType imageType = vk::ImageType::e2D;
 	};
 
-	
+	inline int FormatToSize(vk::Format format)
+	{
+		switch (format)
+		{
+			// 8-bit formats
+		case vk::Format::eR8Unorm:
+		case vk::Format::eR8Snorm:
+		case vk::Format::eR8Uscaled:
+		case vk::Format::eR8Sscaled:
+		case vk::Format::eR8Uint:
+		case vk::Format::eR8Sint:
+			return 1;
+
+			// 16-bit formats
+		case vk::Format::eR16Unorm:
+		case vk::Format::eR16Snorm:
+		case vk::Format::eR16Uscaled:
+		case vk::Format::eR16Sscaled:
+		case vk::Format::eR16Uint:
+		case vk::Format::eR16Sint:
+		case vk::Format::eR16Sfloat:
+		case vk::Format::eD16Unorm:
+		case vk::Format::eR8G8Unorm:
+		case vk::Format::eR8G8Snorm:
+		case vk::Format::eR8G8Uscaled:
+		case vk::Format::eR8G8Sscaled:
+		case vk::Format::eR8G8Uint:
+		case vk::Format::eR8G8Sint:
+			return 2;
+
+			// 32-bit formats
+		case vk::Format::eR32Uint:
+		case vk::Format::eR32Sint:
+		case vk::Format::eR32Sfloat:
+		case vk::Format::eD32Sfloat:
+		case vk::Format::eS8Uint:
+		case vk::Format::eR16G16Unorm:
+		case vk::Format::eR16G16Snorm:
+		case vk::Format::eR16G16Uscaled:
+		case vk::Format::eR16G16Sscaled:
+		case vk::Format::eR16G16Uint:
+		case vk::Format::eR16G16Sint:
+		case vk::Format::eR16G16Sfloat:
+			return 4;
+
+			// 64-bit formats
+		case vk::Format::eR64Uint:
+		case vk::Format::eR64Sint:
+		case vk::Format::eR64Sfloat:
+		case vk::Format::eR32G32Uint:
+		case vk::Format::eR32G32Sint:
+		case vk::Format::eR32G32Sfloat:
+		case vk::Format::eR16G16B16A16Unorm:
+		case vk::Format::eR16G16B16A16Snorm:
+		case vk::Format::eR16G16B16A16Uscaled:
+		case vk::Format::eR16G16B16A16Sscaled:
+		case vk::Format::eR16G16B16A16Uint:
+		case vk::Format::eR16G16B16A16Sint:
+		case vk::Format::eR16G16B16A16Sfloat:
+			return 8;
+
+			// 96-bit formats
+		case vk::Format::eR32G32B32Uint:
+		case vk::Format::eR32G32B32Sint:
+		case vk::Format::eR32G32B32Sfloat:
+			return 12;
+
+			// 128-bit formats
+		case vk::Format::eR32G32B32A32Uint:
+		case vk::Format::eR32G32B32A32Sint:
+		case vk::Format::eR32G32B32A32Sfloat:
+			return 16;
+
+			// Depth/stencil formats
+		case vk::Format::eD16UnormS8Uint:
+		case vk::Format::eD24UnormS8Uint:
+		case vk::Format::eD32SfloatS8Uint:
+			return 4;
+
+
+		default:
+			return -1; // Unsupported format
+		}
+	};
+	inline size_t GetImageSize(int width, int height, vk::Format format)
+	{
+		assert(width != -1);
+		assert(height!= -1);
+		return width * height * FormatToSize(format);
+	}
 	class VOIDSTAR_API Image
 	{
 	public:

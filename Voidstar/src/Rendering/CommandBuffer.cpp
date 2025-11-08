@@ -61,20 +61,24 @@ namespace Voidstar
 		device->GetGraphicsQueue().submit(submitInfo, *fence);
 	}
 
-	void CommandBuffer::Submit(vk::Semaphore* waitSemaphores, vk::Semaphore* signalSemaphores, vk::Fence* fence)
+	void CommandBuffer::Submit(
+		const std::vector<vk::Semaphore>& waitSemaphores,
+		const std::vector<vk::Semaphore>& signalSemaphores,
+		vk::Fence* fence,
+		vk::TimelineSemaphoreSubmitInfo* timelineInfo)
 	{
 		vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
 		vk::SubmitInfo submitInfo = {};
+		submitInfo.pNext = timelineInfo;
 
-		submitInfo.waitSemaphoreCount = waitSemaphores == nullptr ? 0 : 1;
-		submitInfo.pWaitSemaphores = waitSemaphores;
+		submitInfo.waitSemaphoreCount = waitSemaphores.size();
+		submitInfo.pWaitSemaphores = waitSemaphores.data();
 		submitInfo.pWaitDstStageMask = waitStages;
-
 		submitInfo.commandBufferCount = 1;
 		submitInfo.pCommandBuffers = &m_CommandBuffer;
 
-		submitInfo.signalSemaphoreCount = signalSemaphores == nullptr ? 0 : 1;
-		submitInfo.pSignalSemaphores = signalSemaphores;
+		submitInfo.signalSemaphoreCount = signalSemaphores.size();
+		submitInfo.pSignalSemaphores = signalSemaphores.data();
 		auto device = RenderContext::GetDevice();
 		device->GetGraphicsQueue().submit(submitInfo, *fence);
 	}
@@ -259,8 +263,39 @@ namespace Voidstar
 			sourceStage = vk::PipelineStageFlagBits::eFragmentShader;
 			destinationStage = vk::PipelineStageFlagBits::eColorAttachmentOutput;
 		}
+		else if (oldLayout == vk::ImageLayout::eShaderReadOnlyOptimal && newLayout == vk::ImageLayout::eTransferSrcOptimal)
+		{
+			barrier.srcAccessMask = vk::AccessFlagBits::eShaderRead;
+			barrier.dstAccessMask = vk::AccessFlagBits::eTransferRead;
+			sourceStage = vk::PipelineStageFlagBits::eFragmentShader; 
+			destinationStage = vk::PipelineStageFlagBits::eTransfer;
+		}
+		else if (oldLayout == vk::ImageLayout::eTransferSrcOptimal && newLayout == vk::ImageLayout::eShaderReadOnlyOptimal)
+		{
+			barrier.srcAccessMask = vk::AccessFlagBits::eTransferRead;
+			barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+			sourceStage = vk::PipelineStageFlagBits::eTransfer;
+			destinationStage = vk::PipelineStageFlagBits::eFragmentShader; 
+		}
+		else if (oldLayout == vk::ImageLayout::eUndefined && newLayout == vk::ImageLayout::eColorAttachmentOptimal)
+		{
+			barrier.srcAccessMask = {}; // 0
+			barrier.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
+
+			sourceStage = vk::PipelineStageFlagBits::eTopOfPipe;
+			destinationStage = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+		}
+		else if (oldLayout == vk::ImageLayout::eUndefined && newLayout == vk::ImageLayout::eTransferDstOptimal)
+		{
+			barrier.srcAccessMask = {}; // 0
+			sourceStage = vk::PipelineStageFlagBits::eTopOfPipe;
+
+			barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+			destinationStage = vk::PipelineStageFlagBits::eTransfer;
+		}
 		else {
 
+			assert(false);
 			barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
 			barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
 
@@ -298,11 +333,14 @@ namespace Voidstar
 	}
 	void CommandBuffer::CopyImageToBuffer(SPtr<Image> image, SPtr<Buffer> buffer)
 	{
+		auto oldLayout = image->GetLayout();
+		ChangeImageLayout(image.get(),oldLayout, vk::ImageLayout::eTransferSrcOptimal);
 		vk::BufferImageCopy copy;
 		copy.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
 		copy.imageSubresource.layerCount= 1;
 		copy.imageExtent = vk::Extent3D{ (uint32_t)image->GetWidth(), (uint32_t)image->GetHeight(), 1};
 		m_CommandBuffer.copyImageToBuffer(image->GetImage(), vk::ImageLayout::eTransferSrcOptimal, buffer->GetBuffer(), copy);
+		ChangeImageLayout(image.get(), vk::ImageLayout::eTransferSrcOptimal,oldLayout);
 	}
 	void CommandBuffer::EndTransfering()
 	{
