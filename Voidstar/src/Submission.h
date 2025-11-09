@@ -71,13 +71,45 @@ namespace std {
 }
 namespace Voidstar
 {
+	enum class ResourceUsage : uint32_t {
+		None = 0,
 
-	enum class UpdateHint {
-		Immutable,   // uploaded once, then never touched by CPU
-		Static,      // updated occasionally (loading screen, level change)
-		Dynamic,     // updated frequently (per frame or per few frames)
-		Readback     // GPU → CPU reads (screenshots, queries)
+		// GPU reads
+		Sampled = 1 << 0,  // sampled image / sampled buffer (TEX)
+		StorageRead = 1 << 1,  // SSBO/Storage read
+		StorageWrite = 1 << 2,  // SSBO/Storage write
+
+		// Attachments
+		ColorTarget = 1 << 3,  // color attachment
+		DepthStencil = 1 << 4,  // depth-stencil attachment
+
+		// Copies
+		TransferSrc = 1 << 5,
+		TransferDst = 1 << 6,
+
+		// Geometry / draw
+		Vertex = 1 << 7,
+		Index = 1 << 8,
+		Indirect = 1 << 9,
+		Uniform = 1 << 10, // UBO / CBV
+
+		// CPU access hints (high level; maps to memory properties)
+		Upload = 1 << 11, // CPU→GPU frequent writes
+		Readback = 1 << 12, // GPU→CPU reads
+
+		// Image shape hints (optional helpers)
+		Cube = 1 << 13,
+		Mipmapped = 1 << 14,
+		// … add Sparse, External, etc. later
 	};
+
+	inline ResourceUsage operator|(ResourceUsage a, ResourceUsage b) {
+		return static_cast<ResourceUsage>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+	}
+	inline bool has(ResourceUsage u, ResourceUsage f) {
+		return (static_cast<uint32_t>(u) & static_cast<uint32_t>(f)) != 0;
+	}
+	enum class FilterMode { Nearest, Linear };
 
 	enum class TextureFormat {
 		Unknown,
@@ -119,7 +151,6 @@ namespace Voidstar
 		BC7_RGBA_UNORM, BC7_RGBA_SRGB,
 	};
 
-	
 
 
 	enum class SampleCount
@@ -161,6 +192,25 @@ namespace Voidstar
 	inline bool HasFlag(AttachmentHint h, AttachmentHint bit) {
 		return (static_cast<uint32_t>(h) & static_cast<uint32_t>(bit)) != 0;
 	}
+
+
+	struct CreateEmptyTextureCmd
+	{
+		int32_t      width = 1;
+		int32_t      height = 1;
+		TextureFormat format{};
+		ResourceUsage usage{};
+		int mipLevels = 1;
+		SampleCount   samples = SampleCount::e1;
+		FilterMode    minFilter = FilterMode::Linear;
+		FilterMode    magFilter = FilterMode::Linear;
+		uint32_t      layers = 1;
+		bool          cube = false;
+
+		
+	};
+
+
 
 	struct AttachmentInfo_
 	{
@@ -387,6 +437,8 @@ namespace Voidstar
 
 	TextureHandle LoadTexture(std::string_view texture);
 
+	TextureHandle CreateEmptyTexture(int width, int height, TextureFormat format, ResourceUsage usage,int mipLevels = 1, SampleCount e = SampleCount::e1,FilterMode min = FilterMode::Nearest, FilterMode mag = FilterMode::Nearest,int layers = 1, bool cube = false);
+
 	size_t ReadTexture(TextureHandle handle, void* data);
 
 
@@ -402,6 +454,7 @@ namespace Voidstar
 
 	void BindTexture(std::string_view uniform, TextureHandle handle);
 	void BindTextures(std::string_view uniformName, const std::vector<TextureHandle>& handle);
+	std::vector<TextureHandle> GenerateMipMapsAsTextures(TextureHandle handle, int mipLevel);
 
 	void SetWindow(SPtr<Window> window);
 	void SubmitInit(InitParams);
@@ -415,9 +468,10 @@ namespace Voidstar
 	void BindIndexBuffer(IndexBufferHandle handle);
 	// shader location
 	void BindVertexBuffer(uint16_t location , VertexBufferHandle handle);
-
 	VertexBufferHandle CreateVertexBuffer(Memory mem, VertexLayout& layout);
 	IndexBufferHandle CreateIndexBuffer(Memory mem);
+	BufferHandle CreateBuffer (size_t size , ResourceUsage usage);
+
 	size_t GetCurrentFrame();
 	void ExecuteFrame(float deltaTime);
 

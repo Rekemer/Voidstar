@@ -113,12 +113,21 @@ namespace Voidstar
 		void RenderFrame(Frame* render, float deltaTime);
 		void CompileShader(std::string_view shader);
 		void LinkShaders(ProgramHandle handle, uint8_t shaderAmount);
+		void CreateEmptyTexture(TextureHandle handle, const CreateEmptyTextureCmd& cmd);
 
+		// sus 
+		void CreateEmptyMipMapsAsImages(TextureHandle handle, std::vector <TextureHandle>& handles);
+		//
+		
 		void CreateTexture(TextureHandle handle, std::string_view path);
 		void CreateUniform(UniformHandle handle, ResourceType type, size_t num) {};
 		void CreateAttachment(AttachmentHandle handle, AttachmentInfo_ info);
 		void CreateFramebuffer(FrameBufferHandle handle, const std::vector<AttachmentHandle>& info);
-		void CreateVertexBuffer(Memory& mem, VertexBufferHandle vertHandle, UpdateHint hint = UpdateHint::Static);
+
+		void CreateBuffer(BufferHandle handle, size_t size, ResourceUsage usage);
+		
+		void CreateVertexBuffer(Memory& mem, VertexBufferHandle vertHandle, 
+			ResourceUsage hint = ResourceUsage::Vertex);
 		void CreateIndexBuffer(Memory& mem, IndexBufferHandle indexHandle);
 		void CreatePipelineLayout(PipelineLayoutKey& key);
 		vk::DescriptorSetLayout CreateDescriptorLayout(const DescriptorLayoutKey& key);
@@ -261,7 +270,7 @@ namespace Voidstar
 		// 0 handle is default render pass
 		Map<FrameBufferHandle, RenderPass> m_RenderPasses;
 
-
+		Map<BufferHandle, SPtr<Buffer>> m_Buffers;
 
 		Map<TextureHandle, SPtr<Image>> m_Textures;
 

@@ -61,6 +61,14 @@ namespace std
 
 namespace Voidstar
 {
+	inline vk::ImageViewType pickViewType(uint32_t width, uint32_t height,
+		uint32_t layers, bool cube) {
+		if (cube && layers >= 6) return layers > 6 ? vk::ImageViewType::eCubeArray
+			: vk::ImageViewType::eCube;
+		return layers > 1 ? vk::ImageViewType::e2DArray : vk::ImageViewType::e2D;
+	}
+
+
 
 	vk::Format map(TextureFormat f) {
 		switch (f) {
@@ -156,7 +164,91 @@ namespace Voidstar
 		default:               return vk::SampleCountFlagBits::e1;
 		}
 	}
+	struct BufferVkMapping{
+		vk::BufferUsageFlags       usage{};
+		vk::MemoryPropertyFlags    mem{};
+		// optional: default descriptor type for binding
+		//vk::DescriptorType         dscType = vk::DescriptorType::eMaxEnum;
+	};
+	struct ImageVkMapping {
+		vk::ImageUsageFlags        usage{};
+		vk::MemoryPropertyFlags    mem{};
+		vk::ImageLayout            defaultInitial = vk::ImageLayout::eUndefined;
+		vk::ImageLayout            defaultFinal = vk::ImageLayout::eUndefined; // you decide based on pipeline
+		vk::ImageCreateFlags       createFlags{};
+	};
+	inline BufferVkMapping mapBuffer(ResourceUsage u) {
+		BufferVkMapping m{};
 
+		// Usages
+		if (has(u, ResourceUsage::Vertex))   m.usage |= vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst;
+		if (has(u, ResourceUsage::Index))    m.usage |= vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst;
+		if (has(u, ResourceUsage::Indirect)) m.usage |= vk::BufferUsageFlagBits::eIndirectBuffer;
+		if (has(u, ResourceUsage::Uniform)) { m.usage |= vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst; /*m.dscType = vk::DescriptorType::eUniformBuffer; */}
+		if (has(u, ResourceUsage::Sampled)) { m.usage |= vk::BufferUsageFlagBits::eUniformTexelBuffer | vk::BufferUsageFlagBits::eTransferDst; /*m.dscType = vk::DescriptorType::eUniformTexelBuffer; */}
+		if (has(u, ResourceUsage::StorageRead) || has(u, ResourceUsage::StorageWrite)) {
+			m.usage |= vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst;
+			/*m.dscType = vk::DescriptorType::eStorageBuffer;*/
+		}
+		if (has(u, ResourceUsage::TransferSrc)) m.usage |= vk::BufferUsageFlagBits::eTransferSrc;
+		if (has(u, ResourceUsage::TransferDst)) m.usage |= vk::BufferUsageFlagBits::eTransferDst;
+		if (m.usage == vk::BufferUsageFlags{})  m.usage = vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst; // sane default
+
+		// Memory policy
+		if (has(u, ResourceUsage::Upload)) {
+			m.mem |= vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+		}
+		else if (has(u, ResourceUsage::Readback)) {
+			m.mem |= vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCached;
+		}
+		else {
+			m.mem |= vk::MemoryPropertyFlagBits::eDeviceLocal;
+		}
+
+		return m;
+	}
+
+	inline ImageVkMapping mapImage(ResourceUsage u) {
+		ImageVkMapping m{};
+		// Usages
+		if (has(u, ResourceUsage::ColorTarget))   m.usage |= vk::ImageUsageFlagBits::eColorAttachment;
+		if (has(u, ResourceUsage::DepthStencil))  m.usage |= vk::ImageUsageFlagBits::eDepthStencilAttachment;
+		if (has(u, ResourceUsage::Sampled))       m.usage |= vk::ImageUsageFlagBits::eSampled;
+		if (has(u, ResourceUsage::StorageWrite) || has(u, ResourceUsage::StorageRead))
+			m.usage |= vk::ImageUsageFlagBits::eStorage;
+		if (has(u, ResourceUsage::TransferSrc))   m.usage |= vk::ImageUsageFlagBits::eTransferSrc;
+		if (has(u, ResourceUsage::TransferDst))   m.usage |= vk::ImageUsageFlagBits::eTransferDst;
+
+		// Shape
+		if (has(u, ResourceUsage::Cube))          m.createFlags |= vk::ImageCreateFlagBits::eCubeCompatible;
+
+		// Memory
+		if (has(u, ResourceUsage::Upload))        m.mem |= vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+		else if (has(u, ResourceUsage::Readback)) m.mem |= vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCached;
+		else                                      m.mem |= vk::MemoryPropertyFlagBits::eDeviceLocal;
+
+		// Default layouts (you can override per pass)
+		if (has(u, ResourceUsage::ColorTarget)) {
+			m.defaultInitial = vk::ImageLayout::eUndefined;                 // if you clear
+			m.defaultFinal = has(u, ResourceUsage::Sampled)
+				? vk::ImageLayout::eShaderReadOnlyOptimal      // write→sample pattern
+				: vk::ImageLayout::eColorAttachmentOptimal;    // keep as RT
+		}
+		else if (has(u, ResourceUsage::DepthStencil)) {
+			m.defaultInitial = vk::ImageLayout::eUndefined;
+			m.defaultFinal = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+		}
+		else if (has(u, ResourceUsage::Sampled)) {
+			m.defaultInitial = vk::ImageLayout::eUndefined;
+			m.defaultFinal = vk::ImageLayout::eShaderReadOnlyOptimal;
+		}
+
+		return m;
+	}
+
+	inline vk::Filter map(FilterMode f) {
+		return (f == FilterMode::Linear) ? vk::Filter::eLinear : vk::Filter::eNearest;
+	}
 	inline vk::MemoryPropertyFlags DeriveAttachmentMemoryPrefs(AttachmentHint hint) {
 		
 		vk::MemoryPropertyFlags flags;
@@ -258,6 +350,9 @@ namespace Voidstar
 
 		return usage;
 	}
+
+
+
 
 	class  PipelineBuilder
 	{
@@ -1479,6 +1574,16 @@ namespace Voidstar
 	}
 
 	
+	void Renderer::CreateBuffer(BufferHandle handle, size_t size, ResourceUsage usage)
+	{
+		auto prop = mapBuffer(usage);
+		BufferInputChunk inputBuffer;
+		inputBuffer.size = size;
+		inputBuffer.memoryProperties = prop.mem;
+		inputBuffer.usage = prop.usage;
+		m_Buffers[handle] = CreateSPtr<Buffer>(inputBuffer);
+	}
+
 	Renderer* Renderer::Instance()
 	{
 		static Renderer* renderer = new Renderer;
@@ -1597,6 +1702,35 @@ namespace Voidstar
 		m_Compiler.Link(handle, shaderAmount);
 	}
 
+	void Renderer::CreateEmptyTexture(TextureHandle handle, const CreateEmptyTextureCmd& cmd)
+	{
+		auto prop = mapImage(cmd.usage);
+		auto viewType = pickViewType(cmd.width, cmd.height, cmd.layers, cmd.cube);
+		auto image  = Image::CreateEmptyImage(
+			cmd.width,
+			cmd.height,
+			map(cmd.format),
+			prop.usage,
+			cmd.mipLevels,
+			map(cmd.samples),
+			map(cmd.minFilter),
+			map(cmd.magFilter),
+			static_cast<int>(cmd.layers),
+			viewType
+		);
+		m_Textures[handle] = image;
+	}
+
+	void Renderer::CreateEmptyMipMapsAsImages(TextureHandle handle, std::vector <TextureHandle>& handles)
+	{
+		auto image = m_Textures.at(handle);
+		auto mipImages = image->GenerateEmptyMipmapsAsImages(handles.size());
+
+		for (auto i = 0; i < handles.size(); i++)
+		{
+			m_Textures[handles[i]] = mipImages[i];
+		}
+	}
 
 	void Renderer::CreateTexture(TextureHandle handle, std::string_view path)
 	{
@@ -1604,35 +1738,15 @@ namespace Voidstar
 		m_Textures[handle] = image;
 	}
 
-	vk::MemoryPropertyFlags GetMemoryFlags(UpdateHint hint)
-	{
-		switch (hint)	
-		{
-		case Voidstar::UpdateHint::Immutable:
-		case Voidstar::UpdateHint::Static:
-			return vk::MemoryPropertyFlagBits::eDeviceLocal;
-			break;
-		case Voidstar::UpdateHint::Dynamic:
-			return vk::MemoryPropertyFlagBits::eHostCoherent |
-				vk::MemoryPropertyFlagBits::eHostVisible;
-			break;
-		case Voidstar::UpdateHint::Readback:
-			return vk::MemoryPropertyFlagBits::eHostCoherent |
-				vk::MemoryPropertyFlagBits::eHostVisible |
-				vk::MemoryPropertyFlagBits::eHostCached;
-			break;
-		default:
-			return vk::MemoryPropertyFlagBits::eDeviceLocal;;
-			break;
-		}
-	}
+	
 
-	void Renderer::CreateVertexBuffer(Memory& mem, VertexBufferHandle vertHandle, UpdateHint hint)
+	void Renderer::CreateVertexBuffer(Memory& mem, VertexBufferHandle vertHandle, ResourceUsage usage)
 	{
+		auto prop = mapBuffer(usage);
 		BufferInputChunk input;
 		input.size = mem.size;
 		input.usage = vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst;
-		input.memoryProperties = GetMemoryFlags(hint);
+		input.memoryProperties = prop.mem;
 		auto& buffer = m_VertexBuffers[vertHandle] = CreateSPtr<Buffer>(input);
 		SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(mem.size);
 
@@ -1647,7 +1761,7 @@ namespace Voidstar
 		BufferInputChunk input;
 		input.size = mem.size;
 		input.usage = vk::BufferUsageFlagBits::eIndexBuffer |  vk::BufferUsageFlagBits::eTransferDst;
-		input.memoryProperties = GetMemoryFlags(UpdateHint::Static);
+		input.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
 		auto indexAmount = mem.size / 4;
 		auto& buffer = m_IndexBuffers[indexHandle] = CreateSPtr<IndexBuffer>(input, indexAmount, vk::IndexType::eUint32);
 
@@ -1916,7 +2030,7 @@ namespace Voidstar
 		auto swapchain = RenderContext::GetSwapchain();
 		m_Device->GetDevice().acquireNextImageKHR(swapchain->m_Swapchain, UINT64_MAX, m_ImageAvailableSemaphore[m_CurrentFrame].GetSemaphore(), nullptr, &imageIndex);
 
-		auto& currentFence = m_InFlightFence[imageIndex];
+		auto& currentFence = m_InFlightFence[m_CurrentFrame];
 		Renderer::Instance()->Wait(currentFence.GetFence());
 		Renderer::Instance()->Reset(currentFence.GetFence());
 
@@ -2004,14 +2118,14 @@ namespace Voidstar
 			}
 
 			auto& renderPass = m_RenderPasses.at(key.fb);
-			auto frameBuffer = m_Framebuffers.at(key.fb)[imageIndex];
+			auto frameBuffer = m_Framebuffers.at(key.fb)[m_CurrentFrame];
 
 
 			auto& test = m_FBAttachments[key.fb];
 
 			for (auto handle : test)
 			{
-				auto texHandle = m_AttachmentManager.GetColorTexture(handle, imageIndex);
+				auto texHandle = m_AttachmentManager.GetColorTexture(handle, m_CurrentFrame);
 				auto image = m_Textures.at(texHandle);
 				cmd.ChangeImageLayout(image.get(), image->GetLayout(), vk::ImageLayout::eColorAttachmentOptimal, image->m_MipMapLevels);
 			}
@@ -2086,7 +2200,10 @@ namespace Voidstar
 		size_t value = m_FrameNumber + 1;
 		uint64_t    signalVals[2] = { 0,  value };  
 		info.pSignalSemaphoreValues = signalVals;
-		cmd.Submit({waitSemaphore}, signal, &currentFence.GetFence(), &info);
+
+
+		signal.pop_back();
+		cmd.Submit({waitSemaphore}, signal, &currentFence.GetFence());
 		
 		
 		vk::Semaphore waitSemaphores[] = { signal[0]};
@@ -2113,7 +2230,7 @@ namespace Voidstar
 			ZoneScopedN("Recreating swapchain");
 			RecreateSwapchain();
 		}
-		m_Device->GetDevice().waitIdle();
+		//m_Device->GetDevice().waitIdle();
 		
 		std::cout << timer.Elapsed() << std::endl;
 		FrameMark;
@@ -2224,7 +2341,7 @@ namespace Voidstar
 		transferBuffer.CopyImageToBuffer(image, buffer);
 		transferBuffer.EndTransfering();
 
-		transferBuffer.Submit({ m_TimelineSemaphore[0].GetSemaphore() }, {}, &fence.GetFence(), &info);
+		transferBuffer.Submit({}, {}, &fence.GetFence());
 		Renderer::Instance()->Wait(fence.GetFence());
 			
 	}

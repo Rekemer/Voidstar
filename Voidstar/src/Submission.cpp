@@ -14,6 +14,7 @@ namespace Voidstar
 	SparseSet<ShaderHandle> g_ShaderHandleAllocator;
 	SparseSet<ProgramHandle> g_ProgramHandleAllocator;
 
+	SparseSet<BufferHandle> g_BufferHandleAllocator;
 	SparseSet<VertexBufferHandle> g_VertexBufferHandleAllocator;
 	SparseSet<IndexBufferHandle> g_IndexBufferHandleAllocator;
 	SparseSet<VertexLayoutHandle> g_LayoutHandleAllocator;
@@ -21,6 +22,8 @@ namespace Voidstar
 	SparseSet<UniformHandle> g_UniformHandleAllocator;
 	SparseSet<FrameBufferHandle> g_FramebufferHandleAllocator;
 	SparseSet<AttachmentHandle> g_AttachmentrHandleAllocator;
+
+	
 
 
 	
@@ -82,6 +85,31 @@ namespace Voidstar
 		return handle;
 
 	}
+	
+	TextureHandle CreateEmptyTexture(int width, int height, TextureFormat format, ResourceUsage usage,int mipLevels, SampleCount samples, FilterMode min, FilterMode mag, int layers, bool cube)
+	{
+		auto handle = g_TextureHandleAllocator.GetId();
+
+		 CreateEmptyTextureCmd payload
+		 {
+			 width,
+			 height,
+			 format,
+			 usage,
+			 mipLevels,
+			 samples,
+			 min,
+			 mag,
+			 static_cast<uint32_t>(layers),
+			 cube,
+		};
+		 auto& cmd = g_Submission->GetCommandBuffer(ResourceCommand::CreateEmptyTexture);
+		 cmd.WriteObject(handle);     // first write: the handle (same pattern as LoadTexture)
+		 cmd.WriteObject(payload);
+		 return handle;
+	}
+
+
 	size_t ReadTexture(TextureHandle handle, void* data)
 	{
 		auto& cmd = g_Submission->GetCommandBuffer(ResourceCommand::ReadTexture);
@@ -142,7 +170,18 @@ namespace Voidstar
 		return handle;
 	}
 
-
+	std::vector<TextureHandle> GenerateMipMapsAsTextures(TextureHandle handle, int mipLevel)
+	{
+		std::vector<TextureHandle> handles;
+		for (auto i = 0; i < mipLevel; i++)
+		{
+			handles.push_back(g_TextureHandleAllocator.GetId());
+		}
+		auto& cmd = g_Submission->GetCommandBuffer(ResourceCommand::GenerateMipMapsAsTextures);
+		cmd.WriteObject(handle);
+		cmd.WriteVector(handles);
+		return handles;
+	}
 	void BindTextures(std::string_view uniformName, const std::vector<TextureHandle>& handles)
 	{
 		assert(false);
@@ -223,6 +262,14 @@ namespace Voidstar
 				break;
 			case Voidstar::ResourceCommand::CreateVertexLayout:
 				break;
+			case ResourceCommand::CreateBuffer:
+			{
+				auto handle = commandBuffer.ReadObject<BufferHandle>();
+				auto size = commandBuffer.ReadObject<size_t>();
+				auto usage = commandBuffer.ReadObject<ResourceUsage>();
+				Renderer::Instance()->CreateBuffer(handle, size,usage);
+				break;
+			}
 			case Voidstar::ResourceCommand::CreateIndexBuffer:
 			{
 				auto mem = commandBuffer.ReadObject<Memory>();
@@ -261,6 +308,15 @@ namespace Voidstar
 				Renderer::Instance()->LinkShaders(ProgramHandle{ handle }, shaderAmount);
 				break;
 			}
+			case ResourceCommand::GenerateMipMapsAsTextures:
+			{
+				auto handle = commandBuffer.Read<TextureHandle> ();
+
+				std::vector<TextureHandle> handles;
+				commandBuffer.ReadVector<>(handles);
+				Renderer::Instance()->CreateEmptyMipMapsAsImages(handle,handles);
+				break;
+			}
 			case Voidstar::ResourceCommand::CreateTexture:
 			{
 
@@ -269,6 +325,17 @@ namespace Voidstar
 				Renderer::Instance()->CreateTexture(handle, path);
 				break;
 			}
+
+			case Voidstar::ResourceCommand::CreateEmptyTexture:
+			{
+
+				auto handle = commandBuffer.ReadObject<TextureHandle>();
+				auto payload = commandBuffer.ReadObject<CreateEmptyTextureCmd>();
+
+				Renderer::Instance()->CreateEmptyTexture(handle, payload);
+				break;
+			}
+
 			case Voidstar::ResourceCommand::UpdateTexture:
 				break;
 			case Voidstar::ResourceCommand::ResizeTexture:
@@ -410,7 +477,18 @@ namespace Voidstar
 		cmd.WriteObject(bufferHandle);
 		return { bufferHandle };
 	}
+	BufferHandle CreateBuffer(size_t size, ResourceUsage usage)
+	{
+		auto bufferHandle = g_BufferHandleAllocator.GetId();
 
+		auto& cmd = g_Submission->GetCommandBuffer(ResourceCommand::CreateBuffer);
+		cmd.WriteObject(bufferHandle);
+		cmd.WriteObject(size);
+		cmd.WriteObject(usage);
+
+		return bufferHandle;
+
+	}
 	size_t GetCurrentFrame()
 	{
 		return g_Submission->Submit->FrameNumber;

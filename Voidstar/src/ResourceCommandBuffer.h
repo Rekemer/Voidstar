@@ -18,6 +18,9 @@ namespace Voidstar
 		// link shaders
 		CreateProgram,
 		CreateTexture,
+		GenerateMipMapsAsTextures,
+		CreateEmptyTexture,
+		CreateBuffer,
 		UpdateTexture,
 		ResizeTexture,
 		CreateAttachment,
@@ -69,6 +72,36 @@ namespace Voidstar
 			current += sizeof(T);
 			return obj;
 		}
+
+		void WriteBytes(const void* src, size_t bytes) {
+			size_t off = commands.size();
+			commands.resize(off + bytes);
+			std::memcpy(commands.data() + off, src, bytes);
+		}
+
+		void ReadBytes(void* dst, size_t bytes) {
+			if (current + bytes > commands.size())
+				throw std::out_of_range("ResourceCommandBuffer Reading out of bounds");
+			std::memcpy(dst, commands.data() + current, bytes);
+			current += bytes;
+		}
+
+		template<typename T>
+		void WriteVector(const std::vector<T>& v) {
+			static_assert(std::is_trivially_copyable_v<T>, "POD only");
+			uint32_t n = static_cast<uint32_t>(v.size());
+			WriteObject(n);                          
+			if (n) WriteBytes(v.data(), n * sizeof(T));
+		}
+
+		template<typename T>
+		void ReadVector(std::vector<T>& v) {
+			static_assert(std::is_trivially_copyable_v<T>, "POD only");
+			uint32_t n = ReadObject<uint32_t>();     
+			v.resize(n);
+			if (n) ReadBytes(v.data(), n * sizeof(T));
+		}
+
 		bool IsReadable();
 		void Reset();
 		void WriteByte(uint8_t command);

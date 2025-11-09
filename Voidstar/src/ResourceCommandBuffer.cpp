@@ -16,7 +16,7 @@ namespace Voidstar
 	{
 		commands.push_back(command);
 	}
-	void WriteBytes(std::vector<uint8_t>& buf, const uint8_t* data,  const size_t len) 
+	void _WriteBytes(std::vector<uint8_t>& buf, const uint8_t* data,  const size_t len) 
 	{
 		buf.insert(buf.end(), data, data + len);
 	}
@@ -28,7 +28,7 @@ namespace Voidstar
 		
 		commands.insert(commands.end(), p, p + sizeof(uint32_t));
 
-		WriteBytes(commands, reinterpret_cast<const uint8_t*>(str.data()), len);
+		_WriteBytes(commands, reinterpret_cast<const uint8_t*>(str.data()), len);
 	}
 
 	uint8_t ResourceCommandBuffer::ReadByte()
