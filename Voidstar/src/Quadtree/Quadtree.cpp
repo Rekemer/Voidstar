@@ -294,7 +294,7 @@ namespace Voidstar
 		{
 			return;
 		}
-		auto& children = GenerateChildren(nodeToDivide, depth);
+		const auto& children = GenerateChildren(nodeToDivide, depth);
 		float tileWidthOfTileToDivide = nodeToDivide.tileWidth;
 		const glm::vec3 rightOffset{ -tileWidthOfTileToDivide * 2 ,0,0 };
 		const glm::vec3 upOffset{ 0,0,tileWidthOfTileToDivide * 2 };

@@ -380,6 +380,7 @@ namespace Voidstar
 		RenderItem* CurrentRenderItem =&m_renderItem[CurrentRenderItemIndex];
 		View Views[256];
 		size_t FrameNumber = 0;
+		float deltaTime;
 		void NextItem()
 		{
 			CurrentRenderItemIndex++;
@@ -474,6 +475,8 @@ namespace Voidstar
 
 	size_t GetCurrentFrame();
 	void ExecuteFrame(float deltaTime);
+
+	void RunRender_(bool& isRunning);
 
 }
 

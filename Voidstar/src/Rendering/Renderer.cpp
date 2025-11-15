@@ -1835,7 +1835,7 @@ namespace Voidstar
 		{
 			VertexBinding& binding = bindings[i];
 			
-			auto& vertexLayout = GetVertexLayout(binding.LayoutHandle);
+			const auto& vertexLayout = GetVertexLayout(binding.LayoutHandle);
 
 			struct Vertex
 			{
@@ -2203,7 +2203,8 @@ namespace Voidstar
 
 
 		signal.pop_back();
-		cmd.Submit({waitSemaphore}, signal, &currentFence.GetFence());
+		auto fence = currentFence.GetFence();
+		cmd.Submit({waitSemaphore}, signal, &fence);
 		
 		
 		vk::Semaphore waitSemaphores[] = { signal[0]};
@@ -2340,8 +2341,8 @@ namespace Voidstar
 		transferBuffer.BeginTransfering();
 		transferBuffer.CopyImageToBuffer(image, buffer);
 		transferBuffer.EndTransfering();
-
-		transferBuffer.Submit({}, {}, &fence.GetFence());
+		auto vkFence = fence.GetFence();
+		transferBuffer.Submit({}, {}, &vkFence);
 		Renderer::Instance()->Wait(fence.GetFence());
 			
 	}

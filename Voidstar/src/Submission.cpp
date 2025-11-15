@@ -3,6 +3,7 @@
 #include "SparseSet.h"
 #include "Rendering/RenderContext.h"
 #include "Rendering/Renderer.h"
+#include <semaphore>
 
 
 
@@ -420,22 +421,52 @@ namespace Voidstar
 		commandBuffer.Reset();
 	}
 
+	//std::mutex m;
+	//std::condition_variable cv;
+	//bool ready = false;
+	std::binary_semaphore renderSem{0};
+	std::binary_semaphore apiSem{1};
+
+	void RunRender_(bool& isRunning)
+	{
+
+		while (isRunning)
+		{
+			renderSem.acquire();
+			if (!isRunning) break;
+			// execute prerender commands
+			Renderer::Instance()->BeginFrame(g_Submission->Render);
+			ExecuteCommands(g_Submission->Render->CmdPre);
+			// render commands
+
+			Renderer::Instance()->RenderFrame(g_Submission->Render, g_Submission->Render->deltaTime);
+
+			// execute postrender commands
+			ExecuteCommands(g_Submission->Render->CmdPost);
+			Renderer::Instance()->EndFrame(g_Submission->Render);
+			g_Submission->Render->Reset();
+			apiSem.release();
+		}
+	}
+
 	// start calling implementation
 	void ExecuteFrame(float deltaTime)
 	{
+		// we wait until renderer is done rendering
+		apiSem.acquire();
+		 
+		
+		// swap
+		g_Submission->Submit->deltaTime = deltaTime;
 		std::swap(g_Submission->Submit, g_Submission->Render);
 		g_Submission->Submit->FrameNumber++;
-		// execute prerender commands
-		Renderer::Instance()->BeginFrame(g_Submission->Render);
-		ExecuteCommands(g_Submission->Render->CmdPre);
-		// render commands
 
-		Renderer::Instance()->RenderFrame(g_Submission->Render, deltaTime);
+		// signal renderer
+		renderSem.release();
+		// wait until renderer is finished with previous frame
 
-		// execute postrender commands
-		ExecuteCommands(g_Submission->Render->CmdPost);
-		Renderer::Instance()->EndFrame(g_Submission->Render);
-		g_Submission->Render->Reset();
+		// unless specified multithreaded, render one this thread
+		
 	}
 	void BindIndexBuffer(IndexBufferHandle handle)
 	{
