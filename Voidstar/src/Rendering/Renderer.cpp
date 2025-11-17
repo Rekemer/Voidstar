@@ -2233,7 +2233,7 @@ namespace Voidstar
 		}
 		//m_Device->GetDevice().waitIdle();
 		
-		std::cout << timer.Elapsed() << std::endl;
+		//std::cout << timer.Elapsed() << std::endl;
 		FrameMark;
 	}
 

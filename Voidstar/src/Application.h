@@ -30,7 +30,7 @@ namespace Voidstar
 		friend class Renderer;
 		size_t m_ScreenWidth, m_ScreenHeight;
 		float m_ExeTime = 0;
-		bool m_IsRunning = true;
+		std::atomic_bool m_IsRunning{ true };;
 		SPtr<Camera> m_Camera;
 		SPtr<Window> m_Window;
 		std::thread m_RenderThread;

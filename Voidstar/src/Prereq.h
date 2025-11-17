@@ -1,11 +1,11 @@
 #pragma once
-
-#include"Core.h"
-#include"MemoryTracker.h"
+#include "Rendering/Settings.h"
+#include "Core.h"
+#include "MemoryTracker.h"
 #include <memory>
 #include <string>
 #include <iostream>
 #include <vector>
 #include <tuple>
-#include"Types.h"
+#include "Types.h"
 #include "glm.hpp"

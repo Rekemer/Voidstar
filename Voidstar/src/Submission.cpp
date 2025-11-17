@@ -427,13 +427,17 @@ namespace Voidstar
 	std::binary_semaphore renderSem{0};
 	std::binary_semaphore apiSem{1};
 
-	void RunRender_(bool& isRunning)
+	void RunRender_(std::atomic_bool& isRunning)
 	{
 
 		while (isRunning)
 		{
 			renderSem.acquire();
-			if (!isRunning) break;
+			if (!isRunning)
+			{
+				apiSem.release();
+				break;
+			}
 			// execute prerender commands
 			Renderer::Instance()->BeginFrame(g_Submission->Render);
 			ExecuteCommands(g_Submission->Render->CmdPre);
@@ -452,6 +456,7 @@ namespace Voidstar
 	// start calling implementation
 	void ExecuteFrame(float deltaTime)
 	{
+	#if THREADING
 		// we wait until renderer is done rendering
 		apiSem.acquire();
 		 
@@ -466,6 +471,23 @@ namespace Voidstar
 		// wait until renderer is finished with previous frame
 
 		// unless specified multithreaded, render one this thread
+	#else
+
+		std::swap(g_Submission->Submit, g_Submission->Render);
+		g_Submission->Submit->FrameNumber++;
+		// execute prerender commands
+		Renderer::Instance()->BeginFrame(g_Submission->Render);
+		ExecuteCommands(g_Submission->Render->CmdPre);
+		// render commands
+
+		Renderer::Instance()->RenderFrame(g_Submission->Render, deltaTime);
+
+		// execute postrender commands
+		ExecuteCommands(g_Submission->Render->CmdPost);
+		Renderer::Instance()->EndFrame(g_Submission->Render);
+		g_Submission->Render->Reset();
+
+	#endif
 		
 	}
 	void BindIndexBuffer(IndexBufferHandle handle)

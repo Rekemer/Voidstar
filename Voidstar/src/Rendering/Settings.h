@@ -1,6 +1,2 @@
 #pragma once
-
-struct VOIDSTAR_API Settings
-{
-	int frameAmount = 2;
-};
+#define THREADING 0

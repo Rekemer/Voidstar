@@ -462,20 +462,7 @@ public:
 
 	ExampleApplication(std::string appName, size_t screenWidth, size_t screenHeight) : Voidstar::Application(appName, screenWidth, screenHeight)
 	{
-
-
-
-
-
-
-		Settings params{ 3 };
-		m_ClickPoints.resize(MAX_POINTS, glm::vec2(-1, -1));
-
-		
-
-
 		//m_TextureUniform = CreateUniform("u_Texture", ResourceType::Sampler);
-
 		m_FeedbackShader = LoadProgram("feedback.vert", "feedback.frag");
 		m_DefaultShader = LoadProgram("basic.vert", "texture.frag");
 		m_FinalShader = LoadProgram("render_screen_quad.vert","render_attachment.frag");
@@ -549,7 +536,7 @@ public:
 		}
 
 
-		ExecuteFrame(0);
+		//ExecuteFrame(0);
 		m_WorkingSet = CreateEmptyTexture(pageWidth, pageHeight,TextureFormat::RGBA8_UNORM,ResourceUsage::Sampled | ResourceUsage::TransferDst,1, SampleCount::e1, FilterMode::Linear, FilterMode::Linear, workingSetPageAmount, false);
 
 		m_VertexCubeHandle = CreateVertexBuffer({
@@ -1396,21 +1383,24 @@ public:
 
 		// feedback pass
 
-		SetViewRect(m_FeedbackRenderPass, 0, 0, feedbackSize.x, feedbackSize.y);
-		SetFramebuffer(m_FeedbackRenderPass, m_FeedbackFramebuffer);
-		SetViewTransform(m_FeedbackRenderPass, GetCamera()->GetView(), GetCamera()->GetProj());
+		//SetViewRect(m_FeedbackRenderPass, 0, 0, feedbackSize.x, feedbackSize.y);
+		//SetFramebuffer(m_FeedbackRenderPass, m_FeedbackFramebuffer);
+		//SetViewTransform(m_FeedbackRenderPass, GetCamera()->GetView(), GetCamera()-//>GetProj());
+		//BindVertexBuffer(0, m_VertexCubeHandle);
+		//BindIndexBuffer(m_IndexCubeHandle);
+		//Submit(m_FeedbackRenderPass, m_DefaultShader);
+
+
+		//auto scene = GetColorTexture(m_FeedbackFramebuffer);
+		//BindAttachmentAsTexture("u_Scene", scene);
 		BindVertexBuffer(0, m_VertexCubeHandle);
 		BindIndexBuffer(m_IndexCubeHandle);
-		Submit(m_FeedbackRenderPass, m_DefaultShader);
-
-
-		auto scene = GetColorTexture(m_FeedbackFramebuffer);
-		BindAttachmentAsTexture("u_Scene", scene);
 		SetViewRect(m_FinalRenderPass, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
 		SetViewTransform(m_FinalRenderPass, GetCamera()->GetView(), GetCamera()->GetProj());
-		Submit(m_FinalRenderPass, m_FinalShader);
+		Submit(m_FinalRenderPass, m_DefaultShader);
 
 		ExecuteFrame(deltaTime);
+		//ExecuteFrame(0);
 
 
 	}
@@ -1705,7 +1695,6 @@ private:
 	UniformHandle m_TextureUniform;
 	FrameBufferHandle m_FeedbackFramebuffer;
 	AttachmentHandle m_FeedbackAttachments[2];
-	Worker m_Worker;
 	std::vector<Vertex> m_Cube;
 	std::vector<IndexType> m_IndexCube;
 

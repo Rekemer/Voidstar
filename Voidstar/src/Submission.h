@@ -476,7 +476,7 @@ namespace Voidstar
 	size_t GetCurrentFrame();
 	void ExecuteFrame(float deltaTime);
 
-	void RunRender_(bool& isRunning);
+	void RunRender_(std::atomic_bool& isRunning);
 
 }
 
