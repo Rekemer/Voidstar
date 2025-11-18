@@ -233,7 +233,12 @@ namespace Voidstar
 
 	void SubmitInit(InitParams init)
 	{
+#if THREADING
+		g_Submission->Submit = g_Submission->Frames;
+		g_Submission->Render = g_Submission->Frames+1;
+#else
 		g_Submission->Submit = g_Submission->Render = &g_Submission->Frames[0];
+#endif
 		auto& cmd = g_Submission->GetCommandBuffer(ResourceCommand::RendererInit);
 		cmd.WriteObject(init);
 		//cmd.ReadByte();

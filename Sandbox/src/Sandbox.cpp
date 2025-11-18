@@ -552,11 +552,12 @@ public:
 		feedbackSize = { Application::GetScreenWidth() / 70 ,Application::GetScreenHeight() / 70 };
 
 
-		m_FeedbackAttachments[0] = CreateAttachment(AttachmentType::COLOR,TextureFormat::RGBA32_SFLOAT,
-			feedbackSize.x,feedbackSize.y, SampleCount::e1, AttachmentHint::SampledLater | AttachmentHint::Readback);
+		//m_FeedbackAttachments[0] = CreateAttachment(AttachmentType::COLOR,TextureFormat::RGBA32_SFLOAT,
+		//	feedbackSize.x,feedbackSize.y, SampleCount::e1, AttachmentHint::SampledLater | AttachmentHint::Readback);
+		//m_FeedbackFramebuffer = CreateFramebuffer( {m_FeedbackAttachments[0]});
 
 	
-		m_FeedbackFramebuffer = CreateFramebuffer( {m_FeedbackAttachments[0]});
+		
 		ExecuteFrame(0);
 		data = std::make_unique<uint8_t[]>(sizeof(FeedbackRes) * feedbackSize.x * feedbackSize.y);
 		m_FeedbackRes.resize(feedbackSize.x * feedbackSize.y);

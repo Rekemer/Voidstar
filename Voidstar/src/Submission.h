@@ -414,7 +414,7 @@ namespace Voidstar
 		Map<VertexLayoutHandle, VertexLayout> Layouts;
 		// am not sure how we treat it in multithreading
 		SPtr<Window> Window;
-		Frame  Frames[1];
+		Frame  Frames[THREADING+1];
 		// the one registering user commands
 		Frame* Submit;
 		// the one doing API calls

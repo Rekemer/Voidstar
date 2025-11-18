@@ -2042,6 +2042,7 @@ namespace Voidstar
 	
 		for (int i = 0; i < render->CurrentRenderItemIndex; i++)
 		{
+			assert(render->CurrentRenderItemIndex == 1);
 			RenderItem& renderItem = render->m_renderItem[i];
 
 			View& view = render->Views[renderItem.View];
@@ -2118,7 +2119,7 @@ namespace Voidstar
 			}
 
 			auto& renderPass = m_RenderPasses.at(key.fb);
-			auto frameBuffer = m_Framebuffers.at(key.fb)[m_CurrentFrame];
+			auto frameBuffer = m_Framebuffers.at(key.fb)[imageIndex];
 
 
 			auto& test = m_FBAttachments[key.fb];
