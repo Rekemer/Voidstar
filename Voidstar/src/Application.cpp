@@ -30,9 +30,10 @@ namespace Voidstar
 		SetWindow(m_Window);
 		Input::Init(m_Window);
 #if THREADING
+		Log::GetLog()->debug("Threading is enabled");
 		m_RenderThread = std::thread([this] { RunRender_(m_IsRunning); });
 #endif
-	
+		m_Jobs.Start();
 		SubmitInit(init);
 		ExecuteFrame(0);
 	}

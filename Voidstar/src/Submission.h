@@ -13,6 +13,7 @@
 #include <cstdint>
 #include <array>
 #include <vector>
+#include "Memory.h"
 
 namespace Voidstar
 {
@@ -222,11 +223,7 @@ namespace Voidstar
 		AttachmentHint hints;
 	};
 
-	struct Memory
-	{
-		uint8_t* data; //!< Pointer to data.
-		size_t size; //!< Data size.
-	};
+	
 
 	struct VertexBinding
 	{
@@ -478,5 +475,16 @@ namespace Voidstar
 
 	void RunRender_(std::atomic_bool& isRunning);
 
+
+	void UpdateImageRegionWithImage(
+		const Memory& loadedImage,
+		size_t width,
+		size_t height,
+		TextureHandle imageToUpdate,
+		glm::vec3 offset,
+		int layer);
+
+
+	
 }
 

@@ -293,6 +293,24 @@ namespace Voidstar
 			barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
 			destinationStage = vk::PipelineStageFlagBits::eTransfer;
 		}
+		else if (oldLayout == vk::ImageLayout::eGeneral &&
+			newLayout == vk::ImageLayout::eTransferDstOptimal)
+		{
+			barrier.srcAccessMask =
+				vk::AccessFlagBits::eShaderRead |
+				vk::AccessFlagBits::eShaderWrite;
+
+			barrier.dstAccessMask =
+				vk::AccessFlagBits::eTransferWrite;
+
+			sourceStage =
+				vk::PipelineStageFlagBits::eComputeShader |
+				vk::PipelineStageFlagBits::eFragmentShader |
+				vk::PipelineStageFlagBits::eVertexShader; 
+
+			destinationStage = vk::PipelineStageFlagBits::eTransfer;
+		}
+
 		else {
 
 			assert(false);

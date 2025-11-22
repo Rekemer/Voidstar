@@ -1773,7 +1773,14 @@ namespace Voidstar
 		m_TransferCommandBuffer[0].SubmitSingle();
 
 	}
-
+	void Renderer::UpdateRegionWithImage(Memory& mem, size_t width, size_t height, TextureHandle image, vk::Offset3D offset, int layer)
+	{
+		auto imageToUpdate = m_Textures.at(image);
+		Image::UpdateRegionWithImage(mem, width, height,
+			imageToUpdate
+			, offset,
+			layer);
+	}
 	void Renderer::AddFramebuffers(FrameBufferHandle handle, std::vector<vk::Framebuffer>& framebuffers)
 	{
 		if (m_Framebuffers.find(handle) != m_Framebuffers.end())
@@ -2042,7 +2049,7 @@ namespace Voidstar
 	
 		for (int i = 0; i < render->CurrentRenderItemIndex; i++)
 		{
-			assert(render->CurrentRenderItemIndex == 1);
+			//assert(render->CurrentRenderItemIndex == 1);
 			RenderItem& renderItem = render->m_renderItem[i];
 
 			View& view = render->Views[renderItem.View];
@@ -2126,7 +2133,7 @@ namespace Voidstar
 
 			for (auto handle : test)
 			{
-				auto texHandle = m_AttachmentManager.GetColorTexture(handle, m_CurrentFrame);
+				auto texHandle = m_AttachmentManager.GetColorTexture(handle, imageIndex);
 				auto image = m_Textures.at(texHandle);
 				cmd.ChangeImageLayout(image.get(), image->GetLayout(), vk::ImageLayout::eColorAttachmentOptimal, image->m_MipMapLevels);
 			}

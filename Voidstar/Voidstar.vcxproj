@@ -151,6 +151,7 @@
     <ClInclude Include="src\Keys.h" />
     <ClInclude Include="src\Log.h" />
     <ClInclude Include="src\Main.h" />
+    <ClInclude Include="src\Memory.h" />
     <ClInclude Include="src\MemoryTracker.h" />
     <ClInclude Include="src\Prereq.h" />
     <ClInclude Include="src\Quadtree\Quadtree.h" />
@@ -196,12 +197,13 @@
     <ClInclude Include="src\Voidstar.h" />
     <ClInclude Include="src\Window.h" />
     <ClInclude Include="src\VertexLayout.h" />
-    <ClInclude Include="src\Worker.h" />
+    <ClInclude Include="src\Jobs.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Dependencies\Tracy\public\TracyClient.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="src\Jobs.cpp" />
     <ClCompile Include="src\Rendering\ShaderCompiler.cpp" />
     <ClCompile Include="src\Application.cpp" />
     <ClCompile Include="src\Input.cpp" />

@@ -4,6 +4,7 @@
 #include "RenderContext.h"
 #include "Device.h"
 #include "../Types.h"
+#include "../Memory.h"
 #include <vector>
 namespace Voidstar
 {
@@ -136,7 +137,7 @@ namespace Voidstar
 			int layers = 1,
 			vk::ImageViewType viewType= vk::ImageViewType::e2D);
 		static SPtr<Image> CreateEmpty3DImage(int width, int height, int depth, vk::Format format);
-		static void UpdateRegionWithImage(std::string path, SPtr<Image> image, vk::Offset3D offset, int layer);
+		static void UpdateRegionWithImage(Memory& mem, size_t width, size_t height, SPtr<Image> parentImage, vk::Offset3D offset, int layer);
 		~Image();
 
 		
@@ -210,6 +211,10 @@ namespace Voidstar
 			assert(m_Size != -1);
 			return m_Size;
 		}
+
+		static Memory LoadImageCPU(const std::string& path,
+			size_t& width_,
+			size_t& height_);
 	private:
 		void GenerateMipmaps(VkImage image,VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
 		void* LoadImageRaw();
@@ -222,7 +227,7 @@ namespace Voidstar
 		int m_Size = -1;
 		int m_Depth = 0, m_Channels;
 		int m_MipMapLevels = 1;
-		int m_Width, m_Height;
+		int m_Width, m_Height,layers;
 		vk::Image m_Image = VK_NULL_HANDLE;
 		vk::ImageView m_ImageView = VK_NULL_HANDLE;
 		vk::Format m_Format;

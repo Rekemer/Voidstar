@@ -24,7 +24,15 @@ namespace Voidstar
 	SparseSet<FrameBufferHandle> g_FramebufferHandleAllocator;
 	SparseSet<AttachmentHandle> g_AttachmentrHandleAllocator;
 
-	
+	struct UpdateImageRegion
+	{
+		Memory mem;
+		size_t width;
+		size_t height;
+		TextureHandle imageToUpdate;
+		glm::vec3 offset;
+		int layer;
+	};
 
 
 	
@@ -105,7 +113,7 @@ namespace Voidstar
 			 cube,
 		};
 		 auto& cmd = g_Submission->GetCommandBuffer(ResourceCommand::CreateEmptyTexture);
-		 cmd.WriteObject(handle);     // first write: the handle (same pattern as LoadTexture)
+		 cmd.WriteObject(handle);     
 		 cmd.WriteObject(payload);
 		 return handle;
 	}
@@ -341,7 +349,16 @@ namespace Voidstar
 				Renderer::Instance()->CreateEmptyTexture(handle, payload);
 				break;
 			}
-
+			case Voidstar::ResourceCommand::UpdateImageRegionWithImage:
+			{
+				auto update= commandBuffer.ReadObject<UpdateImageRegion>();
+				Renderer::Instance()->UpdateRegionWithImage(update.mem, update.width, update.height,
+					update.imageToUpdate
+					,{0,0,0},
+					update.layer);
+				
+				break;
+			}
 			case Voidstar::ResourceCommand::UpdateTexture:
 				break;
 			case Voidstar::ResourceCommand::ResizeTexture:
@@ -550,6 +567,21 @@ namespace Voidstar
 	size_t GetCurrentFrame()
 	{
 		return g_Submission->Submit->FrameNumber;
+	}
+
+	void UpdateImageRegionWithImage(
+		const Memory& loadedImage,
+		size_t width,
+		size_t height,
+		TextureHandle imageToUpdate,
+		glm::vec3 offset,
+		int layer)
+	{
+		UpdateImageRegion update{ loadedImage,width,height,imageToUpdate,offset,layer };
+		
+		auto& cmd = g_Submission->GetCommandBuffer(ResourceCommand::UpdateImageRegionWithImage);
+		cmd.WriteObject(update);
+		
 	}
 
 }

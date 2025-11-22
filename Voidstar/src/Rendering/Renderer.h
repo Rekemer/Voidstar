@@ -225,6 +225,11 @@ namespace Voidstar
 		void UpdateUniformBuffer(const glm::mat4& proj, const glm::mat4& view,float time);
 		void AddFramebuffers(FrameBufferHandle handle, std::vector<vk::Framebuffer>& framebuffers);
 		size_t m_CurrentFrame = 0;
+
+
+		void UpdateRegionWithImage(Memory& mem, size_t width, size_t height, TextureHandle image, vk::Offset3D offset, int layer);
+		
+
 	private:
 		vk::Pipeline GetPipeline(const PipelineKey& key, std::array<VertexBinding, RenderItem::MAX_VERTEX_BINDING>& bindings,
 			int bindingAmount);

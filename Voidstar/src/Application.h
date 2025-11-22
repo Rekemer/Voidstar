@@ -1,5 +1,6 @@
 #pragma once
 #include "Prereq.h"
+#include "Jobs.h"
 #include <thread>
 namespace Voidstar
 {
@@ -26,6 +27,7 @@ namespace Voidstar
 		
 	protected:
 		size_t m_ActualFrameAmount;
+		JobSystem m_Jobs;
 	private:
 		friend class Renderer;
 		size_t m_ScreenWidth, m_ScreenHeight;
@@ -34,7 +36,6 @@ namespace Voidstar
 		SPtr<Camera> m_Camera;
 		SPtr<Window> m_Window;
 		std::thread m_RenderThread;
-		
 	};
 
 	VOIDSTAR_API Application* CreateApplication();

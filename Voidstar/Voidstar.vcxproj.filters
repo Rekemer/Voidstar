@@ -167,7 +167,8 @@
     <ClInclude Include="src\VertexLayout.h" />
     <ClInclude Include="src\Handle.h" />
     <ClInclude Include="src\Util.h" />
-    <ClInclude Include="src\Worker.h" />
+    <ClInclude Include="src\Jobs.h" />
+    <ClInclude Include="src\Memory.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Dependencies\Tracy\public\TracyClient.cpp">
@@ -256,5 +257,6 @@
     </ClCompile>
     <ClCompile Include="src\ResourceCommandBuffer.cpp" />
     <ClCompile Include="src\Rendering\ShaderCompiler.cpp" />
+    <ClCompile Include="src\Jobs.cpp" />
   </ItemGroup>
 </Project>

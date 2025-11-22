@@ -24,7 +24,7 @@ using namespace Voidstar;
 #include <spirv_cross/spirv_cross.hpp>
 #include "Vertex.h"
 #include "Rendering/Generation.h"
-#include "Worker.h"
+#include "Jobs.h"
 // ImGui
 static VkDescriptorPool         g_DescriptorPool = VK_NULL_HANDLE;
 
@@ -458,7 +458,13 @@ public:
 	}
 #endif
 	
-
+	struct TileResult
+	{
+		int layer;
+		Memory mem;
+		size_t width = 0, height = 0;
+		std::atomic<bool> ready{ false };
+	};
 
 	ExampleApplication(std::string appName, size_t screenWidth, size_t screenHeight) : Voidstar::Application(appName, screenWidth, screenHeight)
 	{
@@ -522,20 +528,21 @@ public:
 		m_StorageBuffers = CreateBuffer(sizeof(FeedbackRes) * virtualTextureTiles.x * virtualTextureTiles.y,ResourceUsage::StorageRead | ResourceUsage::StorageWrite | ResourceUsage::Readback);
 
 		
+		
 
+
+
+#if 0 
 		m_PageTable = CreateEmptyTexture(pageTableWidth, pageTableHeight, TextureFormat::RGBA8_UNORM, ResourceUsage::Sampled | ResourceUsage::TransferDst | ResourceUsage::TransferSrc
 			| ResourceUsage::StorageRead |
 			ResourceUsage::StorageWrite);
-		
 		GenerateMipMapsAsTextures(m_PageTable, pageTableMipLevels);
-
 		auto mipMapSize = 0;
 		for (auto mipMap : m_PageTableMipMaps)
 		{
 			mipMapSize += mipMap->GetSize();
 		}
-
-
+#endif
 		//ExecuteFrame(0);
 		m_WorkingSet = CreateEmptyTexture(pageWidth, pageHeight,TextureFormat::RGBA8_UNORM,ResourceUsage::Sampled | ResourceUsage::TransferDst,1, SampleCount::e1, FilterMode::Linear, FilterMode::Linear, workingSetPageAmount, false);
 
@@ -552,12 +559,13 @@ public:
 		feedbackSize = { Application::GetScreenWidth() / 70 ,Application::GetScreenHeight() / 70 };
 
 
-		//m_FeedbackAttachments[0] = CreateAttachment(AttachmentType::COLOR,TextureFormat::RGBA32_SFLOAT,
-		//	feedbackSize.x,feedbackSize.y, SampleCount::e1, AttachmentHint::SampledLater | AttachmentHint::Readback);
-		//m_FeedbackFramebuffer = CreateFramebuffer( {m_FeedbackAttachments[0]});
+		m_FeedbackAttachments[0] = CreateAttachment(AttachmentType::COLOR,TextureFormat::RGBA32_SFLOAT,
+			feedbackSize.x,feedbackSize.y, SampleCount::e1, AttachmentHint::SampledLater | AttachmentHint::Readback);
+		m_FeedbackFramebuffer = CreateFramebuffer( {m_FeedbackAttachments[0]});
 
 	
 		
+		ExecuteFrame(0);
 		ExecuteFrame(0);
 		data = std::make_unique<uint8_t[]>(sizeof(FeedbackRes) * feedbackSize.x * feedbackSize.y);
 		m_FeedbackRes.resize(feedbackSize.x * feedbackSize.y);
@@ -1384,273 +1392,301 @@ public:
 
 		// feedback pass
 
-		//SetViewRect(m_FeedbackRenderPass, 0, 0, feedbackSize.x, feedbackSize.y);
-		//SetFramebuffer(m_FeedbackRenderPass, m_FeedbackFramebuffer);
-		//SetViewTransform(m_FeedbackRenderPass, GetCamera()->GetView(), GetCamera()-//>GetProj());
-		//BindVertexBuffer(0, m_VertexCubeHandle);
-		//BindIndexBuffer(m_IndexCubeHandle);
-		//Submit(m_FeedbackRenderPass, m_DefaultShader);
-
-
-		//auto scene = GetColorTexture(m_FeedbackFramebuffer);
-		//BindAttachmentAsTexture("u_Scene", scene);
+		SetViewRect(m_FeedbackRenderPass, 0, 0, feedbackSize.x, feedbackSize.y);
+		SetFramebuffer(m_FeedbackRenderPass, m_FeedbackFramebuffer);
+		SetViewTransform(m_FeedbackRenderPass, GetCamera()->GetView(), GetCamera()->GetProj());
 		BindVertexBuffer(0, m_VertexCubeHandle);
 		BindIndexBuffer(m_IndexCubeHandle);
+		Submit(m_FeedbackRenderPass, m_DefaultShader);
+
+
+		auto scene = GetColorTexture(m_FeedbackFramebuffer);
+		BindAttachmentAsTexture("u_Scene", scene);
+		
 		SetViewRect(m_FinalRenderPass, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
 		SetViewTransform(m_FinalRenderPass, GetCamera()->GetView(), GetCamera()->GetProj());
-		Submit(m_FinalRenderPass, m_DefaultShader);
+		Submit(m_FinalRenderPass, m_FinalShader);
 
 		ExecuteFrame(deltaTime);
 		//ExecuteFrame(0);
 
 
-	}
-#if 0
+	#if 1
 
-		static uint64_t lastProcessed = 0;
+			static uint64_t lastProcessed = 0;
 
-		ReadTexture(scene, data.get());
-		ExecuteFrame(deltaTime);
-		//ExecuteFrame(deltaTime);
+			ReadTexture(scene, data.get());
+			ExecuteFrame(deltaTime);
+			//ExecuteFrame(deltaTime);
 		
-		auto currentFrame = GetCurrentFrame();
-		//if (frameWait > lastProcessed)
-		//{
+			auto currentFrame = GetCurrentFrame();
+			//if (frameWait > lastProcessed)
+			//{
 			
-			auto ptr = reinterpret_cast<float*>(data.get());
-			uint64_t bufferSize = sizeof(FeedbackRes) * feedbackSize.x * feedbackSize.y;
+				auto ptr = reinterpret_cast<float*>(data.get());
+				uint64_t bufferSize = sizeof(FeedbackRes) * feedbackSize.x * feedbackSize.y;
 
-			for (int i = 0, memoryRead = 0; memoryRead < bufferSize; memoryRead += sizeof(FeedbackRes), i++)
-			{
-				auto r = *(float*)(ptr);
-				ptr++;
-				auto g = *(float*)(ptr);
-				ptr++;
-				auto b = *(float*)(ptr);
-				ptr++;
-				auto a = *(float*)(ptr);
-				ptr++;
-				m_FeedbackRes[i] = { r,g,b,a };
-			}
-		//}
-		static std::unordered_map<int, std::string_view> mipTiles =
-		{
-			{9,"pages_65536_32768/"},
-			{8,"pages_32768_16384/"},
-			{7,"pages_16384_8192/"},
-			{6,"pages_8192_4096/"},
-			{5,"pages_4096_2048/"},
-			{4,"pages_2048_1024/"},
-			{3,"pages_1024_512/"},
-			{2,"pages_512_256/"},
-			{1,"pages_256_128/"},
-			{0,"pages_128_64/"},
-		};
-
-
-
-
-		// so we can go back to low res mip level
-		// have tiles that
-		std::vector<PageEntry> tilesWeSee;
-		{
-			std::vector<std::future<void>> tilesToLoad;
-			ZoneScopedN("Reading Feedback Buffer");
-			for (auto& feedback : m_FeedbackRes)
-			{
-				//	// there is feedback
-				if (feedback.isValid > 0)
+				for (int i = 0, memoryRead = 0; memoryRead < bufferSize; memoryRead += sizeof(FeedbackRes), i++)
 				{
-					std::stringstream ss;
+					auto r = *(float*)(ptr);
+					ptr++;
+					auto g = *(float*)(ptr);
+					ptr++;
+					auto b = *(float*)(ptr);
+					ptr++;
+					auto a = *(float*)(ptr);
+					ptr++;
+					m_FeedbackRes[i] = { r,g,b,a };
+				}
+			//}
+			static std::unordered_map<int, std::string_view> mipTiles =
+			{
+				{9,"pages_65536_32768/"},
+				{8,"pages_32768_16384/"},
+				{7,"pages_16384_8192/"},
+				{6,"pages_8192_4096/"},
+				{5,"pages_4096_2048/"},
+				{4,"pages_2048_1024/"},
+				{3,"pages_1024_512/"},
+				{2,"pages_512_256/"},
+				{1,"pages_256_128/"},
+				{0,"pages_128_64/"},
+			};
 
-					ss << (int)feedback.pageX << "_" << (int)feedback.pageY << ".png";
-					std::string path = BASE_VIRT_PATH + mipTiles[feedback.mipMap].data() + ss.str();
-					// check cache instead
-					auto cachedPage = m_Cache.Get(path);
 
 
-					if (!cachedPage)
+
+			// so we can go back to low res mip level
+			// have tiles that
+			// should not have local vectors 
+			std::vector<PageEntry> tilesWeSee;
+			{
+				std::vector<SPtr<TileResult>> tilesToLoad;
+				ZoneScopedN("Reading Feedback Buffer");
+				for (auto& feedback : m_FeedbackRes)
+				{
+					//	// there is feedback
+					if (feedback.isValid > 0)
 					{
-						if (m_Overload)
+						std::stringstream ss;
+
+						ss << (int)feedback.pageX << "_" << (int)feedback.pageY << ".png";
+						std::string path = BASE_VIRT_PATH + mipTiles[feedback.mipMap].data() + ss.str();
+						// check cache instead
+						auto cachedPage = m_Cache.Get(path);
+
+
+						if (!cachedPage)
 						{
-							ZoneScopedN("Replace old page");
-							auto coords = m_Cache.GetLUPage(mipTiles, BASE_VIRT_PATH);
-							m_WorkingSetPtr[0] = coords.x;
-							m_WorkingSetPtr[1] = coords.y;
-						}
-						else
-						{
-							ZoneScopedN("Add new page");
-							if (workingSetPageAmountX <= m_WorkingSetPtr[0] + 1)
+							if (m_Overload)
 							{
-								m_WorkingSetPtr[0] = 0;
-								if (workingSetPageAmountY <= m_WorkingSetPtr[1] + 1)
-								{
-									ZoneScopedN("Replace old page first time");
-									// we dont have enough space, must overwrite something
-									m_Overload = true;
-									auto coords = m_Cache.GetLUPage(mipTiles, BASE_VIRT_PATH);
-									m_WorkingSetPtr[0] = coords.x;
-									m_WorkingSetPtr[1] = coords.y;
-								}
-								else
-								{
-									m_WorkingSetPtr[1] += 1;
-								}
+								ZoneScopedN("Replace old page");
+								auto coords = m_Cache.GetLUPage(mipTiles, BASE_VIRT_PATH);
+								m_WorkingSetPtr[0] = coords.x;
+								m_WorkingSetPtr[1] = coords.y;
 							}
 							else
 							{
-								m_WorkingSetPtr[0] += 1;
+								ZoneScopedN("Add new page");
+								if (workingSetPageAmountX <= m_WorkingSetPtr[0] + 1)
+								{
+									m_WorkingSetPtr[0] = 0;
+									if (workingSetPageAmountY <= m_WorkingSetPtr[1] + 1)
+									{
+										ZoneScopedN("Replace old page first time");
+										// we dont have enough space, must overwrite something
+										m_Overload = true;
+										auto coords = m_Cache.GetLUPage(mipTiles, BASE_VIRT_PATH);
+										m_WorkingSetPtr[0] = coords.x;
+										m_WorkingSetPtr[1] = coords.y;
+									}
+									else
+									{
+										m_WorkingSetPtr[1] += 1;
+									}
+								}
+								else
+								{
+									m_WorkingSetPtr[0] += 1;
+								}
+							}
+
+							vk::Offset3D offset{ m_WorkingSetPtr[0],m_WorkingSetPtr[1] ,0 };
+							int layer = m_WorkingSetPtr[1] * workingSetPageAmountX + m_WorkingSetPtr[0];
+							assert(layer < workingSetPageAmount);
+							//std::cout << path << std::endl;
+
+							auto result = CreateSPtr<TileResult>();
+							result->layer = layer;
+							
+
+							m_Jobs.PushJob([result, path]() {
+								size_t width = 0, height = 0;
+								result->mem= Image::LoadImageCPU(path, width, height);
+								result->width = width;
+								result->height= height;
+								result->ready = true;
+								});
+
+							
+							tilesToLoad.push_back(result);
+
+							float workingSetCoordX = (float)(m_WorkingSetPtr[0]);
+							float workingSetCoordY = (float)m_WorkingSetPtr[1];
+							glm::vec2 physCoord = { workingSetCoordX,workingSetCoordY };
+							auto mipMap = feedback.mipMap;
+							glm::vec2 pageCoord = { feedback.pageX ,feedback.pageY };
+							PageEntry page{ mipMap,pageCoord,physCoord };
+
+							m_Cache.Add(page, path);
+							tilesWeSee.push_back(page);
+						}
+						else
+						{
+							ZoneScopedN("Add exisiting page");
+							if (std::find(tilesWeSee.begin(), tilesWeSee.end(), *cachedPage) == tilesWeSee.end())
+							{
+								tilesWeSee.push_back(*cachedPage);
 							}
 						}
 
-						vk::Offset3D offset{ m_WorkingSetPtr[0],m_WorkingSetPtr[1] ,0 };
-						int layer = m_WorkingSetPtr[1] * workingSetPageAmountX + m_WorkingSetPtr[0];
-						assert(layer < workingSetPageAmount);
-						std::cout << path << std::endl;
-						auto future = std::async(std::launch::async, &Image::UpdateRegionWithImage, 
-							path, m_WorkingSet,
-							vk::Offset3D{ 0,0,0 }, layer);
-						tilesToLoad.push_back(std::move(future));
-						float workingSetCoordX = (float)(m_WorkingSetPtr[0]);
-						float workingSetCoordY = (float)m_WorkingSetPtr[1];
-						glm::vec2 physCoord = { workingSetCoordX,workingSetCoordY };
-						auto mipMap = feedback.mipMap;
-						glm::vec2 pageCoord = { feedback.pageX ,feedback.pageY };
-						PageEntry page{ mipMap,pageCoord,physCoord };
-
-						m_Cache.Add(page, path);
-						tilesWeSee.push_back(page);
+					}
+				}
+		
+				for (auto it = tilesToLoad.begin();
+					it != tilesToLoad.end(); )
+				{
+					auto& r = *it;
+					if (r->ready)
+					{
+						UpdateImageRegionWithImage(r->mem, r->width, r->height, m_WorkingSet, {0,0,0}, r->layer);
+						it++;
 					}
 					else
 					{
-						ZoneScopedN("Add exisiting page");
-						if (std::find(tilesWeSee.begin(), tilesWeSee.end(), *cachedPage) == tilesWeSee.end())
-						{
-							tilesWeSee.push_back(*cachedPage);
-						}
+						continue;
 					}
-
 				}
+			}		
+			#if 0 
+
+			if (tilesWeSee.size() > 0)
+			{
+
+				ZoneScopedN("Update visible pages");
+
+				std::vector<PageEntry> clear(virtualTextureTiles.x * virtualTextureTiles.y);
+				m_StorageBuffers->SetData(clear.data());
+				auto ptr = (PageEntry*)device->GetDevice().mapMemory(m_StorageBuffers->GetMemory(), (uint64_t)0, tilesWeSee.size() * sizeof(tilesWeSee[0]));
+				memcpy(ptr, tilesWeSee.data(), tilesWeSee.size() * sizeof(tilesWeSee[0]));
+				device->GetDevice().unmapMemory(m_StorageBuffers->GetMemory());
+				device->UpdateDescriptorSet(m_PageTableDescriptorSet, 1, 1, *m_StorageBuffers, vk::DescriptorType::eStorageBuffer);
+
 			}
-		
+			vk::DescriptorImageInfo imageDescriptor;
+			imageDescriptor.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+			imageDescriptor.imageView = m_WorkingSet->GetImageView();
+			imageDescriptor.sampler = m_WorkingSet->GetSampler();
 
-		}		
-			
+			//device->GetDevice().waitIdle();
+			device->UpdateDescriptorSet(m_DescriptorSetWorkingSet, 0, 1, imageDescriptor, vk::DescriptorType::eCombinedImageSampler);
 
-				if (tilesWeSee.size() > 0)
+
+			{
+				ZoneScopedN("Init page table");
+				int bufferOffset = 0;
+				transferBuffer.BeginTransfering();
+				m_PageTable->Fill(glm::vec4(-1, -1, -1, -1), transferBuffer, m_FillBuffer, bufferOffset);
+				for (auto mipMaps : m_PageTableMipMaps)
 				{
-
-					ZoneScopedN("Update visible pages");
-
-					std::vector<PageEntry> clear(virtualTextureTiles.x * virtualTextureTiles.y);
-					m_StorageBuffers->SetData(clear.data());
-					auto ptr = (PageEntry*)device->GetDevice().mapMemory(m_StorageBuffers->GetMemory(), (uint64_t)0, tilesWeSee.size() * sizeof(tilesWeSee[0]));
-					memcpy(ptr, tilesWeSee.data(), tilesWeSee.size() * sizeof(tilesWeSee[0]));
-					device->GetDevice().unmapMemory(m_StorageBuffers->GetMemory());
-					device->UpdateDescriptorSet(m_PageTableDescriptorSet, 1, 1, *m_StorageBuffers, vk::DescriptorType::eStorageBuffer);
+					bufferOffset += mipMaps->GetSize();
+					mipMaps->Fill(glm::vec4(-1, -1, -1, -1), transferBuffer, m_FillBuffer, bufferOffset);
+				}
+				transferBuffer.ChangeImageLayout(m_WorkingSet.get(), m_WorkingSet->GetLayout(), vk::ImageLayout::eShaderReadOnlyOptimal, 1, workingSetPageAmount);
+				if (m_PageTable->GetLayout() != vk::ImageLayout::eGeneral)
+				{
+					transferBuffer.ChangeImageLayout(m_PageTable.get(), m_PageTable->GetLayout(), vk::ImageLayout::eGeneral);
 
 				}
-				vk::DescriptorImageInfo imageDescriptor;
-				imageDescriptor.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-				imageDescriptor.imageView = m_WorkingSet->GetImageView();
-				imageDescriptor.sampler = m_WorkingSet->GetSampler();
+				transferBuffer.EndTransfering();
+				transferBuffer.SubmitSingle();
 
-				//device->GetDevice().waitIdle();
-				device->UpdateDescriptorSet(m_DescriptorSetWorkingSet, 0, 1, imageDescriptor, vk::DescriptorType::eCombinedImageSampler);
+			}
 
+			cmd.BeginTransfering();
+			{
+				ZoneScopedN("Fill page table");
+				//update mip levels of page table
+				auto currentFrame = frameIndex;
+				// we need to insert a barrier to make memory available
+				auto pipeline = Renderer::Instance()->GetPipeline(COMPUTE_PAGE_TABLE_PASS);
+				vkCmdBindPipeline(cmd.GetCommandBuffer(), VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->GetPipeline());
+				cmd.GetCommandBuffer().bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipeline->GetLayout(), 0, 1, &m_PageTableDescriptorSet, 0, 0);
+				float invocations = 8;
+				int localSize = 1;
+				TracyVkZone(tracyContext, cmd.GetCommandBuffer(), "Update tables");
+				vkCmdDispatch(cmd.GetCommandBuffer(), tilesWeSee.size() / localSize, 1, 1);
 
+				std::vector<vk::Image> images{ m_PageTable->GetImage() };
+				for (auto mipMaps : m_PageTableMipMaps)
 				{
-					ZoneScopedN("Init page table");
-					int bufferOffset = 0;
-					transferBuffer.BeginTransfering();
-					m_PageTable->Fill(glm::vec4(-1, -1, -1, -1), transferBuffer, m_FillBuffer, bufferOffset);
-					for (auto mipMaps : m_PageTableMipMaps)
-					{
-						bufferOffset += mipMaps->GetSize();
-						mipMaps->Fill(glm::vec4(-1, -1, -1, -1), transferBuffer, m_FillBuffer, bufferOffset);
-					}
-					transferBuffer.ChangeImageLayout(m_WorkingSet.get(), m_WorkingSet->GetLayout(), vk::ImageLayout::eShaderReadOnlyOptimal, 1, workingSetPageAmount);
-					if (m_PageTable->GetLayout() != vk::ImageLayout::eGeneral)
-					{
-						transferBuffer.ChangeImageLayout(m_PageTable.get(), m_PageTable->GetLayout(), vk::ImageLayout::eGeneral);
-
-					}
-					transferBuffer.EndTransfering();
-					transferBuffer.SubmitSingle();
-
+					images.push_back(mipMaps->GetImage());
 				}
 
-				cmd.BeginTransfering();
-				{
-					ZoneScopedN("Fill page table");
-					//update mip levels of page table
-					auto currentFrame = frameIndex;
-					// we need to insert a barrier to make memory available
-					auto pipeline = Renderer::Instance()->GetPipeline(COMPUTE_PAGE_TABLE_PASS);
-					vkCmdBindPipeline(cmd.GetCommandBuffer(), VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->GetPipeline());
-					cmd.GetCommandBuffer().bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipeline->GetLayout(), 0, 1, &m_PageTableDescriptorSet, 0, 0);
-					float invocations = 8;
-					int localSize = 1;
-					TracyVkZone(tracyContext, cmd.GetCommandBuffer(), "Update tables");
-					vkCmdDispatch(cmd.GetCommandBuffer(), tilesWeSee.size() / localSize, 1, 1);
+				// sync problem
+				device->GetDevice().waitIdle();
+				//cmd.ImageBufferBarrier(images, vk::PipelineStageFlagBits::eTopOfPipe,
+				//	vk::AccessFlagBits::eNone,
+				//	vk::PipelineStageFlagBits::eComputeShader,
+				//	vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
 
-					std::vector<vk::Image> images{ m_PageTable->GetImage() };
-					for (auto mipMaps : m_PageTableMipMaps)
+
+
+				{
+					auto pipelineFinal = Renderer::Instance()->GetPipeline(COMPUTE_PAGE_TABLE_FINAL_PASS);
+					TracyVkZone(tracyContext, cmd.GetCommandBuffer(), "merge tables");
+
+
+					std::vector<vk::DescriptorImageInfo> imageInfos;
+					vk::DescriptorImageInfo imageDescriptor1;
+					imageDescriptor1.imageLayout = vk::ImageLayout::eGeneral;
+					imageDescriptor1.imageView = m_PageTable->GetImageView();
+					imageDescriptor1.sampler = m_PageTable->GetSampler();
+					device->UpdateDescriptorSet(m_PageTableFinalDescriptorSet, 1, 1, imageDescriptor1, vk::DescriptorType::eStorageImage);
+					for (int i = 0; i < m_PageTableMipMaps.size(); i++)
 					{
-						images.push_back(mipMaps->GetImage());
+						imageDescriptor1.imageView = m_PageTableMipMaps[i]->GetImageView();
+						imageDescriptor1.sampler = m_PageTableMipMaps[i]->GetSampler();
+						imageInfos.push_back(imageDescriptor1);
 					}
 
-					// sync problem
-					device->GetDevice().waitIdle();
-					//cmd.ImageBufferBarrier(images, vk::PipelineStageFlagBits::eTopOfPipe,
-					//	vk::AccessFlagBits::eNone,
-					//	vk::PipelineStageFlagBits::eComputeShader,
-					//	vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+					device->UpdateDescriptorSet(m_PageTableFinalDescriptorSet, 0, imageInfos, vk::DescriptorType::eStorageImage);
+
+					vkCmdBindPipeline(cmd.GetCommandBuffer(), VK_PIPELINE_BIND_POINT_COMPUTE, pipelineFinal->GetPipeline());
+					cmd.GetCommandBuffer().bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipelineFinal->GetLayout(), 0, 1, &m_PageTableFinalDescriptorSet, 0, 0);
 
 
-
+					vkCmdDispatch(cmd.GetCommandBuffer(), pageTableWidth, pageTableHeight, 1);
+					cmd.ChangeImageLayout(m_PageTable.get(), m_PageTable->GetLayout(), vk::ImageLayout::eShaderReadOnlyOptimal);
 					{
-						auto pipelineFinal = Renderer::Instance()->GetPipeline(COMPUTE_PAGE_TABLE_FINAL_PASS);
-						TracyVkZone(tracyContext, cmd.GetCommandBuffer(), "merge tables");
-
-
-						std::vector<vk::DescriptorImageInfo> imageInfos;
 						vk::DescriptorImageInfo imageDescriptor1;
-						imageDescriptor1.imageLayout = vk::ImageLayout::eGeneral;
+						imageDescriptor1.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
 						imageDescriptor1.imageView = m_PageTable->GetImageView();
 						imageDescriptor1.sampler = m_PageTable->GetSampler();
-						device->UpdateDescriptorSet(m_PageTableFinalDescriptorSet, 1, 1, imageDescriptor1, vk::DescriptorType::eStorageImage);
-						for (int i = 0; i < m_PageTableMipMaps.size(); i++)
-						{
-							imageDescriptor1.imageView = m_PageTableMipMaps[i]->GetImageView();
-							imageDescriptor1.sampler = m_PageTableMipMaps[i]->GetSampler();
-							imageInfos.push_back(imageDescriptor1);
-						}
-
-						device->UpdateDescriptorSet(m_PageTableFinalDescriptorSet, 0, imageInfos, vk::DescriptorType::eStorageImage);
-
-						vkCmdBindPipeline(cmd.GetCommandBuffer(), VK_PIPELINE_BIND_POINT_COMPUTE, pipelineFinal->GetPipeline());
-						cmd.GetCommandBuffer().bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipelineFinal->GetLayout(), 0, 1, &m_PageTableFinalDescriptorSet, 0, 0);
-
-
-						vkCmdDispatch(cmd.GetCommandBuffer(), pageTableWidth, pageTableHeight, 1);
-						cmd.ChangeImageLayout(m_PageTable.get(), m_PageTable->GetLayout(), vk::ImageLayout::eShaderReadOnlyOptimal);
-						{
-							vk::DescriptorImageInfo imageDescriptor1;
-							imageDescriptor1.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-							imageDescriptor1.imageView = m_PageTable->GetImageView();
-							imageDescriptor1.sampler = m_PageTable->GetSampler();
-							device->UpdateDescriptorSet(m_DescriptorSetWorkingSet, 1, 1, imageDescriptor1, vk::DescriptorType::eCombinedImageSampler);
-						}
-
+						device->UpdateDescriptorSet(m_DescriptorSetWorkingSet, 1, 1, imageDescriptor1, vk::DescriptorType::eCombinedImageSampler);
 					}
 
 				}
-				cmd.EndTransfering();
 
 			}
-#endif
+			cmd.EndTransfering();
+
+
+			#endif 
+
+			
+	#endif
+	}
 	
 			
 

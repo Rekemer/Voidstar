@@ -97,23 +97,39 @@ namespace Voidstar
 	}
 	std::mutex mutex;
 
-	void Image::UpdateRegionWithImage(std::string path, SPtr<Image> parentImage, vk::Offset3D offset, int layer)
+
+	Memory Image::LoadImageCPU(const std::string& path, size_t& width_, size_t& height_)
 	{
-		ZoneScopedN("UpdateRegionWithImage");	
+
 		stbi_set_flip_vertically_on_load(false);
 		int width = 0, height = 0, channels = 0;
 		auto pixels = stbi_load(path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
 		assert(width != 0 && height != 0);
+
+		width_ = static_cast<size_t>(width);
+		height_ = static_cast<size_t>(height);
+
 		if (!pixels) {
 			Log::GetLog()->error("Unable to load: {0}", path);
-			return;
+			return{};
 		}
+		auto imageSize = width * height * 4;
+
+		Memory mem;
+		mem.data = pixels;
+		mem.size = imageSize;
+		return mem;
+	}
+
+	void Image::UpdateRegionWithImage(Memory& mem,size_t width, size_t height, SPtr<Image> parentImage, vk::Offset3D offset, int layer)
+	{
+		ZoneScopedN("UpdateRegionWithImage");	
+		auto pixels = mem.data;
+		auto imageSize = mem.size;
 		auto device = RenderContext::GetDevice();
 	
-		auto imageSize = width * height * 4;
 		auto buffer = Buffer::CreateStagingBuffer(imageSize);
 
-		//...then fill it,
 		void* writeLocation = device->GetDevice().mapMemory(buffer->GetMemory(), 0, imageSize);
 		memcpy(writeLocation, pixels, imageSize);
 		device->GetDevice().unmapMemory(buffer->GetMemory());
@@ -124,12 +140,14 @@ namespace Voidstar
 		auto commandBuffer = CommandBuffer::CreateBuffer(parentImage->m_CommandPool, vk::CommandBufferLevel::ePrimary);
 
 		commandBuffer.BeginTransfering();
-		commandBuffer.CopyBufferToImage(*buffer.get(), parentImage->m_Image,width, height, 0, offset, layer);
+
+		commandBuffer.ChangeImageLayout(parentImage.get(), parentImage->GetLayout(), vk::ImageLayout::eTransferDstOptimal, 1, parentImage->layers);
+
+		commandBuffer.CopyBufferToImage(*buffer.get(), parentImage->m_Image,width, height, 0, offset,0, parentImage->layers);
 		commandBuffer.EndTransfering();
 		commandBuffer.SubmitSingle();
 
 		commandBuffer.Free();
-		free(pixels);
 
 
 	}
@@ -440,6 +458,7 @@ namespace Voidstar
 	vk::ImageViewType viewType)
 	{
 		auto image = CreateUPtr<Image>();
+		image->layers = layers;
 		image->m_CommandPool = Renderer::Instance()->GetCommandPoolManager()->GetFreePool();
 		image->m_Width = width;
 		image->m_Height = height;
@@ -472,45 +491,12 @@ namespace Voidstar
 			Log::GetLog()->error("Unable to allocate memory for empty image");
 		}
 
-		// populate memory with data
-
-
-
-
-
-
-
-
-
-
-
+	
 
 
 		image->m_ImageView = CreateImageView(image->m_Image, format, vk::ImageAspectFlagBits::eColor, viewType,mipLevels, layers);
 
 
-		/*
-	typedef struct VkSamplerCreateInfo {
-		VkStructureType         sType;
-		const void* pNext;
-		VkSamplerCreateFlags    flags;
-		VkFilter                magFilter;
-		VkFilter                minFilter;
-		VkSamplerMipmapMode     mipmapMode;
-		VkSamplerAddressMode    addressModeU;
-		VkSamplerAddressMode    addressModeV;
-		VkSamplerAddressMode    addressModeW;
-		float                   mipLodBias;
-		VkBool32                anisotropyEnable;
-		float                   maxAnisotropy;
-		VkBool32                compareEnable;
-		VkCompareOp             compareOp;
-		float                   minLod;
-		float                   maxLod;
-		VkBorderColor           borderColor;
-		VkBool32                unnormalizedCoordinates;
-	} VkSamplerCreateInfo;
-	*/
 		vk::SamplerCreateInfo samplerInfo;
 		samplerInfo.flags = vk::SamplerCreateFlags();
 		samplerInfo.minFilter = minFilter;
@@ -546,7 +532,7 @@ namespace Voidstar
 
 
 		commandBuffer.BeginTransfering();
-		commandBuffer.ChangeImageLayout(image.get(), vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral);
+		commandBuffer.ChangeImageLayout(image.get(), vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral,1,layers);
 		commandBuffer.EndTransfering();
 		commandBuffer.SubmitSingle();
 
