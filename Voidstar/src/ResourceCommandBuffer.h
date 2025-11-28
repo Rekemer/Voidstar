@@ -22,9 +22,11 @@ namespace Voidstar
 		CreateEmptyTexture,
 		CreateBuffer,
 		UpdateTexture,
+		FillTexture,
 		// VIRTUAL TEXTURE
 		UpdateImageRegionWithImage,
 		//
+		UpdateBuffer,
 		ResizeTexture,
 		CreateAttachment,
 		CreateFrameBuffer,

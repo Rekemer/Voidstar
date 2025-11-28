@@ -133,7 +133,11 @@ namespace Voidstar
 		vk::DescriptorSetLayout CreateDescriptorLayout(const DescriptorLayoutKey& key);
 		void CopyImageToBuffer(SPtr<Image> image, SPtr<Buffer> buffer);
 		TextureHandle GetFBTextureHandle(FrameBufferHandle fb);
+		void UpdateBuffer(BufferHandle handle, void* data,size_t size);
 		SPtr<Image> GetTexture(TextureHandle handle);
+
+		void FillTexture(TextureHandle texture, glm::vec4& pixel,BufferHandle buffer, size_t offset);
+
 		void CopyBufferToPtr(SPtr<Buffer> buffer, void* data, size_t offset);
 
 		void BeginFrame(Frame* frame);
@@ -228,7 +232,7 @@ namespace Voidstar
 
 
 		void UpdateRegionWithImage(Memory& mem, size_t width, size_t height, TextureHandle image, vk::Offset3D offset, int layer);
-		
+		size_t GetSize(TextureHandle handle);
 
 	private:
 		vk::Pipeline GetPipeline(const PipelineKey& key, std::array<VertexBinding, RenderItem::MAX_VERTEX_BINDING>& bindings,

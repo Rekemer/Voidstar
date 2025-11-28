@@ -101,7 +101,7 @@ namespace Voidstar
 		// Image shape hints (optional helpers)
 		Cube = 1 << 13,
 		Mipmapped = 1 << 14,
-		// … add Sparse, External, etc. later
+		
 	};
 
 	inline ResourceUsage operator|(ResourceUsage a, ResourceUsage b) {
@@ -484,7 +484,11 @@ namespace Voidstar
 		glm::vec3 offset,
 		int layer);
 
+	void SetData(BufferHandle, void*,size_t);
 
-	
+	void FillImage(TextureHandle handle, const glm::vec4& pixel,
+		BufferHandle buffer, size_t bufferOffset);
+
+	size_t GetSize(TextureHandle handle);
 }
 

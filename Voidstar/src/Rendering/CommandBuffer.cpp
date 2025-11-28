@@ -310,8 +310,8 @@ namespace Voidstar
 
 			destinationStage = vk::PipelineStageFlagBits::eTransfer;
 		}
-
-		else {
+		else 
+		{
 
 			assert(false);
 			barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;

@@ -1573,6 +1573,18 @@ namespace Voidstar
 		return m_Textures.at(handle);
 	}
 
+	void Renderer::FillTexture(TextureHandle texture, glm::vec4& pixel, BufferHandle bufferHandle, size_t offset)
+	{
+		auto commandBuffer = m_TransferCommandBuffer[m_CurrentFrame];
+		auto image = GetTexture(texture);
+		auto buffer = m_Buffers.at(bufferHandle);
+		commandBuffer.BeginTransfering();
+		image->Fill(glm::vec4(-1, -1, -1, -1), commandBuffer, buffer, offset);
+		commandBuffer.EndTransfering();
+		commandBuffer.SubmitSingle();
+	}
+
+
 	
 	void Renderer::CreateBuffer(BufferHandle handle, size_t size, ResourceUsage usage)
 	{
@@ -1583,13 +1595,21 @@ namespace Voidstar
 		inputBuffer.usage = prop.usage;
 		m_Buffers[handle] = CreateSPtr<Buffer>(inputBuffer);
 	}
+	size_t Renderer::GetSize(TextureHandle handle)
+	{
+		return m_Textures.at(handle)->GetSize();
+	}
 
 	Renderer* Renderer::Instance()
 	{
 		static Renderer* renderer = new Renderer;
 		return renderer;
 	}
-
+	void Renderer::UpdateBuffer(BufferHandle handle, void* data,size_t size)
+	{
+		auto buffer = m_Buffers.at(handle);
+		buffer->SetData(data, size);
+	}
 	TextureHandle Renderer::GetFBTextureHandle(FrameBufferHandle fb)
 	{
 		auto attHandle = m_FBAttachments.at(fb)[0];

@@ -70,11 +70,12 @@ namespace Voidstar
 		deviceLog.bindBufferMemory(m_Buffer, m_BufferMemory, 0);
 	}
 
-	void Buffer::SetData(void* data)
+	void Buffer::SetData(void* data, size_t size)
 	{
+		assert(m_Size >= size);
 		auto device = RenderContext::GetDevice();
 		void* memoryLocation = device->GetDevice().mapMemory(m_BufferMemory, 0, m_Size);
-		memcpy(memoryLocation, data, m_Size);
+		memcpy(memoryLocation, data, size);
 		device->GetDevice().unmapMemory(m_BufferMemory);
 	}
 

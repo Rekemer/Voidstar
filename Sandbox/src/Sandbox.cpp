@@ -483,13 +483,13 @@ public:
 		m_IndexCube = indices;
 
 		
-#if 0
 		
+#if 0
 
 		auto usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst;
 
-		/*m_WorkingSet = Image::CreateEmptyImage(pageWidth, pageHeight, vk::Format::eR8G8B8A8Unorm, usage, 1,
-			vk::SampleCountFlagBits::e1, vk::Filter::eLinear, vk::Filter::eLinear, workingSetPageAmount, vk::ImageViewType::e2DArray);*/
+		m_WorkingSet = Image::CreateEmptyImage(pageWidth, pageHeight, vk::Format::eR8G8B8A8Unorm, usage, 1,
+			vk::SampleCountFlagBits::e1, vk::Filter::eLinear, vk::Filter::eLinear, workingSetPageAmount, vk::ImageViewType::e2DArray);
 
 		m_PageTable = Image::CreateEmptyImage(pageTableWidth, pageTableHeight, vk::Format::eR32G32B32A32Sfloat, usage
 			| vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eTransferDst);
@@ -528,23 +528,38 @@ public:
 		m_StorageBuffers = CreateBuffer(sizeof(FeedbackRes) * virtualTextureTiles.x * virtualTextureTiles.y,ResourceUsage::StorageRead | ResourceUsage::StorageWrite | ResourceUsage::Readback);
 
 		
-		
 
 
 
-#if 0 
-		m_PageTable = CreateEmptyTexture(pageTableWidth, pageTableHeight, TextureFormat::RGBA8_UNORM, ResourceUsage::Sampled | ResourceUsage::TransferDst | ResourceUsage::TransferSrc
+		m_PageTable = CreateEmptyTexture(pageTableWidth, pageTableHeight, TextureFormat::RGBA32_SFLOAT, ResourceUsage::Sampled | ResourceUsage::TransferDst | ResourceUsage::TransferSrc
 			| ResourceUsage::StorageRead |
 			ResourceUsage::StorageWrite);
-		GenerateMipMapsAsTextures(m_PageTable, pageTableMipLevels);
+		m_PageTableMipMaps = GenerateMipMapsAsTextures(m_PageTable, pageTableMipLevels);
+		int bufferOffset = 0;
+		ExecuteFrame(0);
+		ExecuteFrame(0);
 		auto mipMapSize = 0;
 		for (auto mipMap : m_PageTableMipMaps)
 		{
-			mipMapSize += mipMap->GetSize();
+			mipMapSize += GetSize(mipMap);
 		}
+		m_FillBuffer = CreateBuffer(pageTableWidth * pageTableHeight * 8 * 4 + mipMapSize, ResourceUsage::TransferSrc| ResourceUsage::TransferDst| ResourceUsage::Upload);
+
+		FillImage(m_PageTable, glm::vec4{ -1, -1, -1, -1 },m_FillBuffer, bufferOffset);
+
+		for (auto mipMaps : m_PageTableMipMaps)
+		{
+			bufferOffset += GetSize(mipMaps);
+			FillImage(mipMaps, glm::vec4{ -1, -1, -1, -1 }, m_FillBuffer, bufferOffset);
+		}
+
+#if 0 
 #endif
 		//ExecuteFrame(0);
-		m_WorkingSet = CreateEmptyTexture(pageWidth, pageHeight,TextureFormat::RGBA8_UNORM,ResourceUsage::Sampled | ResourceUsage::TransferDst,1, SampleCount::e1, FilterMode::Linear, FilterMode::Linear, workingSetPageAmount, false);
+		auto usage = ResourceUsage::Sampled | ResourceUsage::TransferDst;
+		m_WorkingSet = CreateEmptyTexture(pageWidth, pageHeight,TextureFormat::RGBA8_UNORM, usage,1, SampleCount::e1, FilterMode::Linear, FilterMode::Linear, workingSetPageAmount, false);
+
+
 
 		m_VertexCubeHandle = CreateVertexBuffer({
 			reinterpret_cast<uint8_t*>(m_Cube.data()),m_Cube.size() * sizeof(m_Cube[0]) }
@@ -1514,7 +1529,7 @@ public:
 							vk::Offset3D offset{ m_WorkingSetPtr[0],m_WorkingSetPtr[1] ,0 };
 							int layer = m_WorkingSetPtr[1] * workingSetPageAmountX + m_WorkingSetPtr[0];
 							assert(layer < workingSetPageAmount);
-							//std::cout << path << std::endl;
+							std::cout << path << std::endl;
 
 							auto result = CreateSPtr<TileResult>();
 							result->layer = layer;
@@ -1568,7 +1583,6 @@ public:
 					}
 				}
 			}		
-			#if 0 
 
 			if (tilesWeSee.size() > 0)
 			{
@@ -1576,42 +1590,47 @@ public:
 				ZoneScopedN("Update visible pages");
 
 				std::vector<PageEntry> clear(virtualTextureTiles.x * virtualTextureTiles.y);
-				m_StorageBuffers->SetData(clear.data());
-				auto ptr = (PageEntry*)device->GetDevice().mapMemory(m_StorageBuffers->GetMemory(), (uint64_t)0, tilesWeSee.size() * sizeof(tilesWeSee[0]));
-				memcpy(ptr, tilesWeSee.data(), tilesWeSee.size() * sizeof(tilesWeSee[0]));
-				device->GetDevice().unmapMemory(m_StorageBuffers->GetMemory());
-				device->UpdateDescriptorSet(m_PageTableDescriptorSet, 1, 1, *m_StorageBuffers, vk::DescriptorType::eStorageBuffer);
+				SetData(m_StorageBuffers, clear.data(),clear.size() * sizeof(clear.at(0)));
+				SetData(m_StorageBuffers, tilesWeSee.data(), tilesWeSee.size() * sizeof(tilesWeSee.at(0)));
+				//m_StorageBuffers->SetData(clear.data());
+
+				//auto ptr = (PageEntry*)device->GetDevice().mapMemory(m_StorageBuffers->GetMemory(), (uint64_t)0, tilesWeSee.size() * sizeof/(tilesWeSee/[0]));
+				//memcpy(ptr, tilesWeSee.data(), tilesWeSee.size() * sizeof(tilesWeSee[0]));
+				//device->GetDevice().unmapMemory(m_StorageBuffers->GetMemory());
+				//device->UpdateDescriptorSet(m_PageTableDescriptorSet, 1, 1, *m_StorageBuffers, vk::DescriptorType::eStorageBuffer);
 
 			}
-			vk::DescriptorImageInfo imageDescriptor;
-			imageDescriptor.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-			imageDescriptor.imageView = m_WorkingSet->GetImageView();
-			imageDescriptor.sampler = m_WorkingSet->GetSampler();
-
-			//device->GetDevice().waitIdle();
-			device->UpdateDescriptorSet(m_DescriptorSetWorkingSet, 0, 1, imageDescriptor, vk::DescriptorType::eCombinedImageSampler);
+			//vk::DescriptorImageInfo imageDescriptor;
+			//imageDescriptor.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+			//imageDescriptor.imageView = m_WorkingSet->GetImageView();
+			//imageDescriptor.sampler = m_WorkingSet->GetSampler();
+			//
+			////device->GetDevice().waitIdle();
+			//device->UpdateDescriptorSet(m_DescriptorSetWorkingSet, 0, 1, imageDescriptor, vk::DescriptorType::eCombinedImageSampler);
 
 
 			{
 				ZoneScopedN("Init page table");
 				int bufferOffset = 0;
-				transferBuffer.BeginTransfering();
-				m_PageTable->Fill(glm::vec4(-1, -1, -1, -1), transferBuffer, m_FillBuffer, bufferOffset);
+				//transferBuffer.BeginTransfering();
+				FillImage(m_PageTable, glm::vec4{ -1, -1, -1, -1 }, m_FillBuffer, bufferOffset);
+
 				for (auto mipMaps : m_PageTableMipMaps)
 				{
-					bufferOffset += mipMaps->GetSize();
-					mipMaps->Fill(glm::vec4(-1, -1, -1, -1), transferBuffer, m_FillBuffer, bufferOffset);
+					bufferOffset += GetSize(mipMaps);
+					FillImage(mipMaps, glm::vec4{ -1, -1, -1, -1 }, m_FillBuffer, bufferOffset);
 				}
-				transferBuffer.ChangeImageLayout(m_WorkingSet.get(), m_WorkingSet->GetLayout(), vk::ImageLayout::eShaderReadOnlyOptimal, 1, workingSetPageAmount);
+			 /* transferBuffer.ChangeImageLayout(m_WorkingSet.get(), m_WorkingSet->GetLayout(), vk::ImageLayout::eShaderReadOnlyOptimal, 1, workingSetPageAmount);
 				if (m_PageTable->GetLayout() != vk::ImageLayout::eGeneral)
 				{
 					transferBuffer.ChangeImageLayout(m_PageTable.get(), m_PageTable->GetLayout(), vk::ImageLayout::eGeneral);
 
 				}
 				transferBuffer.EndTransfering();
-				transferBuffer.SubmitSingle();
+				transferBuffer.SubmitSingle();*/
 
 			}
+	#if 0 
 
 			cmd.BeginTransfering();
 			{
@@ -1721,6 +1740,7 @@ private:
 	ProgramHandle m_DebugShader;
 
 	BufferHandle m_StorageBuffers;
+	BufferHandle m_FillBuffer;
 	VertexBufferHandle m_VertexCubeHandle;
 	IndexBufferHandle m_IndexCubeHandle;
 		
@@ -1757,7 +1777,7 @@ private:
 	bool m_Overload = false;
 	TextureHandle m_WorkingSet;
 	TextureHandle m_PageTable;
-	std::vector<SPtr<Image>> m_PageTableMipMaps;
+	std::vector<TextureHandle> m_PageTableMipMaps;
 
 
 	std::vector<glm::vec2> m_ClickPoints;

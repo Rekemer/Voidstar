@@ -331,6 +331,15 @@ namespace Voidstar
 				Renderer::Instance()->CreateEmptyMipMapsAsImages(handle,handles);
 				break;
 			}
+
+			case ResourceCommand::UpdateBuffer:
+			{
+				auto handle = commandBuffer.Read<BufferHandle> ();
+				auto data = commandBuffer.Read<void*> ();
+				auto size = commandBuffer.Read<size_t> ();
+				Renderer::Instance()->UpdateBuffer(handle, data, size);
+				break;
+			}
 			case Voidstar::ResourceCommand::CreateTexture:
 			{
 
@@ -361,6 +370,15 @@ namespace Voidstar
 			}
 			case Voidstar::ResourceCommand::UpdateTexture:
 				break;
+			case Voidstar::ResourceCommand::FillTexture:
+			{
+				auto texture = commandBuffer.ReadObject<TextureHandle>();
+				auto pixel= commandBuffer.ReadObject<glm::vec4>();
+				auto buffer = commandBuffer.ReadObject<BufferHandle>();
+				auto offset = commandBuffer.ReadObject<size_t>();
+				Renderer::Instance()->FillTexture(texture,pixel,buffer,offset);
+				break;
+			}
 			case Voidstar::ResourceCommand::ResizeTexture:
 				break;
 			case Voidstar::ResourceCommand::CreateAttachment:
@@ -583,7 +601,26 @@ namespace Voidstar
 		cmd.WriteObject(update);
 		
 	}
+	void SetData(BufferHandle buffer, void* data,size_t size)
+	{
+		auto& cmd = g_Submission->GetCommandBuffer(ResourceCommand::UpdateBuffer);
+		cmd.WriteObject(buffer);
+		cmd.WriteObject(data);
+		cmd.WriteObject(size);
+	}
+	void FillImage(TextureHandle handle, const glm::vec4& pixel,BufferHandle buffer, size_t bufferOffset)
+	{
+		auto& cmd = g_Submission->GetCommandBuffer(ResourceCommand::FillTexture);
+		cmd.WriteObject(handle);
+		cmd.WriteObject(pixel);
+		cmd.WriteObject(buffer);
+		cmd.WriteObject(bufferOffset);
+	}
 
+	size_t GetSize(TextureHandle handle)
+	{
+		return Renderer::Instance()->GetSize(handle);
+	}
 }
 
 

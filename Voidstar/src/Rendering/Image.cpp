@@ -141,9 +141,9 @@ namespace Voidstar
 
 		commandBuffer.BeginTransfering();
 
-		commandBuffer.ChangeImageLayout(parentImage.get(), parentImage->GetLayout(), vk::ImageLayout::eTransferDstOptimal, 1, parentImage->layers);
+		commandBuffer.ChangeImageLayout(parentImage.get(), parentImage->GetLayout(), vk::ImageLayout::eTransferDstOptimal, 1);
 
-		commandBuffer.CopyBufferToImage(*buffer.get(), parentImage->m_Image,width, height, 0, offset,0, parentImage->layers);
+		commandBuffer.CopyBufferToImage(*buffer.get(), parentImage->m_Image,width, height, 0, offset,0);
 		commandBuffer.EndTransfering();
 		commandBuffer.SubmitSingle();
 
@@ -532,7 +532,7 @@ namespace Voidstar
 
 
 		commandBuffer.BeginTransfering();
-		commandBuffer.ChangeImageLayout(image.get(), vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral,1,layers);
+		commandBuffer.ChangeImageLayout(image.get(), vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal,1,layers);
 		commandBuffer.EndTransfering();
 		commandBuffer.SubmitSingle();
 
@@ -781,7 +781,7 @@ namespace Voidstar
 			image->m_Height = mipHeight;
 			image->m_Size = image->m_Width * image->m_Height * FormatToSize(m_Format);
 			image->m_Sampler  = CreateSampler(vk::Filter::eNearest, vk::Filter::eNearest);
-			transfer.ChangeImageLayout(image.get(), vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral);
+			transfer.ChangeImageLayout(image.get(), vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);
 			images.push_back(image);
 			mipHeight *= 2;
 			mipWidth *= 2;
