@@ -55,10 +55,23 @@ namespace Voidstar
 
 	ProgramHandle LoadProgram(std::string_view vertex, std::string_view fragment, std::string_view geometry) { return {}; }
 
+
+	ProgramHandle LoadComputeProgram(std::string_view cmp)
+	{
+		LoadShader(cmp);
+		auto programHandle = g_ProgramHandleAllocator.GetId();
+		auto& cmd = g_Submission->GetCommandBuffer(ResourceCommand::CreateProgram);
+
+		cmd.WriteObject(programHandle);
+		cmd.WriteByte(1);
+
+		return programHandle;
+	}
+
 	ProgramHandle LoadProgram(std::string_view vertex, std::string_view fragment)
 	{ 
-		LoadShader(vertex, ShaderType::VERTEX);
-		LoadShader(fragment, ShaderType::FRAGMENT);
+		LoadShader(vertex);
+		LoadShader(fragment);
 
 		auto programHandle =g_ProgramHandleAllocator.GetId();
 		auto& cmd = g_Submission->GetCommandBuffer(ResourceCommand::CreateProgram);
@@ -66,13 +79,12 @@ namespace Voidstar
 		cmd.WriteObject(programHandle);
 		cmd.WriteByte(2);
 
-		return ProgramHandle{ programHandle };
+		return programHandle;
 	}
 	
-	ProgramHandle LoadProgram(std::string_view shader, ShaderType type) { return {}; }
 	
 
-	ShaderHandle LoadShader(std::string_view shader, ShaderType type)
+	ShaderHandle LoadShader(std::string_view shader)
 	{
 		auto handle = g_ShaderHandleAllocator.GetId();
 		auto& cmd = g_Submission->GetCommandBuffer(ResourceCommand::CreateShader);
@@ -153,7 +165,9 @@ namespace Voidstar
 
 	void BindAttachmentAsTexture(std::string_view name, TextureHandle handle)
 	{
-		auto& bind = g_Submission->Submit->CurrentRenderItem->ResBindings[g_Submission->Submit->CurrentRenderItem->currentResBinding++];
+		auto item = g_Submission->Submit->CurrentRenderItem;
+		auto& bind = item->Bindings.ResBindings[
+			item->Bindings.currentResBinding++];
 
 		bind.uniform = name;
 		bind.dirty = true;
@@ -191,23 +205,52 @@ namespace Voidstar
 		cmd.WriteVector(handles);
 		return handles;
 	}
-	void BindTextures(std::string_view uniformName, const std::vector<TextureHandle>& handles)
-	{
-		assert(false);
-		/*auto& bind = g_Submission->Submit->CurrentRenderItem->ResBindings[g_Submission->Submit->CurrentRenderItem->currentResBinding++];
 
-		bind.uniform = uniformName;
-		bind.dirty = true;
-		bind.handles = handles;*/
+	ResourceBindings& GetBindings(Item* item)
+	{
+		return item->Bindings;
 	}
 
+	void BindTextures(std::string_view uniformName, const std::vector<TextureHandle>& handles)
+	{
+		auto& bindings = GetBindings(g_Submission->Submit->CurrentRenderItem);
+		auto& bind = bindings.ResBindings[bindings.currentResBinding++];
+		assert(handles.size() <= bind.handles.size());
+		bind.uniform = uniformName;
+		bind.dirty = true;
+		std::copy_n(handles.begin(),handles.size(), bind.handles.begin());
+		bind.kind = ResourceType::CombinedSampler;
+	}
+	void BindImages(std::string_view uniformName, const std::vector<TextureHandle>& handles)
+	{
+		auto& bindings = GetBindings(g_Submission->Submit->CurrentRenderItem);
+		auto& bind = bindings.ResBindings[bindings.currentResBinding++];
+		assert(handles.size() <= bind.handles.size());
+		bind.uniform = uniformName;
+		bind.dirty = true;
+		std::copy_n(handles.begin(), handles.size(), bind.handles.begin());
+		bind.kind = ResourceType::StorageImage;
+	}
+	void BindBuffer(std::string_view uniformName, BufferHandle handle)
+	{
+		auto& bindings = GetBindings(g_Submission->Submit->CurrentRenderItem);
+		auto& bind = bindings.ResBindings[bindings.currentResBinding++];
+		bind.uniform = uniformName;
+		bind.dirty = true;
+
+	}
 	void BindTexture(std::string_view uniformName, TextureHandle handle)
 	{
-		auto& bind = g_Submission->Submit->CurrentRenderItem->ResBindings[g_Submission->Submit->CurrentRenderItem->currentResBinding++];
+		
+		
+		auto& bindings = GetBindings(g_Submission->Submit->CurrentRenderItem);
+
+		auto& bind = bindings.ResBindings[bindings.currentResBinding++];
 
 		bind.uniform = uniformName;
 		bind.dirty = true;
 		bind.handles[bind.currentHandle++] = handle;
+		bind.kind = ResourceType::CombinedSampler;
 	}
 	void SetViewTransform(PassID id, glm::mat4& view, glm::mat4& proj)
 	{
@@ -222,11 +265,20 @@ namespace Voidstar
 	{
 		g_Submission->Submit->Views[id].Rect = { x,y,width,height };
 	}
+	void SubmitCompute(PassID id, ProgramHandle program, size_t x, size_t y, size_t z)
+	{
+		auto item = g_Submission->Submit->CurrentRenderItem;
+		item->Type = ItemType::COMPUTE;
 
+		item->Program = program;
+		item->GroupCount = { x,y,z };
+		item->View = id;
+		g_Submission->Submit->NextItem();
+	}
 	void Submit(PassID viewID, ProgramHandle programHandle)
 	{
 		// creates render item
-		auto renderItem = g_Submission->Submit->CurrentRenderItem;
+		auto renderItem =g_Submission->Submit->CurrentRenderItem;
 		renderItem->Program = programHandle;
 		renderItem->View =viewID;
 		// we can create pipeline
@@ -532,13 +584,15 @@ namespace Voidstar
 	}
 	void BindIndexBuffer(IndexBufferHandle handle)
 	{
-		g_Submission->Submit->CurrentRenderItem->IndexBuffer = handle;
+		auto item = g_Submission->Submit->CurrentRenderItem;
+		item->IndexBuffer = handle;
 	};
 	void BindVertexBuffer(uint16_t location, VertexBufferHandle handle)
 	{
-		g_Submission->Submit->CurrentRenderItem->Bindings[location].VertexHandle = handle;
-		g_Submission->Submit->CurrentRenderItem->Bindings[location].LayoutHandle = g_Submission->VertexLayoutMap.at(handle);
-		g_Submission->Submit->CurrentRenderItem->currentBinding++;
+		auto item = g_Submission->Submit->CurrentRenderItem;
+		item->VertexBindings[location].VertexHandle = handle;
+		item->VertexBindings[location].LayoutHandle = g_Submission->VertexLayoutMap.at(handle);
+		item->Bindings.currentBinding++;
 	};
 
 

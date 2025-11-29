@@ -468,11 +468,14 @@ public:
 
 	ExampleApplication(std::string appName, size_t screenWidth, size_t screenHeight) : Voidstar::Application(appName, screenWidth, screenHeight)
 	{
-		//m_TextureUniform = CreateUniform("u_Texture", ResourceType::Sampler);
+		m_ComputeShaders[0] = LoadComputeProgram("pageTable.comp");
+		m_ComputeShaders[1] = LoadComputeProgram("pageTableFinal.comp");
+
+
+
 		m_FeedbackShader = LoadProgram("feedback.vert", "feedback.frag");
 		m_DefaultShader = LoadProgram("basic.vert", "texture.frag");
 		m_FinalShader = LoadProgram("render_screen_quad.vert","render_attachment.frag");
-
 		m_TestTexture = LoadTexture("coffee.jpg");
 		m_TestTexture1 = LoadTexture("dos_2_noise.png");
 
@@ -1417,7 +1420,7 @@ public:
 
 		auto scene = GetColorTexture(m_FeedbackFramebuffer);
 		BindAttachmentAsTexture("u_Scene", scene);
-		
+	
 		SetViewRect(m_FinalRenderPass, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
 		SetViewTransform(m_FinalRenderPass, GetCamera()->GetView(), GetCamera()->GetProj());
 		Submit(m_FinalRenderPass, m_FinalShader);
@@ -1620,6 +1623,7 @@ public:
 					bufferOffset += GetSize(mipMaps);
 					FillImage(mipMaps, glm::vec4{ -1, -1, -1, -1 }, m_FillBuffer, bufferOffset);
 				}
+			
 			 /* transferBuffer.ChangeImageLayout(m_WorkingSet.get(), m_WorkingSet->GetLayout(), vk::ImageLayout::eShaderReadOnlyOptimal, 1, workingSetPageAmount);
 				if (m_PageTable->GetLayout() != vk::ImageLayout::eGeneral)
 				{
@@ -1627,9 +1631,33 @@ public:
 
 				}
 				transferBuffer.EndTransfering();
-				transferBuffer.SubmitSingle();*/
+				transferBuffer.SubmitSingle();
+				*/
 
 			}
+
+
+			/*auto binderCompute = Binder<COMPUTE>();
+			m_PageTableDescCompute = binderCompute.BeginBind();
+			binderCompute.Bind(0, pageTableMipLevels + 1, vk::DescriptorType::eStorageImage, vk::ShaderStageFlagBits::eCompute);
+			binderCompute.Bind(1, 1, vk::DescriptorType::eStorageBuffer, vk::ShaderStageFlagBits::eCompute);
+			m_PageTableDescFinalCompute = binderCompute.BeginBind();
+			binderCompute.Bind(0, pageTableMipLevels, vk::DescriptorType::eStorageImage, vk::ShaderStageFlagBits::eCompute);
+			binderCompute.Bind(1, 1, vk::DescriptorType::eStorageImage, vk::ShaderStageFlagBits::eCompute);*/
+
+
+
+			auto images = m_PageTableMipMaps;
+			//images.push_back(m_PageTable);
+
+			BindImages("storageImage", images);
+			BindBuffer("u_StorageBuffer",m_StorageBuffers);
+
+			SubmitCompute(m_UpdatePageTablePass[0], m_ComputeShaders[0], tilesWeSee.size(), 1, 1);
+			BindImages("storageImage", m_PageTableMipMaps);
+			BindTexture("final", m_PageTable);
+			SubmitCompute(m_UpdatePageTablePass[1], m_ComputeShaders[1], pageTableWidth, pageTableHeight, 1);
+			ExecuteFrame(deltaTime);
 	#if 0 
 
 			cmd.BeginTransfering();

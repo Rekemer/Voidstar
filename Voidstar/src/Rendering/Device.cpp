@@ -216,9 +216,9 @@ namespace Voidstar
 	}
 
 	// to have an array of textures for example
-	void Device::UpdateDescriptorSet(vk::DescriptorSet dscSet, int binding, std::vector<vk::DescriptorImageInfo> images, ResourceType type)
+	void Device::UpdateDescriptorSet(vk::DescriptorSet dscSet, int binding, const std::vector<vk::DescriptorImageInfo>& images, ResourceType type)
 	{
-
+		if (images.size() == 0)return;
 
 		vk::WriteDescriptorSet descriptorWrite;
 		descriptorWrite.dstSet = dscSet;

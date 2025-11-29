@@ -100,11 +100,6 @@ namespace Voidstar
 	class CommandPoolManager;
 	class VOIDSTAR_API Renderer
 	{
-		typedef std::unordered_map<std::pair<int, PipelineType>, std::vector < vk::DescriptorSetLayoutBinding>, EnumClassHash>
-			Bindings;
-		typedef std::unordered_map<std::pair<int, PipelineType>, int, EnumClassHash>
-			Sets;
-
 	public:
 		void Init(size_t screenWidth, size_t screenHeight, std::shared_ptr<Window> window, Application* app);
 		static Renderer* Instance();
@@ -152,19 +147,14 @@ namespace Voidstar
 		void Wait(const vk::Fence& fence);
 		void Reset(const vk::Fence& fence);
 		~Renderer();
-		Sets& GetSets() { return m_SetsAmount; }
-		Bindings& GetBindings() { return m_Bindings; }
-		template<typename T>
-		const T GetSet(int handle, PipelineType type)
-		{
-			return std::get<T>(m_Sets[{handle, type}]);;
-		}
+	
+		
 		const DescriptorSetLayout* GetSetLayout(int handle, PipelineType type)
 		{
 			return m_Layout[{handle, type}];
 		}
 		std::pair<float, float> GetViewportSize() const { return { m_ViewportWidth,m_ViewportHeight }; }
-		vk::PolygonMode GetPolygonMode() const { return m_PolygoneMode; }
+		
 		void Shutdown();
 		CommandBuffer& GetRenderCommandBuffer(size_t frameindex);
 		CommandBuffer& GetComputeCommandBuffer(size_t frameindex);
@@ -235,7 +225,8 @@ namespace Voidstar
 		size_t GetSize(TextureHandle handle);
 
 	private:
-		vk::Pipeline GetPipeline(const PipelineKey& key, std::array<VertexBinding, RenderItem::MAX_VERTEX_BINDING>& bindings,
+		vk::Pipeline GetComputePipeline(PipelineKey& key);
+		vk::Pipeline GetPipeline(const PipelineKey& key, std::array<VertexBinding, Item::MAX_VERTEX_BINDING>& bindings,
 			int bindingAmount);
 		void CreateInstance();
 		void RecreateSwapchain();
@@ -317,16 +308,11 @@ namespace Voidstar
 
 		SPtr<Window> m_Window;
 
-		vk::PolygonMode m_PolygoneMode = vk::PolygonMode::eFill;
+		
 
-
-		// int is number of set, int is a type of pipeline render or compute
-		Bindings m_Bindings;
 		std::unordered_map<std::pair<int, PipelineType>, DescriptorSetLayout*, EnumClassHash> m_Layout;
 		std::unordered_map<std::pair<int, PipelineType>, std::variant<vk::DescriptorSet, std::vector<vk::DescriptorSet> >, EnumClassHash> m_Sets;
 
-		Sets m_SetsAmount;
-		
 		std::vector<UPtr<RenderPassGraph>> m_Graphs;
 		std::unordered_map<std::string,std::vector<Drawable>> m_Drawables;
 		std::unordered_map<std::string,std::vector<Drawable>> m_StaticDrawables;

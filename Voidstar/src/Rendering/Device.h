@@ -21,7 +21,7 @@ namespace Voidstar
 		vk::SampleCountFlagBits GetSamples() { return m_MsaaSamples; }
 
 		void UpdateDescriptorSet(vk::DescriptorSet dscSet, int binding, int descriptorCount, Image& image, vk::ImageLayout layout, ResourceType type);
-		void UpdateDescriptorSet(vk::DescriptorSet dscSet, int binding, std::vector<vk::DescriptorImageInfo> images, ResourceType type);
+		void UpdateDescriptorSet(vk::DescriptorSet dscSet, int binding, const std::vector<vk::DescriptorImageInfo>& images, ResourceType type);
 		void UpdateDescriptorSet(vk::DescriptorSet dscSet, int binding, int descriptorCount, Buffer& buffer, ResourceType type);
 		void UpdateDescriptorSet(vk::DescriptorSet dscSet, int binding, int descriptorCount, vk::DescriptorImageInfo& imageInfo, ResourceType type);
 	private:

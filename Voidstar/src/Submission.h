@@ -13,6 +13,7 @@
 #include <cstdint>
 #include <array>
 #include <vector>
+#include <variant>
 #include "Memory.h"
 
 namespace Voidstar
@@ -330,26 +331,19 @@ namespace Voidstar
 	struct ResourceBinding
 	{
 		std::string uniform;
-		std::array<TextureHandle,8> handles;
+		std::array<TextureHandle, 12> handles;
+		std::array<BufferHandle,  12> buffers;
 		int currentHandle = 0;
 		bool dirty;
+		ResourceType kind;
 	};
 
-	// render items learns about the view at submit
-	struct RenderItem
+	struct ResourceBindings
 	{
-		ProgramHandle Program;
-		PassID View;
-		// buffers binded for draw call
-		static constexpr int MAX_VERTEX_BINDING = 10;
 		static constexpr int MAX_RES_BINDING = 10;
-		std::array<VertexBinding, MAX_VERTEX_BINDING> Bindings = {};
-		int currentBinding = 0;
-		IndexBufferHandle IndexBuffer;
-		RenderState State;
-		std::array<ResourceBinding, MAX_RES_BINDING> ResBindings= {};
+		std::array<ResourceBinding, MAX_RES_BINDING> ResBindings = {};
 		int currentResBinding = 0;
-
+		int currentBinding = 0;
 
 		void Reset()
 		{
@@ -360,8 +354,34 @@ namespace Voidstar
 				bind.currentHandle = 0;
 			}
 		}
+	};
+
+
+	
+
+	enum class ItemType
+	{
+		RENDER,
+		COMPUTE,
+	};
+	// render items learns about the view at submit
+	struct Item
+	{
+		ItemType Type = ItemType::RENDER;
+		ProgramHandle Program;
+		PassID View;
+		// buffers binded for draw call
+		static constexpr int MAX_VERTEX_BINDING = 10;
+		std::array<VertexBinding, MAX_VERTEX_BINDING> VertexBindings = {};
+		IndexBufferHandle IndexBuffer;
+		RenderState State;
+		ResourceBindings Bindings;
+		glm::vec3 GroupCount;
 
 	};
+	
+
+
 	struct View
 	{
 		glm::vec4 Rect;
@@ -373,8 +393,8 @@ namespace Voidstar
 	struct Frame
 	{
 		int  CurrentRenderItemIndex = 0;
-		RenderItem m_renderItem[256];
-		RenderItem* CurrentRenderItem =&m_renderItem[CurrentRenderItemIndex];
+		Item m_renderItem[256];
+		Item* CurrentRenderItem =&m_renderItem[CurrentRenderItemIndex];
 		View Views[256];
 		size_t FrameNumber = 0;
 		float deltaTime;
@@ -429,9 +449,9 @@ namespace Voidstar
 
 	ProgramHandle LoadProgram(std::string_view vertex, std::string_view fragment, std::string_view geometry);
 
-	ProgramHandle LoadProgram(std::string_view program, ShaderType type);
+	ProgramHandle LoadComputeProgram(std::string_view cmp);
 
-	ShaderHandle LoadShader(std::string_view shader, ShaderType type);
+	ShaderHandle LoadShader(std::string_view shader);
 
 	TextureHandle LoadTexture(std::string_view texture);
 
@@ -449,9 +469,13 @@ namespace Voidstar
 	
 	TextureHandle GetColorTexture(FrameBufferHandle fb);
 	void BindAttachmentAsTexture(std::string_view name, TextureHandle tex);
-
+	
+	void BindBuffer(std::string_view uniformName, 
+		BufferHandle handle);
+	
 	void BindTexture(std::string_view uniform, TextureHandle handle);
 	void BindTextures(std::string_view uniformName, const std::vector<TextureHandle>& handle);
+	void BindImages(std::string_view uniformName, const std::vector<TextureHandle>& handle);
 	std::vector<TextureHandle> GenerateMipMapsAsTextures(TextureHandle handle, int mipLevel);
 
 	void SetWindow(SPtr<Window> window);
@@ -463,6 +487,9 @@ namespace Voidstar
 	void SetFramebuffer(PassID id, FrameBufferHandle handle);
 
 	void Submit(PassID id, ProgramHandle program);
+
+	void SubmitCompute(PassID id, ProgramHandle program, size_t x, size_t y,size_t z);
+	
 	void BindIndexBuffer(IndexBufferHandle handle);
 	// shader location
 	void BindVertexBuffer(uint16_t location , VertexBufferHandle handle);

@@ -162,7 +162,10 @@ namespace Voidstar
 			const auto& t = comp.get_type(ub.base_type_id);
 			uint32_t count = array_size(comp.get_type(ub.type_id)); // descriptor array on the variable
 			// total struct size (std140/std430 layout is reflected as declared)
+
 			uint32_t blockSize = uint32_t(comp.get_declared_struct_size(t));
+			auto name = comp.get_name(ub.id);
+			meta.uniforms[name] = { set,binding };
 			meta.bindings[set].push_back(CreateBindingDesc(set, binding, ResourceType::UniformBuffer,
 				meta.stage, count, /*stride*/0, /*elemSize*/blockSize));
 		}
@@ -186,6 +189,8 @@ namespace Voidstar
 					elemSize = uint32_t(comp.get_declared_struct_size(mt)); // for scalars/vectors this is fine too
 				}
 			}
+			auto name = comp.get_name(sb.id);
+			meta.uniforms[name] = { set,binding };
 			meta.bindings[set].push_back(CreateBindingDesc(set, binding, ResourceType::StorageBuffer,
 				meta.stage, count, stride, elemSize));
 		}
@@ -232,6 +237,8 @@ namespace Voidstar
 			uint32_t count = array_size(comp.get_type(si.type_id));
 			const auto& ty = comp.get_type(si.type_id);
 			uint32_t fmt = uint32_t(ty.image.format); // spv::ImageFormat enum
+			auto name = comp.get_name(si.id);
+			meta.uniforms[name] = { set,binding };
 			meta.bindings[set].push_back(CreateBindingDesc(set, binding, ResourceType::StorageImage,
 				meta.stage, count, 0, 0, fmt));
 		}

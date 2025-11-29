@@ -838,13 +838,6 @@ namespace Voidstar
 	const int QUAD_AMOUNT = 700;
 
 	
-	void Renderer::CreateLayouts()
-	{
-		for (auto [key, value] : m_Bindings)
-		{
-			m_Layout[key] = DescriptorSetLayout::Create(value);
-		}
-	}
 	std::vector<vk::DescriptorSet> Renderer::AllocateSets(size_t amount, const DescriptorLayoutKey& key)
 	{
 		if (m_DescriptorSet.find(key) == m_DescriptorSet.end())
@@ -1811,7 +1804,7 @@ namespace Voidstar
 	}
 
 	vk::Pipeline Renderer::GetPipeline(const PipelineKey& key, 
-		std::array<VertexBinding, RenderItem::MAX_VERTEX_BINDING>& bindings,
+		std::array<VertexBinding, Item::MAX_VERTEX_BINDING>& bindings,
 		int bindingAmount)
 	{
 		if (m_Pipelines.find(key) != m_Pipelines.end())
@@ -1902,12 +1895,12 @@ namespace Voidstar
 	
 
 
-		struct ProfileResult
+	struct ProfileResult
 		{
 			std::string name;
 			long long start, end;
 		};
-		class Profiler
+	class Profiler
 		{
 		public:
 			void BeginSession(const std::string& name, const std::string& filepath)
@@ -1968,7 +1961,7 @@ namespace Voidstar
 
 
 
-		class ProfileTimer
+	class ProfileTimer
 		{
 		public:
 
@@ -2018,7 +2011,7 @@ namespace Voidstar
 		};
 
 
-		class Timer
+	class Timer
 		{
 		public:
 
@@ -2046,6 +2039,28 @@ namespace Voidstar
 
 	
 
+	vk::Pipeline Renderer::GetComputePipeline(PipelineKey& key)
+	{
+		if (m_Pipelines.find(key) != m_Pipelines.end())
+			return m_Pipelines.at(key);
+		
+		auto device = RenderContext::GetDevice();
+		auto layout = m_PipelineLayout.at(key.layout);
+
+		vk::PipelineShaderStageCreateInfo computeShaderStageInfo{};
+		computeShaderStageInfo.flags = vk::PipelineShaderStageCreateFlags();
+		computeShaderStageInfo.stage = vk::ShaderStageFlagBits::eCompute;
+		computeShaderStageInfo.module = m_Compiler.m_Programs.at(key.program).stages[0].module;
+		computeShaderStageInfo.pName = "main";
+		
+		vk::ComputePipelineCreateInfo pipelineInfo{};
+		
+		pipelineInfo.sType = vk::StructureType::eComputePipelineCreateInfo;
+		pipelineInfo.layout = layout;
+		pipelineInfo.stage = computeShaderStageInfo;
+		m_Pipelines[key] = device->GetDevice().createComputePipeline(nullptr, pipelineInfo).value;
+		return m_Pipelines[key];
+	}
 	void Renderer::RenderFrame(Frame* render, float deltaTime)
 	{
 		Timer timer;
@@ -2069,150 +2084,229 @@ namespace Voidstar
 	
 		for (int i = 0; i < render->CurrentRenderItemIndex; i++)
 		{
-			//assert(render->CurrentRenderItemIndex == 1);
-			RenderItem& renderItem = render->m_renderItem[i];
 
-			View& view = render->Views[renderItem.View];
-			assert(renderItem.Program.Valid());
-			auto& meta = m_Compiler.m_Programs.at(renderItem.Program);
-			if (!view.Fbh.Valid())
+			auto item = (render->m_renderItem + i);
+			if (item->Type == ItemType::COMPUTE)
 			{
-				view.Fbh = DEFAULT_FRAME_BUFFER;
-				//struct PipelineKey
+				auto& computeItem = *item;
+				auto vkCmd = cmd.GetCommandBuffer();
+				auto& meta = m_Compiler.m_Programs.at(computeItem.Program);
+				std::vector<DescriptorLayoutKey>& keys = meta.descriptorKey;
+				PipelineKey key = { computeItem.Program,{},keys,{} };
+				vk::Pipeline pipeline = GetComputePipeline(key);
+				vk::PipelineLayout layout = m_PipelineLayout.at(key.layout);
+				for (int ii = 0; ii < keys.size(); ii++)
+				{
+					auto k = keys.at(ii);
+					if (m_DescriptorSet.find(k) == m_DescriptorSet.end())
+					{
+						AllocateSets(RenderContext::GetFrameAmount(), k);
+					}
+				}
+
+				for (int ii = 0; ii < computeItem.Bindings.currentResBinding; ii++)
+				{
+
+					auto& bind = computeItem.Bindings.ResBindings[ii];
+					if (bind.dirty)
+					{
+						// update descriptor
+						auto setNumber = meta.uniforms.at(bind.uniform).first;
+						auto bindNumber = meta.uniforms.at(bind.uniform).second;
+						auto& k = *std::find_if(keys.begin(), keys.end(), [=](auto key) {return key.set == setNumber; });
+						std::vector<vk::DescriptorImageInfo> descirptors;
+						for (auto handle : bind.handles)
+						{
+							if (!handle.Valid()) break;
+							auto image = m_Textures.at(handle);
+							if (bind.kind == ResourceType::CombinedSampler)
+							{
+								cmd.ChangeImageLayout(image.get(), image->GetLayout(), vk::ImageLayout::eShaderReadOnlyOptimal, image->m_MipMapLevels);
+							}
+							else if (bind.kind == ResourceType::StorageImage)
+							{
+								cmd.ChangeImageLayout(image.get(), image->GetLayout(), vk::ImageLayout::eGeneral, image->m_MipMapLevels);
+							}
+							
+							vk::DescriptorImageInfo imageDescriptor1;
+							imageDescriptor1.imageLayout = image->GetLayout();
+							imageDescriptor1.imageView = image->GetImageView();
+							imageDescriptor1.sampler = image->GetSampler();
+							descirptors.push_back(imageDescriptor1);
+
+						}
+
+						m_Device->UpdateDescriptorSet(m_DescriptorSet.at(k)[m_CurrentFrame], bindNumber, descirptors, bind.kind);
+						for (auto handle : bind.buffers)
+						{
+							if (!handle.Valid()) break;
+							auto buffer = m_Buffers.at(handle);
+							m_Device->UpdateDescriptorSet(
+								m_DescriptorSet.at(k)[m_CurrentFrame], 1, 1, *buffer, ResourceType::StorageBuffer);
+						}
+
+						bind.dirty = false;
+					}
+				}
+
+				for (int ii = 0; ii < keys.size(); ii++)
+				{
+					auto k = keys.at(ii);
+					auto& descSet = m_DescriptorSet.at(k);
+					vkCmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, layout, ii, descSet[m_CurrentFrame], nullptr);
+
+				}
+
+				vkCmd.bindPipeline(vk::PipelineBindPoint::eCompute, pipeline);
+				vkCmd.dispatch(computeItem.GroupCount.x, computeItem.GroupCount.y, computeItem.GroupCount.z);
+
+
+				computeItem.Bindings.Reset();
+
+			}
+			else if ( item->Type == ItemType::RENDER)
+			{
+				auto& renderItem = *item;
+				View& view = render->Views[renderItem.View];
+				assert(renderItem.Program.Valid());
+				auto& meta = m_Compiler.m_Programs.at(renderItem.Program);
+				if (!view.Fbh.Valid())
+				{
+					view.Fbh = DEFAULT_FRAME_BUFFER;
+					//struct PipelineKey
+					//{
+					//	ProgramHandle program;
+					//	RenderState rs;
+					//	PipelineLayoutKey layout;
+					//	RenderPassHandle_ renderPass;
+					//};
+
+				}
+
+
+				// get pipeline
+				std::vector<DescriptorLayoutKey>& keys = meta.descriptorKey;
+
+				PipelineKey key = { renderItem.Program,renderItem.State,keys,view.Fbh };
+
+				vk::Pipeline pipeline = GetPipeline(key, renderItem.VertexBindings, renderItem.Bindings.currentBinding);
+				vk::PipelineLayout layout = m_PipelineLayout.at(key.layout);
+
+
+				for (int ii = 0; ii < keys.size(); ii++)
+				{
+					auto k = keys.at(ii);
+					if (m_DescriptorSet.find(k) == m_DescriptorSet.end())
+					{
+						AllocateSets(RenderContext::GetFrameAmount(), k);
+					}
+
+				}
+
+				// updating uniforms
+				//struct ResourceBinding
 				//{
-				//	ProgramHandle program;
-				//	RenderState rs;
-				//	PipelineLayoutKey layout;
-				//	RenderPassHandle_ renderPass;
+				//	std::string uniform;
+				//	TextureHandle handle;
+				//	bool dirty;
 				//};
-
-			}
-
-
-			// get pipeline
-			std::vector<DescriptorLayoutKey>&  keys = meta.descriptorKey;
-
-			PipelineKey key ={ renderItem.Program,renderItem.State,keys,view.Fbh};
-			
-			vk::Pipeline pipeline = GetPipeline(key, renderItem.Bindings, renderItem.currentBinding);
-			vk::PipelineLayout layout = m_PipelineLayout.at(key.layout);
-
-
-			for (int ii = 0; ii < keys.size(); ii++)
-			{
-				auto k = keys.at(ii);
-				if (m_DescriptorSet.find(k) == m_DescriptorSet.end())
+				for (int ii = 0; ii < renderItem.Bindings.currentResBinding; ii++)
 				{
-					AllocateSets(RenderContext::GetFrameAmount(), k);
+					auto& bind = renderItem.Bindings.ResBindings[ii];
+					if (bind.dirty)
+					{
+						// update descriptor
+						auto setNumber = meta.uniforms.at(bind.uniform).first;
+						auto bindNumber = meta.uniforms.at(bind.uniform).second;
+						auto& k = *std::find_if(keys.begin(), keys.end(), [=](auto key) {return key.set == setNumber; });
+
+						auto image = m_Textures.at(bind.handles[0]);
+
+
+						cmd.ChangeImageLayout(image.get(), image->GetLayout(), vk::ImageLayout::eShaderReadOnlyOptimal, image->m_MipMapLevels);
+
+						vk::DescriptorImageInfo imageDescriptor1;
+						assert(image->GetLayout() == vk::ImageLayout::eShaderReadOnlyOptimal);
+						imageDescriptor1.imageLayout = image->GetLayout();
+						imageDescriptor1.imageView = image->GetImageView();
+						imageDescriptor1.sampler = image->GetSampler();
+
+						m_Device->UpdateDescriptorSet(m_DescriptorSet.at(k)[m_CurrentFrame], bindNumber, 1, imageDescriptor1, ResourceType::CombinedSampler);
+						bind.dirty = false;
+
+
+
+					}
 				}
 
-			}
+				auto& renderPass = m_RenderPasses.at(key.fb);
+				auto frameBuffer = m_Framebuffers.at(key.fb)[imageIndex];
 
-			// updating uniforms
-			//struct ResourceBinding
-			//{
-			//	std::string uniform;
-			//	TextureHandle handle;
-			//	bool dirty;
-			//};
-			bool first = false;
-			for (int ii = 0; ii < renderItem.currentResBinding; ii++)
-			{
-				auto& bind = renderItem.ResBindings[ii];
-				if (bind.dirty)
+
+				auto& test = m_FBAttachments[key.fb];
+
+				for (auto handle : test)
 				{
-					// update descriptor
-					auto setNumber = meta.uniforms.at(bind.uniform).first;
-					auto bindNumber = meta.uniforms.at(bind.uniform).second;
-					auto& k = *std::find_if(keys.begin(), keys.end(), [=](auto key) {return key.set == setNumber; });
-
-					auto image = m_Textures.at(bind.handles[0]);
+					auto texHandle = m_AttachmentManager.GetColorTexture(handle, imageIndex);
+					auto image = m_Textures.at(texHandle);
+					cmd.ChangeImageLayout(image.get(), image->GetLayout(), vk::ImageLayout::eColorAttachmentOptimal, image->m_MipMapLevels);
+				}
 
 
-					cmd.ChangeImageLayout(image.get(), image->GetLayout(), vk::ImageLayout::eShaderReadOnlyOptimal,image->m_MipMapLevels);
-					
-					vk::DescriptorImageInfo imageDescriptor1;
-					assert(image->GetLayout() == vk::ImageLayout::eShaderReadOnlyOptimal);
-					imageDescriptor1.imageLayout = image->GetLayout();
-					imageDescriptor1.imageView = image->GetImageView();
-					imageDescriptor1.sampler = image->GetSampler();
+				cmd.BeginRenderPass(renderPass.m_RenderPass, frameBuffer, renderPass.m_Extent, renderPass.m_ClearValues);
+				auto vkCmd = cmd.GetCommandBuffer();
+				vkCmd.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
 
-					m_Device->UpdateDescriptorSet(m_DescriptorSet.at(k)[m_CurrentFrame], bindNumber, 1, imageDescriptor1, ResourceType::CombinedSampler);
-					bind.dirty = false;
+				UpdateUniformBuffer(view.Proj, view.View, m_App->GetExeTime());
 
-					
+
+				for (int ii = 0; ii < keys.size(); ii++)
+				{
+					auto k = keys.at(ii);
+					auto& descSet = m_DescriptorSet.at(k);
+					vkCmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, layout, ii, descSet[m_CurrentFrame], nullptr);
 
 				}
+				vk::Viewport viewport;
+				viewport.x = view.Rect[0];
+				viewport.y = view.Rect[1];
+				viewport.width = view.Rect[2];
+				viewport.height = view.Rect[3];
+				viewport.minDepth = 0;
+				viewport.maxDepth = 1;
+				vk::Rect2D scissors;
+				scissors.offset = vk::Offset2D{ static_cast<int32_t>(view.Rect[0]),static_cast<int32_t>(view.Rect[1]) };
+				scissors.extent = vk::Extent2D{ static_cast<uint32_t>(view.Rect[2]),static_cast<uint32_t>(view.Rect[3]) };
+				vkCmd.setViewport(0, 1, &viewport);
+				vkCmd.setScissor(0, 1, &scissors);
+
+				std::vector<vk::Buffer> vertexBuffers;
+				vertexBuffers.reserve(renderItem.Bindings.currentBinding);
+				std::vector<vk::DeviceSize> offsets(renderItem.Bindings.currentBinding, 0);
+
+				for (auto ii = 0; ii < renderItem.Bindings.currentBinding; ii++)
+				{
+					auto& buffer = m_VertexBuffers.at(renderItem.VertexBindings.at(ii).VertexHandle)->GetBuffer();
+					vertexBuffers.push_back(buffer);
+				}
+				if (vertexBuffers.size() > 0)
+					vkCmd.bindVertexBuffers(0, static_cast<uint32_t>(vertexBuffers.size()), vertexBuffers.data(), offsets.data());
+				if (renderItem.IndexBuffer.Valid())
+				{
+					auto buffer = m_IndexBuffers.at(renderItem.IndexBuffer);
+					vkCmd.bindIndexBuffer(buffer->GetBuffer(), vk::DeviceSize{ 0 }, buffer->GetIndexType());
+					vkCmd.drawIndexed(buffer->GetIndexAmount(), 1, 0, 0, 0);
+				}
+				else
+				{
+					// draw without index
+					vkCmd.draw(6, 1, 0, 0);
+				}
+
+
+				cmd.EndRenderPass();
+				renderItem.Bindings.Reset();
 			}
-
-			auto& renderPass = m_RenderPasses.at(key.fb);
-			auto frameBuffer = m_Framebuffers.at(key.fb)[imageIndex];
-
-
-			auto& test = m_FBAttachments[key.fb];
-
-			for (auto handle : test)
-			{
-				auto texHandle = m_AttachmentManager.GetColorTexture(handle, imageIndex);
-				auto image = m_Textures.at(texHandle);
-				cmd.ChangeImageLayout(image.get(), image->GetLayout(), vk::ImageLayout::eColorAttachmentOptimal, image->m_MipMapLevels);
-			}
-
-
-			cmd.BeginRenderPass(renderPass.m_RenderPass, frameBuffer, renderPass.m_Extent, renderPass.m_ClearValues);
-			auto vkCmd = cmd.GetCommandBuffer();
-			vkCmd.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
-
-			UpdateUniformBuffer(view.Proj, view.View, m_App->GetExeTime());
-
-			
-			for (int ii = 0; ii < keys.size(); ii++)
-			{
-				auto k = keys.at(ii);
-				auto& descSet = m_DescriptorSet.at(k);
-				vkCmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, layout, ii, descSet[m_CurrentFrame], nullptr);
-
-			}
-			vk::Viewport viewport;
-			viewport.x = view.Rect[0];
-			viewport.y = view.Rect[1];
-			viewport.width = view.Rect[2];
-			viewport.height = view.Rect[3];
-			viewport.minDepth = 0;
-			viewport.maxDepth = 1;
-			vk::Rect2D scissors;
-			scissors.offset = vk::Offset2D{ static_cast<int32_t>(view.Rect[0]),static_cast<int32_t>(view.Rect[1]) };
-			scissors.extent = vk::Extent2D{ static_cast<uint32_t>(view.Rect[2]),static_cast<uint32_t>(view.Rect[3]) };
-			vkCmd.setViewport(0, 1, &viewport);
-			vkCmd.setScissor(0, 1, &scissors);
-
-			std::vector<vk::Buffer> vertexBuffers;
-			vertexBuffers.reserve(renderItem.currentBinding);
-			std::vector<vk::DeviceSize> offsets(renderItem.currentBinding,0);
-
-			for (auto ii = 0; ii < renderItem.currentBinding; ii++)
-			{
-				auto& buffer = m_VertexBuffers.at(renderItem.Bindings.at(ii).VertexHandle)->GetBuffer();
-				vertexBuffers.push_back(buffer);
-			}
-			if (vertexBuffers.size() > 0)
-			vkCmd.bindVertexBuffers(0, static_cast<uint32_t>(vertexBuffers.size()),vertexBuffers.data(), offsets.data());
-			if (renderItem.IndexBuffer.Valid())
-			{
-				auto buffer = m_IndexBuffers.at(renderItem.IndexBuffer);
-				vkCmd.bindIndexBuffer(buffer->GetBuffer(), vk::DeviceSize{ 0 }, buffer->GetIndexType());
-				vkCmd.drawIndexed(buffer->GetIndexAmount(), 1, 0, 0, 0);
-			}
-			else
-			{
-				// draw without index
-				vkCmd.draw(6,1,0,0);
-			}
-
-
-			cmd.EndRenderPass();
-			renderItem.Reset();
-
 		}
 
 		cmd.EndRendering();
