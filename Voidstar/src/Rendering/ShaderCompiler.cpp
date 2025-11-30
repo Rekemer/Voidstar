@@ -212,6 +212,7 @@ namespace Voidstar
 				meta.stage, count, 0, 0, fmt));
 		}
 
+#if 0
 		// --- Separate images (no sampler baked in) ---
 		for (auto& img : res.separate_images) {
 			uint32_t set = comp.get_decoration(img.id, spv::DecorationDescriptorSet);
@@ -229,6 +230,7 @@ namespace Voidstar
 			meta.bindings[set].push_back(CreateBindingDesc(set, binding, ResourceType::SampledImage,
 				meta.stage, count));
 		}
+#endif
 
 		// --- Storage images (read/write) ---
 		for (auto& si : res.storage_images) {

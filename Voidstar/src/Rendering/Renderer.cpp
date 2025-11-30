@@ -1137,14 +1137,14 @@ namespace Voidstar
 
 		std::vector<vk::DescriptorPoolSize> pool_sizes =
 		{
-			{ vk::DescriptorType::eCombinedImageSampler, 10 },
-			{ vk::DescriptorType::eStorageImage, 10 },
-			{ vk::DescriptorType::eStorageBuffer, 10 },
-			{ vk::DescriptorType::eInputAttachment, 10 },
-			{ vk::DescriptorType::eUniformBuffer, 10 },
+			{ vk::DescriptorType::eCombinedImageSampler, 64 },
+			{ vk::DescriptorType::eStorageImage, 64 },
+			{ vk::DescriptorType::eStorageBuffer, 64 },
+			{ vk::DescriptorType::eInputAttachment, 64 },
+			{ vk::DescriptorType::eUniformBuffer, 64 },
 		};
 
-		m_UniversalPool = DescriptorPool::Create(pool_sizes, 10);
+		m_UniversalPool = DescriptorPool::Create(pool_sizes, 64);
 
 	
 		auto frameAmount = RenderContext::GetFrameAmount();
@@ -2058,9 +2058,26 @@ namespace Voidstar
 		pipelineInfo.sType = vk::StructureType::eComputePipelineCreateInfo;
 		pipelineInfo.layout = layout;
 		pipelineInfo.stage = computeShaderStageInfo;
-		m_Pipelines[key] = device->GetDevice().createComputePipeline(nullptr, pipelineInfo).value;
-		return m_Pipelines[key];
+		try
+		{
+			m_Pipelines[key] = device->GetDevice().createComputePipeline(nullptr, pipelineInfo).value;
+			Log::GetLog()->info("Compute pipeline is Created!");
+			return m_Pipelines[key];
+		}
+		catch (vk::SystemError err)
+		{
+			Log::GetLog()->error("Failed to create Pipeline");
+			return {};
+		}
+
 	}
+
+
+	void Renderer::BindDescriptors()
+	{
+
+	}
+
 	void Renderer::RenderFrame(Frame* render, float deltaTime)
 	{
 		Timer timer;
@@ -2115,36 +2132,41 @@ namespace Voidstar
 						auto bindNumber = meta.uniforms.at(bind.uniform).second;
 						auto& k = *std::find_if(keys.begin(), keys.end(), [=](auto key) {return key.set == setNumber; });
 						std::vector<vk::DescriptorImageInfo> descirptors;
-						for (auto handle : bind.handles)
+						if (bind.kind == ResourceType::CombinedSampler || bind.kind == ResourceType::StorageImage)
 						{
-							if (!handle.Valid()) break;
-							auto image = m_Textures.at(handle);
-							if (bind.kind == ResourceType::CombinedSampler)
+							for (auto handle : bind.handles)
 							{
-								cmd.ChangeImageLayout(image.get(), image->GetLayout(), vk::ImageLayout::eShaderReadOnlyOptimal, image->m_MipMapLevels);
-							}
-							else if (bind.kind == ResourceType::StorageImage)
-							{
-								cmd.ChangeImageLayout(image.get(), image->GetLayout(), vk::ImageLayout::eGeneral, image->m_MipMapLevels);
-							}
+								if (!handle.Valid()) break;
+								auto image = m_Textures.at(handle);
+								if (bind.kind == ResourceType::CombinedSampler)
+								{
+									cmd.ChangeImageLayout(image.get(), image->GetLayout(), vk::ImageLayout::eShaderReadOnlyOptimal, image->m_MipMapLevels);
+								}
+								else if (bind.kind == ResourceType::StorageImage)
+								{
+									cmd.ChangeImageLayout(image.get(), image->GetLayout(), vk::ImageLayout::eGeneral, image->m_MipMapLevels);
+								}
 							
-							vk::DescriptorImageInfo imageDescriptor1;
-							imageDescriptor1.imageLayout = image->GetLayout();
-							imageDescriptor1.imageView = image->GetImageView();
-							imageDescriptor1.sampler = image->GetSampler();
-							descirptors.push_back(imageDescriptor1);
+								vk::DescriptorImageInfo imageDescriptor1;
+								imageDescriptor1.imageLayout = image->GetLayout();
+								imageDescriptor1.imageView = image->GetImageView();
+								imageDescriptor1.sampler = image->GetSampler();
+								descirptors.push_back(imageDescriptor1);
 
+							}
+
+							m_Device->UpdateDescriptorSet(m_DescriptorSet.at(k)[m_CurrentFrame], bindNumber, descirptors, bind.kind);
 						}
-
-						m_Device->UpdateDescriptorSet(m_DescriptorSet.at(k)[m_CurrentFrame], bindNumber, descirptors, bind.kind);
-						for (auto handle : bind.buffers)
+						else if (bind.kind == ResourceType::StorageBuffer)
 						{
-							if (!handle.Valid()) break;
-							auto buffer = m_Buffers.at(handle);
-							m_Device->UpdateDescriptorSet(
-								m_DescriptorSet.at(k)[m_CurrentFrame], 1, 1, *buffer, ResourceType::StorageBuffer);
+							for (auto handle : bind.buffers)
+							{
+								if (!handle.Valid()) break;
+								auto buffer = m_Buffers.at(handle);
+								m_Device->UpdateDescriptorSet(
+									m_DescriptorSet.at(k)[m_CurrentFrame], 1, 1, *buffer, ResourceType::StorageBuffer);
+							}
 						}
-
 						bind.dirty = false;
 					}
 				}

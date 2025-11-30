@@ -259,8 +259,8 @@ namespace Voidstar
 		else if (oldLayout == vk::ImageLayout::eShaderReadOnlyOptimal && newLayout == vk::ImageLayout::eColorAttachmentOptimal)
 		{
 			barrier.srcAccessMask = vk::AccessFlagBits::eShaderRead;
-			barrier.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
 			sourceStage = vk::PipelineStageFlagBits::eFragmentShader;
+			barrier.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
 			destinationStage = vk::PipelineStageFlagBits::eColorAttachmentOutput;
 		}
 		else if (oldLayout == vk::ImageLayout::eShaderReadOnlyOptimal && newLayout == vk::ImageLayout::eTransferSrcOptimal)
@@ -326,6 +326,46 @@ namespace Voidstar
 				vk::PipelineStageFlagBits::eFragmentShader |
 				vk::PipelineStageFlagBits::eVertexShader;
 		}
+		else if (oldLayout == vk::ImageLayout::eTransferDstOptimal &&
+			newLayout == vk::ImageLayout::eShaderReadOnlyOptimal)
+		{
+			barrier.srcAccessMask =
+				vk::AccessFlagBits::eTransferWrite;
+
+			sourceStage =
+				vk::PipelineStageFlagBits::eTransfer;
+
+			barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+			destinationStage = vk::PipelineStageFlagBits::eFragmentShader;
+		}
+		else if (oldLayout == vk::ImageLayout::eShaderReadOnlyOptimal &&
+			newLayout == vk::ImageLayout::eTransferDstOptimal)
+		{
+			barrier.srcAccessMask = vk::AccessFlagBits::eShaderRead;
+			sourceStage = vk::PipelineStageFlagBits::eFragmentShader;
+			
+			barrier.dstAccessMask =
+				vk::AccessFlagBits::eTransferWrite;
+			destinationStage =
+				vk::PipelineStageFlagBits::eTransfer;
+
+		}
+		else if (oldLayout == vk::ImageLayout::eShaderReadOnlyOptimal &&
+			newLayout == vk::ImageLayout::eGeneral)
+			{
+				barrier.srcAccessMask = vk::AccessFlagBits::eShaderRead;
+				sourceStage = vk::PipelineStageFlagBits::eFragmentShader;
+
+				barrier.dstAccessMask =
+					vk::AccessFlagBits::eShaderRead |
+					vk::AccessFlagBits::eShaderWrite;
+
+
+				destinationStage = vk::PipelineStageFlagBits::eComputeShader |
+					vk::PipelineStageFlagBits::eFragmentShader |
+					vk::PipelineStageFlagBits::eVertexShader;
+
+			}
 		else 
 		{
 

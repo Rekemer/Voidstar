@@ -476,6 +476,7 @@ public:
 		m_FeedbackShader = LoadProgram("feedback.vert", "feedback.frag");
 		m_DefaultShader = LoadProgram("basic.vert", "texture.frag");
 		m_FinalShader = LoadProgram("render_screen_quad.vert","render_attachment.frag");
+		m_FinalShaderWorkingSet = LoadProgram("feedback.vert","render_working_set.frag");
 		m_TestTexture = LoadTexture("coffee.jpg");
 		m_TestTexture1 = LoadTexture("dos_2_noise.png");
 
@@ -528,7 +529,7 @@ public:
 		commandBuffer.SubmitSingle();
 #endif 
 
-		m_StorageBuffers = CreateBuffer(sizeof(FeedbackRes) * virtualTextureTiles.x * virtualTextureTiles.y,ResourceUsage::StorageRead | ResourceUsage::StorageWrite | ResourceUsage::Readback);
+		m_StorageBuffers = CreateBuffer(sizeof(PageEntry) * virtualTextureTiles.x * virtualTextureTiles.y,ResourceUsage::StorageRead | ResourceUsage::StorageWrite | ResourceUsage::Readback);
 
 		
 
@@ -587,6 +588,7 @@ public:
 		ExecuteFrame(0);
 		data = std::make_unique<uint8_t[]>(sizeof(FeedbackRes) * feedbackSize.x * feedbackSize.y);
 		m_FeedbackRes.resize(feedbackSize.x * feedbackSize.y);
+		m_Clear = std::vector<PageEntry>(virtualTextureTiles.x * virtualTextureTiles.y);
 	}
 #if OLD
 
@@ -1477,7 +1479,7 @@ public:
 			// so we can go back to low res mip level
 			// have tiles that
 			// should not have local vectors 
-			std::vector<PageEntry> tilesWeSee;
+			m_TilesWeSee.clear();
 			{
 				std::vector<SPtr<TileResult>> tilesToLoad;
 				ZoneScopedN("Reading Feedback Buffer");
@@ -1557,14 +1559,14 @@ public:
 							PageEntry page{ mipMap,pageCoord,physCoord };
 
 							m_Cache.Add(page, path);
-							tilesWeSee.push_back(page);
+							m_TilesWeSee.push_back(page);
 						}
 						else
 						{
 							ZoneScopedN("Add exisiting page");
-							if (std::find(tilesWeSee.begin(), tilesWeSee.end(), *cachedPage) == tilesWeSee.end())
+							if (std::find(m_TilesWeSee.begin(), m_TilesWeSee.end(), *cachedPage) == m_TilesWeSee.end())
 							{
-								tilesWeSee.push_back(*cachedPage);
+								m_TilesWeSee.push_back(*cachedPage);
 							}
 						}
 
@@ -1587,14 +1589,14 @@ public:
 				}
 			}		
 
-			if (tilesWeSee.size() > 0)
+			if (m_TilesWeSee.size() > 0)
 			{
 
 				ZoneScopedN("Update visible pages");
 
-				std::vector<PageEntry> clear(virtualTextureTiles.x * virtualTextureTiles.y);
-				SetData(m_StorageBuffers, clear.data(),clear.size() * sizeof(clear.at(0)));
-				SetData(m_StorageBuffers, tilesWeSee.data(), tilesWeSee.size() * sizeof(tilesWeSee.at(0)));
+			    
+				SetData(m_StorageBuffers, m_Clear.data(), m_Clear.size() * sizeof(m_Clear.at(0)));
+				//SetData(m_StorageBuffers, tilesWeSee.data(), tilesWeSee.size() * sizeof(tilesWeSee.at(0)));
 				//m_StorageBuffers->SetData(clear.data());
 
 				//auto ptr = (PageEntry*)device->GetDevice().mapMemory(m_StorageBuffers->GetMemory(), (uint64_t)0, tilesWeSee.size() * sizeof/(tilesWeSee/[0]));
@@ -1647,16 +1649,25 @@ public:
 
 
 
-			auto images = m_PageTableMipMaps;
+			auto& images = m_PageTableMipMaps;
 			//images.push_back(m_PageTable);
 
-			BindImages("storageImage", images);
-			BindBuffer("u_StorageBuffer",m_StorageBuffers);
+			//BindImages("storageImage", images);
+			//BindBuffer("u_StorageBuffer",m_StorageBuffers);
+			//SubmitCompute(m_UpdatePageTablePass[0], m_ComputeShaders[0], m_TilesWeSee.size(), 1, 1);
+			//BindImages("storageImage", m_PageTableMipMaps);
+			//BindImage("final", m_PageTable);
+			//SubmitCompute(m_UpdatePageTablePass[1], m_ComputeShaders[1], pageTableWidth, pageTableHeight, 1);
 
-			SubmitCompute(m_UpdatePageTablePass[0], m_ComputeShaders[0], tilesWeSee.size(), 1, 1);
-			BindImages("storageImage", m_PageTableMipMaps);
-			BindTexture("final", m_PageTable);
-			SubmitCompute(m_UpdatePageTablePass[1], m_ComputeShaders[1], pageTableWidth, pageTableHeight, 1);
+
+			SetViewTransform(m_FeedbackRenderPass, GetCamera()->GetView(), GetCamera()->GetProj());
+			BindVertexBuffer(0, m_VertexCubeHandle);
+			BindIndexBuffer(m_IndexCubeHandle);
+			BindTexture("PageTable", m_PageTable);
+			BindTexture("WorkingSet", m_WorkingSet);
+
+			Submit(m_FinalRenderPass, m_FinalShaderWorkingSet);
+
 			ExecuteFrame(deltaTime);
 	#if 0 
 
@@ -1765,6 +1776,7 @@ private:
 	ProgramHandle m_FeedbackShader;
 	ProgramHandle m_ComputeShaders[2];
 	ProgramHandle m_FinalShader;
+	ProgramHandle m_FinalShaderWorkingSet;
 	ProgramHandle m_DebugShader;
 
 	BufferHandle m_StorageBuffers;
@@ -1782,7 +1794,8 @@ private:
 	AttachmentHandle m_FeedbackAttachments[2];
 	std::vector<Vertex> m_Cube;
 	std::vector<IndexType> m_IndexCube;
-
+	std::vector<PageEntry> m_TilesWeSee;
+	std::vector<PageEntry> m_Clear;
 
 	int m_BaseDesc = 0;
 	int m_PageTableDescCompute = 0;
@@ -1813,6 +1826,7 @@ private:
 	
 	bool isClicked = false;
 	bool isDragged = false;
+
 	struct FeedbackRes
 	{
 		float pageX, pageY, mipMap, isValid;

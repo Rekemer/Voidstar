@@ -22,7 +22,6 @@ namespace Voidstar
 	{
 		UniformBuffer,
 		StorageBuffer,
-		SampledImage,
 		StorageImage,
 		CombinedSampler,
 	};
@@ -334,6 +333,7 @@ namespace Voidstar
 		std::array<TextureHandle, 12> handles;
 		std::array<BufferHandle,  12> buffers;
 		int currentHandle = 0;
+		int currentHandle2 = 0;
 		bool dirty;
 		ResourceType kind;
 	};
@@ -352,6 +352,7 @@ namespace Voidstar
 			for (auto& bind : ResBindings)
 			{
 				bind.currentHandle = 0;
+				bind.currentHandle2 = 0;
 			}
 		}
 	};
@@ -474,6 +475,7 @@ namespace Voidstar
 		BufferHandle handle);
 	
 	void BindTexture(std::string_view uniform, TextureHandle handle);
+	void BindImage(std::string_view uniformName, TextureHandle handle);
 	void BindTextures(std::string_view uniformName, const std::vector<TextureHandle>& handle);
 	void BindImages(std::string_view uniformName, const std::vector<TextureHandle>& handle);
 	std::vector<TextureHandle> GenerateMipMapsAsTextures(TextureHandle handle, int mipLevel);

@@ -232,9 +232,6 @@ namespace Voidstar
         case ResourceType::StorageBuffer:
             return vk::DescriptorType::eStorageBuffer;
 
-        case ResourceType::SampledImage:
-            return vk::DescriptorType::eSampledImage;
-
         case ResourceType::StorageImage:
             return vk::DescriptorType::eStorageImage;
 

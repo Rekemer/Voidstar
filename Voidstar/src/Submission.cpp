@@ -231,12 +231,27 @@ namespace Voidstar
 		std::copy_n(handles.begin(), handles.size(), bind.handles.begin());
 		bind.kind = ResourceType::StorageImage;
 	}
+
+	void BindImage(std::string_view uniformName, TextureHandle handle)
+	{
+		auto& bindings = GetBindings(g_Submission->Submit->CurrentRenderItem);
+
+		auto& bind = bindings.ResBindings[bindings.currentResBinding++];
+
+		bind.uniform = uniformName;
+		bind.dirty = true;
+		bind.handles[bind.currentHandle++] = handle;
+		bind.kind = ResourceType::StorageImage;
+	}
+
 	void BindBuffer(std::string_view uniformName, BufferHandle handle)
 	{
 		auto& bindings = GetBindings(g_Submission->Submit->CurrentRenderItem);
 		auto& bind = bindings.ResBindings[bindings.currentResBinding++];
 		bind.uniform = uniformName;
 		bind.dirty = true;
+		bind.kind = ResourceType::StorageBuffer;
+		bind.buffers[bind.currentHandle2++] = handle;
 
 	}
 	void BindTexture(std::string_view uniformName, TextureHandle handle)
@@ -281,6 +296,7 @@ namespace Voidstar
 		auto renderItem =g_Submission->Submit->CurrentRenderItem;
 		renderItem->Program = programHandle;
 		renderItem->View =viewID;
+		renderItem->Type = ItemType::RENDER;
 		// we can create pipeline
 		g_Submission->Submit->NextItem();
 		
