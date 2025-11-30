@@ -2072,10 +2072,76 @@ namespace Voidstar
 
 	}
 
-
-	void Renderer::BindDescriptors()
+	void Renderer::BindDescriptors(vk::PipelineBindPoint bindPoint, Item& item, std::vector<DescriptorLayoutKey>& keys, ProgramMeta& meta, CommandBuffer& cmd, vk::PipelineLayout layout)
 	{
+		auto vkCmd = cmd.GetCommandBuffer();
+		for (int ii = 0; ii < keys.size(); ii++)
+		{
+			auto k = keys.at(ii);
+			if (m_DescriptorSet.find(k) == m_DescriptorSet.end())
+			{
+				AllocateSets(RenderContext::GetFrameAmount(), k);
+			}
+		}
 
+		for (int ii = 0; ii < item.Bindings.currentResBinding; ii++)
+		{
+
+			auto& bind = item.Bindings.ResBindings[ii];
+			if (bind.dirty)
+			{
+				// update descriptor
+				auto setNumber = meta.uniforms.at(bind.uniform).first;
+				auto bindNumber = meta.uniforms.at(bind.uniform).second;
+				auto& k = *std::find_if(keys.begin(), keys.end(), [=](auto key) {return key.set == setNumber; });
+				std::vector<vk::DescriptorImageInfo> descirptors;
+				if (bind.kind == ResourceType::CombinedSampler || bind.kind == ResourceType::StorageImage)
+				{
+					for (auto handle : bind.handles)
+					{
+						if (!handle.Valid()) break;
+						auto image = m_Textures.at(handle);
+						if (bind.kind == ResourceType::CombinedSampler)
+						{
+							cmd.ChangeImageLayout(image.get(), image->GetLayout(), vk::ImageLayout::eShaderReadOnlyOptimal, image->m_MipMapLevels);
+						}
+						else if (bind.kind == ResourceType::StorageImage)
+						{
+							cmd.ChangeImageLayout(image.get(), image->GetLayout(), vk::ImageLayout::eGeneral, image->m_MipMapLevels);
+						}
+
+						vk::DescriptorImageInfo imageDescriptor1;
+						imageDescriptor1.imageLayout = image->GetLayout();
+						imageDescriptor1.imageView = image->GetImageView();
+						imageDescriptor1.sampler = image->GetSampler();
+						descirptors.push_back(imageDescriptor1);
+
+					}
+
+					m_Device->UpdateDescriptorSet(m_DescriptorSet.at(k)[m_CurrentFrame], bindNumber, descirptors, bind.kind);
+				}
+				else if (bind.kind == ResourceType::StorageBuffer)
+				{
+					for (auto handle : bind.buffers)
+					{
+						if (!handle.Valid()) break;
+						auto buffer = m_Buffers.at(handle);
+						m_Device->UpdateDescriptorSet(
+							m_DescriptorSet.at(k)[m_CurrentFrame], 1, 1, *buffer, ResourceType::StorageBuffer);
+					}
+				}
+				
+				bind.dirty = false;
+			}
+		}
+
+		for (int ii = 0; ii < keys.size(); ii++)
+		{
+			auto k = keys.at(ii);
+			auto& descSet = m_DescriptorSet.at(k);
+			vkCmd.bindDescriptorSets( bindPoint, layout, ii, descSet[m_CurrentFrame], nullptr);
+
+		}
 	}
 
 	void Renderer::RenderFrame(Frame* render, float deltaTime)
@@ -2112,72 +2178,7 @@ namespace Voidstar
 				PipelineKey key = { computeItem.Program,{},keys,{} };
 				vk::Pipeline pipeline = GetComputePipeline(key);
 				vk::PipelineLayout layout = m_PipelineLayout.at(key.layout);
-				for (int ii = 0; ii < keys.size(); ii++)
-				{
-					auto k = keys.at(ii);
-					if (m_DescriptorSet.find(k) == m_DescriptorSet.end())
-					{
-						AllocateSets(RenderContext::GetFrameAmount(), k);
-					}
-				}
-
-				for (int ii = 0; ii < computeItem.Bindings.currentResBinding; ii++)
-				{
-
-					auto& bind = computeItem.Bindings.ResBindings[ii];
-					if (bind.dirty)
-					{
-						// update descriptor
-						auto setNumber = meta.uniforms.at(bind.uniform).first;
-						auto bindNumber = meta.uniforms.at(bind.uniform).second;
-						auto& k = *std::find_if(keys.begin(), keys.end(), [=](auto key) {return key.set == setNumber; });
-						std::vector<vk::DescriptorImageInfo> descirptors;
-						if (bind.kind == ResourceType::CombinedSampler || bind.kind == ResourceType::StorageImage)
-						{
-							for (auto handle : bind.handles)
-							{
-								if (!handle.Valid()) break;
-								auto image = m_Textures.at(handle);
-								if (bind.kind == ResourceType::CombinedSampler)
-								{
-									cmd.ChangeImageLayout(image.get(), image->GetLayout(), vk::ImageLayout::eShaderReadOnlyOptimal, image->m_MipMapLevels);
-								}
-								else if (bind.kind == ResourceType::StorageImage)
-								{
-									cmd.ChangeImageLayout(image.get(), image->GetLayout(), vk::ImageLayout::eGeneral, image->m_MipMapLevels);
-								}
-							
-								vk::DescriptorImageInfo imageDescriptor1;
-								imageDescriptor1.imageLayout = image->GetLayout();
-								imageDescriptor1.imageView = image->GetImageView();
-								imageDescriptor1.sampler = image->GetSampler();
-								descirptors.push_back(imageDescriptor1);
-
-							}
-
-							m_Device->UpdateDescriptorSet(m_DescriptorSet.at(k)[m_CurrentFrame], bindNumber, descirptors, bind.kind);
-						}
-						else if (bind.kind == ResourceType::StorageBuffer)
-						{
-							for (auto handle : bind.buffers)
-							{
-								if (!handle.Valid()) break;
-								auto buffer = m_Buffers.at(handle);
-								m_Device->UpdateDescriptorSet(
-									m_DescriptorSet.at(k)[m_CurrentFrame], 1, 1, *buffer, ResourceType::StorageBuffer);
-							}
-						}
-						bind.dirty = false;
-					}
-				}
-
-				for (int ii = 0; ii < keys.size(); ii++)
-				{
-					auto k = keys.at(ii);
-					auto& descSet = m_DescriptorSet.at(k);
-					vkCmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, layout, ii, descSet[m_CurrentFrame], nullptr);
-
-				}
+				BindDescriptors(vk::PipelineBindPoint::eCompute, computeItem,keys,meta,cmd,layout);
 
 				vkCmd.bindPipeline(vk::PipelineBindPoint::eCompute, pipeline);
 				vkCmd.dispatch(computeItem.GroupCount.x, computeItem.GroupCount.y, computeItem.GroupCount.z);
@@ -2215,6 +2216,7 @@ namespace Voidstar
 				vk::PipelineLayout layout = m_PipelineLayout.at(key.layout);
 
 
+#if 0
 				for (int ii = 0; ii < keys.size(); ii++)
 				{
 					auto k = keys.at(ii);
@@ -2260,10 +2262,14 @@ namespace Voidstar
 
 					}
 				}
+#endif
 
 				auto& renderPass = m_RenderPasses.at(key.fb);
 				auto frameBuffer = m_Framebuffers.at(key.fb)[imageIndex];
 
+
+				BindDescriptors(vk::PipelineBindPoint::eGraphics, renderItem, keys, meta, cmd, layout);
+				UpdateUniformBuffer(view.Proj, view.View, m_App->GetExeTime());
 
 				auto& test = m_FBAttachments[key.fb];
 
@@ -2279,16 +2285,15 @@ namespace Voidstar
 				auto vkCmd = cmd.GetCommandBuffer();
 				vkCmd.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
 
-				UpdateUniformBuffer(view.Proj, view.View, m_App->GetExeTime());
 
 
-				for (int ii = 0; ii < keys.size(); ii++)
+			/*	for (int ii = 0; ii < keys.size(); ii++)
 				{
 					auto k = keys.at(ii);
 					auto& descSet = m_DescriptorSet.at(k);
 					vkCmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, layout, ii, descSet[m_CurrentFrame], nullptr);
 
-				}
+				}*/
 				vk::Viewport viewport;
 				viewport.x = view.Rect[0];
 				viewport.y = view.Rect[1];

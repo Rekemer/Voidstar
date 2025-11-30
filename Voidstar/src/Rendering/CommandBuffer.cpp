@@ -273,16 +273,32 @@ namespace Voidstar
 		else if (oldLayout == vk::ImageLayout::eTransferSrcOptimal && newLayout == vk::ImageLayout::eShaderReadOnlyOptimal)
 		{
 			barrier.srcAccessMask = vk::AccessFlagBits::eTransferRead;
-			barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
 			sourceStage = vk::PipelineStageFlagBits::eTransfer;
+			barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
 			destinationStage = vk::PipelineStageFlagBits::eFragmentShader; 
 		}
 		else if (oldLayout == vk::ImageLayout::eUndefined && newLayout == vk::ImageLayout::eColorAttachmentOptimal)
 		{
 			barrier.srcAccessMask = {}; // 0
-			barrier.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
 
 			sourceStage = vk::PipelineStageFlagBits::eTopOfPipe;
+			barrier.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
+			destinationStage = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+		}
+		else if (oldLayout == vk::ImageLayout::eColorAttachmentOptimal && newLayout == vk::ImageLayout::eTransferSrcOptimal)
+		{
+			barrier.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
+			sourceStage = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+
+			barrier.dstAccessMask = vk::AccessFlagBits::eTransferRead;
+			destinationStage = vk::PipelineStageFlagBits::eTransfer;
+		}
+		else if (oldLayout == vk::ImageLayout::eTransferSrcOptimal && newLayout == vk::ImageLayout::eColorAttachmentOptimal)
+		{
+			barrier.srcAccessMask = vk::AccessFlagBits::eTransferRead;
+			sourceStage = vk::PipelineStageFlagBits::eTransfer;
+
+			barrier.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
 			destinationStage = vk::PipelineStageFlagBits::eColorAttachmentOutput;
 		}
 		else if (oldLayout == vk::ImageLayout::eUndefined && newLayout == vk::ImageLayout::eTransferDstOptimal)
@@ -352,20 +368,20 @@ namespace Voidstar
 		}
 		else if (oldLayout == vk::ImageLayout::eShaderReadOnlyOptimal &&
 			newLayout == vk::ImageLayout::eGeneral)
-			{
-				barrier.srcAccessMask = vk::AccessFlagBits::eShaderRead;
-				sourceStage = vk::PipelineStageFlagBits::eFragmentShader;
+		{
+			barrier.srcAccessMask = vk::AccessFlagBits::eShaderRead;
+			sourceStage = vk::PipelineStageFlagBits::eFragmentShader;
 
-				barrier.dstAccessMask =
-					vk::AccessFlagBits::eShaderRead |
-					vk::AccessFlagBits::eShaderWrite;
+			barrier.dstAccessMask =
+				vk::AccessFlagBits::eShaderRead |
+				vk::AccessFlagBits::eShaderWrite;
 
 
-				destinationStage = vk::PipelineStageFlagBits::eComputeShader |
-					vk::PipelineStageFlagBits::eFragmentShader |
-					vk::PipelineStageFlagBits::eVertexShader;
+			destinationStage = vk::PipelineStageFlagBits::eComputeShader |
+				vk::PipelineStageFlagBits::eFragmentShader |
+				vk::PipelineStageFlagBits::eVertexShader;
 
-			}
+		}
 		else 
 		{
 

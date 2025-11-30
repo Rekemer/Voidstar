@@ -172,6 +172,7 @@ namespace Voidstar
 		bind.uniform = name;
 		bind.dirty = true;
 		bind.handles[bind.currentHandle++] = handle;
+		bind.kind = ResourceType::CombinedSampler;
 	}
 	TextureHandle GetColorTexture(FrameBufferHandle fb)
 	{

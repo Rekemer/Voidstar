@@ -1660,15 +1660,15 @@ public:
 			//SubmitCompute(m_UpdatePageTablePass[1], m_ComputeShaders[1], pageTableWidth, pageTableHeight, 1);
 
 
-			SetViewTransform(m_FeedbackRenderPass, GetCamera()->GetView(), GetCamera()->GetProj());
-			BindVertexBuffer(0, m_VertexCubeHandle);
-			BindIndexBuffer(m_IndexCubeHandle);
-			BindTexture("PageTable", m_PageTable);
-			BindTexture("WorkingSet", m_WorkingSet);
-
-			Submit(m_FinalRenderPass, m_FinalShaderWorkingSet);
-
-			ExecuteFrame(deltaTime);
+			//SetViewTransform(m_FeedbackRenderPass, GetCamera()->GetView(), GetCamera()->GetProj());
+			//BindVertexBuffer(0, m_VertexCubeHandle);
+			//BindIndexBuffer(m_IndexCubeHandle);
+			//BindTexture("PageTable", m_PageTable);
+			//BindTexture("WorkingSet", m_WorkingSet);
+			//
+			//Submit(m_FinalRenderPass, m_FinalShaderWorkingSet);
+			//
+			//ExecuteFrame(deltaTime);
 	#if 0 
 
 			cmd.BeginTransfering();

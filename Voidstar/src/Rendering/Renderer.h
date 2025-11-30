@@ -225,6 +225,7 @@ namespace Voidstar
 		size_t GetSize(TextureHandle handle);
 
 	private:
+		void BindDescriptors(vk::PipelineBindPoint bindPoint, Item& item, std::vector<DescriptorLayoutKey>& keys, ProgramMeta& meta, CommandBuffer& cmd, vk::PipelineLayout layout);
 		vk::Pipeline GetComputePipeline(PipelineKey& key);
 		vk::Pipeline GetPipeline(const PipelineKey& key, std::array<VertexBinding, Item::MAX_VERTEX_BINDING>& bindings,
 			int bindingAmount);
