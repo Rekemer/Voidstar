@@ -1430,13 +1430,13 @@ public:
 		ExecuteFrame(deltaTime);
 		//ExecuteFrame(0);
 
+		ReadTexture(scene, data.get());
+		ExecuteFrame(deltaTime);
 
 	#if 1
 
 			static uint64_t lastProcessed = 0;
 
-			ReadTexture(scene, data.get());
-			ExecuteFrame(deltaTime);
 			//ExecuteFrame(deltaTime);
 		
 			auto currentFrame = GetCurrentFrame();

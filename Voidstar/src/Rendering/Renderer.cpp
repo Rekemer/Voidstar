@@ -2216,7 +2216,7 @@ namespace Voidstar
 				vk::PipelineLayout layout = m_PipelineLayout.at(key.layout);
 
 
-#if 0
+#if 1
 				for (int ii = 0; ii < keys.size(); ii++)
 				{
 					auto k = keys.at(ii);
@@ -2265,17 +2265,18 @@ namespace Voidstar
 #endif
 
 				auto& renderPass = m_RenderPasses.at(key.fb);
-				auto frameBuffer = m_Framebuffers.at(key.fb)[imageIndex];
+				auto index = key.fb == DEFAULT_FRAME_BUFFER ? imageIndex : static_cast<uint32_t>(m_CurrentFrame);
+				auto frameBuffer = m_Framebuffers.at(key.fb)[index];
 
 
-				BindDescriptors(vk::PipelineBindPoint::eGraphics, renderItem, keys, meta, cmd, layout);
+				//BindDescriptors(vk::PipelineBindPoint::eGraphics, renderItem, keys, meta, cmd, layout);
 				UpdateUniformBuffer(view.Proj, view.View, m_App->GetExeTime());
 
 				auto& test = m_FBAttachments[key.fb];
 
 				for (auto handle : test)
 				{
-					auto texHandle = m_AttachmentManager.GetColorTexture(handle, imageIndex);
+					auto texHandle = m_AttachmentManager.GetColorTexture(handle, index);
 					auto image = m_Textures.at(texHandle);
 					cmd.ChangeImageLayout(image.get(), image->GetLayout(), vk::ImageLayout::eColorAttachmentOptimal, image->m_MipMapLevels);
 				}
@@ -2287,13 +2288,13 @@ namespace Voidstar
 
 
 
-			/*	for (int ii = 0; ii < keys.size(); ii++)
+				for (int ii = 0; ii < keys.size(); ii++)
 				{
 					auto k = keys.at(ii);
 					auto& descSet = m_DescriptorSet.at(k);
 					vkCmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, layout, ii, descSet[m_CurrentFrame], nullptr);
 
-				}*/
+				}
 				vk::Viewport viewport;
 				viewport.x = view.Rect[0];
 				viewport.y = view.Rect[1];
@@ -2416,6 +2417,7 @@ namespace Voidstar
 	}
 	void Renderer::EndFrame(Frame* frame)
 	{
+		if (frame->CurrentRenderItemIndex > 0)
 		m_CurrentFrame = (m_CurrentFrame + 1) % RenderContext::GetFrameAmount();
 	}
 
