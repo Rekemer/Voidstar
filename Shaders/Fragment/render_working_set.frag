@@ -24,7 +24,6 @@ void main ()
     
 
     vec2 workingSetUv = offset;
-
     int layer  = int(index.y * 20+ index.x); 
     vec4 tex = texture(WorkingSet,vec3(workingSetUv ,layer)) ;
     

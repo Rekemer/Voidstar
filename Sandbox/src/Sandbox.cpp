@@ -1388,9 +1388,10 @@ public:
 
 		// feedback pass
 
+		auto feedbackProj = glm::perspectiveRH_ZO(glm::radians(65.0f), float(Application::GetScreenWidth() / Application::GetScreenHeight()), 0.0001f, 1000.0f);
 		SetViewRect(m_FeedbackRenderPass, 0, 0, feedbackSize.x, feedbackSize.y);
 		SetFramebuffer(m_FeedbackRenderPass, m_FeedbackFramebuffer);
-		SetViewTransform(m_FeedbackRenderPass, GetCamera()->GetView(), GetCamera()->GetProj());
+		SetViewTransform(m_FeedbackRenderPass, GetCamera()->GetView(), feedbackProj);
 		BindVertexBuffer(0, m_Vertexhandle);
 		BindIndexBuffer(m_IndexHandle);
 		Submit(m_FeedbackRenderPass, m_FeedbackShader);
@@ -1573,7 +1574,7 @@ public:
 
 			    
 				SetData(m_StorageBuffers, m_Clear.data(), m_Clear.size() * sizeof(m_Clear.at(0)));
-				//SetData(m_StorageBuffers, tilesWeSee.data(), tilesWeSee.size() * sizeof(tilesWeSee.at(0)));
+				SetData(m_StorageBuffers, m_TilesWeSee.data(), m_TilesWeSee.size() * sizeof(m_TilesWeSee.at(0)));
 				//m_StorageBuffers->SetData(clear.data());
 
 				//auto ptr = (PageEntry*)device->GetDevice().mapMemory(m_StorageBuffers->GetMemory(), (uint64_t)0, tilesWeSee.size() * sizeof/(tilesWeSee/[0]));
@@ -1709,7 +1710,7 @@ public:
 		BindImage("final", m_PageTable);
 		SubmitCompute(m_UpdatePageTablePass[1], m_ComputeShaders[1], pageTableWidth, pageTableHeight, 1);
 
-
+		
 		SetViewRect(m_FinalRenderPass, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
 		SetViewTransform(m_FinalRenderPass, GetCamera()->GetView(), GetCamera()->GetProj());
 		BindVertexBuffer(0, m_Vertexhandle);

@@ -38,6 +38,6 @@ namespace Voidstar
 		float width;
 		float height;
 		const float farPlane = 100;
-		const float nearPlane = 0.1;
+		const float nearPlane = 0.0001;
 	};
 }
