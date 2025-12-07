@@ -13,12 +13,12 @@
 #include <functional>
 #include "Sync.h"
 #include "Pipeline.h"
-#include "RenderPassGraph.h"
+
 #include "Drawables.h"
 #include"tracy/Tracy.hpp"
 #include"tracy/TracyVulkan.hpp"
 
-
+#include "RenderPass.h"
 #include "CommandPoolManager.h"
 #include "IndexBuffer.h"
 
@@ -145,16 +145,11 @@ namespace Voidstar
 		{
 			return m_CommandPoolManager.get();
 		}
-		void Flush(std::vector< vk:: CommandBuffer > commandBuffers);
 		void Wait(const vk::Fence& fence);
 		void Reset(const vk::Fence& fence);
 		~Renderer();
 	
-		
-		const DescriptorSetLayout* GetSetLayout(int handle, PipelineType type)
-		{
-			return m_Layout[{handle, type}];
-		}
+	
 		std::pair<float, float> GetViewportSize() const { return { m_ViewportWidth,m_ViewportHeight }; }
 		
 		void Shutdown();
@@ -162,18 +157,9 @@ namespace Voidstar
 		CommandBuffer& GetComputeCommandBuffer(size_t frameindex);
 		CommandBuffer& GetTransferCommandBuffer(size_t frameindex);
 		
-		// position 0 0 is center of screen
-		void DrawQuadScreen(vk::CommandBuffer commandBuffer);
-		void DrawQuad(glm::mat4& world, glm::vec4 color);
-		void DrawQuad(std::vector<Vertex_>& verticies);
+
 		void DrawTxt(vk::CommandBuffer commandBuffer, std::string_view str,glm::vec2 pos, std::map<unsigned char, Character> &Characters);
-		void Draw(Drawable& drawable);
-		void DrawSphere(glm::vec3 pos, glm::vec3 scale,
-			glm::vec4 color, glm::vec3 rot);
-		void DrawSphereInstance(vk::CommandBuffer& commandBuffer);
-		void BeginBatch();
-		void DrawBatch(vk::CommandBuffer& commandBuffer,size_t offset = 0, int index = 0);
-		void DrawBatchCustom(vk::CommandBuffer& commandBuffer, size_t indexAmount, size_t offset = 0, int index = 0);
+		
 		vk::Fence GetFence()
 		{
 			return m_InFlightFence[m_CurrentFrame].GetFence();
@@ -189,31 +175,7 @@ namespace Voidstar
 		
 		int m_QuadIndex= 0;
 		void CreateSyncObjects();
-		void AddRenderGraph(std::string_view name, UPtr<RenderPassGraph> graph)
-		{
-			m_Graphs.emplace_back(std::move(graph));
-		}
-		void AddDrawable(std::string_view renderPassName, const Drawable& drawable)
-		{
-			auto& drawables = m_Drawables[renderPassName.data()];
-			drawables.push_back(drawable);
-		}
-		void AddStaticDrawable(std::string_view renderPassName, const Drawable& drawable)
-		{
-			auto& drawables = m_StaticDrawables[renderPassName.data()];
-			drawables.push_back(drawable);
-		}
-
-		std::vector<Drawable>& GetDrawables(std::string_view renderPassName)
-		{
-			auto& drawables = m_Drawables.at(renderPassName.data());
-			return drawables;
-		}
-		std::vector<Drawable>& GetStaticDrawables(std::string_view renderPassName)
-		{
-			auto& drawables = m_StaticDrawables.at(renderPassName.data());
-			return drawables;
-		}
+		
 		std::vector<UPtr<Buffer>> m_UniformBuffers;
 		void Draw(Quad& quad, glm::mat4& world);
 		void Draw(Sphere& drawable);
@@ -234,7 +196,7 @@ namespace Voidstar
 		void CreateInstance();
 		void RecreateSwapchain();
 		std::vector<vk::DescriptorSet>  AllocateSets(size_t amount, const DescriptorLayoutKey& key);
-		void CleanUpLayouts();
+		
 		int GetIndex(FrameBufferHandle handle,bool& isPresent);
 		SparseSet<RenderPassHandle_> g_RenderPassAllocator;
 	private:
@@ -306,19 +268,8 @@ namespace Voidstar
 
 		std::vector<Fence> m_InFlightFence;
 
-		std::vector<Semaphore> m_ComputeFinishedSemaphores;
-		std::vector<Fence> m_ComputeInFlightFences;
 
 		SPtr<Window> m_Window;
-
-		
-
-		std::unordered_map<std::pair<int, PipelineType>, DescriptorSetLayout*, EnumClassHash> m_Layout;
-		std::unordered_map<std::pair<int, PipelineType>, std::variant<vk::DescriptorSet, std::vector<vk::DescriptorSet> >, EnumClassHash> m_Sets;
-
-		std::vector<UPtr<RenderPassGraph>> m_Graphs;
-		std::unordered_map<std::string,std::vector<Drawable>> m_Drawables;
-		std::unordered_map<std::string,std::vector<Drawable>> m_StaticDrawables;
 
 		
 	

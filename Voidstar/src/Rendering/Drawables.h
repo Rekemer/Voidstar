@@ -46,6 +46,7 @@ namespace Voidstar
 			}
 			void Draw() override
 			{
+				// call overloaded draw function
 				Renderer::Instance()->Draw(*m_Self);
 			}
 		private:

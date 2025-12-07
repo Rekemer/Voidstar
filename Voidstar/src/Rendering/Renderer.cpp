@@ -848,14 +848,7 @@ namespace Voidstar
 		}
 		return  m_DescriptorSet[key];
 	}
-	void Renderer::CleanUpLayouts()
-	{
-		auto device = RenderContext::GetDevice();
-		for (auto [key, value] : m_Layout)
-		{
-			device->GetDevice().destroyDescriptorSetLayout(value->GetLayout());
-		}
-	}
+
 
 
 	CommandBuffer& Renderer::GetRenderCommandBuffer(size_t frameindex)
@@ -876,55 +869,9 @@ namespace Voidstar
 		return m_TransferCommandBuffer[frameindex];
 	}
 
-	void Renderer::BeginBatch()
-	{
-		m_QuadIndex = 0;
-		m_BatchQuad = m_BatchQuadStart;
-		//m_BatchInstance = m_BatchInstanceStart;
-	}
 
-	void Renderer::DrawBatch(vk::CommandBuffer& commandBuffer,size_t offset, int index)
-	{
-		vk::DeviceSize offsets[] = { offset };
 
-		{
-			vk::Buffer vertexBuffers[] = { m_QuadBufferBatch->GetBuffer() };
-			commandBuffer.bindVertexBuffers(0, 1, vertexBuffers, offsets);
-		}
-		commandBuffer.bindIndexBuffer(m_QuadBufferBatchIndex->GetBuffer(), 0, m_QuadBufferBatchIndex->GetIndexType());
-		commandBuffer.drawIndexed(m_QuadIndex, 1, 0, 0, 0);
-	}
-	void Renderer::DrawBatchCustom(vk::CommandBuffer& commandBuffer, size_t indexAmount,size_t offset, int index)
-	{
-		vk::DeviceSize offsets[] = { offset };
 
-		{
-			vk::Buffer vertexBuffers[] = { m_QuadBufferBatch->GetBuffer() };
-			commandBuffer.bindVertexBuffers(0, 1, vertexBuffers, offsets);
-		}
-		commandBuffer.bindIndexBuffer(m_QuadBufferBatchIndex->GetBuffer(), 0, m_QuadBufferBatchIndex->GetIndexType());
-		commandBuffer.drawIndexed(indexAmount, 1, m_QuadIndex-index, 0, 0);
-	}
-
-	void UpdateVertex(Vertex_*& vertex, glm::vec3 position, glm::vec2 uv,glm::vec4& color, glm::mat4& world,  int vertIndex)
-	{
-		vertex->Position = world * glm::vec4{ position,1 };
-		vertex->UV = uv;
-		vertex->Color = color;
-	};
-	void UpdateVerticies(Vertex_*& vertex, std::vector<Vertex_>& verticies)
-	{
-		assert(false);
-		//UpdateVertex(vertex,verticies[0].Position, verticies[0].Color, glm::identity<glm::mat4>());
-		//vertex++;																				   
-		//UpdateVertex(vertex,verticies[2].Position, verticies[2].Color, glm::identity<glm::mat4>());
-		//vertex++;																				   
-		//UpdateVertex(vertex,verticies[3].Position, verticies[3].Color, glm::identity<glm::mat4>());
-		//vertex++;																				   
-		//UpdateVertex(vertex,verticies[1].Position, verticies[1].Color, glm::identity<glm::mat4>());
-		//vertex++;
-
-	};
 	void Renderer::DrawTxt(vk::CommandBuffer commandBuffer, std::string_view str, glm::vec2 pos, std::map< unsigned char, Character>& characters)
 	{
 		float scale = 1;
@@ -983,92 +930,6 @@ namespace Voidstar
 		m_QuadIndex += 6;
 		}
 	}
-	void Renderer::DrawQuadScreen(vk::CommandBuffer commandBuffer)
-	{
-		//vk::DeviceSize offsets[] = { 0 };
-		//{
-		//	vk::Buffer vertexBuffers[] = { m_QuadBufferBatch->GetBuffer() };
-		//	commandBuffer.bindVertexBuffers(0, 1, vertexBuffers, offsets);
-		//
-		//}
-		//commandBuffer.bindIndexBuffer(m_QuadBufferBatchIndex->GetBuffer(), 0, m_QuadBufferBatchIndex->GetIndexType());
-		commandBuffer.draw(6, 1, 0, 0);
-	}
-
-	void Renderer::Draw(Sphere& sphere)
-	{
-		DrawSphere(sphere.Pos,sphere.Scale,sphere.Color,sphere.Rot);
-	}
-	
-	void Renderer::Draw(Quad& quad, glm::mat4& world)
-	{
-		DrawQuad(world, glm::vec4{1,0,1,1});
-	}
-
-	void Renderer::Draw(QuadRangle& quadrangle)
-	{
-		DrawQuad(quadrangle.Verticies);
-	}
-	void Renderer::DrawSphere(glm::vec3 pos, glm::vec3 scale, glm::vec4 color, glm::vec3 rot)
-	{
-		assert(false);
-		//m_BatchInstance->Color = color;
-		auto iden = glm::identity<glm::mat4>();
-		iden = glm::translate(iden, pos);
-		auto rotMatrix =  glm::rotate(iden, glm::radians(rot.x), glm::vec3{ 1,0,0 });
-		rotMatrix = glm::rotate(rotMatrix, glm::radians(rot.y), glm::vec3{ 0,1,0 });
-		rotMatrix = glm::scale(rotMatrix,scale);
-		auto transpose = glm::transpose(rotMatrix);
-		//m_BatchInstance->WorldMatrix= transpose;
-		//m_BatchInstance++;
-	}
-
-	void Renderer::DrawSphereInstance(vk::CommandBuffer& commandBuffer)
-	{
-		assert(false);
-		//vk::DeviceSize offsets[] = { 0 };
-		//
-		//{
-		//	vk::Buffer vertexBuffers[] = { m_SphereBuffer->GetBuffer() };
-		//	vk::Buffer instanceBuffers[] = { m_InstanceBuffer->GetBuffer() };
-		//	commandBuffer.bindVertexBuffers(0, 1, vertexBuffers, offsets);
-		//	commandBuffer.bindVertexBuffers(1, 1, instanceBuffers, offsets);
-		//
-		//}
-		//commandBuffer.bindIndexBuffer(m_SphereIndexBuffer->GetBuffer(), 0, m_SphereIndexBuffer->GetIndexType());
-		////auto instanceAmount = static_cast<uint64_t>(m_BatchInstance - m_BatchInstanceStart);
-		//auto instanceAmount = static_cast<uint64_t>(0);
-		//commandBuffer.drawIndexed(m_SphereIndexBuffer->GetIndexAmount(), instanceAmount, 0, 0, 0);
-	}
-	void Renderer::DrawQuad(glm::mat4& world, glm::vec4 color)
-	{
-		assert(false);
-		//auto& verticies = quad.verticies;
-		//// left bottom
-		//UpdateVertex(m_BatchQuad,verticies[0].Position,color,world,0);
-		//m_BatchQuad++;
-		//// right bottom
-		//UpdateVertex(m_BatchQuad,verticies[2].Position,color,world,2);
-		//m_BatchQuad++;
-		//// right top
-		//UpdateVertex(m_BatchQuad, verticies[3].Position, color, world);
-		//m_BatchQuad++;
-
-
-		//// left top
-		//UpdateVertex(m_BatchQuad, verticies[1].Position, color, world);
-		//m_BatchQuad++;
-
-		//m_QuadIndex += 6;
-	}
-
-	void Renderer::DrawQuad(std::vector<Vertex_>& verticies)
-	{
-		assert(false);
-		//UpdateVerticies(m_BatchQuad, verticies);
-		//m_QuadIndex += 6;
-	}
-	
 
 
 	std::vector<vk::Framebuffer> _CreateFramebuffer(
@@ -1293,181 +1154,15 @@ namespace Voidstar
 
 
 		
-
-
-#if 0
-		quad = GeneratePlane(1);
-		sphere = GenerateSphere(1,10, sphereIndicies);
-
-		auto& verticies = quad.verticies;
-		auto& indices = quad.indicies;
-		auto indexSize = SizeOfBuffer(indices.size(), indices[0]);
-		{
-			{
-				SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(indexSize);
-
-
-				{
-					BufferInputChunk inputBuffer;
-					inputBuffer.size = indexSize;
-					inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
-					inputBuffer.usage = vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst;
-					m_QuadIndexBuffer = CreateUPtr<IndexBuffer>(inputBuffer, indices.size(), vk::IndexType::eUint32);
-
-				}
-
-				m_TransferCommandBuffer[0].BeginTransfering();
-				m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_QuadIndexBuffer.get(), (void*)indices.data(), indexSize);
-				m_TransferCommandBuffer[0].EndTransfering();
-				m_TransferCommandBuffer[0].SubmitSingle();
-			}
-			{
-
-
-				auto vertexSize = SizeOfBuffer(verticies.size(), verticies[0]);
-				{
-					BufferInputChunk inputBuffer;
-					inputBuffer.size = vertexSize;
-					inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
-					inputBuffer.usage = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer;
-
-					m_QuadBuffer = CreateUPtr<Buffer>(inputBuffer);
-
-
-					
-					{
-						BufferInputChunk inputBuffer;
-						inputBuffer.size = sizeof(Vertex) * 4 * QUAD_AMOUNT;
-						inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
-						inputBuffer.usage = vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eVertexBuffer;
-						m_QuadBufferBatch = CreateUPtr<Buffer>(inputBuffer);
-						m_BatchQuadStart = reinterpret_cast<Vertex*>( m_Device->GetDevice().mapMemory(m_QuadBufferBatch->GetMemory(),0, inputBuffer.size));
-
-						indices.resize(QUAD_AMOUNT*3);
-						int offset = 0;
-						for (int i = 0; i < QUAD_AMOUNT*3; i+=6)
-						{
-							indices[i] = offset;
-							indices[i + 1] = offset + 1;
-							indices[i + 2] = offset + 2;
-
-							indices[i + 3] = offset + 2;
-							indices[i + 4] = offset + 3;
-							indices[i + 5] = offset;
-
-							offset += 4;
-						}
-						{
-							BufferInputChunk inputBuffer;
-							inputBuffer.size = SizeOfBuffer(indices.size(),indices[0]);
-							inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
-							inputBuffer.usage = vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst;
-							m_QuadBufferBatchIndex = CreateUPtr<IndexBuffer>(inputBuffer, indices.size(), vk::IndexType::eUint32);
-
-
-							auto indexSize = SizeOfBuffer(indices.size(), indices[0]);
-							SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(indexSize);
-
-							m_TransferCommandBuffer[0].BeginTransfering();
-							m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_QuadBufferBatchIndex.get(), (void*)indices.data(), indexSize);
-							m_TransferCommandBuffer[0].EndTransfering();
-							m_TransferCommandBuffer[0].SubmitSingle();
-
-						}
-					}
-				}
-				void* vertexData = const_cast<void*>(static_cast<const void*>(verticies.data()));
-				SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(vertexSize);
-				m_TransferCommandBuffer[0].BeginTransfering();
-				m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_QuadBuffer.get(), (void*)verticies.data(), vertexSize);
-				m_TransferCommandBuffer[0].EndTransfering();
-				m_TransferCommandBuffer[0].SubmitSingle();
-			}
-
-
-
-		}
-
-
-		{
-			auto indexSize = SizeOfBuffer(sphereIndicies.size(), sphereIndicies[0]);
-			{
-				{
-					SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(indexSize);
-
-
-					{
-						BufferInputChunk inputBuffer;
-						inputBuffer.size = indexSize;
-						inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
-						inputBuffer.usage = vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst;
-						m_SphereIndexBuffer = CreateUPtr<IndexBuffer>(inputBuffer, sphereIndicies.size(), vk::IndexType::eUint32);
-
-					}
-
-					m_TransferCommandBuffer[0].BeginTransfering();
-					m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_SphereIndexBuffer.get(), (void*)sphereIndicies.data(), indexSize);
-					m_TransferCommandBuffer[0].EndTransfering();
-					m_TransferCommandBuffer[0].SubmitSingle();
-				}
-				{
-					auto vertexSize = SizeOfBuffer(sphere.size(), sphere[0]);
-					{
-						BufferInputChunk inputBuffer;
-						inputBuffer.size = vertexSize;
-						inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
-						inputBuffer.usage = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer;
-
-						m_SphereBuffer = CreateUPtr<Buffer>(inputBuffer);
-					}
-					SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(vertexSize);
-					m_TransferCommandBuffer[0].BeginTransfering();
-					m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_SphereBuffer.get(), (void*)sphere.data(), vertexSize);
-					m_TransferCommandBuffer[0].EndTransfering();
-					m_TransferCommandBuffer[0].SubmitSingle();
-				}
-			}
-		}
-		
-
-		{
-			BufferInputChunk inputBuffer;
-			inputBuffer.size = sizeof(InstanceData) * 30;
-			inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
-			inputBuffer.usage = vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eVertexBuffer;
-			m_InstanceBuffer = CreateUPtr<Buffer>(inputBuffer);
-			m_BatchInstanceStart = reinterpret_cast<InstanceData*>(m_Device->GetDevice().mapMemory(m_InstanceBuffer->GetMemory(), 0, inputBuffer.size));
-
-		}
-
-		
-#endif // 0
 			
 	}
 
-	
-	
 
-	
-
-	
-
-
-
-	
-
-
-	
-	void Renderer::Draw(Drawable& drawable)
-	{
-		drawable.m_Self->Draw();
-	}
 
 	void Renderer::CreateSyncObjects()
 	{	
 		auto frameAmount = RenderContext::GetFrameAmount();
-		m_ComputeInFlightFences.resize(frameAmount);
-		m_ComputeFinishedSemaphores = Semaphore::CreateBinarySemaphore(RenderContext::GetFrameAmount());
+		
 		m_ImageAvailableSemaphore = Semaphore::CreateBinarySemaphore(RenderContext::GetFrameAmount());
 		m_RenderFinishedSemaphore = Semaphore::CreateBinarySemaphore(RenderContext::GetFrameAmount());
 		m_TimelineSemaphore = Semaphore::CreateTimelineSemaphore(RenderContext::GetFrameAmount(),0);
@@ -1517,15 +1212,6 @@ namespace Voidstar
 			device.waitIdle();
 
 
-				
-
-				std::for_each(m_Graphs.begin(),
-					m_Graphs.end(),
-					[](UPtr<RenderPassGraph>& graph)
-					{
-						graph->Destroy();
-					});
-
 			for (int i = 0; i < m_ComputeCommandBuffer.size(); i++)
 			{
 				m_RenderCommandBuffer[i].Free();
@@ -1539,12 +1225,12 @@ namespace Voidstar
 
 			m_UniformBuffers.clear();
 			m_UniversalPool.reset();
-			CleanUpLayouts();
+			
 			m_ImageAvailableSemaphore.clear();
 			m_RenderFinishedSemaphore.clear();
-			m_ComputeFinishedSemaphores.clear();
+		
 			m_InFlightFence.clear();
-			m_ComputeInFlightFences.clear();
+
 			m_ImageAvailableSemaphore.clear(); 
 
 
@@ -2411,11 +2097,6 @@ namespace Voidstar
 		m_Device->GetDevice().resetFences(fence);
 	}
 
-	
-	void Renderer::Flush(std::vector<vk::CommandBuffer> commandBuffers)
-	{
-		assert(false);
-	}
 	void Renderer::UpdateUniformBuffer(const glm::mat4& proj, const glm::mat4& view, float time)
 	{
 		UniformBufferObject ubo{};
