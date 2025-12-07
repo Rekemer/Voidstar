@@ -482,6 +482,7 @@ public:
 
 		m_VertexLayout.Add(ShaderDataType::FLOAT3)
 			.Add(ShaderDataType::FLOAT2);
+		m_Plane = GeneratePlane<Vertex>(1);
 		auto [verts, indices] = GenerateCube<Vertex>();
 		m_Cube = verts;
 		m_IndexCube = indices;
@@ -561,16 +562,18 @@ public:
 #endif
 		//ExecuteFrame(0);
 		auto usage = ResourceUsage::Sampled | ResourceUsage::TransferDst;
-		m_WorkingSet = CreateEmptyTexture(pageWidth, pageHeight,TextureFormat::RGBA8_UNORM, usage,1, SampleCount::e1, FilterMode::Linear, FilterMode::Linear, workingSetPageAmount, false);
+		m_WorkingSet = CreateEmptyTexture(pageWidth, pageHeight,TextureFormat::RGBA8_UNORM, usage, 1, SampleCount::e1, FilterMode::Linear, FilterMode::Linear, workingSetPageAmount, false);
 
 
 
-		m_VertexCubeHandle = CreateVertexBuffer({
-			reinterpret_cast<uint8_t*>(m_Cube.data()),m_Cube.size() * sizeof(m_Cube[0]) }
+		auto& planeV = m_Plane.verticies;
+		auto& planeI = m_Plane.indicies;
+		m_Vertexhandle = CreateVertexBuffer({
+			reinterpret_cast<uint8_t*>(planeV.data()),planeV.size() * sizeof(planeV[0]) }
 		, m_VertexLayout);
-		m_IndexCubeHandle = CreateIndexBuffer
+		m_IndexHandle = CreateIndexBuffer
 		(
-			Memory{ reinterpret_cast<uint8_t*>(m_IndexCube.data()), m_IndexCube.size() * sizeof(m_IndexCube[0]) }
+			Memory{ reinterpret_cast<uint8_t*>(planeI.data()), planeI.size() * sizeof(planeI[0]) }
 		);
 
 
@@ -1383,52 +1386,26 @@ public:
 	void Update(float deltaTime) override
 	{
 
-		// test pass
-#if 0
-		SetViewRect(m_CubeRenderPass, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
-		//SetFramebuffer(m_CubeRenderPass)
-		SetViewTransform(m_CubeRenderPass, GetCamera()->GetView(), GetCamera()->GetProj());
-
-		BindTexture("u_Texture", m_TestTexture);
-		BindTexture("u_Texture1", m_TestTexture1);
-
-		Submit(m_CubeRenderPass, m_DefaultShader);
-#endif	
-
-#if 0
-
-		SetViewRect(m_CubeRenderPass, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
-		//SetFramebuffer(m_CubeRenderPass)
-		SetViewTransform(m_CubeRenderPass, GetCamera()->GetView(), GetCamera()->GetProj());
-
-		BindVertexBuffer(0, m_VertexCubeHandle);
-		BindIndexBuffer(m_IndexCubeHandle);
-
-		Submit(m_CubeRenderPass, m_DefaultShader);
-
-#endif 
-
-
-
 		// feedback pass
 
 		SetViewRect(m_FeedbackRenderPass, 0, 0, feedbackSize.x, feedbackSize.y);
 		SetFramebuffer(m_FeedbackRenderPass, m_FeedbackFramebuffer);
 		SetViewTransform(m_FeedbackRenderPass, GetCamera()->GetView(), GetCamera()->GetProj());
-		BindVertexBuffer(0, m_VertexCubeHandle);
-		BindIndexBuffer(m_IndexCubeHandle);
-		Submit(m_FeedbackRenderPass, m_DefaultShader);
+		BindVertexBuffer(0, m_Vertexhandle);
+		BindIndexBuffer(m_IndexHandle);
+		Submit(m_FeedbackRenderPass, m_FeedbackShader);
 
 
 		auto scene = GetColorTexture(m_FeedbackFramebuffer);
-		BindAttachmentAsTexture("u_Scene", scene);
-	
-		SetViewRect(m_FinalRenderPass, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
-		SetViewTransform(m_FinalRenderPass, GetCamera()->GetView(), GetCamera()->GetProj());
-		Submit(m_FinalRenderPass, m_FinalShader);
-
+		//BindAttachmentAsTexture("u_Scene", scene);
+		
+		//SetViewRect(m_FinalRenderPass, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
+		//SetViewTransform(m_FinalRenderPass, GetCamera()->GetView(), GetCamera()->GetProj());
+		//Submit(m_FinalRenderPass, m_FinalShader);
+		
+		//ExecuteFrame(deltaTime);
 		ExecuteFrame(deltaTime);
-		//ExecuteFrame(0);
+		ExecuteFrame(0);
 
 		ReadTexture(scene, data.get());
 		ExecuteFrame(deltaTime);
@@ -1649,26 +1626,7 @@ public:
 
 
 
-			auto& images = m_PageTableMipMaps;
-			//images.push_back(m_PageTable);
-
-			//BindImages("storageImage", images);
-			//BindBuffer("u_StorageBuffer",m_StorageBuffers);
-			//SubmitCompute(m_UpdatePageTablePass[0], m_ComputeShaders[0], m_TilesWeSee.size(), 1, 1);
-			//BindImages("storageImage", m_PageTableMipMaps);
-			//BindImage("final", m_PageTable);
-			//SubmitCompute(m_UpdatePageTablePass[1], m_ComputeShaders[1], pageTableWidth, pageTableHeight, 1);
-
-
-			//SetViewTransform(m_FeedbackRenderPass, GetCamera()->GetView(), GetCamera()->GetProj());
-			//BindVertexBuffer(0, m_VertexCubeHandle);
-			//BindIndexBuffer(m_IndexCubeHandle);
-			//BindTexture("PageTable", m_PageTable);
-			//BindTexture("WorkingSet", m_WorkingSet);
-			//
-			//Submit(m_FinalRenderPass, m_FinalShaderWorkingSet);
-			//
-			//ExecuteFrame(deltaTime);
+	#endif
 	#if 0 
 
 			cmd.BeginTransfering();
@@ -1740,27 +1698,33 @@ public:
 			cmd.EndTransfering();
 
 
-			#endif 
+	#endif 
+		auto& images = m_PageTableMipMaps;
+		//images.push_back(m_PageTable);
+
+		BindImages("storageImage", images);
+		BindBuffer("u_StorageBuffer",m_StorageBuffers);
+		SubmitCompute(m_UpdatePageTablePass[0], m_ComputeShaders[0], m_TilesWeSee.size(), 1, 1);
+		BindImages("storageImage", m_PageTableMipMaps);
+		BindImage("final", m_PageTable);
+		SubmitCompute(m_UpdatePageTablePass[1], m_ComputeShaders[1], pageTableWidth, pageTableHeight, 1);
+
+
+		SetViewRect(m_FinalRenderPass, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
+		SetViewTransform(m_FinalRenderPass, GetCamera()->GetView(), GetCamera()->GetProj());
+		BindVertexBuffer(0, m_Vertexhandle);
+		BindIndexBuffer(m_IndexHandle);
+		BindTexture("PageTable", m_PageTable);
+		BindTexture("WorkingSet", m_WorkingSet);
+		
+		Submit(m_FinalRenderPass, m_FinalShaderWorkingSet);
+		
+		ExecuteFrame(deltaTime);
 
 			
-	#endif
 	}
 	
-			
-
-
-		//// update page table pass
-		//Submit(m_UpdatePageTablePass[0], m_ComputeShaders[0]);
-		//Submit(m_UpdatePageTablePass[1], m_ComputeShaders[1]);
-		//// final render pass
-		//
-		//Submit(m_FinalRenderPass, m_FinalShader);
-		//// debug render pass
-		//Submit(m_DebugRenderPass, m_DebugShader);
-
-
-		//ExecuteFrame(deltaTime);
-
+	
 
 
 
@@ -1781,8 +1745,8 @@ private:
 
 	BufferHandle m_StorageBuffers;
 	BufferHandle m_FillBuffer;
-	VertexBufferHandle m_VertexCubeHandle;
-	IndexBufferHandle m_IndexCubeHandle;
+	VertexBufferHandle m_Vertexhandle;
+	IndexBufferHandle m_IndexHandle;
 		
 	ProgramHandle m_DefaultShader;
 	VertexLayout m_VertexLayout;
@@ -1833,7 +1797,7 @@ private:
 	};
 	std::vector<FeedbackRes> m_FeedbackRes;
 
-	Quad m_Plane;
+	QuadData<Vertex> m_Plane;
 	glm::mat4 iden{ 1 };
 	glm::vec3  m_SphereRot = {0,0,0};
 	Cache<workingSetPageAmount> m_Cache;

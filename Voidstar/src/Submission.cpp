@@ -230,6 +230,7 @@ namespace Voidstar
 		bind.uniform = uniformName;
 		bind.dirty = true;
 		std::copy_n(handles.begin(), handles.size(), bind.handles.begin());
+		bind.currentHandle += handles.size();
 		bind.kind = ResourceType::StorageImage;
 	}
 

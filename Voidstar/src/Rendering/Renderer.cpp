@@ -2097,13 +2097,15 @@ namespace Voidstar
 				std::vector<vk::DescriptorImageInfo> descirptors;
 				if (bind.kind == ResourceType::CombinedSampler || bind.kind == ResourceType::StorageImage)
 				{
-					for (auto handle : bind.handles)
+
+					for (int i = 0; i < bind.currentHandle; i++)
 					{
+						auto handle = bind.handles.at(i);
 						if (!handle.Valid()) break;
 						auto image = m_Textures.at(handle);
 						if (bind.kind == ResourceType::CombinedSampler)
 						{
-							cmd.ChangeImageLayout(image.get(), image->GetLayout(), vk::ImageLayout::eShaderReadOnlyOptimal, image->m_MipMapLevels);
+							cmd.ChangeImageLayout(image.get(), image->GetLayout(), vk::ImageLayout::eShaderReadOnlyOptimal, image->m_MipMapLevels,image->layers);
 						}
 						else if (bind.kind == ResourceType::StorageImage)
 						{
@@ -2144,21 +2146,36 @@ namespace Voidstar
 		}
 	}
 
+
+	int Renderer::GetIndex(FrameBufferHandle handle, bool& isPresent)
+	{
+
+		if (handle == DEFAULT_FRAME_BUFFER)
+		{
+			assert(isPresent == false);
+			uint32_t imageIndex = 0;
+			auto swapchain = RenderContext::GetSwapchain();
+			m_Device->GetDevice().acquireNextImageKHR(swapchain->m_Swapchain, UINT64_MAX, m_ImageAvailableSemaphore[m_CurrentFrame].GetSemaphore(), nullptr, &imageIndex);
+			
+		    isPresent = true;
+			return imageIndex;
+		}
+		return m_CurrentFrame;
+	}
+
 	void Renderer::RenderFrame(Frame* render, float deltaTime)
 	{
 		Timer timer;
 		if (render->CurrentRenderItemIndex == 0) return;
 		
-		
-		
-		uint32_t imageIndex = 0;
-		auto swapchain = RenderContext::GetSwapchain();
-		m_Device->GetDevice().acquireNextImageKHR(swapchain->m_Swapchain, UINT64_MAX, m_ImageAvailableSemaphore[m_CurrentFrame].GetSemaphore(), nullptr, &imageIndex);
 
 		auto& currentFence = m_InFlightFence[m_CurrentFrame];
 		Renderer::Instance()->Wait(currentFence.GetFence());
 		Renderer::Instance()->Reset(currentFence.GetFence());
 
+		bool isPresent = false;
+		uint32_t presentIndex = 0;
+		
 
 		auto& cmd = m_RenderCommandBuffer[m_CurrentFrame];
 		cmd.BeginRendering();
@@ -2216,7 +2233,7 @@ namespace Voidstar
 				vk::PipelineLayout layout = m_PipelineLayout.at(key.layout);
 
 
-#if 1
+#if 0
 				for (int ii = 0; ii < keys.size(); ii++)
 				{
 					auto k = keys.at(ii);
@@ -2247,7 +2264,7 @@ namespace Voidstar
 						auto image = m_Textures.at(bind.handles[0]);
 
 
-						cmd.ChangeImageLayout(image.get(), image->GetLayout(), vk::ImageLayout::eShaderReadOnlyOptimal, image->m_MipMapLevels);
+						cmd.ChangeImageLayout(image.get(), image->GetLayout(), vk::ImageLayout::eShaderReadOnlyOptimal, image->m_MipMapLevels,image->layers);
 
 						vk::DescriptorImageInfo imageDescriptor1;
 						assert(image->GetLayout() == vk::ImageLayout::eShaderReadOnlyOptimal);
@@ -2265,11 +2282,12 @@ namespace Voidstar
 #endif
 
 				auto& renderPass = m_RenderPasses.at(key.fb);
-				auto index = key.fb == DEFAULT_FRAME_BUFFER ? imageIndex : static_cast<uint32_t>(m_CurrentFrame);
+				auto index = GetIndex(key.fb, isPresent);
+				if (isPresent) presentIndex = index;
 				auto frameBuffer = m_Framebuffers.at(key.fb)[index];
 
 
-				//BindDescriptors(vk::PipelineBindPoint::eGraphics, renderItem, keys, meta, cmd, layout);
+				BindDescriptors(vk::PipelineBindPoint::eGraphics, renderItem, keys, meta, cmd, layout);
 				UpdateUniformBuffer(view.Proj, view.View, m_App->GetExeTime());
 
 				auto& test = m_FBAttachments[key.fb];
@@ -2288,13 +2306,13 @@ namespace Voidstar
 
 
 
-				for (int ii = 0; ii < keys.size(); ii++)
+				/*for (int ii = 0; ii < keys.size(); ii++)
 				{
 					auto k = keys.at(ii);
 					auto& descSet = m_DescriptorSet.at(k);
 					vkCmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, layout, ii, descSet[m_CurrentFrame], nullptr);
 
-				}
+				}*/
 				vk::Viewport viewport;
 				viewport.x = view.Rect[0];
 				viewport.y = view.Rect[1];
@@ -2340,46 +2358,43 @@ namespace Voidstar
 		cmd.EndRendering();
 		
 
-		auto waitSemaphore = m_ImageAvailableSemaphore[m_CurrentFrame].GetSemaphore();
 
-
-		std::vector<vk::Semaphore> signal = { m_RenderFinishedSemaphore[m_CurrentFrame].GetSemaphore(), m_TimelineSemaphore[0].GetSemaphore() };
-
-		vk::TimelineSemaphoreSubmitInfo info{};
-		info.signalSemaphoreValueCount = 2;
-		size_t value = m_FrameNumber + 1;
-		uint64_t    signalVals[2] = { 0,  value };  
-		info.pSignalSemaphoreValues = signalVals;
-
-
-		signal.pop_back();
-		auto fence = currentFence.GetFence();
-		cmd.Submit({waitSemaphore}, signal, &fence);
-		
-		
-		vk::Semaphore waitSemaphores[] = { signal[0]};
-		vk::PresentInfoKHR presentInfo = {};
-
-		presentInfo.waitSemaphoreCount = 1;
-		presentInfo.pWaitSemaphores = waitSemaphores;
-
-		vk::SwapchainKHR swapChains[] = { swapchain->m_Swapchain };
-		presentInfo.swapchainCount = 1;
-		presentInfo.pSwapchains = swapChains;
-
-		presentInfo.pImageIndices = &imageIndex;
-		vk::Result present;
-		try {
-			ZoneScopedN("Presenting");
-			present = m_Device->GetPresentQueue().presentKHR(presentInfo);
-		}
-		catch (vk::OutOfDateKHRError error) {
-			present = vk::Result::eErrorOutOfDateKHR;
-		}
-		if (present == vk::Result::eErrorOutOfDateKHR)
+		std::vector<vk::Semaphore> waitSemaphores;
+		std::vector<vk::Semaphore> signal;
+		if (isPresent)
 		{
-			ZoneScopedN("Recreating swapchain");
-			RecreateSwapchain();
+			waitSemaphores.push_back(m_ImageAvailableSemaphore[m_CurrentFrame].GetSemaphore());
+			signal.push_back(m_RenderFinishedSemaphore[m_CurrentFrame].GetSemaphore());
+		}
+
+		auto fence = m_InFlightFence[m_CurrentFrame].GetFence();
+		cmd.Submit(waitSemaphores, signal, &fence);
+		
+		if (isPresent)
+		{
+			vk::PresentInfoKHR presentInfo = {};
+			presentInfo.waitSemaphoreCount = signal.size();
+			presentInfo.pWaitSemaphores = signal.data();
+
+			vk::SwapchainKHR swapChains[] = { RenderContext::GetSwapchain()->m_Swapchain};
+			presentInfo.swapchainCount = 1;
+			presentInfo.pSwapchains = swapChains;
+
+			presentInfo.pImageIndices = &presentIndex;
+			vk::Result present;
+			try {
+				ZoneScopedN("Presenting");
+				present = m_Device->GetPresentQueue().presentKHR(presentInfo);
+			}
+			catch (vk::OutOfDateKHRError error) {
+				present = vk::Result::eErrorOutOfDateKHR;
+			}
+			if (present == vk::Result::eErrorOutOfDateKHR)
+			{
+				ZoneScopedN("Recreating swapchain");
+				RecreateSwapchain();
+			}
+
 		}
 		//m_Device->GetDevice().waitIdle();
 		

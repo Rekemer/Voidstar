@@ -11,6 +11,7 @@
 #include "Renderer.h"
 #include"tracy/Tracy.hpp"
 #include <mutex>
+#include <filesystem>
 namespace Voidstar
 {
 	
@@ -103,6 +104,8 @@ namespace Voidstar
 
 		stbi_set_flip_vertically_on_load(false);
 		int width = 0, height = 0, channels = 0;
+		assert(std::filesystem::exists(path));
+		
 		auto pixels = stbi_load(path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
 		assert(width != 0 && height != 0);
 
@@ -141,9 +144,10 @@ namespace Voidstar
 
 		commandBuffer.BeginTransfering();
 
-		commandBuffer.ChangeImageLayout(parentImage.get(), parentImage->GetLayout(), vk::ImageLayout::eTransferDstOptimal, 1);
+		commandBuffer.ChangeImageLayout(parentImage.get(), parentImage->GetLayout(), vk::ImageLayout::eTransferDstOptimal, 1,parentImage->layers);
 
-		commandBuffer.CopyBufferToImage(*buffer.get(), parentImage->m_Image,width, height, 0, offset,0);
+		commandBuffer.CopyBufferToImage(*buffer.get(), parentImage->m_Image,width, height, 0, offset, layer );
+
 		commandBuffer.EndTransfering();
 		commandBuffer.SubmitSingle();
 

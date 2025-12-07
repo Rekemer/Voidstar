@@ -52,7 +52,7 @@ namespace Voidstar
 
 	inline std::string BASE_SHADER_PATH = "../Shaders/";
 	inline std::string BASE_RES_PATH = "res";
-	inline std::string BASE_VIRT_PATH = "E:/dev/Voidstar/mipMaps_virtualTex4.tiff/";
+	static inline std::string BASE_VIRT_PATH = "E:/dev/Voidstar/mipMaps_virtualTex4.tiff/";
 	const std::string SPIRV_COMPILER_PATH = std::string(std::string(std::getenv("VULKAN_SDK")) + std::string("/Bin/glslangvalidator.exe"));
 
 	inline std::string BASE_SPIRV_OUTPUT = BASE_SHADER_PATH + "Binary/";
@@ -62,6 +62,7 @@ namespace Voidstar
 
 		// Check if running within Visual Studio
 		const char* visualStudioEnvVar = std::getenv("VSLANG");
+		//std::cout << (visualStudioEnvVar != nullptr) ? "true" :"false";
 		if (visualStudioEnvVar != nullptr)
 		{
 			// Set the base shader path relative to the project directory
@@ -76,7 +77,8 @@ namespace Voidstar
 			BASE_SHADER_PATH = executablePath.parent_path().string() + "../../../Shaders/";
 			BASE_RES_PATH = executablePath.parent_path().string() + "../../../res/";
 			BASE_SPIRV_OUTPUT = BASE_SHADER_PATH + "Binary/";
-			BASE_VIRT_PATH = executablePath.parent_path().string() + "../../../../mipMaps_virtualTex4.tiff/";
+			BASE_VIRT_PATH = "E:/dev/Voidstar/mipMaps_virtualTex4.tiff/";
+			//BASE_VIRT_PATH = executablePath.parent_path().string() + "/../../mipMaps_virtualTex4.tiff/";
 		}
 		return baseShaderPath;
 	}
@@ -232,8 +234,8 @@ namespace Voidstar
 		void CreateInstance();
 		void RecreateSwapchain();
 		std::vector<vk::DescriptorSet>  AllocateSets(size_t amount, const DescriptorLayoutKey& key);
-		void CreateLayouts();
 		void CleanUpLayouts();
+		int GetIndex(FrameBufferHandle handle,bool& isPresent);
 		SparseSet<RenderPassHandle_> g_RenderPassAllocator;
 	private:
 		Application* m_App;

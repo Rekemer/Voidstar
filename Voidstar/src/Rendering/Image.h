@@ -227,7 +227,8 @@ namespace Voidstar
 		int m_Size = -1;
 		int m_Depth = 0, m_Channels;
 		int m_MipMapLevels = 1;
-		int m_Width, m_Height,layers;
+		int m_Width, m_Height;
+		int layers = 1;
 		vk::Image m_Image = VK_NULL_HANDLE;
 		vk::ImageView m_ImageView = VK_NULL_HANDLE;
 		vk::Format m_Format;
