@@ -19,7 +19,13 @@ void main ()
     vec2 workingSetSize =  vec2(1024,512);
     vec2 rescale =  pageSize/workingSetSize;
     vec4 index = texture(PageTable,uv);
-    float amountOfTiles =exp2(index.b);
+    if (index.a < 0.5) {
+    
+    outColor = vec4(0.0, 0.0, 0.1, 1.0); 
+    return;
+}
+
+    float amountOfTiles = exp2(index.b);
     vec2 offset = (fract(uv * amountOfTiles))  ;
     
 
@@ -28,9 +34,10 @@ void main ()
     vec4 tex = texture(WorkingSet,vec3(workingSetUv ,layer)) ;
     
     
-    outColor.xyzw =tex.xyzw;
+//  if (layer > 399) outColor.xyzw =vec4(1,0,1,1);
     //outColor = vec4(index.xy,0,1);
-   // outColor = vec4(workingSetUv,0,1); 
+    outColor = vec4(workingSetUv,0,1); 
+    outColor.xyzw =tex.xyzw;
     
     
     
