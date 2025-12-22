@@ -1,4 +1,4 @@
-project "Sandbox"
+project "VirtualTexture"
     kind "ConsoleApp"
     language "C++"
     targetdir ("%{wks.location}/bin/%{prj.name}/"..outputdir)

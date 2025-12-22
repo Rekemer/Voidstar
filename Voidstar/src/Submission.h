@@ -15,6 +15,7 @@
 #include <vector>
 #include <variant>
 #include "Memory.h"
+#include "Rendering/Generation.h"
 
 namespace Voidstar
 {
@@ -72,6 +73,9 @@ namespace std {
 }
 namespace Voidstar
 {
+
+	
+
 	enum class ResourceUsage : uint32_t {
 		None = 0,
 

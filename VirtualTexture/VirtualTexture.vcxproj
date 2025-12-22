@@ -15,10 +15,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{F4C124E3-60A1-A37E-69B9-2E55D5170AE0}</ProjectGuid>
+    <ProjectGuid>{DDF6889A-C9C4-7CA0-B258-EDC69EC55805}</ProjectGuid>
     <IgnoreWarnCompileDuplicatedFilename>true</IgnoreWarnCompileDuplicatedFilename>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>Sandbox</RootNamespace>
+    <RootNamespace>VirtualTexture</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
@@ -54,23 +54,23 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>..\bin\Sandbox\Debug-windows-x86_64\</OutDir>
-    <IntDir>..\bin-int\Sandbox\Debug-windows-x86_64\</IntDir>
-    <TargetName>Sandbox</TargetName>
+    <OutDir>..\bin\VirtualTexture\Debug-windows-x86_64\</OutDir>
+    <IntDir>..\bin-int\VirtualTexture\Debug-windows-x86_64\</IntDir>
+    <TargetName>VirtualTexture</TargetName>
     <TargetExt>.exe</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>..\bin\Sandbox\Release-windows-x86_64\</OutDir>
-    <IntDir>..\bin-int\Sandbox\Release-windows-x86_64\</IntDir>
-    <TargetName>Sandbox</TargetName>
+    <OutDir>..\bin\VirtualTexture\Release-windows-x86_64\</OutDir>
+    <IntDir>..\bin-int\VirtualTexture\Release-windows-x86_64\</IntDir>
+    <TargetName>VirtualTexture</TargetName>
     <TargetExt>.exe</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Dist|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>..\bin\Sandbox\Dist-windows-x86_64\</OutDir>
-    <IntDir>..\bin-int\Sandbox\Dist-windows-x86_64\</IntDir>
-    <TargetName>Sandbox</TargetName>
+    <OutDir>..\bin\VirtualTexture\Dist-windows-x86_64\</OutDir>
+    <IntDir>..\bin-int\VirtualTexture\Dist-windows-x86_64\</IntDir>
+    <TargetName>VirtualTexture</TargetName>
     <TargetExt>.exe</TargetExt>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -134,7 +134,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\Sandbox.cpp" />
+    <ClInclude Include="src\Vertex.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\VirtualTexture.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Voidstar\Voidstar.vcxproj">
@@ -146,9 +149,6 @@
     <ProjectReference Include="..\Dependencies\ImGui\ImGui.vcxproj">
       <Project>{C0FF640D-2C14-8DBE-F595-301E616989EF}</Project>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="src\Vertex.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

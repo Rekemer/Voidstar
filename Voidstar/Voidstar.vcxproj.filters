@@ -30,7 +30,16 @@
     <ClInclude Include="src\Core.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="src\Handle.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\InitParams.h">
+      <Filter>src</Filter>
+    </ClInclude>
     <ClInclude Include="src\Input.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Jobs.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\Keys.h">
@@ -40,6 +49,9 @@
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\Main.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Memory.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\MemoryTracker.h">
@@ -84,6 +96,9 @@
     <ClInclude Include="src\Rendering\Device.h">
       <Filter>src\Rendering</Filter>
     </ClInclude>
+    <ClInclude Include="src\Rendering\Drawables.h">
+      <Filter>src\Rendering</Filter>
+    </ClInclude>
     <ClInclude Include="src\Rendering\Font.h">
       <Filter>src\Rendering</Filter>
     </ClInclude>
@@ -120,6 +135,9 @@
     <ClInclude Include="src\Rendering\Settings.h">
       <Filter>src\Rendering</Filter>
     </ClInclude>
+    <ClInclude Include="src\Rendering\ShaderCompiler.h">
+      <Filter>src\Rendering</Filter>
+    </ClInclude>
     <ClInclude Include="src\Rendering\ShaderType.h">
       <Filter>src\Rendering</Filter>
     </ClInclude>
@@ -132,6 +150,15 @@
     <ClInclude Include="src\Rendering\Sync.h">
       <Filter>src\Rendering</Filter>
     </ClInclude>
+    <ClInclude Include="src\Rendering\Vertex_.h">
+      <Filter>src\Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ResourceCommandBuffer.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\SparseSet.h">
+      <Filter>src</Filter>
+    </ClInclude>
     <ClInclude Include="src\Submission.h">
       <Filter>src</Filter>
     </ClInclude>
@@ -141,22 +168,18 @@
     <ClInclude Include="src\Types.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="src\Util.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\VertexLayout.h">
+      <Filter>src</Filter>
+    </ClInclude>
     <ClInclude Include="src\Voidstar.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\Window.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="src\ResourceCommandBuffer.h" />
-    <ClInclude Include="src\SparseSet.h" />
-    <ClInclude Include="src\Init.h" />
-    <ClInclude Include="src\Rendering\ShaderCompiler.h" />
-    <ClInclude Include="src\Rendering\Vertex_.h" />
-    <ClInclude Include="src\VertexLayout.h" />
-    <ClInclude Include="src\Handle.h" />
-    <ClInclude Include="src\Util.h" />
-    <ClInclude Include="src\Jobs.h" />
-    <ClInclude Include="src\Memory.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Dependencies\Tracy\public\TracyClient.cpp">
@@ -166,6 +189,9 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="src\Input.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Jobs.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="src\Log.cpp">
@@ -228,8 +254,14 @@
     <ClCompile Include="src\Rendering\Renderer.cpp">
       <Filter>src\Rendering</Filter>
     </ClCompile>
+    <ClCompile Include="src\Rendering\ShaderCompiler.cpp">
+      <Filter>src\Rendering</Filter>
+    </ClCompile>
     <ClCompile Include="src\Rendering\Swapchain.cpp">
       <Filter>src\Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ResourceCommandBuffer.cpp">
+      <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="src\Submission.cpp">
       <Filter>src</Filter>
@@ -237,8 +269,5 @@
     <ClCompile Include="src\Window.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="src\ResourceCommandBuffer.cpp" />
-    <ClCompile Include="src\Rendering\ShaderCompiler.cpp" />
-    <ClCompile Include="src\Jobs.cpp" />
   </ItemGroup>
 </Project>

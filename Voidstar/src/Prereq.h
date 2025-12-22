@@ -1,6 +1,8 @@
 #pragma once
 #include "Rendering/Settings.h"
 #include "Core.h"
+#include <cstdint>
+typedef uint32_t IndexType;
 #include "MemoryTracker.h"
 #include <memory>
 #include <string>

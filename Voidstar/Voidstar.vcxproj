@@ -19,7 +19,6 @@
     <IgnoreWarnCompileDuplicatedFilename>true</IgnoreWarnCompileDuplicatedFilename>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>Voidstar</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
@@ -107,7 +106,7 @@
       <MinimalRebuild>false</MinimalRebuild>
       <StringPooling>true</StringPooling>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <ExternalWarningLevel>Level3</ExternalWarningLevel>
     </ClCompile>
     <Link>
@@ -130,7 +129,7 @@
       <Optimization>Disabled</Optimization>
       <MinimalRebuild>false</MinimalRebuild>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <ExternalWarningLevel>Level3</ExternalWarningLevel>
     </ClCompile>
     <Link>
@@ -146,8 +145,9 @@
     <ClInclude Include="src\Cache.h" />
     <ClInclude Include="src\Core.h" />
     <ClInclude Include="src\Handle.h" />
-    <ClInclude Include="src\Init.h" />
+    <ClInclude Include="src\InitParams.h" />
     <ClInclude Include="src\Input.h" />
+    <ClInclude Include="src\Jobs.h" />
     <ClInclude Include="src\Keys.h" />
     <ClInclude Include="src\Log.h" />
     <ClInclude Include="src\Main.h" />
@@ -166,6 +166,7 @@
     <ClInclude Include="src\Rendering\DescriptorPool.h" />
     <ClInclude Include="src\Rendering\DescriptorSetLayout.h" />
     <ClInclude Include="src\Rendering\Device.h" />
+    <ClInclude Include="src\Rendering\Drawables.h" />
     <ClInclude Include="src\Rendering\Font.h" />
     <ClInclude Include="src\Rendering\Generation.h" />
     <ClInclude Include="src\Rendering\Image.h" />
@@ -178,31 +179,29 @@
     <ClInclude Include="src\Rendering\RenderPass.h" />
     <ClInclude Include="src\Rendering\Renderer.h" />
     <ClInclude Include="src\Rendering\Settings.h" />
+    <ClInclude Include="src\Rendering\ShaderCompiler.h" />
     <ClInclude Include="src\Rendering\ShaderType.h" />
     <ClInclude Include="src\Rendering\SupportStruct.h" />
     <ClInclude Include="src\Rendering\Swapchain.h" />
     <ClInclude Include="src\Rendering\Sync.h" />
-    <ClInclude Include="src\Util.h" />
     <ClInclude Include="src\Rendering\Vertex_.h" />
     <ClInclude Include="src\ResourceCommandBuffer.h" />
-    <ClInclude Include="src\Rendering\ShaderCompiler.h" />
     <ClInclude Include="src\SparseSet.h" />
     <ClInclude Include="src\Submission.h" />
     <ClInclude Include="src\Transform.h" />
     <ClInclude Include="src\Types.h" />
+    <ClInclude Include="src\Util.h" />
+    <ClInclude Include="src\VertexLayout.h" />
     <ClInclude Include="src\Voidstar.h" />
     <ClInclude Include="src\Window.h" />
-    <ClInclude Include="src\VertexLayout.h" />
-    <ClInclude Include="src\Jobs.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Dependencies\Tracy\public\TracyClient.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="src\Jobs.cpp" />
-    <ClCompile Include="src\Rendering\ShaderCompiler.cpp" />
     <ClCompile Include="src\Application.cpp" />
     <ClCompile Include="src\Input.cpp" />
+    <ClCompile Include="src\Jobs.cpp" />
     <ClCompile Include="src\Log.cpp" />
     <ClCompile Include="src\MemoryTracker.cpp" />
     <ClCompile Include="src\Prereq.cpp">
@@ -225,6 +224,7 @@
     <ClCompile Include="src\Rendering\RenderContext.cpp" />
     <ClCompile Include="src\Rendering\RenderPass.cpp" />
     <ClCompile Include="src\Rendering\Renderer.cpp" />
+    <ClCompile Include="src\Rendering\ShaderCompiler.cpp" />
     <ClCompile Include="src\Rendering\Swapchain.cpp" />
     <ClCompile Include="src\ResourceCommandBuffer.cpp" />
     <ClCompile Include="src\Submission.cpp" />

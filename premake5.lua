@@ -5,7 +5,7 @@ workspace "Voidstar"
 	architecture "x86_64"
 	startproject "Sandbox"
     language "C++"
-    cppdialect "C++17"
+    cppdialect "C++20"
 	configurations
 	{
 		"Debug",
@@ -32,6 +32,7 @@ workspace "Voidstar"
 		include "Dependencies/freetype"
 		include "Dependencies/SPIRV-Cross"
 	group ""
+	include "VirtualTexture"
 	include "Sandbox"
 	
 

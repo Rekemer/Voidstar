@@ -2,7 +2,7 @@
 #include"Buffer.h"
 namespace Voidstar
 {
-	typedef uint32_t IndexType;
+	
 	class VOIDSTAR_API IndexBuffer : public Buffer
 	{
 	public:

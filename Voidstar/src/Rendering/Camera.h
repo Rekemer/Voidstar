@@ -5,6 +5,14 @@
 
 namespace Voidstar
 {
+	enum class CameraControlMode
+	{
+		DIRECT_CONTROL,
+		ROUND_CONTROL,
+		NO_CONTROL
+	};
+
+
 	class VOIDSTAR_API Camera
 	{
 	public:
@@ -17,14 +25,17 @@ namespace Voidstar
 		void SetUp(glm::vec3 up) { m_Up= up; }
 		float GetFov() { return m_Fov; }
 		void UpdateProj(float width,float height, float fov);
+		void SetCameraControl(CameraControlMode mode) { m_Mode = mode; };
 	private:
 		void UpdateProj();
 		void UpdateView();
-		void ProcessInput(float deltaTime);
+		void ProcessInput(CameraControlMode mode, float deltaTime);
 		void ProcessMouse();
 		friend class Application;
 		friend class Renderer;
 	private:
+		CameraControlMode m_Mode;
+		glm::vec3 m_Target{0,0,0};
 		glm::vec3 m_Up {0.0f, 1.0f, 0.0f};
 		glm::vec3 m_Front{ 0.0f, 0.0f, -1.0f };
 		glm::vec3 m_Position{0,0,-5};
@@ -33,7 +44,7 @@ namespace Voidstar
 		float m_Fov = glm::radians(45.f);;
 		float m_Yaw = 90.0f; // around y axis
 		float m_Pitch = 0.f; // around x axis
-		float speed = 10.f;
+		float speed = 2.f;
 		//bool m_IsControlEnabled = true;
 		float width;
 		float height;

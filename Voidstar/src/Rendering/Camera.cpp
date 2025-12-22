@@ -19,10 +19,9 @@ namespace Voidstar
 
 	void Camera::Update(float deltaTime)
 	{
-       ProcessInput(deltaTime);
-       ProcessMouse();
+       ProcessInput(m_Mode,deltaTime);
+       //ProcessMouse();
        UpdateView();
-       //LookAt({0,0,0});
       //Log::GetLog()->info("camera pos: {0} {1} {2}\n", m_Position.x, m_Position.y, m_Position.z);
         //if (Input::IsKeyTyped(VS_KEY_C))
         //{
@@ -98,40 +97,86 @@ namespace Voidstar
 
   
 
-    void Camera::ProcessInput(float deltaTime)
+    void Camera::ProcessInput(CameraControlMode mode, float deltaTime)
 	{
-            const float cameraSpeed = speed;
-           deltaTime = 0.01f;
-           if (Input::IsKeyPressed(VS_KEY_W))
-           {
-               auto pos = m_Position + cameraSpeed * m_Front * deltaTime/2.f;
-             
-               m_Position = pos;
-           }
+        if (mode == CameraControlMode::NO_CONTROL) return;
+        if (mode == CameraControlMode::ROUND_CONTROL)
+        {
+            
+            float m_Radius = 5.0f;                 // distance to target
+            static float m_Yaw = 0.0f;                  // radians
+            static float m_Pitch = 0.0f;                  // radians
+            const float rotateSpeed = speed;      // radians/sec-ish
+            const float zoomSpeed = speed;      // units/sec
+            // use your real deltaTime, don't hardcode it
+            // deltaTime = ...
+            deltaTime = 0.01f;
            
-           if (Input::IsKeyPressed(VS_KEY_S))
-           {
-               auto pos = m_Position - cameraSpeed * m_Front * deltaTime / 2.f;
-               m_Position = pos;
-           }
-           
-            auto right = glm::normalize(glm::cross(m_Front, m_Up));
-           if (Input::IsKeyPressed(VS_KEY_A))
-           {
-               auto pos = m_Position - right * cameraSpeed * deltaTime;
-               m_Position = pos;
-           
-           }
-           
-           if (Input::IsKeyPressed(VS_KEY_D))
-           {
-           
-               auto pos = m_Position + right * cameraSpeed * deltaTime;
-               m_Position = pos;
-           }
+           // yaw: left/right
+            if (Input::IsKeyPressed(VS_KEY_A)) m_Yaw -= rotateSpeed * deltaTime;
+            if (Input::IsKeyPressed(VS_KEY_D)) m_Yaw += rotateSpeed * deltaTime;
 
-             
-           
+            // pitch: up/down  (THIS is what you asked)
+            if (Input::IsKeyPressed(VS_KEY_W)) m_Pitch += rotateSpeed * deltaTime;
+            if (Input::IsKeyPressed(VS_KEY_S)) m_Pitch -= rotateSpeed * deltaTime;
+
+            // clamp pitch to avoid flipping at the poles
+            const float pitchLimit = glm::radians(89.0f);
+            m_Pitch = glm::clamp(m_Pitch, -pitchLimit, pitchLimit);
+
+            // rebuild camera position from yaw/pitch/radius
+            float cp = cosf(m_Pitch);
+            glm::vec3 offset;
+            offset.x = m_Radius * cp * cosf(m_Yaw);
+            offset.y = m_Radius * sinf(m_Pitch);
+            offset.z = m_Radius * cp * sinf(m_Yaw);
+
+            m_Position = m_Target + offset;
+
+            // look at target
+            m_Front = glm::normalize(m_Target - m_Position);
+
+            // stable up
+            glm::vec3 worldUp = glm::vec3(0, 1, 0);
+            glm::vec3 right = glm::normalize(glm::cross(m_Front, worldUp));
+            m_Up = glm::normalize(glm::cross(right, m_Front));
+        }
+        else
+        {
+            const float cameraSpeed = speed;
+            deltaTime = 0.01f;
+            if (Input::IsKeyPressed(VS_KEY_W))
+            {
+                auto pos = m_Position + cameraSpeed * m_Front * deltaTime / 2.f;
+
+                m_Position = pos;
+            }
+
+            if (Input::IsKeyPressed(VS_KEY_S))
+            {
+                auto pos = m_Position - cameraSpeed * m_Front * deltaTime / 2.f;
+                m_Position = pos;
+            }
+
+            auto right = glm::normalize(glm::cross(m_Front, m_Up));
+            if (Input::IsKeyPressed(VS_KEY_A))
+            {
+                auto pos = m_Position - right * cameraSpeed * deltaTime;
+                m_Position = pos;
+
+            }
+
+            if (Input::IsKeyPressed(VS_KEY_D))
+            {
+
+                auto pos = m_Position + right * cameraSpeed * deltaTime;
+                m_Position = pos;
+            }
+
+
+
+        }
+            
 	}
     bool firstMouse = true;
     double lastX = 0;
@@ -139,6 +184,7 @@ namespace Voidstar
 
     void Camera::LookAt(glm::vec3 pos)
     {
+        m_Target = pos;
         auto diff = glm::normalize(pos - m_Position);
         m_Front = diff;
         m_View = glm::lookAt(m_Position, pos, m_Up);
