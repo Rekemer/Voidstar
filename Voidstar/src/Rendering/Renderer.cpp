@@ -1184,21 +1184,93 @@ namespace Voidstar
 
 
 		m_Device->GetDevice().waitIdle();
+		RenderContext::RecreateSwapchain(vk::Format::eB8G8R8A8Unorm,
+			m_ViewportWidth, m_ViewportHeight,
+			vk::PresentModeKHR::eFifo, vk::ColorSpaceKHR::eSrgbNonlinear);
 
 
-		SwapChainSupportDetails support;
-		auto device = RenderContext::GetDevice();
-		auto surface = RenderContext::GetSurface();
-		support.AvailableCapabilities = device->GetDevicePhys().getSurfaceCapabilitiesKHR(*surface);
-		support.AvailablePresentModes = device->GetDevicePhys().getSurfacePresentModesKHR(*surface);
-		support.AvailableFormats = device->GetDevicePhys().getSurfaceFormatsKHR(*surface);
-		support.ViewportWidth = m_ViewportWidth;
-		support.ViewportHeight = m_ViewportHeight;
+		size_t screenWidth = m_ViewportWidth;
+		size_t screenHeight = m_ViewportHeight;
+		size_t frameAmount = 3;
+		auto samples = RenderContext::GetDevice()->GetSamples();
+		m_AttachmentManager.CreateColor(m_DefaultMSAAAttachment, vk::Format::eB8G8R8A8Unorm,
+			screenWidth, screenHeight,
+			samples, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransientAttachment,
+			frameAmount);
+
+		m_AttachmentManager.CreateDepthStencil(m_DefaultDepthAttachment,
+			screenWidth, screenHeight,
+			vk::SampleCountFlagBits::e1, vk::ImageUsageFlagBits::eDepthStencilAttachment,
+			frameAmount);
+
+
 		
-		RenderContext::RecreateSwapchain(support);
+
+
+		RenderPassBuilder builder;
+
+		builder.ColorOutput(m_DefaultColorAttachment, m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
+		builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
+		builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
+		builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+		builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
+		builder.SetInitialLayout(vk::ImageLayout::eUndefined);
+		builder.SetFinalLayout(vk::ImageLayout::ePresentSrcKHR);
+
+		builder.BuildAttachmentDesc();
+
+		builder.DepthStencilOutput(m_DefaultDepthAttachment, m_AttachmentManager, vk::ImageLayout::eDepthStencilAttachmentOptimal);
+		builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
+		builder.SetSaveOp(vk::AttachmentStoreOp::eDontCare);
+		builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+		builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
+		builder.SetInitialLayout(vk::ImageLayout::eUndefined);
+		builder.SetFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+		builder.BuildAttachmentDesc();
+
+		//builder.ResolveOutput(m_DefaultColorAttachment, m_AttachmentManager, vk::ImageLayout::eColorAttachmentOptimal);
+		//builder.SetLoadOp(vk::AttachmentLoadOp::eClear);
+		//builder.SetSaveOp(vk::AttachmentStoreOp::eStore);
+		//builder.SetStencilLoadOp(vk::AttachmentLoadOp::eDontCare);
+		//builder.SetStencilSaveOp(vk::AttachmentStoreOp::eDontCare);
+		//builder.SetInitialLayout(vk::ImageLayout::eUndefined);
+		////builder.SetFinalLayout(vk::ImageLayout::eColorAttachmentOptimal);
+		//builder.SetFinalLayout(vk::ImageLayout::ePresentSrcKHR);
+		//builder.BuildAttachmentDesc();
+
+		vk::SubpassDependency dependency0 = SubpassDependency(VK_SUBPASS_EXTERNAL, 0,
+			vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests, vk::AccessFlagBits::eColorAttachmentWrite,
+			vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests, vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eDepthStencilAttachmentWrite);
+
+
+
+		//builder.AddSubpass({ 0 }, { 1 }, { 2 });
+		builder.AddSubpass({ 0 }, { 1 }, {});
+
+		builder.AddSubpassDependency(dependency0);
+
+
+
+		vk::Extent2D extent = { static_cast<uint32_t>(screenWidth),static_cast<uint32_t>(screenHeight) };
+
+		vk::ClearValue clearColor = { std::array<float, 4>{137.f / 255.f, 189.f / 255.f, 199.f / 255.f, 1.0f} };
+		vk::ClearValue clearDepth = vk::ClearDepthStencilValue{ 1.0f, 0 };
+		std::vector<vk::ClearValue> clearValues{ clearColor ,clearDepth, clearColor };
+		m_RenderPasses[DEFAULT_FRAME_BUFFER] = builder.Build(m_AttachmentManager, RenderContext::GetFrameAmount(), extent, clearValues);
+
+
+		//AttachmentInfo_ info{ type,format,width,height,samples,hints };
+		//m_AttachmentInfo[m_DefaultColorAttachment] = AttachmentInfo_{AttachmentType::COLOR,}
+		m_Framebuffers[DEFAULT_FRAME_BUFFER] = _CreateFramebuffer(m_RenderPasses[DEFAULT_FRAME_BUFFER].m_RenderPass,
+			extent.width, extent.height, builder,
+			{ m_DefaultColorAttachment,m_DefaultDepthAttachment });
+
+
+
+
+
+
 		
-		//auto& camera = m_App->GetCamera();
-		//camera->UpdateProj(m_ViewportWidth, m_ViewportHeight, camera->GetFov());
 	}
 
 	void Renderer::Shutdown()

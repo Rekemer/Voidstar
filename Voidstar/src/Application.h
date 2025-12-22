@@ -21,8 +21,8 @@ namespace Voidstar
 		virtual void PreUpdate(Camera& camera) {};
 		virtual void Update(float deltaTime) = 0;
 		virtual ~Application();
-		size_t GetScreenWidth() { return m_ScreenWidth; }
-		size_t GetScreenHeight() { return m_ScreenHeight; }
+		size_t GetScreenWidth();
+		size_t GetScreenHeight();
 		SPtr<Window> GetWindow() { return m_Window; }
 		
 	protected:
@@ -30,9 +30,8 @@ namespace Voidstar
 		JobSystem m_Jobs;
 	private:
 		friend class Renderer;
-		size_t m_ScreenWidth, m_ScreenHeight;
 		float m_ExeTime = 0;
-		std::atomic_bool m_IsRunning{ true };;
+		std::atomic_bool m_IsRunning{ true };
 		SPtr<Camera> m_Camera;
 		SPtr<Window> m_Window;
 		std::thread m_RenderThread;

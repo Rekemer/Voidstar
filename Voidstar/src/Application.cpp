@@ -11,8 +11,11 @@
 
 namespace Voidstar
 {
-	Application::Application(std::string_view appName ,size_t screenWidth, size_t screenHeight) :
-		m_ScreenWidth{ screenWidth }, m_ScreenHeight{ screenHeight}
+
+	size_t Application::GetScreenWidth() { return m_Window->ScreenWidth; }
+	size_t Application::GetScreenHeight() { return m_Window->ScreenHeight; }
+
+	Application::Application(std::string_view appName ,size_t screenWidth, size_t screenHeight)
 	{
 		Log::Init();
 		// init Window
@@ -25,7 +28,7 @@ namespace Voidstar
 		init.SetName(appName);
 		
 		
-		m_Window = CreateSPtr<Window>(init.appName, init.width, init.height);
+		m_Window = CreateSPtr<Window>(this,init.appName, init.width, init.height);
 		
 		SetWindow(m_Window);
 		Input::Init(m_Window);

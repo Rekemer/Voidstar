@@ -32,16 +32,15 @@ namespace Voidstar
 		m_Device = device;
 	}
 	 size_t RenderContext::GetFrameAmount() { return m_Swapchain->GetFrameAmount(); };
-	void RenderContext::CreateSwapchain(SwapChainSupportDetails& details)
+	void RenderContext::CreateSwapchain_(SwapChainSupportDetails& details)
 	{
-		assert(m_Swapchain == nullptr);
 		m_Swapchain = Swapchain::Create(details);
 	}
-	void RenderContext::RecreateSwapchain(SwapChainSupportDetails& details)
+	void RenderContext::RecreateSwapchain(vk::Format format, size_t width, size_t height, vk::PresentModeKHR presentMode, vk::ColorSpaceKHR colorSpace)
 	{
 		assert(m_Swapchain != nullptr);
 		m_Swapchain->CleanUp();
-		m_Swapchain = Swapchain::Create(details);
+		CreateSwapchain(format, width, height, presentMode, colorSpace);
 	}
 	void RenderContext::CreateSwapchain(vk::Format format, size_t width, size_t height, vk::PresentModeKHR presentMode, vk::ColorSpaceKHR colorSpace)
 	{
@@ -68,7 +67,7 @@ namespace Voidstar
 		support.ColorSpace = swapchainSpec.ColorSpace;
 		support.Usage = swapchainSpec.Specs.usage;
 		support.FrameAmount = swapchainSpec.Amount;
-		RenderContext::CreateSwapchain(support);
+		RenderContext::CreateSwapchain_(support);
 	}
 	void RenderContext::CreateSurface(Window* window)
 	{

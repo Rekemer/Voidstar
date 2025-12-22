@@ -187,6 +187,7 @@ namespace Voidstar
 
 		void UpdateRegionWithImage(Memory& mem, size_t width, size_t height, TextureHandle image, vk::Offset3D offset, int layer);
 		size_t GetSize(TextureHandle handle);
+		void RecreateSwapchain();
 
 	private:
 		void BindDescriptors(vk::PipelineBindPoint bindPoint, Item& item, std::vector<DescriptorLayoutKey>& keys, ProgramMeta& meta, CommandBuffer& cmd, vk::PipelineLayout layout);
@@ -194,7 +195,6 @@ namespace Voidstar
 		vk::Pipeline GetPipeline(const PipelineKey& key, std::array<VertexBinding, Item::MAX_VERTEX_BINDING>& bindings,
 			int bindingAmount);
 		void CreateInstance();
-		void RecreateSwapchain();
 		std::vector<vk::DescriptorSet>  AllocateSets(size_t amount, const DescriptorLayoutKey& key);
 		
 		int GetIndex(FrameBufferHandle handle,bool& isPresent);

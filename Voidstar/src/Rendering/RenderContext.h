@@ -18,10 +18,12 @@ namespace Voidstar
 		static Instance* GetInstance();
 		static vk::SurfaceKHR* GetSurface() { return m_Surface.get(); };
 		static void SetDevice(Device* device);
-		static void RecreateSwapchain(SwapChainSupportDetails& attachment);
+
+		static void RecreateSwapchain(vk::Format format, size_t width, size_t height, vk::PresentModeKHR presentMode, vk::ColorSpaceKHR colorSpace);
 		static void CreateSwapchain(vk::Format format, size_t width, size_t height,
 			vk::PresentModeKHR presentMode,
 			vk::ColorSpaceKHR colorSpace);
+		
 		static void CreateSurface(Window* window);
 		static void CreateInstance(InstanceInfo& window);
 		static void CreateDevice();
@@ -31,7 +33,7 @@ namespace Voidstar
 	private:
 		friend class Renderer;
 		static Swapchain* GetSwapchain() { return m_Swapchain.get(); }
-		static void CreateSwapchain(SwapChainSupportDetails& attachment);
+		static void CreateSwapchain_(SwapChainSupportDetails& attachment);
 		static Device* m_Device;
 		static UPtr<Swapchain> m_Swapchain;
 		static UPtr<Instance> m_Instance;
