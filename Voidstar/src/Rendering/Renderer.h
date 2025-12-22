@@ -223,6 +223,8 @@ namespace Voidstar
 
 		Map<DescriptorLayoutKey, std::vector<vk::DescriptorSet>, DescriptorLayoutKeyHash> m_DescriptorSet;
 
+		std::vector<TextureHandle> m_ColorSwapchainHandles;
+		
 		Map<VertexBufferHandle, SPtr<Buffer>> m_VertexBuffers;
 		Map<IndexBufferHandle, SPtr<IndexBuffer>> m_IndexBuffers;
 		//unordered_map<VertexLayoutHandle, > m_BufferLayouts;

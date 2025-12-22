@@ -1068,14 +1068,14 @@ namespace Voidstar
 
 		{
 			auto images = RenderContext::GetFrames();
-			std::vector<TextureHandle> handles{ {GetTextureHandle(),GetTextureHandle() ,GetTextureHandle() } };
-			for (int i = 0; i < handles.size(); i++)
+			m_ColorSwapchainHandles = std::vector<TextureHandle>{ {GetTextureHandle(),GetTextureHandle() ,GetTextureHandle() } };
+			for (int i = 0; i < m_ColorSwapchainHandles.size(); i++)
 			{
-				auto handle = handles[i];
+				auto handle = m_ColorSwapchainHandles[i];
 				m_Textures[handle] = images[i];
 			}
 
-			m_AttachmentManager.Init(handles, m_DefaultColorAttachment);
+			m_AttachmentManager.Init(m_ColorSwapchainHandles, m_DefaultColorAttachment);
 		}
 
 
@@ -1187,6 +1187,19 @@ namespace Voidstar
 		RenderContext::RecreateSwapchain(vk::Format::eB8G8R8A8Unorm,
 			m_ViewportWidth, m_ViewportHeight,
 			vk::PresentModeKHR::eFifo, vk::ColorSpaceKHR::eSrgbNonlinear);
+
+
+		{
+			auto images = RenderContext::GetFrames();
+			for (int i = 0; i < m_ColorSwapchainHandles.size(); i++)
+			{
+				auto handle = m_ColorSwapchainHandles[i];
+				m_Textures[handle] = images[i];
+			}
+
+			m_AttachmentManager.Init(m_ColorSwapchainHandles, m_DefaultColorAttachment);
+		}
+
 
 
 		size_t screenWidth = m_ViewportWidth;
