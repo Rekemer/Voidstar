@@ -18,7 +18,6 @@
 #include "Camera.h"
 #include "Image.h"
 #include "DescriptorPool.h"
-#include "Model.h"
 #include "../Application.h"
 #include <random>
 #include "CommandPoolManager.h"
@@ -1179,7 +1178,7 @@ namespace Voidstar
 		m_ViewportHeight = 0;
 		while (m_ViewportWidth == 0 || m_ViewportHeight == 0) {
 			glfwGetFramebufferSize(m_Window->GetRaw(), &m_ViewportWidth, &m_ViewportHeight);
-			glfwWaitEvents();
+			//glfwWaitEvents();
 		}
 
 

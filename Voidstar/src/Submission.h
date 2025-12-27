@@ -211,8 +211,6 @@ namespace Voidstar
 		FilterMode    magFilter = FilterMode::Linear;
 		uint32_t      layers = 1;
 		bool          cube = false;
-
-		
 	};
 
 
@@ -361,9 +359,6 @@ namespace Voidstar
 		}
 	};
 
-
-	
-
 	enum class ItemType
 	{
 		RENDER,
@@ -384,9 +379,6 @@ namespace Voidstar
 		glm::vec3 GroupCount;
 
 	};
-	
-
-
 	struct View
 	{
 		glm::vec4 Rect;
@@ -419,6 +411,21 @@ namespace Voidstar
 		ResourceCommandBuffer CmdPost;
 	};
 	
+
+	struct Mesh
+	{
+		VertexBufferHandle VertexBuffer;
+		IndexBufferHandle IndexBuffer;
+
+	};
+
+	struct Model
+	{
+		VertexLayoutHandle m_Layout;
+	};
+
+	SPtr<Model> LoadModel(std::string_view path);
+
 
 	struct Submission
 	{

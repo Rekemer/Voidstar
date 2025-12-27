@@ -23,6 +23,7 @@ project "Voidstar"
         "%{wks.location}/Dependencies/",
         "../"..TRACY_HEADERS,
         "../"..SPIRV_CROSS_HEADERS,
+        "../"..CGLTF_HEADERS,
         "%{wks.location}/Dependencies/ImGui",
         "%{prj.location}/src"
         

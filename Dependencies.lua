@@ -5,6 +5,7 @@ IncludeDir["ImGui"] = "%{wks.location}/Dependencies/ImGui"
 IncludeDir["GLM"] = "%{wks.location}/Dependencies/glm"
 IncludeDir["SOIL"] = "%{wks.location}/Dependencies/soil/include"
 IncludeDir["FreeType"] = "%{wks.location}/Dependencies/freetype"
+IncludeDir["cgltf"] = "%{wks.location}/Dependencies/cgltf"
 
 
 

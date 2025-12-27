@@ -6,6 +6,9 @@
 #include <semaphore>
 
 
+#define CGLTF_IMPLEMENTATION
+#include "cgltf.h"
+#include <filesystem>
 
 
 namespace Voidstar
@@ -695,6 +698,80 @@ namespace Voidstar
 	{
 		return Renderer::Instance()->GetSize(handle);
 	}
+
+
+	static const cgltf_accessor* FindAttr(const cgltf_primitive* prim, const char* name)
+	{
+		for (cgltf_size i = 0; i < prim->attributes_count; i++)
+		{
+			const cgltf_attribute& a = prim->attributes[i];
+			if (a.name && 0 == std::strcmp(a.name, name))
+				return a.data; 
+		}
+		return nullptr;
+	}
+
+
+
+	SPtr<Model> LoadModel(std::string_view file)
+	{
+		using namespace std::filesystem;
+		path pathFile{ file };
+
+		assert(std::filesystem::exists(pathFile));
+
+		SPtr<Model> model;
+
+		cgltf_options options{};
+		cgltf_data* data = NULL;
+		// reading description of the model 
+		cgltf_result result = cgltf_parse_file(&options, pathFile.string().c_str(), &data);
+		if (result == cgltf_result_success)
+		{
+			//Note that contents of external files for buffers and images are not
+			//automatically loaded
+
+			result = cgltf_load_buffers(&options, data, pathFile.string().c_str());
+
+
+			cgltf_mesh* mesh = &data->meshes[0];
+			cgltf_primitive* prim = &mesh->primitives[0];
+
+			auto pos = FindAttr(prim, "POSITION");
+			auto nrm = FindAttr(prim, "NORMAL");
+			auto uv = FindAttr(prim, "TEXCOORD_0");
+
+
+			size_t vCount = pos->count;
+			std::vector<VertexModel_> vertices(vCount);
+
+			for (cgltf_size i = 0; i < pos->count; i++)
+			{
+				cgltf_accessor_read_float(pos, i, &vertices[i].Position.x, 3);
+
+				if (nrm) cgltf_accessor_read_float(nrm, i, &vertices[i].Normal.x, 3);
+				else 
+				{
+					vertices[i].Normal[0] = 0;
+					vertices[i].Normal[1] = 1;
+					vertices[i].Normal[2] = 0;
+				}
+
+				if (uv)  cgltf_accessor_read_float(uv, i, &vertices[i].UV.x, 2);
+				else 
+				{ 
+					vertices[i].UV[0] = 0;
+					vertices[i].UV[1] = 0;
+				}
+			}
+
+
+			
+			cgltf_free(data);
+		}
+		return model;
+	}
+
 }
 
 
