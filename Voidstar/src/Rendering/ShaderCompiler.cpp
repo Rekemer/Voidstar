@@ -142,6 +142,8 @@ namespace Voidstar
 		StageMeta meta;
 		meta.stage = GetShaderType(comp.get_execution_model());
 		meta.path = path;
+		
+		
 		if (res.uniform_buffers.size() > 0)
 		{
 			auto ub = res.uniform_buffers[0];
@@ -185,14 +187,27 @@ namespace Voidstar
 				if (!mt.array.empty() && mt.array.back() == 0) {
 					// runtime array: array stride & element size
 					stride = comp.type_struct_member_array_stride(st, last);
-					// element size = declared size of one element type
-					elemSize = uint32_t(comp.get_declared_struct_size(mt)); // for scalars/vectors this is fine too
+
+
+					bool isStruct = (st.basetype == spv::OpTypeStruct);
+
+					if (isStruct)
+					{
+						// element size = declared size of one element type
+						elemSize = uint32_t(comp.get_declared_struct_size(mt)); // for scalars/vectors this is fine too
+					}
+					else
+					{
+						elemSize = stride;
+					}
+
 				}
 			}
+			// for set 0 shader access is for all
 			auto name = comp.get_name(sb.id);
 			meta.uniforms[name] = { set,binding };
 			meta.bindings[set].push_back(CreateBindingDesc(set, binding, ResourceType::StorageBuffer,
-				meta.stage, count, stride, elemSize));
+				set == 0 ? ShaderType::ALL : meta.stage, count, stride, elemSize));
 		}
 
 		// --- Sampled images (combined image-samplers) ---

@@ -248,7 +248,8 @@ namespace Voidstar
 	
 	void Device::UpdateDescriptorSet(vk::DescriptorSet dscSet, int binding, int descriptorCount, Buffer& buffer, ResourceType type)
 	{
-		vk::WriteDescriptorSet writeInfo;
+		vk::WriteDescriptorSet writeInfo{};
+
 		vk::DescriptorBufferInfo bufferInfo{};
 		bufferInfo.buffer = buffer.GetBuffer();
 		bufferInfo.offset = 0;

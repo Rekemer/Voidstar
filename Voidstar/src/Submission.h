@@ -19,6 +19,8 @@
 
 namespace Voidstar
 {
+	const size_t MAX_OBJECTS = 255;
+
 	enum class ResourceType : uint8_t
 	{
 		UniformBuffer,
@@ -378,6 +380,8 @@ namespace Voidstar
 		ResourceBindings Bindings;
 		glm::vec3 GroupCount;
 
+		size_t MatrixIndex = 0;
+		size_t ObjectCount = 1;
 	};
 	struct View
 	{
@@ -394,6 +398,8 @@ namespace Voidstar
 		Item* CurrentRenderItem =&m_renderItem[CurrentRenderItemIndex];
 		View Views[256];
 		size_t FrameNumber = 0;
+		size_t CurrentFreeMatrix = 0;
+		std::array<glm::mat4, MAX_OBJECTS> Matricies;
 		float deltaTime;
 		void NextItem()
 		{
@@ -403,7 +409,9 @@ namespace Voidstar
 		void Reset() 
 		{
 			CurrentRenderItemIndex = 0;
+			CurrentFreeMatrix = 0;
 			CurrentRenderItem = &m_renderItem[CurrentRenderItemIndex];
+
 		};
 		// command to execute before Render/Compute API calls
 		ResourceCommandBuffer CmdPre;
@@ -412,16 +420,16 @@ namespace Voidstar
 	};
 	
 
-	struct Mesh
-	{
-		VertexBufferHandle VertexBuffer;
-		IndexBufferHandle IndexBuffer;
-
-	};
-
 	struct Model
 	{
+		// will need to remove it from here
+		// have it to avoid dangling pointers
+		std::vector<VertexModel_> verticies;
+		std::vector<IndexType> indexes;
+
 		VertexLayoutHandle m_Layout;
+		VertexBufferHandle m_VertexBuffer;
+		IndexBufferHandle m_IndexBuffer;
 	};
 
 	SPtr<Model> LoadModel(std::string_view path);
@@ -501,6 +509,8 @@ namespace Voidstar
 
 	void Submit(PassID id, ProgramHandle program);
 
+	void SubmitModel(SPtr<Model> model, PassID pass, ProgramHandle program, const glm::mat4& world);
+	
 	void SubmitCompute(PassID id, ProgramHandle program, size_t x, size_t y,size_t z);
 	
 	void BindIndexBuffer(IndexBufferHandle handle);

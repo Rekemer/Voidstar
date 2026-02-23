@@ -328,8 +328,6 @@ namespace Voidstar
 		//cmd.ReadObject<InitParams>();
 	}
 
-	
-
 	void ExecuteCommands(ResourceCommandBuffer& commandBuffer)
 	{
 
@@ -339,198 +337,202 @@ namespace Voidstar
 
 			switch (command)
 			{
-			case Voidstar::ResourceCommand::RendererInit:
-			{
-				auto init = commandBuffer.ReadObject<InitParams>();
-
-				Renderer::Instance()->Init(init.width, init.height, g_Submission->Window,init.app);
-				
-				break;
-			}
-			case Voidstar::ResourceCommand::RendererShutdownBegin:
-				break;
-			case Voidstar::ResourceCommand::CreateVertexLayout:
-				break;
-			case ResourceCommand::CreateBuffer:
-			{
-				auto handle = commandBuffer.ReadObject<BufferHandle>();
-				auto size = commandBuffer.ReadObject<size_t>();
-				auto usage = commandBuffer.ReadObject<ResourceUsage>();
-				Renderer::Instance()->CreateBuffer(handle, size,usage);
-				break;
-			}
-			case Voidstar::ResourceCommand::CreateIndexBuffer:
-			{
-				auto mem = commandBuffer.ReadObject<Memory>();
-				auto bufferHandle = commandBuffer.ReadObject<uint16_t>();
-				Renderer::Instance()->CreateIndexBuffer(mem, IndexBufferHandle{ bufferHandle });
-			}
-				break;
-			case Voidstar::ResourceCommand::CreateVertexBuffer:
-			{
-				auto mem = commandBuffer.ReadObject<Memory>();
-				auto bufferHandle = commandBuffer.ReadObject<uint16_t>();
-				auto layoutHandle = commandBuffer.ReadObject<uint16_t>();
-				Renderer::Instance()->CreateVertexBuffer(mem, VertexBufferHandle{ bufferHandle });
-			}
-				break;
-			case Voidstar::ResourceCommand::CreateDynamicIndexBuffer:
-				break;
-			case Voidstar::ResourceCommand::UpdateDynamicIndexBuffer:
-				break;
-			case Voidstar::ResourceCommand::CreateDynamicVertexBuffer:
-				break;
-			case Voidstar::ResourceCommand::UpdateDynamicVertexBuffer:
-				break;
-			case Voidstar::ResourceCommand::CreateShader:
-			{
-				auto handle = commandBuffer.Read<uint16_t>();
-
-				auto path = commandBuffer.ReadString();
-				Renderer::Instance()->CompileShader(path);
-				break;
-			}
-			case Voidstar::ResourceCommand::CreateProgram:
-			{
-				auto handle = commandBuffer.Read<uint16_t>();
-				auto shaderAmount = commandBuffer.ReadByte();
-				Renderer::Instance()->LinkShaders(ProgramHandle{ handle }, shaderAmount);
-				break;
-			}
-			case ResourceCommand::GenerateMipMapsAsTextures:
-			{
-				auto handle = commandBuffer.Read<TextureHandle> ();
-
-				std::vector<TextureHandle> handles;
-				commandBuffer.ReadVector<>(handles);
-				Renderer::Instance()->CreateEmptyMipMapsAsImages(handle,handles);
-				break;
-			}
-
-			case ResourceCommand::UpdateBuffer:
-			{
-				auto handle = commandBuffer.Read<BufferHandle> ();
-				auto data = commandBuffer.Read<void*> ();
-				auto size = commandBuffer.Read<size_t> ();
-				Renderer::Instance()->UpdateBuffer(handle, data, size);
-				break;
-			}
-			case Voidstar::ResourceCommand::CreateTexture:
-			{
-
-				auto handle = commandBuffer.ReadObject<TextureHandle>();
-				auto path = commandBuffer.ReadString();
-				Renderer::Instance()->CreateTexture(handle, path);
-				break;
-			}
-
-			case Voidstar::ResourceCommand::CreateEmptyTexture:
-			{
-
-				auto handle = commandBuffer.ReadObject<TextureHandle>();
-				auto payload = commandBuffer.ReadObject<CreateEmptyTextureCmd>();
-
-				Renderer::Instance()->CreateEmptyTexture(handle, payload);
-				break;
-			}
-			case Voidstar::ResourceCommand::UpdateImageRegionWithImage:
-			{
-				auto update= commandBuffer.ReadObject<UpdateImageRegion>();
-				Renderer::Instance()->UpdateRegionWithImage(update.mem, update.width, update.height,
-					update.imageToUpdate
-					,{0,0,0},
-					update.layer);
-				
-				break;
-			}
-			case Voidstar::ResourceCommand::UpdateTexture:
-				break;
-			case Voidstar::ResourceCommand::FillTexture:
-			{
-				auto texture = commandBuffer.ReadObject<TextureHandle>();
-				auto pixel= commandBuffer.ReadObject<glm::vec4>();
-				auto buffer = commandBuffer.ReadObject<BufferHandle>();
-				auto offset = commandBuffer.ReadObject<size_t>();
-				Renderer::Instance()->FillTexture(texture,pixel,buffer,offset);
-				break;
-			}
-			case Voidstar::ResourceCommand::ResizeTexture:
-				break;
-			case Voidstar::ResourceCommand::CreateAttachment:
-			{
-				auto handle = commandBuffer.ReadObject<AttachmentHandle>();
-				auto info = commandBuffer.ReadObject<AttachmentInfo_>();
-				Renderer::Instance()->CreateAttachment(handle,info);
-				break;
-			}
-			case Voidstar::ResourceCommand::CreateFrameBuffer:
-			{
-				auto handle = commandBuffer.ReadObject<FrameBufferHandle>();
-				auto amount= commandBuffer.ReadObject<size_t>();
-				std::vector<AttachmentHandle> handles;
-				handles.reserve(amount);
-				for (int i = 0; i < amount; i++)
+				case Voidstar::ResourceCommand::RendererInit:
 				{
-					handles.push_back(commandBuffer.ReadObject<AttachmentHandle>());
+					auto init = commandBuffer.ReadObject<InitParams>();
+
+					Renderer::Instance()->Init(init.width, init.height, g_Submission->Window,	init.app);
+
+					break;
 				}
-				Renderer::Instance()->CreateFramebuffer(handle,handles);
+				case Voidstar::ResourceCommand::RendererShutdownBegin:
+					break;
+				case Voidstar::ResourceCommand::CreateVertexLayout:
+					break;
+				case ResourceCommand::CreateBuffer:
+				{
+					auto handle = commandBuffer.ReadObject<BufferHandle>();
+					auto size = commandBuffer.ReadObject<size_t>();
+					auto usage = commandBuffer.ReadObject<ResourceUsage>();
+					Renderer::Instance()->CreateBuffer(handle, size, usage);
+					break;
+				}
+				case Voidstar::ResourceCommand::CreateIndexBuffer:
+				{
+					auto mem = commandBuffer.ReadObject<Memory>();
+					auto bufferHandle = commandBuffer.ReadObject<uint16_t>();
+					Renderer::Instance()->CreateIndexBuffer(mem, IndexBufferHandle  { bufferHandle });
+				}
 				break;
-			}
-			case Voidstar::ResourceCommand::CreateUniform:
-			{
+				case Voidstar::ResourceCommand::CreateVertexBuffer:
+				{
+					auto mem = commandBuffer.ReadObject<Memory>();
+					auto bufferHandle = commandBuffer.ReadObject<uint16_t>();
+					auto layoutHandle = commandBuffer.ReadObject<uint16_t>();
+					Renderer::Instance()->CreateVertexBuffer(mem, VertexBufferHandle	{ bufferHandle });
+				}
+				break;
+				case Voidstar::ResourceCommand::CreateDynamicIndexBuffer:
+					break;
+				case Voidstar::ResourceCommand::UpdateDynamicIndexBuffer:
+					break;
+				case Voidstar::ResourceCommand::CreateDynamicVertexBuffer:
+					break;
+				case Voidstar::ResourceCommand::UpdateDynamicVertexBuffer:
+					break;
+				case Voidstar::ResourceCommand::CreateShader:
+				{
+					auto handle = commandBuffer.Read<ShaderHandle>();
 
-				auto handle = commandBuffer.ReadObject<UniformHandle>();
-				auto type = commandBuffer.ReadObject<ResourceType>();
-				auto num = commandBuffer.Read<size_t>();
-				Renderer::Instance()->CreateUniform(handle, type, num);
-				break;
-			}
-			case Voidstar::ResourceCommand::UpdateViewName:
-				break;
-			case Voidstar::ResourceCommand::SetName:
-				break;
-			case Voidstar::ResourceCommand::End:
-				break;
-			case Voidstar::ResourceCommand::RendererShutdownEnd:
-				break;
-			case Voidstar::ResourceCommand::DestroyVertexLayout:
-				break;
-			case Voidstar::ResourceCommand::DestroyIndexBuffer:
-				break;
-			case Voidstar::ResourceCommand::DestroyVertexBuffer:
-				break;
-			case Voidstar::ResourceCommand::DestroyDynamicIndexBuffer:
-				break;
-			case Voidstar::ResourceCommand::DestroyDynamicVertexBuffer:
-				break;
-			case Voidstar::ResourceCommand::DestroyShader:
-				break;
-			case Voidstar::ResourceCommand::DestroyProgram:
-				break;
-			case Voidstar::ResourceCommand::DestroyTexture:
-				break;
-			case Voidstar::ResourceCommand::DestroyFrameBuffer:
-				break;
-			case Voidstar::ResourceCommand::DestroyUniform:
-				break;
-			case Voidstar::ResourceCommand::ReadTexture:
-			{
-				auto handle = commandBuffer.ReadObject<TextureHandle>();
-				auto data = commandBuffer.ReadObject<void*>();
-				
-				auto image = Renderer::Instance()->GetTexture(handle);
-				auto size = image->GetSize();
+					auto path = commandBuffer.ReadString();
+					Renderer::Instance()->CompileShader(path);
+					break;
+				}
+				case Voidstar::ResourceCommand::CreateProgram:
+				{
+					auto handle = commandBuffer.Read<ProgramHandle>();
+					auto shaderAmount = commandBuffer.ReadByte();
+					Renderer::Instance()->LinkShaders(ProgramHandle{ handle }, shaderAmount);
+					break;
+				}
+				case ResourceCommand::GenerateMipMapsAsTextures:
+				{
+					auto handle = commandBuffer.Read<TextureHandle>();
 
-				auto buffer = Buffer::CreateStagingBuffer(size);
+					std::vector<TextureHandle> handles;
+					commandBuffer.ReadVector<>(handles);
+					Renderer::Instance()->CreateEmptyMipMapsAsImages(handle, handles);
+					break;
+				}
+
+				case ResourceCommand::UpdateBuffer:
+				{
+					auto handle = commandBuffer.Read<BufferHandle>();
+					auto data = commandBuffer.Read<void*>();
+					auto size = commandBuffer.Read<size_t>();
+					Renderer::Instance()->UpdateBuffer(handle, data, size);
+					break;
+				}
+				case Voidstar::ResourceCommand::CreateTexture:
+				{
+
+					auto handle = commandBuffer.ReadObject<TextureHandle>();
+					auto path = commandBuffer.ReadString();
+					Renderer::Instance()->CreateTexture(handle, path);
+					break;
+				}
+
+				case Voidstar::ResourceCommand::CreateEmptyTexture:
+				{
+
+					auto handle = commandBuffer.ReadObject<TextureHandle>();
+					auto payload = commandBuffer.ReadObject<CreateEmptyTextureCmd>();
+
+					Renderer::Instance()->CreateEmptyTexture(handle, payload);
+					break;
+				}
+				case Voidstar::ResourceCommand::UpdateImageRegionWithImage:
+				{
+					auto update = commandBuffer.ReadObject<UpdateImageRegion>();
+					Renderer::Instance()->UpdateRegionWithImage(update.mem, update.width,	update.height,
+						update.imageToUpdate
+						, { 0,0,0 },
+						update.layer);
+
+					break;
+				}
+				case Voidstar::ResourceCommand::UpdateTexture:
+					break;
+				case Voidstar::ResourceCommand::FillTexture:
+				{
+					auto texture = commandBuffer.ReadObject<TextureHandle>();
+					auto pixel = commandBuffer.ReadObject<glm::vec4>();
+					auto buffer = commandBuffer.ReadObject<BufferHandle>();
+					auto offset = commandBuffer.ReadObject<size_t>();
+					Renderer::Instance()->FillTexture(texture, pixel, buffer, offset);
+					break;
+				}
+				case Voidstar::ResourceCommand::ResizeTexture:
+					break;
+				case Voidstar::ResourceCommand::CreateAttachment:
+				{
+					auto handle = commandBuffer.ReadObject<AttachmentHandle>();
+					auto info = commandBuffer.ReadObject<AttachmentInfo_>();
+					Renderer::Instance()->CreateAttachment(handle, info);
+					break;
+				}
+				case Voidstar::ResourceCommand::CreateFrameBuffer:
+				{
+					auto handle = commandBuffer.ReadObject<FrameBufferHandle>();
+					auto amount = commandBuffer.ReadObject<size_t>();
+					std::vector<AttachmentHandle> handles;
+					handles.reserve(amount);
+					for (int i = 0; i < amount; i++)
+					{
+						handles.push_back(commandBuffer.ReadObject<AttachmentHandle>());
+					}
+					Renderer::Instance()->CreateFramebuffer(handle, handles);
+					break;
+				}
+				case Voidstar::ResourceCommand::CreateUniform:
+				{
+
+					auto handle = commandBuffer.ReadObject<UniformHandle>();
+					auto type = commandBuffer.ReadObject<ResourceType>();
+					auto num = commandBuffer.Read<size_t>();
+					Renderer::Instance()->CreateUniform(handle, type, num);
+					break;
+				}
+				case Voidstar::ResourceCommand::UpdateViewName:
+					break;
+				case Voidstar::ResourceCommand::SetName:
+					break;
+				case Voidstar::ResourceCommand::End:
+					break;
+				case Voidstar::ResourceCommand::RendererShutdownEnd:
+					break;
+				case Voidstar::ResourceCommand::DestroyVertexLayout:
+					break;
+				case Voidstar::ResourceCommand::DestroyIndexBuffer:
+					break;
+				case Voidstar::ResourceCommand::DestroyVertexBuffer:
+					break;
+				case Voidstar::ResourceCommand::DestroyDynamicIndexBuffer:
+					break;
+				case Voidstar::ResourceCommand::DestroyDynamicVertexBuffer:
+					break;
+				case Voidstar::ResourceCommand::DestroyShader:
+					break;
+				case Voidstar::ResourceCommand::DestroyProgram:
+					break;
+				case Voidstar::ResourceCommand::DestroyTexture:
+					break;
+				case Voidstar::ResourceCommand::DestroyFrameBuffer:
+					break;
+				case Voidstar::ResourceCommand::DestroyUniform:
+					break;
+				case Voidstar::ResourceCommand::ReadTexture:
+				{
+					auto handle = commandBuffer.ReadObject<TextureHandle>();
+					auto data = commandBuffer.ReadObject<void*>();
+
+					auto image = Renderer::Instance()->GetTexture(handle);
+					auto size = image->GetSize();
+
+					auto buffer = Buffer::CreateStagingBuffer(size);
 
 
-				Renderer::Instance()->CopyImageToBuffer(image,buffer);
-				Renderer::Instance()->CopyBufferToPtr(buffer, data, FormatToSize(image->GetFormat()));
-				
-				break;
-			}
-			default:
-				break;
+					Renderer::Instance()->CopyImageToBuffer(image, buffer);
+					Renderer::Instance()->CopyBufferToPtr(buffer, data, FormatToSize(image->GetFormat()));
+
+					break;
+				}
+				default:
+				{
+					assert(false && "unhandled resource command");
+					break;
+				}
+
 			}
 		}
 		commandBuffer.Reset();
@@ -716,11 +718,12 @@ namespace Voidstar
 	SPtr<Model> LoadModel(std::string_view file)
 	{
 		using namespace std::filesystem;
-		path pathFile{ file };
-
+		auto resPath = BASE_RES_PATH;
+		path pathFile{ resPath.append(file)};
+		std::cout << BASE_RES_PATH << std::endl;
 		assert(std::filesystem::exists(pathFile));
 
-		SPtr<Model> model;
+		SPtr<Model> model = CreateSPtr<Model>();
 
 		cgltf_options options{};
 		cgltf_data* data = NULL;
@@ -743,8 +746,8 @@ namespace Voidstar
 
 
 			size_t vCount = pos->count;
-			std::vector<VertexModel_> vertices(vCount);
-
+			model->verticies.resize(vCount);
+			std::vector<VertexModel_>&  vertices = model->verticies;
 			for (cgltf_size i = 0; i < pos->count; i++)
 			{
 				cgltf_accessor_read_float(pos, i, &vertices[i].Position.x, 3);
@@ -765,13 +768,42 @@ namespace Voidstar
 				}
 			}
 
+			std::vector<IndexType>& indexes = model->indexes;
 
+			if (prim->indices) {
+				indexes.resize(prim->indices->count);
+				for (size_t i = 0; i < indexes.size(); i++)
+					indexes[i] = (IndexType)cgltf_accessor_read_index(prim->indices, i);
+			}
+
+			VertexLayout layout;
+			layout.Add(ShaderDataType::FLOAT3);
+			layout.Add(ShaderDataType::FLOAT3);
+			layout.Add(ShaderDataType::FLOAT2);
+
+			Memory mem;
+			mem.data = reinterpret_cast<uint8_t*>(vertices.data());
+			mem.size = vertices.size() * sizeof(vertices[0]);
+			model->m_VertexBuffer = CreateVertexBuffer(mem,layout);
 			
+			mem.data = reinterpret_cast<uint8_t*>(indexes.data());
+			mem.size = indexes.size() * sizeof(indexes[0]);
+			model->m_IndexBuffer = CreateIndexBuffer(mem);
+
 			cgltf_free(data);
 		}
+
 		return model;
 	}
-
+	void SubmitModel(SPtr<Model> model, PassID pass, ProgramHandle program, const glm::mat4& world)
+	{
+		BindVertexBuffer(pass, model->m_VertexBuffer);
+		BindIndexBuffer(model->m_IndexBuffer);
+		g_Submission->Submit->CurrentRenderItem->MatrixIndex = g_Submission->Submit->CurrentFreeMatrix++;
+		g_Submission->Submit->Matricies[g_Submission->Submit->CurrentRenderItem->MatrixIndex] = world;
+		Submit(pass, program);
+		return;
+	}
 }
 
 

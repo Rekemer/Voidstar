@@ -2,11 +2,16 @@
 #include "Vertex.h"
 using namespace Voidstar;
 
+#define MODEL 0
 class Sandbox : public Voidstar::Application
 {
 public:
 	Sandbox(std::string appName, size_t screenWidth, size_t screenHeight) : Voidstar::Application(appName, screenWidth, screenHeight)
 	{
+#if MODEL
+		m_DefaultShader = LoadProgram("model.vert", "basic.frag");
+		m_Model = LoadModel("DamagedHelmet/glTF-Binary/DamagedHelmet.glb");
+#else
 		m_DefaultShader = LoadProgram("basic.vert", "texture.frag");
 		m_VertexLayout.Add(ShaderDataType::FLOAT3)
 			.Add(ShaderDataType::FLOAT2);
@@ -23,6 +28,9 @@ public:
 		);
 
 		m_MorganaTex = LoadTexture("morgana.png");
+#endif
+
+		
 
 		GetCamera()->SetCameraControl(CameraControlMode::ROUND_CONTROL);
 		GetCamera()->LookAt({ 0,0,0 });
@@ -33,15 +41,22 @@ public:
 	{
 		SetViewRect(0, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
 		SetViewTransform(0, GetCamera()->GetView(), GetCamera()->GetProj());
+
+#if MODEL 
+		glm::mat4 world = glm::scale(glm::mat4(1), glm::vec3{2});
+		
+		SubmitModel(m_Model,0,m_DefaultShader,world);
+#else
 		BindVertexBuffer(0, m_VertexHandle);
 		BindIndexBuffer(m_IndexHandle);
 		BindTexture("u_Texture",m_MorganaTex);
 		Submit(0, m_DefaultShader);
+#endif
 
 		ExecuteFrame(deltaTime);
 
 	}
-
+	SPtr<Model> m_Model;
 	PassID m_DefaultRenderPass;
 	VertexBufferHandle m_VertexHandle;
 	IndexBufferHandle m_IndexHandle;

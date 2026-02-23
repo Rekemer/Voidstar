@@ -1024,41 +1024,74 @@ namespace Voidstar
 		m_UniformBuffersMapped.resize(framesAmount);
 
 
-		BufferInputChunk inputBuffer;
-		inputBuffer.size = bufferSize;
-		inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
-		inputBuffer.usage = vk::BufferUsageFlagBits::eUniformBuffer;
+		BufferInputChunk inputUniformBuffer;
+		inputUniformBuffer.size = bufferSize;
+		inputUniformBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+		inputUniformBuffer.usage = vk::BufferUsageFlagBits::eUniformBuffer;
 
+		BufferInputChunk inputObjectBuffer;
+		inputObjectBuffer.size = sizeof(glm::mat4) * MAX_OBJECTS;
+		inputObjectBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+		inputObjectBuffer.usage = vk::BufferUsageFlagBits::eStorageBuffer;
+		
+		m_ObjectsBuffers.resize(framesAmount);
+		m_ObjectsBuffersMapped.resize(framesAmount);
+		
 		for (size_t i = 0; i < framesAmount; i++)
 		{
-			m_UniformBuffers[i] = CreateUPtr<Buffer>(inputBuffer);
+			m_UniformBuffers[i] = CreateUPtr<Buffer>(inputUniformBuffer);
+
+			m_ObjectsBuffers[i] = CreateUPtr<Buffer>(inputObjectBuffer);
+			
 			m_UniformBuffersMapped[i] = m_Device->GetDevice().mapMemory(m_UniformBuffers[i]->GetMemory(), 0, bufferSize);
+			m_ObjectsBuffersMapped[i] = m_Device->GetDevice().mapMemory(m_ObjectsBuffers[i]->GetMemory(), 0, bufferSize);
 		}
+
+
+	
 
 
 
 		SystemDescriptorLayoutKey.set = 0;
-		BindingDesc desc;
-		desc.binding = 0;
-		desc.set = 0;
-		desc.access = ShaderType::ALL;
-		desc.kind = ResourceType::UniformBuffer;
-		desc.count = 1;
-		desc.elemSize = sizeof(UniformBufferObject);
-		desc.stride = 0;
-		SystemDescriptorLayoutKey.bindings.insert(desc);
+		{
+			BindingDesc desc;
+			desc.binding = 0;
+			desc.set = 0;
+			desc.access = ShaderType::ALL;
+			desc.kind = ResourceType::UniformBuffer;
+			desc.count = 1;
+			desc.elemSize = sizeof(UniformBufferObject);
+			desc.stride = 0;
+			SystemDescriptorLayoutKey.bindings.insert(desc);
+
+		}
+
+		{
+			BindingDesc desc;
+			desc.binding = 1;
+			desc.set = 0;
+			desc.access = ShaderType::ALL;
+			desc.kind = ResourceType::StorageBuffer;
+			desc.count = 1;
+			desc.elemSize = sizeof(glm::mat4);
+			desc.stride = sizeof(glm::mat4);
+			SystemDescriptorLayoutKey.bindings.insert(desc);
+		}
+
 		CreateDescriptorLayout(SystemDescriptorLayoutKey);
 
 
 		auto sets = AllocateSets(frameAmount, SystemDescriptorLayoutKey);
 
+	for (auto& binding : SystemDescriptorLayoutKey.bindings)
+	{	
 		for (auto i = 0; i < frameAmount; i++)
 		{
-			for (auto binding : SystemDescriptorLayoutKey.bindings)
-			{
-				m_Device->UpdateDescriptorSet(sets[i], binding.binding, binding.count, *m_UniformBuffers[i], binding.kind);
-			}
+				auto& buffer = binding.kind == ResourceType::UniformBuffer ? *m_UniformBuffers[i] : *m_ObjectsBuffers[i];
+				m_Device->UpdateDescriptorSet(sets[i], binding.binding, binding.count, buffer, binding.kind);
 		}
+		break;
+	}
 
 
 		m_DefaultColorAttachment = GetAttachmentHandle();
@@ -1847,7 +1880,14 @@ namespace Voidstar
 		auto vkCmd = cmd.GetCommandBuffer();
 		for (int ii = 0; ii < keys.size(); ii++)
 		{
-			auto k = keys.at(ii);
+
+			auto& k = keys.at(ii);
+
+			if (k.set == 0)
+			{
+				for (const auto& sys : SystemDescriptorLayoutKey.bindings)
+					k.bindings.insert(sys);
+			}
 			if (m_DescriptorSet.find(k) == m_DescriptorSet.end())
 			{
 				AllocateSets(RenderContext::GetFrameAmount(), k);
@@ -2058,8 +2098,14 @@ namespace Voidstar
 
 
 				BindDescriptors(vk::PipelineBindPoint::eGraphics, renderItem, keys, meta, cmd, layout);
+
+				// update camera matricies
 				UpdateUniformBuffer(view.Proj, view.View, m_App->GetExeTime());
 
+				// update object matricies
+				auto& matrix = render->Matricies.at(renderItem.MatrixIndex);
+				memcpy(m_ObjectsBuffersMapped[m_CurrentFrame], &matrix, sizeof(glm::mat4) * renderItem.ObjectCount);
+				
 				auto& test = m_FBAttachments[key.fb];
 
 				for (auto handle : test)
@@ -2184,7 +2230,6 @@ namespace Voidstar
 	void Renderer::UpdateUniformBuffer(const glm::mat4& proj, const glm::mat4& view, float time)
 	{
 		UniformBufferObject ubo{};
-
 		ubo.view = view;
 		ubo.proj = proj;
 		ubo.time = time;

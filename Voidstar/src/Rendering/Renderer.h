@@ -49,10 +49,10 @@ namespace Voidstar
 	class Pipeline;
 
 
-
+	
 	inline std::string BASE_SHADER_PATH = "../Shaders/";
-	inline std::string BASE_RES_PATH = "res";
-	static inline std::string BASE_VIRT_PATH = "E:/dev/Voidstar/mipMaps_virtualTex4.tiff/";
+	inline std::string BASE_RES_PATH = "../res/";
+	inline std::string BASE_VIRT_PATH = "E:/dev/Voidstar/mipMaps_virtualTex4.tiff/";
 	const std::string SPIRV_COMPILER_PATH = std::string(std::string(std::getenv("VULKAN_SDK")) + std::string("/Bin/glslangvalidator.exe"));
 
 	inline std::string BASE_SPIRV_OUTPUT = BASE_SHADER_PATH + "Binary/";
@@ -62,7 +62,7 @@ namespace Voidstar
 
 		// Check if running within Visual Studio
 		const char* visualStudioEnvVar = std::getenv("VSLANG");
-		//std::cout << (visualStudioEnvVar != nullptr) ? "true" :"false";
+		std::cout << (visualStudioEnvVar != nullptr) ? 1 : 0;
 		if (visualStudioEnvVar != nullptr)
 		{
 			// Set the base shader path relative to the project directory
@@ -74,8 +74,8 @@ namespace Voidstar
 		{
 			// Set the base shader path relative to the executable directory
 			std::filesystem::path executablePath = std::filesystem::current_path();
-			BASE_SHADER_PATH = executablePath.parent_path().string() + "../../../Shaders/";
-			BASE_RES_PATH = executablePath.parent_path().string() + "../../../res/";
+			BASE_SHADER_PATH = executablePath.parent_path().string() + "/../../Shaders/";
+			BASE_RES_PATH = executablePath.parent_path().string() + "/../../res/";
 			BASE_SPIRV_OUTPUT = BASE_SHADER_PATH + "Binary/";
 			BASE_VIRT_PATH = "E:/dev/Voidstar/mipMaps_virtualTex4.tiff/";
 			//BASE_VIRT_PATH = executablePath.parent_path().string() + "/../../mipMaps_virtualTex4.tiff/";
@@ -177,6 +177,9 @@ namespace Voidstar
 		void CreateSyncObjects();
 		
 		std::vector<UPtr<Buffer>> m_UniformBuffers;
+		std::vector<UPtr<Buffer>> m_ObjectsBuffers;
+		std::vector<void*> m_UniformBuffersMapped;
+		std::vector<void*> m_ObjectsBuffersMapped;
 		void Draw(Quad& quad, glm::mat4& world);
 		void Draw(Sphere& drawable);
 		void Draw(QuadRangle& drawable);
@@ -212,7 +215,7 @@ namespace Voidstar
 		size_t m_FrameNumber = 0;
 		ShaderCompiler m_Compiler;
 		FrameBufferHandle DEFAULT_FRAME_BUFFER;
-		std::vector<void*> m_UniformBuffersMapped;
+	
 
 		DescriptorLayoutKey SystemDescriptorLayoutKey;
 

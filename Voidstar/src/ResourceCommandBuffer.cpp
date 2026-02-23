@@ -44,6 +44,7 @@ namespace Voidstar
 		current += sizeof(uint32_t);
 
 		auto data = reinterpret_cast<const char*>(commands.data() + current);
+		current += len;
 		return { data, len };
 	}
 
