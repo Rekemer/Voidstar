@@ -11,6 +11,9 @@
 #include <filesystem>
 
 
+// for loading image from gltf files
+#include "stb_image.h"
+
 namespace Voidstar
 {
 	UPtr<Submission> g_Submission = CreateUPtr<Submission>();
@@ -324,8 +327,6 @@ namespace Voidstar
 #endif
 		auto& cmd = g_Submission->GetCommandBuffer(ResourceCommand::RendererInit);
 		cmd.WriteObject(init);
-		//cmd.ReadByte();
-		//cmd.ReadObject<InitParams>();
 	}
 
 	void ExecuteCommands(ResourceCommandBuffer& commandBuffer)
@@ -571,7 +572,7 @@ namespace Voidstar
 	}
 
 	// start calling implementation
-	void ExecuteFrame(float deltaTime)
+	void ExecuteFrame(float deltaTime, bool wait)
 	{
 	#if THREADING
 		// we wait until renderer is done rendering
@@ -580,13 +581,18 @@ namespace Voidstar
 		
 		// swap
 		g_Submission->Submit->deltaTime = deltaTime;
-		std::swap(g_Submission->Submit, g_Submission->Render);
 		g_Submission->Submit->FrameNumber++;
+		std::swap(g_Submission->Submit, g_Submission->Render);
 
-		// signal renderer
+		// signal renderer to do the work
 		renderSem.release();
+		
 		// wait until renderer is finished with previous frame
-
+		if (wait)
+		{
+			apiSem.acquire();
+			apiSem.release();
+		}
 		// unless specified multithreaded, render one this thread
 	#else
 
@@ -720,7 +726,6 @@ namespace Voidstar
 		using namespace std::filesystem;
 		auto resPath = BASE_RES_PATH;
 		path pathFile{ resPath.append(file)};
-		std::cout << BASE_RES_PATH << std::endl;
 		assert(std::filesystem::exists(pathFile));
 
 		SPtr<Model> model = CreateSPtr<Model>();
@@ -745,9 +750,30 @@ namespace Voidstar
 			auto uv = FindAttr(prim, "TEXCOORD_0");
 
 
+			cgltf_material* m = prim->material; 
+			if (m)
+			{
+				cgltf_texture* t = m->normal_texture.texture;
+				cgltf_image* img = t->image; // this is what you loa
+				if (img->buffer_view)
+				{
+				
+					const cgltf_buffer_view* bv = img->buffer_view;
+					const cgltf_buffer* buf = bv->buffer;
+
+					assert(buf && buf->data && "Call cgltf_load_buffers first!");
+
+					const uint8_t* bytes = (const uint8_t*)buf->data + bv->offset;
+					const int byteCount = (int)bv->size;
+
+					//pixels = stbi_load_from_memory(bytes, byteCount, &w, &h, &comp, 4);
+				}
+			}
+
 			size_t vCount = pos->count;
-			model->verticies.resize(vCount);
 			std::vector<VertexModel_>&  vertices = model->verticies;
+			//std::vector<VertexModel_> vertices;
+			vertices.resize(vCount);
 			for (cgltf_size i = 0; i < pos->count; i++)
 			{
 				cgltf_accessor_read_float(pos, i, &vertices[i].Position.x, 3);
@@ -769,6 +795,7 @@ namespace Voidstar
 			}
 
 			std::vector<IndexType>& indexes = model->indexes;
+			//std::vector<IndexType> indexes;
 
 			if (prim->indices) {
 				indexes.resize(prim->indices->count);
@@ -789,6 +816,9 @@ namespace Voidstar
 			mem.data = reinterpret_cast<uint8_t*>(indexes.data());
 			mem.size = indexes.size() * sizeof(indexes[0]);
 			model->m_IndexBuffer = CreateIndexBuffer(mem);
+
+			ExecuteFrame(0,true);
+
 
 			cgltf_free(data);
 		}

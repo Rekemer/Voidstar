@@ -16,7 +16,6 @@ layout(std430, set=0, binding=1) readonly buffer Objects {
     mat4 model[];
 } objects;
 
-
 void main()
 {
     gl_Position = ubo.proj * ubo.view * objects.model[gl_InstanceIndex] * vec4(in_pos.xyz, 1.0);

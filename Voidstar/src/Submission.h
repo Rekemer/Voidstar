@@ -521,7 +521,7 @@ namespace Voidstar
 	BufferHandle CreateBuffer (size_t size , ResourceUsage usage);
 
 	size_t GetCurrentFrame();
-	void ExecuteFrame(float deltaTime);
+	void ExecuteFrame(float deltaTime,bool wait = false);
 
 	void RunRender_(std::atomic_bool& isRunning);
 

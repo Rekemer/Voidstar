@@ -38,7 +38,9 @@ namespace Voidstar
 #endif
 		m_Jobs.Start();
 		SubmitInit(init);
-		ExecuteFrame(0);
+		ExecuteFrame(0,true);
+
+		std::cout << BASE_RES_PATH << std::endl;
 	}
 	Application::~Application()
 	{
