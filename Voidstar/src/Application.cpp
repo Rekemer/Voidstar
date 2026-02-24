@@ -67,6 +67,6 @@ namespace Voidstar
 			m_Camera->Update(deltaTime);
 			Update(deltaTime);
 		}
-		std::cout << "ex";
+		std::cout << "Application::Run is finished";
 	}
 }

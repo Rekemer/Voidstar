@@ -1090,7 +1090,6 @@ namespace Voidstar
 				auto& buffer = binding.kind == ResourceType::UniformBuffer ? *m_UniformBuffers[i] : *m_ObjectsBuffers[i];
 				m_Device->UpdateDescriptorSet(sets[i], binding.binding, binding.count, buffer, binding.kind);
 		}
-		break;
 	}
 
 
@@ -1882,12 +1881,6 @@ namespace Voidstar
 		{
 
 			auto& k = keys.at(ii);
-
-			if (k.set == 0)
-			{
-				for (const auto& sys : SystemDescriptorLayoutKey.bindings)
-					k.bindings.insert(sys);
-			}
 			if (m_DescriptorSet.find(k) == m_DescriptorSet.end())
 			{
 				AllocateSets(RenderContext::GetFrameAmount(), k);

@@ -142,7 +142,8 @@ namespace Voidstar
 		StageMeta meta;
 		meta.stage = GetShaderType(comp.get_execution_model());
 		meta.path = path;
-		
+
+
 		
 		if (res.uniform_buffers.size() > 0)
 		{
@@ -302,6 +303,15 @@ namespace Voidstar
 			{
 				auto& descKey = keysMap[set];
 				descKey.set = set;
+				// we need to ensure we have system descriptors too
+				if (descKey.set == 0)
+				{
+					for (auto& bind : Renderer::Instance()->SystemDescriptorLayoutKey.bindings)
+					{
+						descKey.bindings.insert(bind);
+					}
+				}
+				
 				descKey.bindings.insert(bindings.begin(), bindings.end());
 			}
 
@@ -322,7 +332,8 @@ namespace Voidstar
 		}
 		std::sort(meta.descriptorKey.begin(), meta.descriptorKey.end(), [](DescriptorLayoutKey a, DescriptorLayoutKey  b) { return a.set < b.set; });
 		PipelineLayoutKey key;
-		key.layoutKeys =  meta.descriptorKey ;
+		key.layoutKeys =  meta.descriptorKey;
+
 		Renderer::Instance()->CreatePipelineLayout(key);
 
 		

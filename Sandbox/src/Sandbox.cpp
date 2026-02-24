@@ -2,7 +2,7 @@
 #include "Vertex.h"
 using namespace Voidstar;
 
-#define MODEL 0
+#define MODEL 1
 class Sandbox : public Voidstar::Application
 {
 public:

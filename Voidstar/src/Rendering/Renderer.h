@@ -62,7 +62,7 @@ namespace Voidstar
 
 		// Check if running within Visual Studio
 		const char* visualStudioEnvVar = std::getenv("VSLANG");
-		std::cout << (visualStudioEnvVar != nullptr) ? 1 : 0;
+		//std::cout << (visualStudioEnvVar != nullptr) ? 1 : 0;
 		if (visualStudioEnvVar != nullptr)
 		{
 			// Set the base shader path relative to the project directory
@@ -192,6 +192,7 @@ namespace Voidstar
 		size_t GetSize(TextureHandle handle);
 		void RecreateSwapchain();
 
+		DescriptorLayoutKey SystemDescriptorLayoutKey;
 	private:
 		void BindDescriptors(vk::PipelineBindPoint bindPoint, Item& item, std::vector<DescriptorLayoutKey>& keys, ProgramMeta& meta, CommandBuffer& cmd, vk::PipelineLayout layout);
 		vk::Pipeline GetComputePipeline(PipelineKey& key);
@@ -217,7 +218,6 @@ namespace Voidstar
 		FrameBufferHandle DEFAULT_FRAME_BUFFER;
 	
 
-		DescriptorLayoutKey SystemDescriptorLayoutKey;
 
 		Map<DescriptorLayoutKey, vk::DescriptorSetLayout, DescriptorLayoutKeyHash> m_DescriptorLayout;
 
