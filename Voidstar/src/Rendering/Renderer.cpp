@@ -1546,7 +1546,11 @@ namespace Voidstar
 			m_Textures[handles[i]] = mipImages[i];
 		}
 	}
-
+	void Renderer::CreateTextureFrom(TextureHandle handle, Memory& mem, int w, int h)
+	{
+		auto image = Image::CreateImageFrom(mem,w,h);
+		m_Textures[handle] = image;
+	}
 	void Renderer::CreateTexture(TextureHandle handle, std::string_view path)
 	{
 		auto image = Image::CreateImage(BASE_RES_PATH + std::string{path});

@@ -155,6 +155,116 @@ namespace Voidstar
 
 
 	}
+	SPtr<Image> Image::CreateImageFrom(Memory& mem, int w, int h)
+	{
+		auto image = CreateUPtr<Image>();
+		InitVulkanImageFromRGBA8(*image, mem.data, w, h, true);
+		return image;
+	}
+
+
+	void Image::InitVulkanImageFromRGBA8(
+		Image& image,
+		const void* rgbaPixels,
+		int width,
+		int height,
+		bool generateMips,
+		vk::Filter samplerFilter ,
+		vk::SamplerAddressMode addressMode)
+	{
+		image.m_Width = width;
+		image.m_Height = height;
+		image.m_Channels = 4;
+		image.m_Format = vk::Format::eR8G8B8A8Unorm;
+
+		image.m_CommandPool = Renderer::Instance()->GetCommandPoolManager()->GetFreePool();
+
+		const uint32_t mipLevels = generateMips
+			? (uint32_t)(std::floor(std::log2(std::max(width, height)))) + 1u
+			: 1u;
+
+		image.m_MipMapLevels = mipLevels;
+		image.m_Size = size_t(width) * size_t(height) * 4;
+
+		ImageSpecs specs{};
+		specs.width = width;
+		specs.height = height;
+		specs.format = image.m_Format;
+		specs.tiling = vk::ImageTiling::eOptimal;
+		specs.usage = vk::ImageUsageFlagBits::eTransferDst
+			| vk::ImageUsageFlagBits::eSampled;
+		if (generateMips)
+			specs.usage |= vk::ImageUsageFlagBits::eTransferSrc;
+
+		specs.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+
+		// Create image + memory
+		image.m_Image = CreateVKImage(specs, vk::SampleCountFlagBits::e1, mipLevels);
+		image.m_ImageMemory = CreateMemory(image.m_Image, specs);
+
+		// Staging upload
+		auto device = RenderContext::GetDevice();
+		const vk::DeviceSize imageSize = vk::DeviceSize(image.m_Size);
+
+		SPtr<Buffer> staging = Buffer::CreateStagingBuffer((size_t)imageSize);
+
+		void* dst = device->GetDevice().mapMemory(staging->GetMemory(), 0, imageSize);
+		std::memcpy(dst, rgbaPixels, (size_t)imageSize);
+		device->GetDevice().unmapMemory(staging->GetMemory());
+
+		// Copy to GPU image
+		auto cmd = CommandBuffer::CreateBuffer(image.m_CommandPool, vk::CommandBufferLevel::ePrimary);
+
+		cmd.BeginTransfering();
+		cmd.ChangeImageLayout(&image, vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal, mipLevels);
+		cmd.EndTransfering();
+		cmd.SubmitSingle();
+
+		cmd.BeginTransfering();
+		cmd.CopyBufferToImage(*staging.get(), image.m_Image, width, height);
+		cmd.EndTransfering();
+		cmd.SubmitSingle();
+
+		if (generateMips)
+		{
+			image.GenerateMipmaps(image.m_Image, (VkFormat)image.m_Format, width, height, mipLevels);
+		}
+		else
+		{
+			cmd.BeginTransfering();
+			cmd.ChangeImageLayout(&image, vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal, mipLevels);
+			cmd.EndTransfering();
+			cmd.SubmitSingle();
+		}
+
+		cmd.Free();
+
+		// Image view
+		image.m_ImageView = CreateImageView(
+			image.m_Image,
+			image.m_Format,
+			vk::ImageAspectFlagBits::eColor,
+			vk::ImageViewType::e2D,
+			mipLevels);
+
+		// Sampler
+		vk::SamplerCreateInfo samplerInfo{};
+		samplerInfo.minFilter = samplerFilter;
+		samplerInfo.magFilter = samplerFilter;
+		samplerInfo.addressModeU = addressMode;
+		samplerInfo.addressModeV = addressMode;
+		samplerInfo.addressModeW = addressMode;
+		samplerInfo.mipmapMode = vk::SamplerMipmapMode::eLinear;
+		samplerInfo.mipLodBias = 0.0f;
+		samplerInfo.minLod = 0.0f;
+		samplerInfo.maxLod = (float)mipLevels;
+		samplerInfo.anisotropyEnable = VK_FALSE;
+		samplerInfo.maxAnisotropy = 1.0f;
+		samplerInfo.borderColor = vk::BorderColor::eIntOpaqueBlack;
+		samplerInfo.unnormalizedCoordinates = VK_FALSE;
+
+		image.m_Sampler = device->GetDevice().createSampler(samplerInfo);
+	}
 
 	SPtr<Image> Image::CreateImage(std::string_view path)
 	{
@@ -171,134 +281,7 @@ namespace Voidstar
 		auto mipMaps = static_cast<uint32_t>(std::floor(std::log2(std::max(image->m_Width, image->m_Height)))) + 1;
 		image->m_MipMapLevels = mipMaps;
 		//mipMaps = 1;
-
-		image->m_Size = image->m_Width * image->m_Height * FormatToSize(vk::Format::eR8G8B8A8Unorm);
-		auto device = RenderContext::GetDevice();
-		ImageSpecs specs;
-		specs.width = image->m_Width;
-		specs.height = image->m_Height;
-		specs.format = vk::Format::eR8G8B8A8Unorm;
-		specs.tiling = vk::ImageTiling::eOptimal;
-		specs.usage = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eSampled;
-		specs.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
-		image->m_Format = specs.format;
-		try {
-			image->m_Image = CreateVKImage(specs,vk::SampleCountFlagBits::e1, mipMaps);
-		}
-		catch (vk::SystemError err)
-		{
-			Log::GetLog()->error("Unable to make image: {0}", path);
-		}
-
-		try 
-		{
-			image->m_ImageMemory = CreateMemory(image->m_Image,specs);
-		}
-		catch (vk::SystemError err) 
-		{
-			Log::GetLog()->error("Unable to allocate memory for image: {0}", path);
-		}
-
-		// populate memory with data
-		auto imageSize = image->m_Width * image->m_Height * 4;
-		auto buffer = Buffer::CreateStagingBuffer(imageSize);
-
-
-
-
-
-
-
-		//...then fill it,
-		void* writeLocation = device->GetDevice().mapMemory(buffer->GetMemory(), 0, imageSize);
-		memcpy(writeLocation, pixels, imageSize);
-		device->GetDevice().unmapMemory(buffer->GetMemory());
-
-		//then transfer it to image memory
-		auto commandBuffer = CommandBuffer::CreateBuffer(image->m_CommandPool,vk::CommandBufferLevel::ePrimary);
-
-
-		commandBuffer.BeginTransfering();
-		commandBuffer.ChangeImageLayout(image.get(), vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal, mipMaps);
-		commandBuffer.EndTransfering();
-		commandBuffer.SubmitSingle();
-
-		commandBuffer.BeginTransfering();
-		commandBuffer.CopyBufferToImage(*buffer.get(), image->m_Image, image->m_Width, image->m_Height);
-		commandBuffer.EndTransfering();
-		commandBuffer.SubmitSingle();
-		
-		
-		
-		//commandBuffer.BeginTransfering();
-		//commandBuffer.ChangeImageLayout(image.get(), vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal, mipMaps);
-		//commandBuffer.EndTransfering();
-		//commandBuffer.SubmitSingle();
-
-		image->GenerateMipmaps(image->m_Image, (VkFormat)image->m_Format, image->m_Width, image->m_Height,mipMaps);
-
-
-		commandBuffer.Free();
-		free(pixels);
-
-
-		image->m_ImageView = CreateImageView(image->m_Image, vk::Format::eR8G8B8A8Unorm, vk::ImageAspectFlagBits::eColor, vk::ImageViewType::e2D, mipMaps);
-
-
-		/*
-	typedef struct VkSamplerCreateInfo {
-		VkStructureType         sType;
-		const void* pNext;
-		VkSamplerCreateFlags    flags;
-		VkFilter                magFilter;
-		VkFilter                minFilter;
-		VkSamplerMipmapMode     mipmapMode;
-		VkSamplerAddressMode    addressModeU;
-		VkSamplerAddressMode    addressModeV;
-		VkSamplerAddressMode    addressModeW;
-		float                   mipLodBias;
-		VkBool32                anisotropyEnable;
-		float                   maxAnisotropy;
-		VkBool32                compareEnable;
-		VkCompareOp             compareOp;
-		float                   minLod;
-		float                   maxLod;
-		VkBorderColor           borderColor;
-		VkBool32                unnormalizedCoordinates;
-	} VkSamplerCreateInfo;
-	*/
-		vk::SamplerCreateInfo samplerInfo;
-		samplerInfo.flags = vk::SamplerCreateFlags();
-		samplerInfo.minFilter = vk::Filter::eLinear;
-		samplerInfo.magFilter = vk::Filter::eLinear;
-		samplerInfo.addressModeU = vk::SamplerAddressMode::eRepeat;
-		samplerInfo.addressModeV = vk::SamplerAddressMode::eRepeat;
-		samplerInfo.addressModeW = vk::SamplerAddressMode::eRepeat;
-
-		samplerInfo.anisotropyEnable = false;
-		samplerInfo.maxAnisotropy = 1.0f;
-
-		samplerInfo.borderColor = vk::BorderColor::eIntOpaqueBlack;
-		samplerInfo.unnormalizedCoordinates = false;
-		samplerInfo.compareEnable = false;
-		samplerInfo.compareOp = vk::CompareOp::eAlways;
-
-		samplerInfo.mipmapMode = vk::SamplerMipmapMode::eLinear;
-		samplerInfo.mipLodBias = 0.0f;
-		samplerInfo.minLod = 0.0f;
-		samplerInfo.maxLod = (float)mipMaps;
-		//samplerInfo.maxLod = 0;
-
-		try 
-		{
-			image->m_Sampler= device->GetDevice().createSampler(samplerInfo);
-		}
-		catch (vk::SystemError err)
-		{
-			Log::GetLog()->error("Failed to make sampler for image: {0}", path);
-
-		}
-
+		InitVulkanImageFromRGBA8(*image, pixels, image->m_Width, image->m_Height,true);
 		return image;
 	}
 	SPtr<Image> Image::CreateCubemap(std::vector<std::string> pathes)

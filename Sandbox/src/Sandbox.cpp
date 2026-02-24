@@ -9,7 +9,7 @@ public:
 	Sandbox(std::string appName, size_t screenWidth, size_t screenHeight) : Voidstar::Application(appName, screenWidth, screenHeight)
 	{
 #if MODEL
-		m_DefaultShader = LoadProgram("model.vert", "basic.frag");
+		m_DefaultShader = LoadProgram("model.vert", "texture.frag");
 		m_Model = LoadModel("DamagedHelmet/glTF-Binary/DamagedHelmet.glb");
 #else
 		m_DefaultShader = LoadProgram("basic.vert", "texture.frag");

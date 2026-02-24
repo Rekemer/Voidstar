@@ -103,43 +103,44 @@ namespace Voidstar
         if (mode == CameraControlMode::ROUND_CONTROL)
         {
             
-            float m_Radius = 5.0f;                 // distance to target
-            static float m_Yaw = 0.0f;                  // radians
-            static float m_Pitch = 0.0f;                  // radians
-            const float rotateSpeed = speed;      // radians/sec-ish
-            const float zoomSpeed = speed;      // units/sec
-            // use your real deltaTime, don't hardcode it
-            // deltaTime = ...
-            deltaTime = 0.01f;
-           
-           // yaw: left/right
+            float m_Radius = 5.0f;
+            static float m_Yaw = 0.0f;
+            static float m_Pitch = 0.0f;
+            const float rotateSpeed = speed;
+            const float deltaTime = 0.01f;
+
+            // 1. Update Angles
             if (Input::IsKeyPressed(VS_KEY_A)) m_Yaw -= rotateSpeed * deltaTime;
             if (Input::IsKeyPressed(VS_KEY_D)) m_Yaw += rotateSpeed * deltaTime;
-
-            // pitch: up/down  (THIS is what you asked)
             if (Input::IsKeyPressed(VS_KEY_W)) m_Pitch += rotateSpeed * deltaTime;
             if (Input::IsKeyPressed(VS_KEY_S)) m_Pitch -= rotateSpeed * deltaTime;
 
-            // clamp pitch to avoid flipping at the poles
-            const float pitchLimit = glm::radians(89.0f);
-            m_Pitch = glm::clamp(m_Pitch, -pitchLimit, pitchLimit);
+            // 2. REMOVED THE CLAMP
+            // We no longer restrict m_Pitch to 89 degrees.
 
-            // rebuild camera position from yaw/pitch/radius
+            // 3. Rebuild position
             float cp = cosf(m_Pitch);
+            float sp = sinf(m_Pitch);
+            float cy = cosf(m_Yaw);
+            float sy = sinf(m_Yaw);
+
             glm::vec3 offset;
-            offset.x = m_Radius * cp * cosf(m_Yaw);
-            offset.y = m_Radius * sinf(m_Pitch);
-            offset.z = m_Radius * cp * sinf(m_Yaw);
+            offset.x = m_Radius * cp * cy;
+            offset.y = m_Radius * sp;
+            offset.z = m_Radius * cp * sy;
 
             m_Position = m_Target + offset;
-
-            // look at target
             m_Front = glm::normalize(m_Target - m_Position);
 
-            // stable up
-            glm::vec3 worldUp = glm::vec3(0, 1, 0);
-            glm::vec3 right = glm::normalize(glm::cross(m_Front, worldUp));
-            m_Up = glm::normalize(glm::cross(right, m_Front));
+            // 4. FIX THE UP VECTOR
+            // Instead of using a fixed (0,1,0) World Up, we calculate the "Up" 
+            // vector based on the current Pitch and Yaw. This prevents "Gimbal Lock."
+            m_Up.x = -sp * cy;
+            m_Up.y = cp;
+            m_Up.z = -sp * sy;
+
+            // Calculate Right vector normally now that Up is stable
+            glm::vec3 right = glm::normalize(glm::cross(m_Front, m_Up));
         }
         else
         {

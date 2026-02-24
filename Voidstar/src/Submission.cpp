@@ -43,7 +43,7 @@ namespace Voidstar
 
 
 
-	
+
 	TextureHandle GetTextureHandle()
 	{
 		return g_TextureHandleAllocator.GetId();
@@ -77,20 +77,20 @@ namespace Voidstar
 	}
 
 	ProgramHandle LoadProgram(std::string_view vertex, std::string_view fragment)
-	{ 
+	{
 		LoadShader(vertex);
 		LoadShader(fragment);
 
-		auto programHandle =g_ProgramHandleAllocator.GetId();
+		auto programHandle = g_ProgramHandleAllocator.GetId();
 		auto& cmd = g_Submission->GetCommandBuffer(ResourceCommand::CreateProgram);
-		
+
 		cmd.WriteObject(programHandle);
 		cmd.WriteByte(2);
 
 		return programHandle;
 	}
-	
-	
+
+
 
 	ShaderHandle LoadShader(std::string_view shader)
 	{
@@ -102,7 +102,17 @@ namespace Voidstar
 		return handle;
 	}
 
+	TextureHandle LoadTextureFrom(Memory mem, int w, int h)
+	{
+		auto handle = g_TextureHandleAllocator.GetId();
 
+		auto& cmd = g_Submission->GetCommandBuffer(ResourceCommand::CreateTextureFrom);
+		cmd.WriteObject(handle);
+		cmd.WriteObject(mem);
+		cmd.WriteObject(w);
+		cmd.WriteObject(h);
+		return handle;
+	}
 	TextureHandle LoadTexture(std::string_view texture)
 	{
 		auto handle = g_TextureHandleAllocator.GetId();
@@ -150,17 +160,6 @@ namespace Voidstar
 		return g_Submission->Submit->FrameNumber + 2;
 	}
 
-	UniformHandle CreateUniform(std::string_view name, ResourceType kind, size_t num)
-	{
-		auto handle = g_UniformHandleAllocator.GetId();
-
-		auto& cmd = g_Submission->GetCommandBuffer(ResourceCommand::CreateUniform);
-		cmd.WriteObject(kind);
-		cmd.WriteObject(num);
-
-		return handle;
-
-	}
 	AttachmentHandle CreateAttachment(AttachmentType type, TextureFormat format, int width, int height, SampleCount samples, AttachmentHint hints)
 	{
 		auto handle = g_AttachmentrHandleAllocator.GetId();
@@ -422,6 +421,17 @@ namespace Voidstar
 					Renderer::Instance()->CreateTexture(handle, path);
 					break;
 				}
+				case Voidstar::ResourceCommand::CreateTextureFrom:
+				{
+
+					auto handle = commandBuffer.ReadObject<TextureHandle>();
+					auto mem = commandBuffer.ReadObject<Memory>();
+					auto w= commandBuffer.ReadObject<int>();
+					auto h= commandBuffer.ReadObject<int>();
+
+					Renderer::Instance()->CreateTextureFrom(handle,mem,w,h);
+					break;
+				}
 
 				case Voidstar::ResourceCommand::CreateEmptyTexture:
 				{
@@ -473,15 +483,6 @@ namespace Voidstar
 						handles.push_back(commandBuffer.ReadObject<AttachmentHandle>());
 					}
 					Renderer::Instance()->CreateFramebuffer(handle, handles);
-					break;
-				}
-				case Voidstar::ResourceCommand::CreateUniform:
-				{
-
-					auto handle = commandBuffer.ReadObject<UniformHandle>();
-					auto type = commandBuffer.ReadObject<ResourceType>();
-					auto num = commandBuffer.Read<size_t>();
-					Renderer::Instance()->CreateUniform(handle, type, num);
 					break;
 				}
 				case Voidstar::ResourceCommand::UpdateViewName:
@@ -753,7 +754,7 @@ namespace Voidstar
 			cgltf_material* m = prim->material; 
 			if (m)
 			{
-				cgltf_texture* t = m->normal_texture.texture;
+				cgltf_texture* t = m->pbr_metallic_roughness.base_color_texture.texture;
 				cgltf_image* img = t->image; // this is what you loa
 				if (img->buffer_view)
 				{
@@ -766,13 +767,21 @@ namespace Voidstar
 					const uint8_t* bytes = (const uint8_t*)buf->data + bv->offset;
 					const int byteCount = (int)bv->size;
 
-					//pixels = stbi_load_from_memory(bytes, byteCount, &w, &h, &comp, 4);
+					stbi_uc* pixels = nullptr;
+					int w, h, comp;
+					pixels = stbi_load_from_memory(bytes, byteCount, &w, &h, &comp, 4);
+
+					Memory mem;
+					mem.data = static_cast<uint8_t*>(pixels);
+					mem.size = w * h * comp;
+					//Upload
+					model->Albedo = LoadTextureFrom(mem, w, h);
+
 				}
 			}
 
 			size_t vCount = pos->count;
-			std::vector<VertexModel_>&  vertices = model->verticies;
-			//std::vector<VertexModel_> vertices;
+			std::vector<VertexModel_> vertices;
 			vertices.resize(vCount);
 			for (cgltf_size i = 0; i < pos->count; i++)
 			{
@@ -794,8 +803,7 @@ namespace Voidstar
 				}
 			}
 
-			std::vector<IndexType>& indexes = model->indexes;
-			//std::vector<IndexType> indexes;
+			std::vector<IndexType> indexes;
 
 			if (prim->indices) {
 				indexes.resize(prim->indices->count);
@@ -829,6 +837,7 @@ namespace Voidstar
 	{
 		BindVertexBuffer(pass, model->m_VertexBuffer);
 		BindIndexBuffer(model->m_IndexBuffer);
+		BindTexture("u_Texture",model->Albedo);
 		g_Submission->Submit->CurrentRenderItem->MatrixIndex = g_Submission->Submit->CurrentFreeMatrix++;
 		g_Submission->Submit->Matricies[g_Submission->Submit->CurrentRenderItem->MatrixIndex] = world;
 		Submit(pass, program);

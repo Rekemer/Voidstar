@@ -422,11 +422,7 @@ namespace Voidstar
 
 	struct Model
 	{
-		// will need to remove it from here
-		// have it to avoid dangling pointers
-		std::vector<VertexModel_> verticies;
-		std::vector<IndexType> indexes;
-
+		TextureHandle Albedo;
 		VertexLayoutHandle m_Layout;
 		VertexBufferHandle m_VertexBuffer;
 		IndexBufferHandle m_IndexBuffer;
@@ -474,14 +470,13 @@ namespace Voidstar
 	ShaderHandle LoadShader(std::string_view shader);
 
 	TextureHandle LoadTexture(std::string_view texture);
+	TextureHandle LoadTextureFrom(Memory mem, int w, int h);
 
 	TextureHandle CreateEmptyTexture(int width, int height, TextureFormat format, ResourceUsage usage,int mipLevels = 1, SampleCount e = SampleCount::e1,FilterMode min = FilterMode::Nearest, FilterMode mag = FilterMode::Nearest,int layers = 1, bool cube = false);
 
+	// read vulkan buffer on cpu
 	size_t ReadTexture(TextureHandle handle, void* data);
 
-
-	UniformHandle CreateUniform(std::string_view name,
-		ResourceType kind, size_t num = 1);
 
 	AttachmentHandle CreateAttachment(AttachmentType type, TextureFormat format, int width, int height, SampleCount samples, AttachmentHint hints);
 
@@ -493,7 +488,9 @@ namespace Voidstar
 	void BindBuffer(std::string_view uniformName, 
 		BufferHandle handle);
 	
+	// it is for sampled images
 	void BindTexture(std::string_view uniform, TextureHandle handle);
+	// it is for storage images
 	void BindImage(std::string_view uniformName, TextureHandle handle);
 	void BindTextures(std::string_view uniformName, const std::vector<TextureHandle>& handle);
 	void BindImages(std::string_view uniformName, const std::vector<TextureHandle>& handle);

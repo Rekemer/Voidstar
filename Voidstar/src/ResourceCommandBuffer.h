@@ -17,7 +17,10 @@ namespace Voidstar
 		CreateShader,
 		// link shaders
 		CreateProgram,
+		// create from file path
 		CreateTexture,
+		// create from buffer
+		CreateTextureFrom,
 		GenerateMipMapsAsTextures,
 		CreateEmptyTexture,
 		CreateBuffer,
@@ -30,7 +33,7 @@ namespace Voidstar
 		ResizeTexture,
 		CreateAttachment,
 		CreateFrameBuffer,
-		CreateUniform,
+		//CreateUniform,
 		UpdateViewName, // ?
 		SetName,
 		End,

@@ -120,13 +120,16 @@ namespace Voidstar
 	public:
 		Image() = default;
 		Image(const Image& image) = delete;
-		//Image(Image&& image);
+		
+
 		// create image
+		static SPtr<Image> CreateImageFrom(Memory& mem, int w, int h);
 		static VkImageView CreateImageView(vk::Image& image, vk::Format format, vk::ImageAspectFlags aspect, vk::ImageViewType viewType =  vk::ImageViewType::e2D, int mipmap = 1, int layers = 1);
 		static vk::Sampler CreateSampler(vk::Filter min, vk::Filter mag);
 		static vk::Image CreateVKImage(ImageSpecs& specs, vk::SampleCountFlagBits samples = vk::SampleCountFlagBits::e1, int mipmap = 1);
 		static vk::DeviceMemory CreateMemory(vk::Image& image, ImageSpecs& specs);
 		static SPtr<Image> CreateImage(std::string_view path);
+		
 		static SPtr<Image> CreateCubemap(std::vector<std::string> pathes);
 		void Fill(glm::vec4  value, CommandBuffer& cmd, SPtr<Buffer> stageBuffer, int bufferOffset);
 		static SPtr<Image> CreateEmptyImage( int width, int height,vk::Format format,
@@ -216,6 +219,14 @@ namespace Voidstar
 			size_t& width_,
 			size_t& height_);
 	private:
+		static void InitVulkanImageFromRGBA8(
+			Image& image,
+			const void* rgbaPixels,
+			int width,
+			int height,
+			bool generateMips,
+			vk::Filter samplerFilter = vk::Filter::eLinear,
+			vk::SamplerAddressMode addressMode = vk::SamplerAddressMode::eRepeat);
 		void GenerateMipmaps(VkImage image,VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
 		void* LoadImageRaw();
 	private:

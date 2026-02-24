@@ -117,7 +117,7 @@ namespace Voidstar
 		//
 		
 		void CreateTexture(TextureHandle handle, std::string_view path);
-		void CreateUniform(UniformHandle handle, ResourceType type, size_t num) {};
+		void CreateTextureFrom(TextureHandle handle, Memory& mem, int w, int h);
 		void CreateAttachment(AttachmentHandle handle, AttachmentInfo_ info);
 		void CreateFramebuffer(FrameBufferHandle handle, const std::vector<AttachmentHandle>& info);
 
@@ -134,7 +134,6 @@ namespace Voidstar
 		SPtr<Image> GetTexture(TextureHandle handle);
 
 		void FillTexture(TextureHandle texture, glm::vec4& pixel,BufferHandle buffer, size_t offset);
-
 		void CopyBufferToPtr(SPtr<Buffer> buffer, void* data, size_t offset);
 
 		void BeginFrame(Frame* frame);
