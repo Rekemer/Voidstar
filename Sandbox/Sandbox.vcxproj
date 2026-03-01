@@ -134,10 +134,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="src\DOS.h" />
     <ClInclude Include="src\ModelSandbox.h" />
     <ClInclude Include="src\Vertex.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\DOS.cpp" />
     <ClCompile Include="src\Main.cpp" />
     <ClCompile Include="src\ModelSandbox.cpp" />
   </ItemGroup>

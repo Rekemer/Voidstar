@@ -12,15 +12,16 @@ namespace Voidstar
 	};
 
 	template<typename T>
-	QuadData<T> GeneratePlane(float detail) 
+	std::tuple<std::vector<T>, std::vector<IndexType>> GeneratePlane(float detail)
 	{
 		uint32_t seg = detail < 1 ? 1u : static_cast<uint32_t>(detail);
 		uint32_t vx = seg + 1;
 		uint32_t vy = seg + 1;
 
-		QuadData<T> out;
-		out.verticies.resize(vx * vy);
-		out.indicies.reserve(seg * seg * 6);
+		std::vector<T> verticies;
+		std::vector<IndexType> indicies;
+		verticies.resize(vx * vy);
+		indicies.reserve(seg * seg * 6);
 
 		// XY plane, Z = 0, coords in [-1,1], UV in [0,1]
 		for (uint32_t y = 0; y < vy; ++y) {
@@ -31,11 +32,11 @@ namespace Voidstar
 				float px = -1.0f + 2.0f * u;
 
 				uint32_t i = y * vx + x;
-				out.verticies[i].Position[0] = px;
-				out.verticies[i].Position[1] = py;
-				out.verticies[i].Position[2] = 0.0f;
-				out.verticies[i].UV[0] = u;
-				out.verticies[i].UV[1] = v;
+				verticies[i].Position[0] = px;
+				verticies[i].Position[1] = py;
+				verticies[i].Position[2] = 0.0f;
+				verticies[i].UV[0] = u;
+				verticies[i].UV[1] = v;
 				// if T has Normal: set to (0,0,1)
 				// out.verticies[i].Normal[0]=0; out.verticies[i].Normal[1]=0; out.verticies[i].Normal[2]=1;
 			}
@@ -49,15 +50,15 @@ namespace Voidstar
 				uint32_t i3 = (y + 1) * vx + x;
 
 				// two triangles (CCW)
-				out.indicies.push_back(i0);
-				out.indicies.push_back(i1);
-				out.indicies.push_back(i2);
-				out.indicies.push_back(i2);
-				out.indicies.push_back(i3);
-				out.indicies.push_back(i0);
+				indicies.push_back(i0);
+				indicies.push_back(i1);
+				indicies.push_back(i2);
+				indicies.push_back(i2);
+				indicies.push_back(i3);
+				indicies.push_back(i0);
 			}
 		}
-		return out;
+		return { verticies, indicies};
 	}
 ;
 	inline float toRadians(float degrees) { return (degrees * 2.0f * 3.14159f) / 360.0f; }

@@ -20,27 +20,7 @@ namespace Voidstar
 	void Camera::Update(float deltaTime)
 	{
        ProcessInput(m_Mode,deltaTime);
-       //ProcessMouse();
        UpdateView();
-      //Log::GetLog()->info("camera pos: {0} {1} {2}\n", m_Position.x, m_Position.y, m_Position.z);
-        //if (Input::IsKeyTyped(VS_KEY_C))
-        //{
-        //    m_IsControlEnabled = !m_IsControlEnabled;
-        //}
-       // auto delta = .125/6;
-       // if (Input::IsKeyPressed(VS_KEY_F))
-       // {
-       //
-       //     m_Fov -= delta;
-       //     UpdateProj();
-       // }
-       // if (Input::IsKeyPressed(VS_KEY_G))
-       // {
-       //
-       //     m_Fov += delta;
-       //     UpdateProj();
-       // }
-
 	}
     void Camera::UpdateProj()
     {
@@ -142,80 +122,68 @@ namespace Voidstar
             // Calculate Right vector normally now that Up is stable
             glm::vec3 right = glm::normalize(glm::cross(m_Front, m_Up));
         }
-        else
+        else if (mode == CameraControlMode::DIRECT_CONTROL)
         {
-            const float cameraSpeed = speed;
-            deltaTime = 0.01f;
-            if (Input::IsKeyPressed(VS_KEY_W))
-            {
-                auto pos = m_Position + cameraSpeed * m_Front * deltaTime / 2.f;
+            const float rotateSpeed = 0.5f; // Lowered: 200.0f is too fast for raw pixel deltas
+            const float moveSpeed = 10.0f;
+            const float deltaTime = 0.01f;
 
-                m_Position = pos;
+            // 1. MOUSE ROTATION
+            if (Input::IsMousePressed(1)) {
+                // Use the raw delta from your Mouse update logic
+                m_Yaw += (float)Input::GetMouseDeltaX() * rotateSpeed * deltaTime;
+                m_Pitch += (float)Input::GetMouseDeltaY() * rotateSpeed * deltaTime;
             }
+            // 2. CALCULATE DIRECTION VECTORS (Based on Angles)
+            // We calculate Front and Up first so we know which way to move
+            float cp = cosf(m_Pitch);
+            float sp = sinf(m_Pitch);
+            float cy = cosf(m_Yaw);
+            float sy = sinf(m_Yaw);
 
-            if (Input::IsKeyPressed(VS_KEY_S))
-            {
-                auto pos = m_Position - cameraSpeed * m_Front * deltaTime / 2.f;
-                m_Position = pos;
-            }
+            m_Front.x = cp * cy;
+            m_Front.y = sp;
+            m_Front.z = cp * sy;
+            m_Front = glm::normalize(m_Front);
 
-            auto right = glm::normalize(glm::cross(m_Front, m_Up));
-            if (Input::IsKeyPressed(VS_KEY_A))
-            {
-                auto pos = m_Position - right * cameraSpeed * deltaTime;
-                m_Position = pos;
+            // Calculate the stable Up vector for 360-degree movement
+            m_Up.x = -sp * cy;
+            m_Up.y = cp;
+            m_Up.z = -sp * sy;
+            m_Up = glm::normalize(m_Up);
 
-            }
+            // Calculate Right vector for strafing
+            m_Right = glm::normalize(glm::cross(m_Front, m_Up));
 
-            if (Input::IsKeyPressed(VS_KEY_D))
-            {
+            // 3. MOVEMENT (Update Position Directly)
+            // Instead of moving a target, we move our actual location
+            if (Input::IsKeyPressed(VS_KEY_W)) m_Position += m_Front * moveSpeed * deltaTime;
+            if (Input::IsKeyPressed(VS_KEY_S)) m_Position -= m_Front * moveSpeed * deltaTime;
+            if (Input::IsKeyPressed(VS_KEY_D)) m_Position += m_Right * moveSpeed * deltaTime;
+            if (Input::IsKeyPressed(VS_KEY_A)) m_Position -= m_Right * moveSpeed * deltaTime;
 
-                auto pos = m_Position + right * cameraSpeed * deltaTime;
-                m_Position = pos;
-            }
-
+            // 4. THE VIEW MATRIX
+            // Your Camera's LookAt should now be:
+            //glm::lookAt(m_Position, m_Position + m_Front, m_Up);
 
 
         }
             
 	}
-    bool firstMouse = true;
-    double lastX = 0;
-    double lastY = 0;
-
     void Camera::LookAt(glm::vec3 pos)
     {
         m_Target = pos;
         auto diff = glm::normalize(pos - m_Position);
         m_Front = diff;
         m_View = glm::lookAt(m_Position, pos, m_Up);
+
+        // tp sync angles and vectors
+        m_Yaw = glm::atan(m_Front.z, m_Front.x);
+        m_Pitch = glm::asin(m_Front.y);
+
     }
    
-    void Camera::ProcessMouse() {
-        auto [mx, my] = Input::GetMousePos();
-
-        if (firstMouse) { lastX = mx; lastY = my; firstMouse = false; return; }
-
-        float dx = mx - lastX;         // right  = positive
-        float dy = my - lastY;         // down   = positive (screen origin top-left)
-        lastX = mx; lastY = my;
-        float sens = 0.54;
-        // Signs you can flip if it "feels" wrong:
-        m_Yaw += sens * dx;            // invert yaw? change to 'yaw -= sens * dx'
-        m_Pitch += sens * dy;            // invert pitch? change to 'pitch += sens * dy'
-
-        // Clamp pitch (avoid gimbal flip)
-        m_Pitch = glm::clamp(m_Pitch, -89.0f, 89.0f);
-
-        // Recompute forward from yaw/pitch (RH, -Z forward when yaw=-90)
-        float cy = glm::cos(glm::radians(m_Yaw));
-        float sy = glm::sin(glm::radians(m_Yaw));
-        float cp = glm::cos(glm::radians(m_Pitch));
-        float sp = glm::sin(glm::radians(m_Pitch));
-
-        m_Front = glm::normalize(glm::vec3(cy * cp, sp, sy * cp));
-        // If your world is Z-up or something exotic, adjust this math accordingly.
-    }
+  
 
 };
 

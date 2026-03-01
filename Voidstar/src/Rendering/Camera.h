@@ -30,7 +30,6 @@ namespace Voidstar
 		void UpdateProj();
 		void UpdateView();
 		void ProcessInput(CameraControlMode mode, float deltaTime);
-		void ProcessMouse();
 		friend class Application;
 		friend class Renderer;
 	private:
@@ -38,6 +37,7 @@ namespace Voidstar
 		glm::vec3 m_Target{0,0,0};
 		glm::vec3 m_Up {0.0f, 1.0f, 0.0f};
 		glm::vec3 m_Front{ 0.0f, 0.0f, -1.0f };
+		glm::vec3 m_Right = { 1.0f, 0.0f, 0.0f };
 		glm::vec3 m_Position{0,0,-5};
 		glm::mat4 m_Proj;
 		glm::mat4 m_View;

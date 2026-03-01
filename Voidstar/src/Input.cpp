@@ -11,6 +11,12 @@ namespace Voidstar {
 	bool Input::m_keysCurrentFrame[1024];
 	bool Input::m_keysLastFrame[1024];
 	bool Input::m_keysTyped[1024];
+
+	double Input::m_MouseLastPosX = 0.0;
+	double Input::m_MouseLastPosY = 0.0;
+	double Input::m_MouseCurrentPosX = 0.0;
+	double Input::m_MouseCurrentPosY = 0.0;
+
 	SPtr<Window> Input::m_currentWindow;
 	void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 	{
@@ -58,11 +64,22 @@ namespace Voidstar {
 	{
 		glfwSetCursorPos(m_currentWindow->GetRaw(), x, y);
 	}
+
+
+	double Input::GetMouseDeltaX()
+	{
+		return m_MouseCurrentPosX - m_MouseLastPosX;
+	}
+	double Input::GetMouseDeltaY()
+	{
+		return m_MouseCurrentPosY - m_MouseLastPosY;
+	}
 	std::tuple<float, float> Input::GetMousePos()
 	{
-		double currentPosX = 0, currentPosY = 0;
-		glfwGetCursorPos(m_currentWindow->GetRaw(), &currentPosX, &currentPosY);
-		return { currentPosX,currentPosY};
+		m_MouseLastPosX = m_MouseCurrentPosX;
+		m_MouseLastPosY = m_MouseCurrentPosY;
+		glfwGetCursorPos(m_currentWindow->GetRaw(), &m_MouseCurrentPosX, &m_MouseCurrentPosY);
+		return { m_MouseCurrentPosX,m_MouseCurrentPosY };
 	}
 	void Input::Update()
 	{
@@ -72,6 +89,7 @@ namespace Voidstar {
 			m_keysTyped[i] = m_keysCurrentFrame[i] && !m_keysLastFrame[i];
 		}
 		memcpy(m_keysLastFrame, m_keysCurrentFrame, sizeof(m_keysCurrentFrame));
+		GetMousePos();
 	}
 }
 
