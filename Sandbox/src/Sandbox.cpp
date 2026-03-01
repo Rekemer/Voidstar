@@ -2,6 +2,33 @@
 #include "Vertex.h"
 using namespace Voidstar;
 
+
+
+void Rotate(float deltaTime, float rotateSpeed, float& yaw, float& pitch, glm::mat4& world)
+{
+
+	if (Input::IsKeyPressed(VS_KEY_A)) yaw -= rotateSpeed * deltaTime; // Left
+	if (Input::IsKeyPressed(VS_KEY_D)) yaw += rotateSpeed * deltaTime; // Right
+	if (Input::IsKeyPressed(VS_KEY_W)) pitch += rotateSpeed * deltaTime; // Up (Loop)
+	if (Input::IsKeyPressed(VS_KEY_S)) pitch -= rotateSpeed * deltaTime; // Down (Loop)
+
+	// 2. Position the model at the camera/target point
+
+	// 3. Rotate YAW (Horizontal)
+	// We rotate around the Y-axis (0, 1, 0)
+	world = glm::rotate(world, yaw, glm::vec3(0, 1, 0));
+
+	// 4. Rotate PITCH (Vertical)
+	// We rotate around the X-axis (1, 0, 0)
+	// Because there is no clamp, this will allow full 360 vertical loops
+	world = glm::rotate(world, pitch, glm::vec3(1, 0, 0));
+
+	// 5. Scale
+	world = glm::scale(world, glm::vec3(2.0f));
+}
+
+
+
 #define MODEL 1
 class Sandbox : public Voidstar::Application
 {
@@ -32,7 +59,7 @@ public:
 
 		
 
-		GetCamera()->SetCameraControl(CameraControlMode::ROUND_CONTROL);
+		GetCamera()->SetCameraControl(CameraControlMode::NO_CONTROL);
 		GetCamera()->LookAt({ 0,0,0 });
 		ExecuteFrame(0);
 	}
@@ -43,7 +70,10 @@ public:
 		SetViewTransform(0, GetCamera()->GetView(), GetCamera()->GetProj());
 
 #if MODEL 
-		glm::mat4 world = glm::scale(glm::mat4(1), glm::vec3{2});
+		// 1. Start with Identity
+		glm::mat4 world = glm::mat4(1.0f);
+		static float m_Yaw = 0, m_Pitch = 0;
+		Rotate(deltaTime,1400,m_Yaw,m_Pitch, world);
 		
 		SubmitModel(m_Model,0,m_DefaultShader,world);
 #else
@@ -56,6 +86,7 @@ public:
 		ExecuteFrame(deltaTime);
 
 	}
+	
 	SPtr<Model> m_Model;
 	PassID m_DefaultRenderPass;
 	VertexBufferHandle m_VertexHandle;

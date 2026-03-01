@@ -6,7 +6,7 @@
 #include "Submission.h"
 #include "Rendering/Camera.h"
 
-//#include "Input.h"
+#include "Input.h"
 //#include "Types.h"
 //#include "Window.h"
 //#include "Log.h"

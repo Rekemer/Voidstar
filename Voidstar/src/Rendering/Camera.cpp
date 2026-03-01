@@ -103,7 +103,7 @@ namespace Voidstar
         if (mode == CameraControlMode::ROUND_CONTROL)
         {
             
-            float m_Radius = 5.0f;
+            float m_Radius = 15.0f;
             static float m_Yaw = 0.0f;
             static float m_Pitch = 0.0f;
             const float rotateSpeed = speed;
