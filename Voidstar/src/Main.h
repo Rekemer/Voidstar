@@ -4,7 +4,7 @@
 extern Voidstar::Application* Voidstar::CreateApplication();
 
 
-int Main()
+inline int Main()
 {
 
 	auto app = Voidstar::CreateApplication();

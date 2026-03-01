@@ -1,6 +1,4 @@
-#include "Voidstar.h"
-#include "Vertex.h"
-using namespace Voidstar;
+#include "ModelSandbox.h"
 
 
 
@@ -30,15 +28,14 @@ void Rotate(float deltaTime, float rotateSpeed, float& yaw, float& pitch, glm::m
 
 
 #define MODEL 1
-class Sandbox : public Voidstar::Application
-{
-public:
-	Sandbox(std::string appName, size_t screenWidth, size_t screenHeight) : Voidstar::Application(appName, screenWidth, screenHeight)
+ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t screenHeight) : Voidstar::Application(appName, screenWidth, screenHeight)
 	{
 #if MODEL
 		m_DefaultShader = LoadProgram("model.vert", "texture.frag");
 		m_Model = LoadModel("DamagedHelmet/glTF-Binary/DamagedHelmet.glb");
+
 #else
+		// MO MODEL
 		m_DefaultShader = LoadProgram("basic.vert", "texture.frag");
 		m_VertexLayout.Add(ShaderDataType::FLOAT3)
 			.Add(ShaderDataType::FLOAT2);
@@ -64,7 +61,7 @@ public:
 		ExecuteFrame(0);
 	}
 
-	void Update(float deltaTime)
+	void ModelSandbox::Update(float deltaTime)
 	{
 		SetViewRect(0, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
 		SetViewTransform(0, GetCamera()->GetView(), GetCamera()->GetProj());
@@ -87,29 +84,6 @@ public:
 
 	}
 	
-	SPtr<Model> m_Model;
-	PassID m_DefaultRenderPass;
-	VertexBufferHandle m_VertexHandle;
-	IndexBufferHandle m_IndexHandle;
-	ProgramHandle m_DefaultShader;
-	std::vector<Vertex> m_Cube;
-	std::vector<IndexType> m_IndexCube;
-	VertexLayout m_VertexLayout;
-	TextureHandle m_MorganaTex;
-};
 
 
 
-Voidstar::Application* Voidstar::CreateApplication()
-{
-	auto str = std::string("Sandbox");
-	// 120 -> 1920 * 1080
-	// 110
-	const int res = 110;
-	return new Sandbox(str, std::min(16 * res, 1920), std::min(9 * res, 1061));
-}
-
-int main()
-{
-	return Main();
-}
