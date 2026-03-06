@@ -231,6 +231,7 @@ namespace Voidstar
 
 	struct VertexBinding
 	{
+		VertexStreamMode Mode;
 		VertexBufferHandle VertexHandle;
 		VertexLayoutHandle LayoutHandle;
 	};
@@ -477,6 +478,8 @@ namespace Voidstar
 	// read vulkan buffer on cpu
 	size_t ReadTexture(TextureHandle handle, void* data);
 
+	void ReadVertexBuffer(VertexBufferHandle handle, void* data);
+	
 
 	AttachmentHandle CreateAttachment(AttachmentType type, TextureFormat format, int width, int height, SampleCount samples, AttachmentHint hints);
 
@@ -512,8 +515,8 @@ namespace Voidstar
 	
 	void BindIndexBuffer(IndexBufferHandle handle);
 	// shader location
-	void BindVertexBuffer(uint16_t location , VertexBufferHandle handle);
-	VertexBufferHandle CreateVertexBuffer(Memory mem, VertexLayout& layout);
+	void BindVertexBuffer(uint16_t location , VertexBufferHandle handle, VertexStreamMode mode = VertexStreamMode::VERTEX);
+	VertexBufferHandle CreateVertexBuffer(Memory mem, VertexLayout& layout, ResourceUsage usage = ResourceUsage::Vertex);
 	IndexBufferHandle CreateIndexBuffer(Memory mem);
 	BufferHandle CreateBuffer (size_t size , ResourceUsage usage);
 

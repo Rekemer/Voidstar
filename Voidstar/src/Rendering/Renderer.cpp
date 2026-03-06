@@ -1564,7 +1564,7 @@ namespace Voidstar
 		auto prop = mapBuffer(usage);
 		BufferInputChunk input;
 		input.size = mem.size;
-		input.usage = vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst;
+		input.usage = prop.usage;
 		input.memoryProperties = prop.mem;
 		auto& buffer = m_VertexBuffers[vertHandle] = CreateSPtr<Buffer>(input);
 		SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(mem.size);
@@ -1657,29 +1657,29 @@ namespace Voidstar
 			builder.AddDescriptorSetLayouts(layouts);
 		}
 
+		// even if we have multiple bindings, location must be unique
+		auto location = 0;
 		for (int i = 0; i < bindingAmount; i++)
 		{
 			VertexBinding& binding = bindings[i];
 			
 			const auto& vertexLayout = GetVertexLayout(binding.LayoutHandle);
-
-			struct Vertex
-			{
-				glm::vec3 Position;
-				//glm::vec4 Color;
-				glm::vec2 UV;
-				//alignas(4)
-				//float textureID;
-			};
-			auto size = sizeof Vertex;
-			auto vInputBindDescription = VertexBindingDescription(0, vertexLayout.m_CurrentOffset, vk::VertexInputRate::eVertex);
-			
+			auto rate =  (binding.Mode == VertexStreamMode::VERTEX) ? vk::VertexInputRate::eVertex :
+			  vk::VertexInputRate::eInstance;
+			auto vInputBindDescription = VertexBindingDescription(
+				i, 
+				vertexLayout.m_CurrentOffset, 
+				rate);
 			builder.AddBindingDescription(vInputBindDescription);
 
 			for (int ii =0; ii < vertexLayout.m_Elements.size(); ii++)
 			{
 				auto& element = vertexLayout.m_Elements[ii];
-				auto desc = VertexInputAttributeDescription(i, ii, map(element.type), element.offset);
+				auto desc = VertexInputAttributeDescription(
+					element.bufferStream, 
+					location++, 
+					map(element.type),
+					element.offset);
 				builder.AddAttributeDescription(desc);
 			}
 		}
@@ -2038,55 +2038,6 @@ namespace Voidstar
 
 				vk::Pipeline pipeline = GetPipeline(key, renderItem.VertexBindings, renderItem.Bindings.currentBinding);
 				vk::PipelineLayout layout = m_PipelineLayout.at(key.layout);
-
-
-#if 0
-				for (int ii = 0; ii < keys.size(); ii++)
-				{
-					auto k = keys.at(ii);
-					if (m_DescriptorSet.find(k) == m_DescriptorSet.end())
-					{
-						AllocateSets(RenderContext::GetFrameAmount(), k);
-					}
-
-				}
-
-				// updating uniforms
-				//struct ResourceBinding
-				//{
-				//	std::string uniform;
-				//	TextureHandle handle;
-				//	bool dirty;
-				//};
-				for (int ii = 0; ii < renderItem.Bindings.currentResBinding; ii++)
-				{
-					auto& bind = renderItem.Bindings.ResBindings[ii];
-					if (bind.dirty)
-					{
-						// update descriptor
-						auto setNumber = meta.uniforms.at(bind.uniform).first;
-						auto bindNumber = meta.uniforms.at(bind.uniform).second;
-						auto& k = *std::find_if(keys.begin(), keys.end(), [=](auto key) {return key.set == setNumber; });
-
-						auto image = m_Textures.at(bind.handles[0]);
-
-
-						cmd.ChangeImageLayout(image.get(), image->GetLayout(), vk::ImageLayout::eShaderReadOnlyOptimal, image->m_MipMapLevels,image->layers);
-
-						vk::DescriptorImageInfo imageDescriptor1;
-						assert(image->GetLayout() == vk::ImageLayout::eShaderReadOnlyOptimal);
-						imageDescriptor1.imageLayout = image->GetLayout();
-						imageDescriptor1.imageView = image->GetImageView();
-						imageDescriptor1.sampler = image->GetSampler();
-
-						m_Device->UpdateDescriptorSet(m_DescriptorSet.at(k)[m_CurrentFrame], bindNumber, 1, imageDescriptor1, ResourceType::CombinedSampler);
-						bind.dirty = false;
-
-
-
-					}
-				}
-#endif
 
 				auto& renderPass = m_RenderPasses.at(key.fb);
 				auto index = GetIndex(key.fb, isPresent);

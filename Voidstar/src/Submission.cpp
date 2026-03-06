@@ -149,6 +149,11 @@ namespace Voidstar
 	}
 
 
+	void ReadVertexBuffer(VertexBufferHandle handle, void* data)
+	{
+
+	}
+
 	size_t ReadTexture(TextureHandle handle, void* data)
 	{
 		auto& cmd = g_Submission->GetCommandBuffer(ResourceCommand::ReadTexture);
@@ -369,7 +374,9 @@ namespace Voidstar
 					auto mem = commandBuffer.ReadObject<Memory>();
 					auto bufferHandle = commandBuffer.ReadObject<uint16_t>();
 					auto layoutHandle = commandBuffer.ReadObject<uint16_t>();
-					Renderer::Instance()->CreateVertexBuffer(mem, VertexBufferHandle	{ bufferHandle });
+					auto usage = commandBuffer.ReadObject<ResourceUsage>();
+
+					Renderer::Instance()->CreateVertexBuffer(mem, VertexBufferHandle	{ bufferHandle }, usage);
 				}
 				break;
 				case Voidstar::ResourceCommand::CreateDynamicIndexBuffer:
@@ -619,16 +626,17 @@ namespace Voidstar
 		auto item = g_Submission->Submit->CurrentRenderItem;
 		item->IndexBuffer = handle;
 	};
-	void BindVertexBuffer(uint16_t location, VertexBufferHandle handle)
+	void BindVertexBuffer(uint16_t location, VertexBufferHandle handle, VertexStreamMode mode)
 	{
 		auto item = g_Submission->Submit->CurrentRenderItem;
+		item->VertexBindings[location].Mode = mode;
 		item->VertexBindings[location].VertexHandle = handle;
 		item->VertexBindings[location].LayoutHandle = g_Submission->VertexLayoutMap.at(handle);
 		item->Bindings.currentBinding++;
 	};
 
 
-	VertexBufferHandle CreateVertexBuffer(Memory mem, VertexLayout& layout)
+	VertexBufferHandle CreateVertexBuffer(Memory mem, VertexLayout& layout, ResourceUsage usage)
 	{
 		auto bufferHandle = VertexBufferHandle{ g_VertexBufferHandleAllocator.GetId() };
 		
@@ -639,9 +647,9 @@ namespace Voidstar
 
 		auto& cmd = g_Submission->GetCommandBuffer(ResourceCommand::CreateVertexBuffer);
 		cmd.WriteObject(mem);
-		//auto me = cmd.ReadObject<Memory>();
 		cmd.WriteObject(bufferHandle);
 		cmd.WriteObject(layoutHandle);
+		cmd.WriteObject(usage);
 
 		return{ bufferHandle };
 	};
@@ -812,9 +820,9 @@ namespace Voidstar
 			}
 
 			VertexLayout layout;
-			layout.Add(ShaderDataType::FLOAT3);
-			layout.Add(ShaderDataType::FLOAT3);
-			layout.Add(ShaderDataType::FLOAT2);
+			layout.AddVertex(ShaderDataType::FLOAT3);
+			layout.AddVertex(ShaderDataType::FLOAT3);
+			layout.AddVertex(ShaderDataType::FLOAT2);
 
 			Memory mem;
 			mem.data = reinterpret_cast<uint8_t*>(vertices.data());

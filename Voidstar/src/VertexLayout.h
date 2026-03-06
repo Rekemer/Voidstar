@@ -9,7 +9,12 @@ namespace Voidstar
 		FLOAT3,
 		FLOAT2,
 		FLOAT,
+	};
 
+	enum class VertexStreamMode
+	{
+		VERTEX,
+		INSTANCE
 	};
 	struct VertexLayout
 	{
@@ -17,11 +22,12 @@ namespace Voidstar
 		{
 			ShaderDataType type;
 			size_t offset;
+			int bufferStream = 0;
 		};
 
-		VertexLayout& Add(ShaderDataType type)
+		VertexLayout& AddVertex(ShaderDataType type, int bufferStream  = 0 )
 		{
-			m_Elements.push_back(VertexLayoutElement{ type,m_CurrentOffset });
+			m_Elements.push_back(VertexLayoutElement{ type,m_CurrentOffset,bufferStream });
 			m_CurrentOffset += GetSize(type);
 			return *this;
 		}

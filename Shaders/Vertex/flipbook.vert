@@ -13,7 +13,7 @@ layout(location = 1) in vec2 in_uv;
 layout(location = 2) in float in_frame ;
 
 layout(location = 0) out vec2 out_uv;
-
+layout(location = 1) out float out_frame;
 
 void main() 
 {
@@ -22,6 +22,6 @@ void main()
     vec4 clipSpace = ubo.proj * ubo.view * vec4(worldPos,1);
     gl_Position = clipSpace;
     out_uv = in_uv;
- 
+    out_frame =in_frame;
 
 }
