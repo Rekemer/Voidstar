@@ -149,9 +149,9 @@ namespace Voidstar
 	}
 
 
-	void ReadVertexBuffer(VertexBufferHandle handle, void* data)
+	void* ReadVertexBuffer(VertexBufferHandle handle)
 	{
-
+		return Renderer::Instance()->GetMappedPtr(handle);
 	}
 
 	size_t ReadTexture(TextureHandle handle, void* data)
@@ -159,6 +159,7 @@ namespace Voidstar
 		auto& cmd = g_Submission->GetCommandBuffer(ResourceCommand::ReadTexture);
 		cmd.WriteObject(handle);
 		cmd.WriteObject(data);
+		// we are not doing like that:
 		// current frame user asks
 		// next frame - copy data
 		// after that should be available
@@ -372,11 +373,11 @@ namespace Voidstar
 				case Voidstar::ResourceCommand::CreateVertexBuffer:
 				{
 					auto mem = commandBuffer.ReadObject<Memory>();
-					auto bufferHandle = commandBuffer.ReadObject<uint16_t>();
+					auto bufferHandle = commandBuffer.ReadObject<VertexBufferHandle>();
 					auto layoutHandle = commandBuffer.ReadObject<uint16_t>();
 					auto usage = commandBuffer.ReadObject<ResourceUsage>();
 
-					Renderer::Instance()->CreateVertexBuffer(mem, VertexBufferHandle	{ bufferHandle }, usage);
+					Renderer::Instance()->CreateVertexBuffer(mem,  bufferHandle, usage);
 				}
 				break;
 				case Voidstar::ResourceCommand::CreateDynamicIndexBuffer:

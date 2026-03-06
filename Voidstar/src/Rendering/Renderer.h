@@ -136,6 +136,8 @@ namespace Voidstar
 		void FillTexture(TextureHandle texture, glm::vec4& pixel,BufferHandle buffer, size_t offset);
 		void CopyBufferToPtr(SPtr<Buffer> buffer, void* data, size_t offset);
 
+		void* GetMappedPtr(VertexBufferHandle handle);
+		
 		void BeginFrame(Frame* frame);
 		void EndFrame(Frame* frame);
 	
@@ -227,7 +229,13 @@ namespace Voidstar
 
 		std::vector<TextureHandle> m_ColorSwapchainHandles;
 		
-		Map<VertexBufferHandle, SPtr<Buffer>> m_VertexBuffers;
+		Map<VertexBufferHandle, std::vector<SPtr<Buffer>>> m_VertexBuffers;
+		Map<Handle<void>::Type, bool> m_Dynamic;
+		// cache mapped ptrs
+		Map<Handle<void>::Type, std::vector<void*>> m_Mapped;
+
+
+
 		Map<IndexBufferHandle, SPtr<IndexBuffer>> m_IndexBuffers;
 		//unordered_map<VertexLayoutHandle, > m_BufferLayouts;
 

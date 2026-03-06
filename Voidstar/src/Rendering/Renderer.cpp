@@ -180,24 +180,24 @@ namespace Voidstar
 		BufferVkMapping m{};
 
 		// Usages
-		if (has(u, ResourceUsage::Vertex))   m.usage |= vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst;
-		if (has(u, ResourceUsage::Index))    m.usage |= vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst;
-		if (has(u, ResourceUsage::Indirect)) m.usage |= vk::BufferUsageFlagBits::eIndirectBuffer;
-		if (has(u, ResourceUsage::Uniform)) { m.usage |= vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst; /*m.dscType = vk::DescriptorType::eUniformBuffer; */}
-		if (has(u, ResourceUsage::Sampled)) { m.usage |= vk::BufferUsageFlagBits::eUniformTexelBuffer | vk::BufferUsageFlagBits::eTransferDst; /*m.dscType = vk::DescriptorType::eUniformTexelBuffer; */}
-		if (has(u, ResourceUsage::StorageRead) || has(u, ResourceUsage::StorageWrite)) {
+		if (HasFlag(u, ResourceUsage::Vertex))   m.usage |= vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst;
+		if (HasFlag(u, ResourceUsage::Index))    m.usage |= vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst;
+		if (HasFlag(u, ResourceUsage::Indirect)) m.usage |= vk::BufferUsageFlagBits::eIndirectBuffer;
+		if (HasFlag(u, ResourceUsage::Uniform)) { m.usage |= vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst; /*m.dscType = vk::DescriptorType::eUniformBuffer; */}
+		if (HasFlag(u, ResourceUsage::Sampled)) { m.usage |= vk::BufferUsageFlagBits::eUniformTexelBuffer | vk::BufferUsageFlagBits::eTransferDst; /*m.dscType = vk::DescriptorType::eUniformTexelBuffer; */}
+		if (HasFlag(u, ResourceUsage::StorageRead) || HasFlag(u, ResourceUsage::StorageWrite)) {
 			m.usage |= vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst;
 			/*m.dscType = vk::DescriptorType::eStorageBuffer;*/
 		}
-		if (has(u, ResourceUsage::TransferSrc)) m.usage |= vk::BufferUsageFlagBits::eTransferSrc;
-		if (has(u, ResourceUsage::TransferDst)) m.usage |= vk::BufferUsageFlagBits::eTransferDst;
+		if (HasFlag(u, ResourceUsage::TransferSrc)) m.usage |= vk::BufferUsageFlagBits::eTransferSrc;
+		if (HasFlag(u, ResourceUsage::TransferDst)) m.usage |= vk::BufferUsageFlagBits::eTransferDst;
 		if (m.usage == vk::BufferUsageFlags{})  m.usage = vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst; // sane default
 
 		// Memory policy
-		if (has(u, ResourceUsage::Upload)) {
+		if (HasFlag(u, ResourceUsage::Upload)) {
 			m.mem |= vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
 		}
-		else if (has(u, ResourceUsage::Readback)) {
+		else if (HasFlag(u, ResourceUsage::Readback)) {
 			m.mem |= vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCached;
 		}
 		else {
@@ -210,34 +210,34 @@ namespace Voidstar
 	inline ImageVkMapping mapImage(ResourceUsage u) {
 		ImageVkMapping m{};
 		// Usages
-		if (has(u, ResourceUsage::ColorTarget))   m.usage |= vk::ImageUsageFlagBits::eColorAttachment;
-		if (has(u, ResourceUsage::DepthStencil))  m.usage |= vk::ImageUsageFlagBits::eDepthStencilAttachment;
-		if (has(u, ResourceUsage::Sampled))       m.usage |= vk::ImageUsageFlagBits::eSampled;
-		if (has(u, ResourceUsage::StorageWrite) || has(u, ResourceUsage::StorageRead))
+		if (HasFlag(u, ResourceUsage::ColorTarget))   m.usage |= vk::ImageUsageFlagBits::eColorAttachment;
+		if (HasFlag(u, ResourceUsage::DepthStencil))  m.usage |= vk::ImageUsageFlagBits::eDepthStencilAttachment;
+		if (HasFlag(u, ResourceUsage::Sampled))       m.usage |= vk::ImageUsageFlagBits::eSampled;
+		if (HasFlag(u, ResourceUsage::StorageWrite) || HasFlag(u, ResourceUsage::StorageRead))
 			m.usage |= vk::ImageUsageFlagBits::eStorage;
-		if (has(u, ResourceUsage::TransferSrc))   m.usage |= vk::ImageUsageFlagBits::eTransferSrc;
-		if (has(u, ResourceUsage::TransferDst))   m.usage |= vk::ImageUsageFlagBits::eTransferDst;
+		if (HasFlag(u, ResourceUsage::TransferSrc))   m.usage |= vk::ImageUsageFlagBits::eTransferSrc;
+		if (HasFlag(u, ResourceUsage::TransferDst))   m.usage |= vk::ImageUsageFlagBits::eTransferDst;
 
 		// Shape
-		if (has(u, ResourceUsage::Cube))          m.createFlags |= vk::ImageCreateFlagBits::eCubeCompatible;
+		if (HasFlag(u, ResourceUsage::Cube))          m.createFlags |= vk::ImageCreateFlagBits::eCubeCompatible;
 
 		// Memory
-		if (has(u, ResourceUsage::Upload))        m.mem |= vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
-		else if (has(u, ResourceUsage::Readback)) m.mem |= vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCached;
+		if (HasFlag(u, ResourceUsage::Upload))        m.mem |= vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+		else if (HasFlag(u, ResourceUsage::Readback)) m.mem |= vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCached;
 		else                                      m.mem |= vk::MemoryPropertyFlagBits::eDeviceLocal;
 
 		// Default layouts (you can override per pass)
-		if (has(u, ResourceUsage::ColorTarget)) {
+		if (HasFlag(u, ResourceUsage::ColorTarget)) {
 			m.defaultInitial = vk::ImageLayout::eUndefined;                 // if you clear
-			m.defaultFinal = has(u, ResourceUsage::Sampled)
+			m.defaultFinal = HasFlag(u, ResourceUsage::Sampled)
 				? vk::ImageLayout::eShaderReadOnlyOptimal      // write→sample pattern
 				: vk::ImageLayout::eColorAttachmentOptimal;    // keep as RT
 		}
-		else if (has(u, ResourceUsage::DepthStencil)) {
+		else if (HasFlag(u, ResourceUsage::DepthStencil)) {
 			m.defaultInitial = vk::ImageLayout::eUndefined;
 			m.defaultFinal = vk::ImageLayout::eDepthStencilAttachmentOptimal;
 		}
-		else if (has(u, ResourceUsage::Sampled)) {
+		else if (HasFlag(u, ResourceUsage::Sampled)) {
 			m.defaultInitial = vk::ImageLayout::eUndefined;
 			m.defaultFinal = vk::ImageLayout::eShaderReadOnlyOptimal;
 		}
@@ -1394,7 +1394,10 @@ namespace Voidstar
 	{
 		return m_Textures.at(handle)->GetSize();
 	}
-
+	void* Renderer::GetMappedPtr(VertexBufferHandle handle)
+	{
+		return m_Mapped.at(handle.idx)[m_CurrentFrame];
+	}
 	Renderer* Renderer::Instance()
 	{
 		static Renderer* renderer = new Renderer;
@@ -1566,13 +1569,34 @@ namespace Voidstar
 		input.size = mem.size;
 		input.usage = prop.usage;
 		input.memoryProperties = prop.mem;
-		auto& buffer = m_VertexBuffers[vertHandle] = CreateSPtr<Buffer>(input);
-		SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(mem.size);
 
-		m_TransferCommandBuffer[0].BeginTransfering();
-		m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), buffer.get(), mem.data, mem.size);
-		m_TransferCommandBuffer[0].EndTransfering();
-		m_TransferCommandBuffer[0].SubmitSingle();
+		int frames = 1;
+		if (HasFlag(usage, ResourceUsage::Upload | ResourceUsage::Readback))
+		{
+			m_Dynamic[vertHandle.idx] = true;
+			frames = RenderContext::GetFrameAmount();
+
+		}
+
+		for (auto i = 0; i < frames; i++)
+		{
+			m_VertexBuffers[vertHandle].push_back(CreateSPtr<Buffer>(input));
+			SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(mem.size);
+
+			m_TransferCommandBuffer[0].BeginTransfering();
+			m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_VertexBuffers[vertHandle][i].get(), mem.data, mem.size);
+			m_TransferCommandBuffer[0].EndTransfering();
+			m_TransferCommandBuffer[0].SubmitSingle();
+		}
+		if (HasFlag(usage, ResourceUsage::Upload | ResourceUsage::Readback))
+		{
+			for (auto i = 0; i < frames; i++)
+			{
+				void* ptr = m_Device->GetDevice().mapMemory(m_VertexBuffers[vertHandle][i]->GetMemory(), 0, mem.size);
+				m_Mapped[vertHandle.idx].push_back(ptr);
+			}
+		}
+		
 	}
 
 	void Renderer::CreateIndexBuffer(Memory& mem, IndexBufferHandle indexHandle)
@@ -2096,7 +2120,16 @@ namespace Voidstar
 
 				for (auto ii = 0; ii < renderItem.Bindings.currentBinding; ii++)
 				{
-					auto& buffer = m_VertexBuffers.at(renderItem.VertexBindings.at(ii).VertexHandle)->GetBuffer();
+					auto handle = renderItem.VertexBindings.at(ii).VertexHandle;
+					vk::Buffer buffer;
+					if (m_Dynamic[handle.idx])
+					{
+						buffer = m_VertexBuffers.at(handle)[m_CurrentFrame]->GetBuffer();
+					}
+					else
+					{
+						buffer = m_VertexBuffers.at(handle)[0]->GetBuffer();
+					}
 					vertexBuffers.push_back(buffer);
 				}
 				if (vertexBuffers.size() > 0)

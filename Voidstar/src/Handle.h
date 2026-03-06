@@ -4,6 +4,7 @@ namespace Voidstar
 	template <class Tag>
 	struct Handle {
 
+		using Type = uint16_t;
 		static constexpr uint16_t INVALID_ID = uint16_t(-1);
 
 		uint16_t idx = INVALID_ID;

@@ -30,6 +30,7 @@ namespace Voidstar
 		UpdateImageRegionWithImage,
 		//
 		UpdateBuffer,
+		UpdateVertexBuffer,
 		ResizeTexture,
 		CreateAttachment,
 		CreateFrameBuffer,

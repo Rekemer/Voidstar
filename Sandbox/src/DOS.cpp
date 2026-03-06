@@ -41,7 +41,7 @@ DOS::DOS(std::string appName, size_t screenWidth, size_t screenHeight) : Voidsta
 	m_FramePerParticle = { 1 };
 	m_InstanceHandle = CreateVertexBuffer({
 		reinterpret_cast<uint8_t*>(m_FramePerParticle.data()),m_FramePerParticle.size() * sizeof(m_FramePerParticle[0]) }
-	, m_InstanceLayout, ResourceUsage::Vertex | ResourceUsage::Upload);
+	, m_InstanceLayout, ResourceUsage::Vertex | ResourceUsage::Upload | ResourceUsage::Readback);
 	
 
 	m_IndexHandle = CreateIndexBuffer
@@ -55,7 +55,7 @@ DOS::DOS(std::string appName, size_t screenWidth, size_t screenHeight) : Voidsta
 
 	GetCamera()->SetCameraControl(CameraControlMode::DIRECT_CONTROL);
 	GetCamera()->LookAt({ 0,0,0 });
-	ExecuteFrame(0);
+	ExecuteFrame(0,true);
 }
 
 auto frame = 0;
@@ -64,7 +64,9 @@ void DOS::Update(float deltaTime)
 	SetViewRect(0, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
 	SetViewTransform(0, GetCamera()->GetView(), GetCamera()->GetProj());
 
+	auto data = static_cast<float*>(ReadVertexBuffer(m_InstanceHandle));
 
+	*data = float(frame) / 255;
 
 	BindVertexBuffer(0, m_VertexHandle);
 	BindVertexBuffer(1, m_InstanceHandle, VertexStreamMode::INSTANCE);
@@ -73,5 +75,6 @@ void DOS::Update(float deltaTime)
 	Submit(0, m_DefaultShader);
 	ExecuteFrame(deltaTime);
 	frame++;
+	frame = frame % 255;
 
 }

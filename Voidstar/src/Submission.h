@@ -113,7 +113,7 @@ namespace Voidstar
 	inline ResourceUsage operator|(ResourceUsage a, ResourceUsage b) {
 		return static_cast<ResourceUsage>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
 	}
-	inline bool has(ResourceUsage u, ResourceUsage f) {
+	inline bool HasFlag(ResourceUsage u, ResourceUsage f) {
 		return (static_cast<uint32_t>(u) & static_cast<uint32_t>(f)) != 0;
 	}
 	enum class FilterMode { Nearest, Linear };
@@ -477,8 +477,8 @@ namespace Voidstar
 
 	// read vulkan buffer on cpu
 	size_t ReadTexture(TextureHandle handle, void* data);
-
-	void ReadVertexBuffer(VertexBufferHandle handle, void* data);
+	// use that on gpu cpu visible buffers
+	void* ReadVertexBuffer(VertexBufferHandle handle);
 	
 
 	AttachmentHandle CreateAttachment(AttachmentType type, TextureFormat format, int width, int height, SampleCount samples, AttachmentHint hints);
