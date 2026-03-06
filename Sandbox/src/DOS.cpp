@@ -1,23 +1,22 @@
 #include "DOS.h"
 
+struct Particle
+{
+	float age = 0;
+	float lifetime = 10000;
+};
 VertexBufferHandle m_VertexHandle;
 VertexBufferHandle m_InstanceHandle;
 IndexBufferHandle m_IndexHandle;
 ProgramHandle m_DefaultShader;
 std::vector<Vertex> m_Verticies;
-std::vector<float> m_FramePerParticle;
+std::vector<Particle> m_FramePerParticle;
 std::vector<IndexType> m_Indicies;
 VertexLayout m_VertexLayout;
 VertexLayout m_InstanceLayout;
 TextureHandle m_MorganaTex;
 
 TextureHandle m_FireTexture;
-
-
-struct Particle
-{
-
-};
 
 
 // if we have dynamic instance buffer we should have them per frame
@@ -29,6 +28,7 @@ DOS::DOS(std::string appName, size_t screenWidth, size_t screenHeight) : Voidsta
 		.AddVertex(ShaderDataType::FLOAT2, 0);
 
 	m_InstanceLayout.AddVertex(ShaderDataType::FLOAT, 1);
+	m_InstanceLayout.AddVertex(ShaderDataType::FLOAT, 1);
 	
 	auto [verts, indices] = GeneratePlane<Vertex>(2);
 	m_Verticies = verts;
@@ -38,7 +38,7 @@ DOS::DOS(std::string appName, size_t screenWidth, size_t screenHeight) : Voidsta
 	, m_VertexLayout);
 
 	
-	m_FramePerParticle = { 1 };
+	m_FramePerParticle = { {0,1000} };
 	m_InstanceHandle = CreateVertexBuffer({
 		reinterpret_cast<uint8_t*>(m_FramePerParticle.data()),m_FramePerParticle.size() * sizeof(m_FramePerParticle[0]) }
 	, m_InstanceLayout, ResourceUsage::Vertex | ResourceUsage::Upload | ResourceUsage::Readback);
@@ -59,14 +59,16 @@ DOS::DOS(std::string appName, size_t screenWidth, size_t screenHeight) : Voidsta
 }
 
 auto frame = 0;
+float age = 0;
 void DOS::Update(float deltaTime)
 {
 	SetViewRect(0, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
 	SetViewTransform(0, GetCamera()->GetView(), GetCamera()->GetProj());
 
-	auto data = static_cast<float*>(ReadVertexBuffer(m_InstanceHandle));
+	auto data = static_cast<Particle*>(ReadVertexBuffer(m_InstanceHandle));
 
-	*data = float(frame) / 255;
+	age += deltaTime;
+	data->age = age*1000;
 
 	BindVertexBuffer(0, m_VertexHandle);
 	BindVertexBuffer(1, m_InstanceHandle, VertexStreamMode::INSTANCE);

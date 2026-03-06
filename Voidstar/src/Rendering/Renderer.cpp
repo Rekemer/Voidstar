@@ -1172,6 +1172,7 @@ namespace Voidstar
 		vk::Extent2D extent = { static_cast<uint32_t>(screenWidth),static_cast<uint32_t>(screenHeight)};
 
 		vk::ClearValue clearColor = { std::array<float, 4>{137.f / 255.f, 189.f / 255.f, 199.f / 255.f, 1.0f} };
+		clearColor = { std::array<float, 4>{0,0,0,0} };
 		vk::ClearValue clearDepth = vk::ClearDepthStencilValue{ 1.0f, 0 };
 		std::vector<vk::ClearValue> clearValues{ clearColor ,clearDepth, clearColor };
 		m_RenderPasses[DEFAULT_FRAME_BUFFER] = builder.Build(m_AttachmentManager, RenderContext::GetFrameAmount(), extent, clearValues);
