@@ -12,6 +12,6 @@ A [project](https://www.youtube.com/playlist?list=PLF_V0mPHXtuJKMe45rwgXtpii-B2k
 |----|----|
 | ![](./screenshots/quadtree.gif) | ![](./screenshots/ground.gif) |
 
-| Partial implementation of DOS surface shape effect | |
+| stuff | |
 |----|----|
 | ![](./screenshots/dos2.gif) |
