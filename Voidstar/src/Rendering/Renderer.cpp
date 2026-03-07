@@ -1991,7 +1991,7 @@ namespace Voidstar
 							m_Buffers.at(handle).at(m_CurrentFrame)
 							: m_Buffers.at(handle).at(0);
 						m_Device->UpdateDescriptorSet(
-							m_DescriptorSet.at(k)[m_CurrentFrame], ii, 1, *buffer, ResourceType::StorageBuffer);
+							m_DescriptorSet.at(k)[m_CurrentFrame], bindNumber, 1, *buffer, ResourceType::StorageBuffer);
 					}
 				}
 				
@@ -2106,7 +2106,7 @@ namespace Voidstar
 				UpdateUniformBuffer(view.Proj, view.View, m_App->GetExeTime());
 
 				// update object matricies
-				if (renderItem.ObjectCount > 1)
+				if (renderItem.ObjectCount > 0)
 				{
 					auto& matrix = render->Matricies.at(renderItem.MatrixIndex);
 					memcpy(m_ObjectsBuffersMapped[m_CurrentFrame], &matrix, sizeof(glm::mat4) * renderItem.ObjectCount);
@@ -2127,14 +2127,6 @@ namespace Voidstar
 				vkCmd.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
 
 
-
-				/*for (int ii = 0; ii < keys.size(); ii++)
-				{
-					auto k = keys.at(ii);
-					auto& descSet = m_DescriptorSet.at(k);
-					vkCmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, layout, ii, descSet[m_CurrentFrame], nullptr);
-
-				}*/
 				vk::Viewport viewport;
 				viewport.x = view.Rect[0];
 				viewport.y = view.Rect[1];

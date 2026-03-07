@@ -628,6 +628,10 @@ namespace Voidstar
 		auto item = g_Submission->Submit->CurrentRenderItem;
 		item->IndexBuffer = handle;
 	};
+	void SetTransform(const glm::mat4& world)
+	{
+		g_Submission->Submit->Matricies[g_Submission->Submit->CurrentFreeMatrix++] = world;
+	};
 	void BindVertexBuffer(uint16_t location, VertexBufferHandle handle, VertexStreamMode mode)
 	{
 		auto item = g_Submission->Submit->CurrentRenderItem;

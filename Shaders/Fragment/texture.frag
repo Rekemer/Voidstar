@@ -24,6 +24,6 @@ void main()
     //float fact = (sin(ubo.time * 1000) + 1)/ 2;
     //color = vec4( tex.xyz + tex1.xyz,1 * fact);
   
-    vec4 tex = texture(u_Texture,vec2(out_uv));
+    vec4 tex = texture(u_Texture,vec2(fract(out_uv * 5)));
     color = vec4(tex.xyz,1);
 }

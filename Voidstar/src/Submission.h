@@ -506,7 +506,7 @@ namespace Voidstar
 	void SetWindow(SPtr<Window> window);
 	void SubmitInit(InitParams);
 
-
+	void SetTransform(const glm::mat4& world);
 	void SetViewTransform(PassID id, glm::mat4& view, glm::mat4& proj);
 	void SetViewRect(PassID id , size_t x, size_t y, size_t width, size_t height);
 	void SetFramebuffer(PassID id, FrameBufferHandle handle);
