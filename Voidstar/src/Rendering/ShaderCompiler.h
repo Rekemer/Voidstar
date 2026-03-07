@@ -47,16 +47,40 @@ namespace Voidstar
    
 	inline vk::ShaderStageFlags mapAccess(ShaderType type) {
 		vk::ShaderStageFlags out{};
-		if (HasFlag(type , ShaderType::VERTEX))
+
+		switch (type)
+		{
+		case ShaderType::ALL:
+			
+		case ShaderType::VERTEX:
 			out |= vk::ShaderStageFlagBits::eVertex;
-		if (HasFlag(type , ShaderType::TESS_CONTROL))
+			if (type != ShaderType::ALL) break;
+
+		case ShaderType::TESS_CONTROL:
 			out |= vk::ShaderStageFlagBits::eTessellationControl;
-		if (HasFlag(type , ShaderType::TESS_EVALUATION))
+			if (type != ShaderType::ALL) break;
+
+		case ShaderType::TESS_EVALUATION:
 			out |= vk::ShaderStageFlagBits::eTessellationEvaluation;
-		if (HasFlag(type, ShaderType::FRAGMENT))
+			if (type != ShaderType::ALL) break;
+
+		case ShaderType::FRAGMENT:
 			out |= vk::ShaderStageFlagBits::eFragment;
-		if (HasFlag(type , ShaderType::COMPUTE))
+			if (type != ShaderType::ALL) break;
+
+		case ShaderType::COMPUTE:
 			out |= vk::ShaderStageFlagBits::eCompute;
+			break;
+
+		default:
+			
+			if (HasFlag(type, ShaderType::VERTEX))          out |= vk::ShaderStageFlagBits::eVertex;
+			if (HasFlag(type, ShaderType::TESS_CONTROL))    out |= vk::ShaderStageFlagBits::eTessellationControl;
+			if (HasFlag(type, ShaderType::TESS_EVALUATION)) out |= vk::ShaderStageFlagBits::eTessellationEvaluation;
+			if (HasFlag(type, ShaderType::FRAGMENT))        out |= vk::ShaderStageFlagBits::eFragment;
+			if (HasFlag(type, ShaderType::COMPUTE))         out |= vk::ShaderStageFlagBits::eCompute;
+			break;
+		}
 		return out;
 	}
     inline vk::ShaderStageFlagBits map(ShaderType type)

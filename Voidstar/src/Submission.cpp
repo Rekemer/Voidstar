@@ -149,9 +149,9 @@ namespace Voidstar
 	}
 
 
-	void* ReadVertexBuffer(VertexBufferHandle handle)
+	void* ReadMappedPtr(ResourceType type,Handle<void>::Type handle)
 	{
-		return Renderer::Instance()->GetMappedPtr(handle);
+		return Renderer::Instance()->GetMappedPtr(type,handle);
 	}
 
 	size_t ReadTexture(TextureHandle handle, void* data)
@@ -305,10 +305,11 @@ namespace Voidstar
 		item->View = id;
 		g_Submission->Submit->NextItem();
 	}
-	void Submit(PassID viewID, ProgramHandle programHandle)
+	void Submit(PassID viewID, ProgramHandle programHandle, size_t instances)
 	{
 		// creates render item
 		auto renderItem =g_Submission->Submit->CurrentRenderItem;
+		renderItem->ObjectCount = instances;
 		renderItem->Program = programHandle;
 		renderItem->View =viewID;
 		renderItem->Type = ItemType::RENDER;
@@ -358,9 +359,9 @@ namespace Voidstar
 				case ResourceCommand::CreateBuffer:
 				{
 					auto handle = commandBuffer.ReadObject<BufferHandle>();
-					auto size = commandBuffer.ReadObject<size_t>();
+					auto mem = commandBuffer.ReadObject<Memory>();
 					auto usage = commandBuffer.ReadObject<ResourceUsage>();
-					Renderer::Instance()->CreateBuffer(handle, size, usage);
+					Renderer::Instance()->CreateBuffer(handle, mem, usage);
 					break;
 				}
 				case Voidstar::ResourceCommand::CreateIndexBuffer:
@@ -665,13 +666,14 @@ namespace Voidstar
 		cmd.WriteObject(bufferHandle);
 		return { bufferHandle };
 	}
-	BufferHandle CreateBuffer(size_t size, ResourceUsage usage)
+
+	BufferHandle CreateBuffer(Memory mem, ResourceUsage usage)
 	{
 		auto bufferHandle = g_BufferHandleAllocator.GetId();
 
 		auto& cmd = g_Submission->GetCommandBuffer(ResourceCommand::CreateBuffer);
 		cmd.WriteObject(bufferHandle);
-		cmd.WriteObject(size);
+		cmd.WriteObject(mem);
 		cmd.WriteObject(usage);
 
 		return bufferHandle;

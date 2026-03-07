@@ -35,7 +35,42 @@
 
 
 
-struct ImGui_ImplVulkanH_Window;
+namespace Voidstar
+{
+	struct DynamicKey
+	{
+		ResourceType kind;
+		Handle<void>::Type idx;
+
+		bool operator==(const DynamicKey& other) const {
+			return kind == other.kind && idx == other.idx;
+		}
+
+		bool operator!=(const DynamicKey& other) const {
+			return !(*this == other);
+		}
+
+	};
+}
+
+
+namespace std {
+	template<>
+	struct hash<Voidstar::DynamicKey>
+	{
+		size_t operator()(const Voidstar::DynamicKey& k) const noexcept
+		{
+			const auto kind_u = static_cast<std::size_t>(k.kind);
+
+			const auto idx_u = static_cast<std::size_t>(k.idx);
+
+			std::size_t h1 = std::hash<std::size_t>{}(kind_u);
+			std::size_t h2 = std::hash<std::size_t>{}(idx_u);
+			return h1 ^ (h2 + 0x9e3779b97f4a7c15ULL + (h1 << 6) + (h1 >> 2));
+		}
+	};
+} // name
+
 namespace Voidstar
 {
 	class Window;
@@ -49,7 +84,7 @@ namespace Voidstar
 	class Pipeline;
 
 
-	
+
 	inline std::string BASE_SHADER_PATH = "../Shaders/";
 	inline std::string BASE_RES_PATH = "../res/";
 	inline std::string BASE_VIRT_PATH = "E:/dev/Voidstar/mipMaps_virtualTex4.tiff/";
@@ -94,12 +129,16 @@ namespace Voidstar
 
 
 
+
+
 	class Instance;
 	class Device;
 	class Swapchain;
 	class Application;
 	class DescriptorSetLayout;
 	class CommandPoolManager;
+
+
 	class VOIDSTAR_API Renderer
 	{
 	public:
@@ -121,9 +160,13 @@ namespace Voidstar
 		void CreateAttachment(AttachmentHandle handle, AttachmentInfo_ info);
 		void CreateFramebuffer(FrameBufferHandle handle, const std::vector<AttachmentHandle>& info);
 
-		void CreateBuffer(BufferHandle handle, size_t size, ResourceUsage usage);
+		void CreateBuffer(BufferHandle handle, Memory mem, ResourceUsage usage);
 		
-		void CreateVertexBuffer(Memory& mem, VertexBufferHandle vertHandle, 
+		void HandleDynamic(Voidstar::ResourceUsage usage, ResourceType type, Handle<void>::Type handle, int& frames);
+		void HandleMapped(Handle<void>::Type idx, ResourceType type, vk::DeviceMemory mem,
+			size_t size, ResourceUsage usage);
+
+		void CreateVertexBuffer(Memory& mem, VertexBufferHandle vertHandle,
 			ResourceUsage hint = ResourceUsage::Vertex);
 		void CreateIndexBuffer(Memory& mem, IndexBufferHandle indexHandle);
 		void CreatePipelineLayout(PipelineLayoutKey& key);
@@ -136,7 +179,7 @@ namespace Voidstar
 		void FillTexture(TextureHandle texture, glm::vec4& pixel,BufferHandle buffer, size_t offset);
 		void CopyBufferToPtr(SPtr<Buffer> buffer, void* data, size_t offset);
 
-		void* GetMappedPtr(VertexBufferHandle handle);
+		void* GetMappedPtr(ResourceType type, Handle<void>::Type handle);
 		
 		void BeginFrame(Frame* frame);
 		void EndFrame(Frame* frame);
@@ -230,9 +273,9 @@ namespace Voidstar
 		std::vector<TextureHandle> m_ColorSwapchainHandles;
 		
 		Map<VertexBufferHandle, std::vector<SPtr<Buffer>>> m_VertexBuffers;
-		Map<Handle<void>::Type, bool> m_Dynamic;
+		Map<DynamicKey, bool> m_Dynamic;
 		// cache mapped ptrs
-		Map<Handle<void>::Type, std::vector<void*>> m_Mapped;
+		Map<DynamicKey, std::vector<void*>> m_Mapped;
 
 
 
@@ -247,7 +290,7 @@ namespace Voidstar
 		// 0 handle is default render pass
 		Map<FrameBufferHandle, RenderPass> m_RenderPasses;
 
-		Map<BufferHandle, SPtr<Buffer>> m_Buffers;
+		Map<BufferHandle, std::vector<SPtr<Buffer>>> m_Buffers;
 
 		Map<TextureHandle, SPtr<Image>> m_Textures;
 

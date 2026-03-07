@@ -6,7 +6,7 @@
 #include <optional>
 namespace Voidstar
 {
-    constexpr size_t size = 64;
+    constexpr size_t _size = 64;
     #define F_32 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
     #define F_16 0xFFFFFFFFFFFFFFFF
     using Coordinate = uint32_t;
@@ -14,7 +14,7 @@ namespace Voidstar
     static constexpr Coordinate null = Coordinate(-1);
     struct Node
     {
-        std::bitset<size> index;
+        std::bitset<_size > index;
         glm::vec3 worldPosition;
         float edges[4] = {1,1,1,1};
         int depth;
@@ -44,7 +44,7 @@ namespace Voidstar
  
     struct GeneratedChildren
     {
-        std::bitset<size>  leftTop, rightTop, leftBottom, rightBottom;
+        std::bitset<_size >  leftTop, rightTop, leftBottom, rightBottom;
     };
     class Quadtree
     {
@@ -53,8 +53,8 @@ namespace Voidstar
         std::unordered_map<int,std::vector<Node>> nodes;
 
         static Quadtree Build(glm::vec3 posPlayer);
-        std::optional<Node*> GetNode(std::bitset<size> node, int depth);
-        std::optional<Node> GetNeighbour(Direction direction, std::bitset<size> node, int depthOfNode);
+        std::optional<Node*> GetNode(std::bitset<_size > node, int depth);
+        std::optional<Node> GetNeighbour(Direction direction, std::bitset<_size > node, int depthOfNode);
         void Clear(Node& node);
         GeneratedChildren GenerateChildren(Node& node, int depth);
         ~Quadtree();

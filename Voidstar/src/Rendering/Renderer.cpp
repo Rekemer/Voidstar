@@ -1172,7 +1172,7 @@ namespace Voidstar
 		vk::Extent2D extent = { static_cast<uint32_t>(screenWidth),static_cast<uint32_t>(screenHeight)};
 
 		vk::ClearValue clearColor = { std::array<float, 4>{137.f / 255.f, 189.f / 255.f, 199.f / 255.f, 1.0f} };
-		clearColor = { std::array<float, 4>{0,0,0,0} };
+		//clearColor = { std::array<float, 4>{0,0,0,0} };
 		vk::ClearValue clearDepth = vk::ClearDepthStencilValue{ 1.0f, 0 };
 		std::vector<vk::ClearValue> clearValues{ clearColor ,clearDepth, clearColor };
 		m_RenderPasses[DEFAULT_FRAME_BUFFER] = builder.Build(m_AttachmentManager, RenderContext::GetFrameAmount(), extent, clearValues);
@@ -1373,7 +1373,7 @@ namespace Voidstar
 	{
 		auto commandBuffer = m_TransferCommandBuffer[m_CurrentFrame];
 		auto image = GetTexture(texture);
-		auto buffer = m_Buffers.at(bufferHandle);
+		auto buffer = m_Buffers.at(bufferHandle).at(m_CurrentFrame);
 		commandBuffer.BeginTransfering();
 		image->Fill(glm::vec4(-1, -1, -1, -1), commandBuffer, buffer, offset);
 		commandBuffer.EndTransfering();
@@ -1382,22 +1382,39 @@ namespace Voidstar
 
 
 	
-	void Renderer::CreateBuffer(BufferHandle handle, size_t size, ResourceUsage usage)
+	void Renderer::CreateBuffer(BufferHandle handle, Memory mem, ResourceUsage usage)
 	{
 		auto prop = mapBuffer(usage);
+
+		int frames = 1;
+		HandleDynamic(usage,ResourceType::StorageBuffer,handle.idx,frames);
 		BufferInputChunk inputBuffer;
-		inputBuffer.size = size;
+		inputBuffer.size = mem.size;
 		inputBuffer.memoryProperties = prop.mem;
 		inputBuffer.usage = prop.usage;
-		m_Buffers[handle] = CreateSPtr<Buffer>(inputBuffer);
+		for (auto i = 0; i < frames; i++)
+		{
+			m_Buffers[handle].push_back(CreateSPtr<Buffer>(inputBuffer));
+			HandleMapped(handle.idx, ResourceType::StorageBuffer, m_Buffers[handle][i]->GetMemory(), mem.size, usage);
+			if (mem.data)
+			{
+				SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(mem.size);
+				m_TransferCommandBuffer[0].BeginTransfering();
+				m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_Buffers[handle][i].get(), mem.data, mem.size);
+				m_TransferCommandBuffer[0].EndTransfering();
+				m_TransferCommandBuffer[0].SubmitSingle();
+			}
+		}
+
+
 	}
 	size_t Renderer::GetSize(TextureHandle handle)
 	{
 		return m_Textures.at(handle)->GetSize();
 	}
-	void* Renderer::GetMappedPtr(VertexBufferHandle handle)
+	void* Renderer::GetMappedPtr(ResourceType type,Handle<void>::Type handle)
 	{
-		return m_Mapped.at(handle.idx)[m_CurrentFrame];
+		return m_Mapped.at({type,handle})[m_CurrentFrame];
 	}
 	Renderer* Renderer::Instance()
 	{
@@ -1406,7 +1423,8 @@ namespace Voidstar
 	}
 	void Renderer::UpdateBuffer(BufferHandle handle, void* data,size_t size)
 	{
-		auto buffer = m_Buffers.at(handle);
+		auto buffer = m_Buffers.at(handle)[m_CurrentFrame];
+
 		buffer->SetData(data, size);
 	}
 	TextureHandle Renderer::GetFBTextureHandle(FrameBufferHandle fb)
@@ -1563,6 +1581,24 @@ namespace Voidstar
 
 	
 
+	void Renderer::HandleDynamic(Voidstar::ResourceUsage usage, ResourceType type, Handle<void>::Type handle, int& frames)
+	{
+		if (HasFlag(usage, ResourceUsage::Upload | ResourceUsage::Readback))
+		{
+			m_Dynamic[DynamicKey{type,handle}] = true;
+			frames = RenderContext::GetFrameAmount();
+
+		}
+	}
+	void Renderer::HandleMapped(Handle<void>::Type idx,ResourceType type, vk::DeviceMemory mem,
+		size_t size, ResourceUsage usage)
+	{
+		if (HasFlag(usage, ResourceUsage::Upload | ResourceUsage::Readback))
+		{
+			void* ptr = m_Device->GetDevice().mapMemory(mem, 0,size);
+			m_Mapped[{type, idx}].push_back(ptr);
+		}
+	}
 	void Renderer::CreateVertexBuffer(Memory& mem, VertexBufferHandle vertHandle, ResourceUsage usage)
 	{
 		auto prop = mapBuffer(usage);
@@ -1572,12 +1608,7 @@ namespace Voidstar
 		input.memoryProperties = prop.mem;
 
 		int frames = 1;
-		if (HasFlag(usage, ResourceUsage::Upload | ResourceUsage::Readback))
-		{
-			m_Dynamic[vertHandle.idx] = true;
-			frames = RenderContext::GetFrameAmount();
-
-		}
+		HandleDynamic(usage,ResourceType::VertexBuffer, vertHandle.idx, frames);
 
 		for (auto i = 0; i < frames; i++)
 		{
@@ -1588,15 +1619,12 @@ namespace Voidstar
 			m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), m_VertexBuffers[vertHandle][i].get(), mem.data, mem.size);
 			m_TransferCommandBuffer[0].EndTransfering();
 			m_TransferCommandBuffer[0].SubmitSingle();
+			
+			HandleMapped(vertHandle.idx, ResourceType::VertexBuffer,m_VertexBuffers[vertHandle][i]->GetMemory(), mem.size,usage);
 		}
-		if (HasFlag(usage, ResourceUsage::Upload | ResourceUsage::Readback))
-		{
-			for (auto i = 0; i < frames; i++)
-			{
-				void* ptr = m_Device->GetDevice().mapMemory(m_VertexBuffers[vertHandle][i]->GetMemory(), 0, mem.size);
-				m_Mapped[vertHandle.idx].push_back(ptr);
-			}
-		}
+
+
+	
 		
 	}
 
@@ -1959,9 +1987,11 @@ namespace Voidstar
 					for (auto handle : bind.buffers)
 					{
 						if (!handle.Valid()) break;
-						auto buffer = m_Buffers.at(handle);
+						auto buffer = m_Dynamic[{ResourceType::StorageBuffer,handle.idx}] ?
+							m_Buffers.at(handle).at(m_CurrentFrame)
+							: m_Buffers.at(handle).at(0);
 						m_Device->UpdateDescriptorSet(
-							m_DescriptorSet.at(k)[m_CurrentFrame], 1, 1, *buffer, ResourceType::StorageBuffer);
+							m_DescriptorSet.at(k)[m_CurrentFrame], ii, 1, *buffer, ResourceType::StorageBuffer);
 					}
 				}
 				
@@ -2076,8 +2106,11 @@ namespace Voidstar
 				UpdateUniformBuffer(view.Proj, view.View, m_App->GetExeTime());
 
 				// update object matricies
-				auto& matrix = render->Matricies.at(renderItem.MatrixIndex);
-				memcpy(m_ObjectsBuffersMapped[m_CurrentFrame], &matrix, sizeof(glm::mat4) * renderItem.ObjectCount);
+				if (renderItem.ObjectCount > 1)
+				{
+					auto& matrix = render->Matricies.at(renderItem.MatrixIndex);
+					memcpy(m_ObjectsBuffersMapped[m_CurrentFrame], &matrix, sizeof(glm::mat4) * renderItem.ObjectCount);
+				}
 				
 				auto& test = m_FBAttachments[key.fb];
 
@@ -2123,7 +2156,7 @@ namespace Voidstar
 				{
 					auto handle = renderItem.VertexBindings.at(ii).VertexHandle;
 					vk::Buffer buffer;
-					if (m_Dynamic[handle.idx])
+					if (m_Dynamic[{ResourceType::VertexBuffer, handle.idx}])
 					{
 						buffer = m_VertexBuffers.at(handle)[m_CurrentFrame]->GetBuffer();
 					}
@@ -2139,7 +2172,7 @@ namespace Voidstar
 				{
 					auto buffer = m_IndexBuffers.at(renderItem.IndexBuffer);
 					vkCmd.bindIndexBuffer(buffer->GetBuffer(), vk::DeviceSize{ 0 }, buffer->GetIndexType());
-					vkCmd.drawIndexed(buffer->GetIndexAmount(), 1, 0, 0, 0);
+					vkCmd.drawIndexed(buffer->GetIndexAmount(), renderItem.ObjectCount, 0, 0, 0);
 				}
 				else
 				{

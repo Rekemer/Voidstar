@@ -25,6 +25,9 @@ namespace Voidstar
 	{
 		UniformBuffer,
 		StorageBuffer,
+
+		VertexBuffer,
+
 		StorageImage,
 		CombinedSampler,
 	};
@@ -477,8 +480,9 @@ namespace Voidstar
 
 	// read vulkan buffer on cpu
 	size_t ReadTexture(TextureHandle handle, void* data);
+
 	// use that on gpu cpu visible buffers
-	void* ReadVertexBuffer(VertexBufferHandle handle);
+	void* ReadMappedPtr(ResourceType type, Handle<void>::Type handle);
 	
 
 	AttachmentHandle CreateAttachment(AttachmentType type, TextureFormat format, int width, int height, SampleCount samples, AttachmentHint hints);
@@ -507,7 +511,8 @@ namespace Voidstar
 	void SetViewRect(PassID id , size_t x, size_t y, size_t width, size_t height);
 	void SetFramebuffer(PassID id, FrameBufferHandle handle);
 
-	void Submit(PassID id, ProgramHandle program);
+	void Submit(PassID id, ProgramHandle program,
+		size_t instances = 1);
 
 	void SubmitModel(SPtr<Model> model, PassID pass, ProgramHandle program, const glm::mat4& world);
 	
@@ -518,7 +523,7 @@ namespace Voidstar
 	void BindVertexBuffer(uint16_t location , VertexBufferHandle handle, VertexStreamMode mode = VertexStreamMode::VERTEX);
 	VertexBufferHandle CreateVertexBuffer(Memory mem, VertexLayout& layout, ResourceUsage usage = ResourceUsage::Vertex);
 	IndexBufferHandle CreateIndexBuffer(Memory mem);
-	BufferHandle CreateBuffer (size_t size , ResourceUsage usage);
+	BufferHandle CreateBuffer (Memory mem , ResourceUsage usage);
 
 	size_t GetCurrentFrame();
 	void ExecuteFrame(float deltaTime,bool wait = false);

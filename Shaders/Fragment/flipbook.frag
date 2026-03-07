@@ -4,7 +4,7 @@ layout(location = 0) in vec2 out_uv;
 layout(location = 1) in float out_age;
 layout(location = 2) in float out_lifetime;
 
-layout(set = 1, binding = 0) uniform sampler2D u_Texture;
+layout(set = 1, binding = 1) uniform sampler2D u_Texture;
 
 void main()
 {

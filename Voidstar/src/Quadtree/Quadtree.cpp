@@ -17,9 +17,9 @@ namespace Voidstar
 
 
 	
-	std::bitset<size> GenerateTx(int depth)
+	std::bitset<_size> GenerateTx(int depth)
 	{
-		std::bitset<size> tx;
+		std::bitset<_size> tx;
 		for (int i = 0; i < depth*2; i+=2)
 		{
 			tx[i] = 0;
@@ -27,9 +27,9 @@ namespace Voidstar
 		}
 		return tx;
 	}
-	std::bitset<size> GenerateTy(int depth)
+	std::bitset<_size> GenerateTy(int depth)
 	{
-		std::bitset<size> ty;
+		std::bitset<_size> ty;
 		for (int i = 0; i < depth*2; i+= 2)
 		{
 			ty[i] = 1;
@@ -46,19 +46,19 @@ namespace Voidstar
 
 	// 2 bits per depth
 	//  deeper level - go left
-	std::bitset<size> ChildOfParent(int x, std::bitset<size> parentIndex, int childrenDepth)
+	std::bitset<_size> ChildOfParent(int x, std::bitset<_size> parentIndex, int childrenDepth)
 	{
-		std::bitset<size> nodeCoords;
+		std::bitset<_size> nodeCoords;
 		nodeCoords |= x;
 
-		std::bitset<size> maskCoords;
-		maskCoords |= std::bitset<size>(parentIndex);
+		std::bitset<_size> maskCoords;
+		maskCoords |= std::bitset<_size>(parentIndex);
 		maskCoords <<=  2;
 		nodeCoords |= maskCoords;
 		return nodeCoords;
 
 	}
-	std::bitset<size> ParentOfChild(std::bitset<size> child, int childDepth)
+	std::bitset<_size> ParentOfChild(std::bitset<_size> child, int childDepth)
 	{
 		return child>>2;
 	}
@@ -80,7 +80,7 @@ namespace Voidstar
 		return result;
 	}
 	
-	std::optional<Node*> Quadtree::GetNode(std::bitset<size> node, int depth)
+	std::optional<Node*> Quadtree::GetNode(std::bitset<_size> node, int depth)
 	{
 		auto& vector = nodes[depth];
 		for (int i = 0; i < vector.size(); i++)
@@ -104,15 +104,15 @@ namespace Voidstar
 	//std::bitset<size> northWest("010111");
 	//std::bitset<size> southWest("111111");
 
-	std::bitset<size> GetBitDirection(Direction direction, int depth)
+	std::bitset<_size> GetBitDirection(Direction direction, int depth)
 	{
 		switch (direction)
 		{
 		case Voidstar::Direction::NORTH:
-			return std::bitset<size>("10");
+			return std::bitset<_size>("10");
 			break;
 		case Voidstar::Direction::EAST:
-			return std::bitset<size>("1");
+			return std::bitset<_size>("1");
 			break;
 		case Voidstar::Direction::WEST:
 			return GenerateTy(depth);
@@ -122,21 +122,21 @@ namespace Voidstar
 			break;
 
 		case Voidstar::Direction::SOUTHEAST:
-			return GenerateTx(depth) | std::bitset<size>("11");
+			return GenerateTx(depth) | std::bitset<_size>("11");
 			break;
 		case Voidstar::Direction::SOUTHWEST:
 		{
-			auto bitDirection = std::bitset<size>();
+			auto bitDirection = std::bitset<_size>();
 			bitDirection.set();
 			return bitDirection;
 		}
 			break;
 
 		case Voidstar::Direction::NORTHWEST:
-			return GenerateTy(depth) | std::bitset<size>("111");
+			return GenerateTy(depth) | std::bitset<_size>("111");
 			break;
 		case Voidstar::Direction::NORTHEAST:
-			return std::bitset<size>("11");
+			return std::bitset<_size>("11");
 			break;
 
 		default:
@@ -144,10 +144,10 @@ namespace Voidstar
 		}
 	}
 
-	std::bitset<size> Increment(std::bitset<size> node,  Direction direction,int depth)
+	std::bitset<_size> Increment(std::bitset<_size> node,  Direction direction,int depth)
 	{
-		std::bitset<size> tx = GenerateTx(depth);
-		std::bitset<size> ty = GenerateTy(depth);
+		std::bitset<_size> tx = GenerateTx(depth);
+		std::bitset<_size> ty = GenerateTy(depth);
 		auto dir = GetBitDirection(direction,depth);
 	
 		unsigned long long nodeValue = node.to_ullong();
@@ -155,7 +155,7 @@ namespace Voidstar
 
 		nodeValue = ((((nodeValue | ty.to_ullong()) + (dirValue & tx.to_ullong())) & tx.to_ullong()) | (((nodeValue | tx.to_ullong()) + (dirValue & ty.to_ullong())) & ty.to_ullong()));
 
-		auto neighbour = std::bitset<size>(nodeValue);
+		auto neighbour = std::bitset<_size>(nodeValue);
 		return neighbour;
 	}
 
@@ -173,7 +173,7 @@ namespace Voidstar
 	bool bottomOverflow = false;
 	
 
-	std::optional<Node> Quadtree::GetNeighbour(Direction direction, std::bitset<size> node, int depthOfNode)
+	std::optional<Node> Quadtree::GetNeighbour(Direction direction, std::bitset<_size> node, int depthOfNode)
 	{
 
 
@@ -308,7 +308,7 @@ namespace Voidstar
 
 		if (depth > 1)
 		{
-			if (nodeToDivide.index == std::bitset<size>("000101"))
+			if (nodeToDivide.index == std::bitset<_size>("000101"))
 			{
 			//	std::cout << "sd";
 			}
@@ -512,7 +512,7 @@ namespace Voidstar
 		float distRightBottom = glm::distance(posPlayer, tileRightBottom);
 
 		// Find the position closest to posPlayer and get new parent index from generated tiles
-		std::bitset<size> closestTilePos;
+		std::bitset<_size> closestTilePos;
 		if (distLeftTop <= distRightTop && distLeftTop <= distLeftBottom && distLeftTop <= distRightBottom)
 		{
 			//lefttop
