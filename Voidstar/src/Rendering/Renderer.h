@@ -87,10 +87,11 @@ namespace Voidstar
 
 	inline std::string BASE_SHADER_PATH = "../Shaders/";
 	inline std::string BASE_RES_PATH = "../res/";
-	inline std::string BASE_VIRT_PATH = "E:/dev/Voidstar/mipMaps_virtualTex4.tiff/";
+	
 	const std::string SPIRV_COMPILER_PATH = std::string(std::string(std::getenv("VULKAN_SDK")) + std::string("/Bin/glslangvalidator.exe"));
 
 	inline std::string BASE_SPIRV_OUTPUT = BASE_SHADER_PATH + "Binary/";
+	inline std::string BASE_VIRT_PATH = "E:/dev/Voidstar/mipMaps_virtualTex4.tiff/";
 	inline std::string InitFilePath()
 	{
 		std::string baseShaderPath = "";
@@ -245,7 +246,7 @@ namespace Voidstar
 		void CreateInstance();
 		std::vector<vk::DescriptorSet>  AllocateSets(size_t amount, const DescriptorLayoutKey& key);
 		
-		int GetIndex(FrameBufferHandle handle,bool& isPresent);
+		int GetIndex(FrameBufferHandle handle,bool& isPresent, bool lastRenderItem);
 		SparseSet<RenderPassHandle_> g_RenderPassAllocator;
 	private:
 		Application* m_App;

@@ -2009,10 +2009,10 @@ namespace Voidstar
 	}
 
 
-	int Renderer::GetIndex(FrameBufferHandle handle, bool& isPresent)
+	int Renderer::GetIndex(FrameBufferHandle handle, bool& isPresent, bool lastRenderItem)
 	{
 
-		if (handle == DEFAULT_FRAME_BUFFER)
+		if (handle == DEFAULT_FRAME_BUFFER && lastRenderItem)
 		{
 			assert(isPresent == false);
 			uint32_t imageIndex = 0;
@@ -2035,108 +2035,100 @@ namespace Voidstar
 		Renderer::Instance()->Wait(currentFence.GetFence());
 		Renderer::Instance()->Reset(currentFence.GetFence());
 
-		bool isPresent = false;
+		bool isPresent = false; 
 		uint32_t presentIndex = 0;
 		
 
 		auto& cmd = m_RenderCommandBuffer[m_CurrentFrame];
 		cmd.BeginRendering();
 
-
-	
-		for (int i = 0; i < render->CurrentRenderItemIndex; i++)
+		for (int i = 0; i <= render->LastView; ++i)
 		{
+			auto& view = render->Views[i];
+			if (view.FreeIndex == 0)
+				continue;
 
-			auto item = (render->m_renderItem + i);
-			if (item->Type == ItemType::COMPUTE)
+			FrameBufferHandle fb = view.Fbh.Valid() ? view.Fbh : DEFAULT_FRAME_BUFFER;
+
+			bool viewIsPresent = false;
+			uint32_t index = GetIndex(fb, viewIsPresent, i == render->LastView);
+			if (viewIsPresent)
 			{
-				auto& computeItem = *item;
-				auto vkCmd = cmd.GetCommandBuffer();
-				auto& meta = m_Compiler.m_Programs.at(computeItem.Program);
-				std::vector<DescriptorLayoutKey>& keys = meta.descriptorKey;
-				PipelineKey key = { computeItem.Program,{},keys,{} };
-				vk::Pipeline pipeline = GetComputePipeline(key);
-				vk::PipelineLayout layout = m_PipelineLayout.at(key.layout);
-				BindDescriptors(vk::PipelineBindPoint::eCompute, computeItem,keys,meta,cmd,layout);
-
-				vkCmd.bindPipeline(vk::PipelineBindPoint::eCompute, pipeline);
-				vkCmd.dispatch(computeItem.GroupCount.x, computeItem.GroupCount.y, computeItem.GroupCount.z);
-
-
-				computeItem.Bindings.Reset();
-
+				isPresent = true;
+				presentIndex = index;
 			}
-			else if ( item->Type == ItemType::RENDER)
-			{
-				auto& renderItem = *item;
-				View& view = render->Views[renderItem.View];
-				assert(renderItem.Program.Valid());
-				auto& meta = m_Compiler.m_Programs.at(renderItem.Program);
-				if (!view.Fbh.Valid())
-				{
-					view.Fbh = DEFAULT_FRAME_BUFFER;
-					//struct PipelineKey
-					//{
-					//	ProgramHandle program;
-					//	RenderState rs;
-					//	PipelineLayoutKey layout;
-					//	RenderPassHandle_ renderPass;
-					//};
 
+			auto frameBuffer = m_Framebuffers.at(fb)[index];
+			auto& renderPass = m_RenderPasses.at(fb);
+
+			
+			auto& attachments = m_FBAttachments[fb];
+			for (auto handle : attachments)
+			{
+				auto texHandle = m_AttachmentManager.GetColorTexture(handle, index);
+				auto image = m_Textures.at(texHandle);
+				cmd.ChangeImageLayout(
+					image.get(),
+					image->GetLayout(),
+					vk::ImageLayout::eColorAttachmentOptimal,
+					image->m_MipMapLevels);
+			}
+
+			UpdateUniformBuffer(view.Proj, view.View, m_App->GetExeTime());
+
+			cmd.BeginRenderPass(renderPass.m_RenderPass, frameBuffer, renderPass.m_Extent, renderPass.m_ClearValues);
+
+			for (int ii = 0; ii < view.FreeIndex; ++ii)
+			{
+				int itemIndex = view.ItemsIndex[ii];
+				auto* item = &render->m_renderItem[itemIndex];
+
+				if (item->Type != ItemType::RENDER)
+				{
+					assert(false && "Conpute passes are broken currently, since stuff is done per view now");
+					continue; 
 				}
 
+				auto& renderItem = *item;
+				assert(renderItem.Program.Valid());
 
-				// get pipeline
+				auto& meta = m_Compiler.m_Programs.at(renderItem.Program);
 				std::vector<DescriptorLayoutKey>& keys = meta.descriptorKey;
 
-				PipelineKey key = { renderItem.Program,renderItem.State,keys,view.Fbh };
+				PipelineKey key = { renderItem.Program, renderItem.State, keys, fb };
 
 				vk::Pipeline pipeline = GetPipeline(key, renderItem.VertexBindings, renderItem.Bindings.currentBinding);
 				vk::PipelineLayout layout = m_PipelineLayout.at(key.layout);
 
-				auto& renderPass = m_RenderPasses.at(key.fb);
-				auto index = GetIndex(key.fb, isPresent);
-				if (isPresent) presentIndex = index;
-				auto frameBuffer = m_Framebuffers.at(key.fb)[index];
-
-
 				BindDescriptors(vk::PipelineBindPoint::eGraphics, renderItem, keys, meta, cmd, layout);
 
-				// update camera matricies
-				UpdateUniformBuffer(view.Proj, view.View, m_App->GetExeTime());
-
-				// update object matricies
 				if (renderItem.ObjectCount > 0)
 				{
 					auto& matrix = render->Matricies.at(renderItem.MatrixIndex);
 					memcpy(m_ObjectsBuffersMapped[m_CurrentFrame], &matrix, sizeof(glm::mat4) * renderItem.ObjectCount);
 				}
-				
-				auto& test = m_FBAttachments[key.fb];
 
-				for (auto handle : test)
-				{
-					auto texHandle = m_AttachmentManager.GetColorTexture(handle, index);
-					auto image = m_Textures.at(texHandle);
-					cmd.ChangeImageLayout(image.get(), image->GetLayout(), vk::ImageLayout::eColorAttachmentOptimal, image->m_MipMapLevels);
-				}
-
-
-				cmd.BeginRenderPass(renderPass.m_RenderPass, frameBuffer, renderPass.m_Extent, renderPass.m_ClearValues);
 				auto vkCmd = cmd.GetCommandBuffer();
 				vkCmd.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
-
 
 				vk::Viewport viewport;
 				viewport.x = view.Rect[0];
 				viewport.y = view.Rect[1];
 				viewport.width = view.Rect[2];
 				viewport.height = view.Rect[3];
-				viewport.minDepth = 0;
-				viewport.maxDepth = 1;
+				viewport.minDepth = 0.0f;
+				viewport.maxDepth = 1.0f;
+
 				vk::Rect2D scissors;
-				scissors.offset = vk::Offset2D{ static_cast<int32_t>(view.Rect[0]),static_cast<int32_t>(view.Rect[1]) };
-				scissors.extent = vk::Extent2D{ static_cast<uint32_t>(view.Rect[2]),static_cast<uint32_t>(view.Rect[3]) };
+				scissors.offset = vk::Offset2D{
+					static_cast<int32_t>(view.Rect[0]),
+					static_cast<int32_t>(view.Rect[1])
+				};
+				scissors.extent = vk::Extent2D{
+					static_cast<uint32_t>(view.Rect[2]),
+					static_cast<uint32_t>(view.Rect[3])
+				};
+
 				vkCmd.setViewport(0, 1, &viewport);
 				vkCmd.setScissor(0, 1, &scissors);
 
@@ -2144,22 +2136,20 @@ namespace Voidstar
 				vertexBuffers.reserve(renderItem.Bindings.currentBinding);
 				std::vector<vk::DeviceSize> offsets(renderItem.Bindings.currentBinding, 0);
 
-				for (auto ii = 0; ii < renderItem.Bindings.currentBinding; ii++)
+				for (int iii = 0; iii < renderItem.Bindings.currentBinding; ++iii)
 				{
-					auto handle = renderItem.VertexBindings.at(ii).VertexHandle;
-					vk::Buffer buffer;
-					if (m_Dynamic[{ResourceType::VertexBuffer, handle.idx}])
-					{
-						buffer = m_VertexBuffers.at(handle)[m_CurrentFrame]->GetBuffer();
-					}
-					else
-					{
-						buffer = m_VertexBuffers.at(handle)[0]->GetBuffer();
-					}
+					auto handle = renderItem.VertexBindings.at(iii).VertexHandle;
+					vk::Buffer buffer =
+						m_Dynamic[{ResourceType::VertexBuffer, handle.idx}]
+						? m_VertexBuffers.at(handle)[m_CurrentFrame]->GetBuffer()
+						: m_VertexBuffers.at(handle)[0]->GetBuffer();
+
 					vertexBuffers.push_back(buffer);
 				}
-				if (vertexBuffers.size() > 0)
+
+				if (!vertexBuffers.empty())
 					vkCmd.bindVertexBuffers(0, static_cast<uint32_t>(vertexBuffers.size()), vertexBuffers.data(), offsets.data());
+
 				if (renderItem.IndexBuffer.Valid())
 				{
 					auto buffer = m_IndexBuffers.at(renderItem.IndexBuffer);
@@ -2168,14 +2158,13 @@ namespace Voidstar
 				}
 				else
 				{
-					// draw without index
 					vkCmd.draw(6, 1, 0, 0);
 				}
 
-
-				cmd.EndRenderPass();
 				renderItem.Bindings.Reset();
 			}
+			view.FreeIndex = 0;
+			cmd.EndRenderPass();
 		}
 
 		cmd.EndRendering();

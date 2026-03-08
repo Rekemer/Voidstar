@@ -312,7 +312,11 @@ namespace Voidstar
 		renderItem->ObjectCount = instances;
 		renderItem->Program = programHandle;
 		renderItem->View =viewID;
+
 		renderItem->Type = ItemType::RENDER;
+		auto& freeIndex = g_Submission->Submit->Views[viewID].FreeIndex;
+		g_Submission->Submit->Views[viewID].ItemsIndex[freeIndex++] = g_Submission->Submit->CurrentRenderItemIndex;
+		g_Submission->Submit->LastView = viewID;
 		// we can create pipeline
 		g_Submission->Submit->NextItem();
 		

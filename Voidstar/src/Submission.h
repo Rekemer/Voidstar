@@ -393,13 +393,17 @@ namespace Voidstar
 		glm::mat4 View;
 		glm::mat4 Proj;
 		FrameBufferHandle Fbh;
+		int FreeIndex = 0;
+		std::array<int,256> ItemsIndex;
 	};
 
 	struct Frame
 	{
 		int  CurrentRenderItemIndex = 0;
 		Item m_renderItem[256];
+
 		Item* CurrentRenderItem =&m_renderItem[CurrentRenderItemIndex];
+		int LastView = 0;
 		View Views[256];
 		size_t FrameNumber = 0;
 		size_t CurrentFreeMatrix = 0;
@@ -412,6 +416,7 @@ namespace Voidstar
 		}
 		void Reset() 
 		{
+			LastView = 0;
 			CurrentRenderItemIndex = 0;
 			CurrentFreeMatrix = 0;
 			CurrentRenderItem = &m_renderItem[CurrentRenderItemIndex];

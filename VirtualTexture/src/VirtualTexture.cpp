@@ -25,19 +25,12 @@ using namespace Voidstar;
 #include "Vertex.h"
 #include "Rendering/Generation.h"
 #include "Jobs.h"
-// ImGui
-static VkDescriptorPool         g_DescriptorPool = VK_NULL_HANDLE;
+#include "Cache.h"
+#include "Rendering/Image.h"
+#include "Rendering/Renderer.h"
 
-void CleanUpImGui()
-{
-	auto device = RenderContext::GetDevice()->GetDevice();
-	device.destroyDescriptorPool(g_DescriptorPool);
-	ImGui_ImplVulkan_Shutdown();
-	ImGui_ImplGlfw_Shutdown();
-	ImGui::DestroyContext();
-}
 
-std::map<unsigned char, Character> Characters;
+
 constexpr int pageWidth = 128;
 constexpr int pageHeight = 64;
 constexpr int workingSetWidth = pageWidth * 20;
@@ -119,17 +112,18 @@ public:
 		m_TestTexture = LoadTexture("coffee.jpg");
 		m_TestTexture1 = LoadTexture("dos_2_noise.png");
 
-		m_VertexLayout.Add(ShaderDataType::FLOAT3)
-			.Add(ShaderDataType::FLOAT2);
-		m_Plane = GeneratePlane<Vertex>(1);
-		auto [verts, indices] = GenerateCube<Vertex>();
-		m_Cube = verts;
-		m_IndexCube = indices;
+		m_VertexLayout.AddVertex(ShaderDataType::FLOAT3)
+			.AddVertex(ShaderDataType::FLOAT2);
+		auto [verts, indices] = GeneratePlane<Vertex>(1);
+		m_Plane.verticies = verts;
+		m_Plane.indicies= indices;
+
 
 		
 		
-
-		m_StorageBuffers = CreateBuffer(sizeof(PageEntry) * virtualTextureTiles.x * virtualTextureTiles.y,ResourceUsage::StorageRead | ResourceUsage::StorageWrite | ResourceUsage::Readback);
+		Memory mem;
+		mem.size = sizeof(PageEntry) * virtualTextureTiles.x * virtualTextureTiles.y;
+		m_StorageBuffers = CreateBuffer(mem,ResourceUsage::StorageRead | ResourceUsage::StorageWrite | ResourceUsage::Readback);
 
 		
 
@@ -147,7 +141,11 @@ public:
 		{
 			mipMapSize += GetSize(mipMap);
 		}
-		m_FillBuffer = CreateBuffer(pageTableWidth * pageTableHeight * 8 * 4 + mipMapSize, ResourceUsage::TransferSrc| ResourceUsage::TransferDst| ResourceUsage::Upload);
+		{
+			Memory mem;
+			mem.size = pageTableWidth * pageTableHeight * 8 * 4 + mipMapSize;
+			m_FillBuffer = CreateBuffer(mem, ResourceUsage::TransferSrc| ResourceUsage::TransferDst| ResourceUsage::Upload);
+		}
 
 		FillImage(m_PageTable, glm::vec4{ -1, -1, -1, -1 },m_FillBuffer, bufferOffset);
 
@@ -286,6 +284,7 @@ public:
 						std::stringstream ss;
 
 						ss << (int)feedback.pageX << "_" << (int)feedback.pageY << ".png";
+
 						std::string path = BASE_VIRT_PATH + mipTiles[feedback.mipMap].data() + ss.str();
 						// check cache instead
 						auto cachedPage = m_Cache.Get(path);

@@ -3,7 +3,7 @@
 #include<unordered_map>
 namespace Voidstar
 {
-	struct  PageEntry
+	struct PageEntry
 	{
 		PageEntry() = default;
 		PageEntry(float mipMap, glm::vec2 pageTableCoord, glm::vec2 physCoord):
