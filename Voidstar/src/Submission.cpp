@@ -154,6 +154,13 @@ namespace Voidstar
 		return Renderer::Instance()->GetMappedPtr(type,handle);
 	}
 
+	void UpdateTexture(TextureHandle handle, uint8_t* data, size_t size)
+	{
+		auto& cmd = g_Submission->GetCommandBuffer(ResourceCommand::UpdateTexture);
+		cmd.WriteObject(handle);
+		cmd.WriteObject(data);
+		cmd.WriteObject(size);
+	}
 	size_t ReadTexture(TextureHandle handle, void* data)
 	{
 		auto& cmd = g_Submission->GetCommandBuffer(ResourceCommand::ReadTexture);
@@ -466,7 +473,13 @@ namespace Voidstar
 					break;
 				}
 				case Voidstar::ResourceCommand::UpdateTexture:
+				{
+					auto texture = commandBuffer.ReadObject<TextureHandle>();
+					auto pixels = commandBuffer.ReadObject<uint8_t*>();
+					auto size = commandBuffer.ReadObject<size_t>();
+					Renderer::Instance()->UpdateTexture(texture,pixels,size);
 					break;
+				}
 				case Voidstar::ResourceCommand::FillTexture:
 				{
 					auto texture = commandBuffer.ReadObject<TextureHandle>();

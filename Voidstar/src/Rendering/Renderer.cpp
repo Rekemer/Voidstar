@@ -831,21 +831,27 @@ namespace Voidstar
 
 
 
-	std::vector<Vertex_> sphere;
-	std::vector<IndexType> sphereIndicies;
 	
-	const int QUAD_AMOUNT = 700;
-
-	
-	std::vector<vk::DescriptorSet> Renderer::AllocateSets(size_t amount, const DescriptorLayoutKey& key)
+	std::vector<vk::DescriptorSet> Renderer::AllocateSets(size_t amount,
+		const DescriptorLayoutKey& key)
 	{
+		
 		if (m_DescriptorSet.find(key) == m_DescriptorSet.end())
 		{
+			if (m_DescriptorSet[key].size() <= RenderContext::GetFrameAmount())
+			{
+				m_DescriptorSet[key].resize(RenderContext::GetFrameAmount());
+			}
 			auto& layout = m_DescriptorLayout.at(key);
 			std::vector<vk::DescriptorSetLayout> layouts{amount, layout};
-			m_DescriptorSet[key] = m_UniversalPool->AllocateDescriptorSets(amount, layouts.data());
+			auto sets = m_UniversalPool->AllocateDescriptorSets(amount, layouts.data());
+			for (int i = 0; i < amount; i++)
+			{
+				m_DescriptorSet[key][i].push_back(sets[i]);
+			}
+		
 		}
-		return  m_DescriptorSet[key];
+		return  m_DescriptorSet[key][m_CurrentFrame];
 	}
 
 
@@ -1081,14 +1087,12 @@ namespace Voidstar
 		CreateDescriptorLayout(SystemDescriptorLayoutKey);
 
 
-		auto sets = AllocateSets(frameAmount, SystemDescriptorLayoutKey);
-
 	for (auto& binding : SystemDescriptorLayoutKey.bindings)
 	{	
 		for (auto i = 0; i < frameAmount; i++)
 		{
 				auto& buffer = binding.kind == ResourceType::UniformBuffer ? *m_UniformBuffers[i] : *m_ObjectsBuffers[i];
-				m_Device->UpdateDescriptorSet(sets[i], binding.binding, binding.count, buffer, binding.kind);
+				m_Device->UpdateDescriptorSet(GetDescriptorSet(SystemDescriptorLayoutKey,i,0) , binding.binding, binding.count, buffer, binding.kind);
 		}
 	}
 
@@ -1421,6 +1425,13 @@ namespace Voidstar
 		static Renderer* renderer = new Renderer;
 		return renderer;
 	}
+
+	void Renderer::UpdateTexture(TextureHandle handle, uint8_t* data, size_t size)
+	{
+		auto image = m_Textures.at(handle);
+		image->UpdateImage(data,size);
+	}
+
 	void Renderer::UpdateBuffer(BufferHandle handle, void* data,size_t size)
 	{
 		auto buffer = m_Buffers.at(handle)[m_CurrentFrame];
@@ -1931,18 +1942,29 @@ namespace Voidstar
 
 	}
 
-	void Renderer::BindDescriptors(vk::PipelineBindPoint bindPoint, Item& item, std::vector<DescriptorLayoutKey>& keys, ProgramMeta& meta, CommandBuffer& cmd, vk::PipelineLayout layout)
+	vk::DescriptorSet Renderer::GetDescriptorSet(DescriptorLayoutKey& key, int frameIndex,int itemIndex)
 	{
-		auto vkCmd = cmd.GetCommandBuffer();
-		for (int ii = 0; ii < keys.size(); ii++)
+		if (m_DescriptorSet[key].size() < RenderContext::GetFrameAmount())
 		{
-
-			auto& k = keys.at(ii);
-			if (m_DescriptorSet.find(k) == m_DescriptorSet.end())
-			{
-				AllocateSets(RenderContext::GetFrameAmount(), k);
-			}
+			m_DescriptorSet[key].resize(RenderContext::GetFrameAmount());
 		}
+		if (m_DescriptorSet[key][frameIndex].size() <= itemIndex)
+		{
+			auto& list = m_DescriptorSet.at(key)[frameIndex];
+			auto& layout = m_DescriptorLayout.at(key);
+			Log::GetLog()->info("Descriptor set is allocated");
+			auto set =m_UniversalPool->AllocateDescriptorSets(1, &layout)[0];
+			list.push_back(set);
+			return set;
+		}
+		return m_DescriptorSet.at(key)[frameIndex][itemIndex];
+	}
+
+	void Renderer::UpdateDescriptors(vk::PipelineBindPoint bindPoint, Item& item, std::vector<DescriptorLayoutKey>& keys, ProgramMeta& meta, CommandBuffer& cmd, vk::PipelineLayout layout, int itemIndex)
+	{
+		
+		auto vkCmd = cmd.GetCommandBuffer();
+	
 
 		for (int ii = 0; ii < item.Bindings.currentResBinding; ii++)
 		{
@@ -1965,7 +1987,7 @@ namespace Voidstar
 						auto image = m_Textures.at(handle);
 						if (bind.kind == ResourceType::CombinedSampler)
 						{
-							cmd.ChangeImageLayout(image.get(), image->GetLayout(), vk::ImageLayout::eShaderReadOnlyOptimal, image->m_MipMapLevels,image->layers);
+							cmd.ChangeImageLayout(image.get(), image->GetLayout(), vk::ImageLayout::eShaderReadOnlyOptimal, image->m_MipMapLevels, image->layers);
 						}
 						else if (bind.kind == ResourceType::StorageImage)
 						{
@@ -1980,32 +2002,25 @@ namespace Voidstar
 
 					}
 
-					m_Device->UpdateDescriptorSet(m_DescriptorSet.at(k)[m_CurrentFrame], bindNumber, descirptors, bind.kind);
+					m_Device->UpdateDescriptorSet(GetDescriptorSet(k, m_CurrentFrame, itemIndex), bindNumber, descirptors, bind.kind);
 				}
 				else if (bind.kind == ResourceType::StorageBuffer)
 				{
 					for (auto handle : bind.buffers)
 					{
 						if (!handle.Valid()) break;
-						auto buffer = m_Dynamic[{ResourceType::StorageBuffer,handle.idx}] ?
+						auto buffer = m_Dynamic[{ResourceType::StorageBuffer, handle.idx}] ?
 							m_Buffers.at(handle).at(m_CurrentFrame)
 							: m_Buffers.at(handle).at(0);
 						m_Device->UpdateDescriptorSet(
-							m_DescriptorSet.at(k)[m_CurrentFrame], bindNumber, 1, *buffer, ResourceType::StorageBuffer);
+							GetDescriptorSet(k, m_CurrentFrame,itemIndex), bindNumber, 1, *buffer, ResourceType::StorageBuffer);
 					}
 				}
-				
+
 				bind.dirty = false;
 			}
 		}
-
-		for (int ii = 0; ii < keys.size(); ii++)
-		{
-			auto k = keys.at(ii);
-			auto& descSet = m_DescriptorSet.at(k);
-			vkCmd.bindDescriptorSets( bindPoint, layout, ii, descSet[m_CurrentFrame], nullptr);
-
-		}
+		
 	}
 
 
@@ -2076,6 +2091,29 @@ namespace Voidstar
 
 			UpdateUniformBuffer(view.Proj, view.View, m_App->GetExeTime());
 
+			// prepare to rendering
+			{
+				for (int ii = 0; ii < view.FreeIndex; ++ii)
+				{
+					int itemIndex = view.ItemsIndex[ii];
+					auto* item = &render->m_renderItem[itemIndex];
+					auto& renderItem = *item;
+					auto& meta = m_Compiler.m_Programs.at(renderItem.Program);
+					std::vector<DescriptorLayoutKey>& keys = meta.descriptorKey;
+
+					vk::PipelineLayout layout = m_PipelineLayout.at({keys});
+					UpdateDescriptors(vk::PipelineBindPoint::eGraphics, renderItem, keys, meta, cmd, layout, itemIndex);
+
+					if (renderItem.ObjectCount > 0)
+					{
+						// BUG: ovewrite bug 
+						auto& matrix = render->Matricies.at(renderItem.MatrixIndex);
+						memcpy(m_ObjectsBuffersMapped[m_CurrentFrame], &matrix, sizeof(glm::mat4) * renderItem.ObjectCount);
+					}
+
+				}
+			}
+
 			cmd.BeginRenderPass(renderPass.m_RenderPass, frameBuffer, renderPass.m_Extent, renderPass.m_ClearValues);
 
 			for (int ii = 0; ii < view.FreeIndex; ++ii)
@@ -2098,19 +2136,19 @@ namespace Voidstar
 				PipelineKey key = { renderItem.Program, renderItem.State, keys, fb };
 
 				vk::Pipeline pipeline = GetPipeline(key, renderItem.VertexBindings, renderItem.Bindings.currentBinding);
-				vk::PipelineLayout layout = m_PipelineLayout.at(key.layout);
-
-				BindDescriptors(vk::PipelineBindPoint::eGraphics, renderItem, keys, meta, cmd, layout);
-
-				if (renderItem.ObjectCount > 0)
-				{
-					auto& matrix = render->Matricies.at(renderItem.MatrixIndex);
-					memcpy(m_ObjectsBuffersMapped[m_CurrentFrame], &matrix, sizeof(glm::mat4) * renderItem.ObjectCount);
-				}
-
+			
+				
 				auto vkCmd = cmd.GetCommandBuffer();
+				vk::PipelineLayout layout = m_PipelineLayout.at({ keys });
 				vkCmd.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
+				{
+					for (int iii = 0; iii < keys.size(); iii++)
+					{
+						auto k = keys.at(iii);
+						vkCmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, layout, iii, GetDescriptorSet(k,m_CurrentFrame,itemIndex),nullptr);
 
+					}
+				}
 				vk::Viewport viewport;
 				viewport.x = view.Rect[0];
 				viewport.y = view.Rect[1];
@@ -2131,7 +2169,6 @@ namespace Voidstar
 
 				vkCmd.setViewport(0, 1, &viewport);
 				vkCmd.setScissor(0, 1, &scissors);
-
 				std::vector<vk::Buffer> vertexBuffers;
 				vertexBuffers.reserve(renderItem.Bindings.currentBinding);
 				std::vector<vk::DeviceSize> offsets(renderItem.Bindings.currentBinding, 0);

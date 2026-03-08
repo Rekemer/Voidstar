@@ -146,7 +146,7 @@ namespace Voidstar
 		void Init(size_t screenWidth, size_t screenHeight, std::shared_ptr<Window> window, Application* app);
 		static Renderer* Instance();
 		
-		
+		void UpdateTexture(TextureHandle handle, uint8_t* data, size_t size);
 		void RenderFrame(Frame* render, float deltaTime);
 		void CompileShader(std::string_view shader);
 		void LinkShaders(ProgramHandle handle, uint8_t shaderAmount);
@@ -239,7 +239,8 @@ namespace Voidstar
 
 		DescriptorLayoutKey SystemDescriptorLayoutKey;
 	private:
-		void BindDescriptors(vk::PipelineBindPoint bindPoint, Item& item, std::vector<DescriptorLayoutKey>& keys, ProgramMeta& meta, CommandBuffer& cmd, vk::PipelineLayout layout);
+		vk::DescriptorSet GetDescriptorSet(DescriptorLayoutKey& key, int frameIndex, int itemIndex);
+		void UpdateDescriptors(vk::PipelineBindPoint bindPoint, Item& item, std::vector<DescriptorLayoutKey>& keys, ProgramMeta& meta, CommandBuffer& cmd, vk::PipelineLayout layout,int itemIndex);
 		vk::Pipeline GetComputePipeline(PipelineKey& key);
 		vk::Pipeline GetPipeline(const PipelineKey& key, std::array<VertexBinding, Item::MAX_VERTEX_BINDING>& bindings,
 			int bindingAmount);
@@ -269,7 +270,7 @@ namespace Voidstar
 		Map<PipelineLayoutKey, vk::PipelineLayout, PipelineLayoutKeyHash> m_PipelineLayout;
 		Map<PipelineKey, vk::Pipeline, PipelineKeyHash> m_Pipelines;
 
-		Map<DescriptorLayoutKey, std::vector<vk::DescriptorSet>, DescriptorLayoutKeyHash> m_DescriptorSet;
+		Map<DescriptorLayoutKey, std::vector<std::vector<vk::DescriptorSet>>, DescriptorLayoutKeyHash> m_DescriptorSet;
 
 		std::vector<TextureHandle> m_ColorSwapchainHandles;
 		

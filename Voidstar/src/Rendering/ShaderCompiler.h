@@ -186,8 +186,9 @@ namespace Voidstar
 	};
 
 	struct DescriptorLayoutKeyHash {
-		size_t operator()(const DescriptorLayoutKey& k) const noexcept {
+		size_t operator()(const DescriptorLayoutKey& p) const noexcept {
 			size_t h = 0;
+			auto k = p;
 			util::hash_combine(h, k.set);
 			for (auto const& b : k.bindings) {
 				util::hash_combine(h, BindingDescHash{}(b));

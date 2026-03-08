@@ -483,6 +483,7 @@ namespace Voidstar
 
 	TextureHandle CreateEmptyTexture(int width, int height, TextureFormat format, ResourceUsage usage,int mipLevels = 1, SampleCount e = SampleCount::e1,FilterMode min = FilterMode::Nearest, FilterMode mag = FilterMode::Nearest,int layers = 1, bool cube = false);
 
+	void UpdateTexture(TextureHandle handle, uint8_t* data, size_t size);
 	// read vulkan buffer on cpu
 	size_t ReadTexture(TextureHandle handle, void* data);
 

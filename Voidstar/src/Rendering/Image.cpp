@@ -162,6 +162,32 @@ namespace Voidstar
 		return image;
 	}
 
+	void Image::UpdateImage(uint8_t* data, size_t size)
+	{
+		assert(size == m_Size);
+		auto device = RenderContext::GetDevice();
+
+		auto buffer = Buffer::CreateStagingBuffer(size);
+
+		void* writeLocation = device->GetDevice().mapMemory(buffer->GetMemory(), 0, size);
+		memcpy(writeLocation, data, size);
+		device->GetDevice().unmapMemory(buffer->GetMemory());
+
+		auto commandBuffer = CommandBuffer::CreateBuffer(m_CommandPool, vk::CommandBufferLevel::ePrimary);
+
+		commandBuffer.BeginTransfering();
+
+		commandBuffer.ChangeImageLayout(this, m_ImageLayout, vk::ImageLayout::eTransferDstOptimal, 1, layers);
+
+		commandBuffer.CopyBufferToImage(*buffer.get(), m_Image, m_Width, m_Height, 0);
+
+		commandBuffer.EndTransfering();
+		commandBuffer.SubmitSingle();
+
+		commandBuffer.Free();
+
+
+	}
 
 	void Image::InitVulkanImageFromRGBA8(
 		Image& image,

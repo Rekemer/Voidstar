@@ -55,6 +55,7 @@ namespace Voidstar
 			{
 				image->m_Sampler = Image::CreateSampler(vk::Filter::eLinear, vk::Filter::eLinear);
 			}
+			image->m_CommandPool = Renderer::Instance()->GetCommandPoolManager()->GetFreePool();
 			image->SetFormat(specs.format);
 			image->SetSample(msaa.Samples);
 			image->SetView(msaaImageView);

@@ -124,6 +124,7 @@ namespace Voidstar
 
 		// create image
 		static SPtr<Image> CreateImageFrom(Memory& mem, int w, int h);
+		void UpdateImage(uint8_t* data, size_t size);
 		static VkImageView CreateImageView(vk::Image& image, vk::Format format, vk::ImageAspectFlags aspect, vk::ImageViewType viewType =  vk::ImageViewType::e2D, int mipmap = 1, int layers = 1);
 		static vk::Sampler CreateSampler(vk::Filter min, vk::Filter mag);
 		static vk::Image CreateVKImage(ImageSpecs& specs, vk::SampleCountFlagBits samples = vk::SampleCountFlagBits::e1, int mipmap = 1);

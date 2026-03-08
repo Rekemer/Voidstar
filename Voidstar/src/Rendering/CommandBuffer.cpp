@@ -293,6 +293,22 @@ namespace Voidstar
 			barrier.dstAccessMask = vk::AccessFlagBits::eTransferRead;
 			destinationStage = vk::PipelineStageFlagBits::eTransfer;
 		}
+		else if (oldLayout == vk::ImageLayout::eColorAttachmentOptimal && newLayout == vk::ImageLayout::eTransferDstOptimal)
+		{
+			barrier.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
+			sourceStage = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+
+			barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+			destinationStage = vk::PipelineStageFlagBits::eTransfer;
+		}
+		else if (oldLayout == vk::ImageLayout::eTransferDstOptimal && newLayout == vk::ImageLayout::eColorAttachmentOptimal)
+		{
+			barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+			sourceStage = vk::PipelineStageFlagBits::eTransfer;
+
+			barrier.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
+			destinationStage = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+		}
 		else if (oldLayout == vk::ImageLayout::eTransferSrcOptimal && newLayout == vk::ImageLayout::eColorAttachmentOptimal)
 		{
 			barrier.srcAccessMask = vk::AccessFlagBits::eTransferRead;
@@ -354,6 +370,30 @@ namespace Voidstar
 			barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
 			destinationStage = vk::PipelineStageFlagBits::eFragmentShader;
 		}
+		else if (oldLayout == vk::ImageLayout::eTransferSrcOptimal &&
+			newLayout == vk::ImageLayout::eTransferDstOptimal)
+			{
+				barrier.srcAccessMask =
+					vk::AccessFlagBits::eTransferRead;
+
+				sourceStage =
+					vk::PipelineStageFlagBits::eTransfer;
+
+				barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+				destinationStage = vk::PipelineStageFlagBits::eTransfer;
+			}
+		else if (oldLayout == vk::ImageLayout::eTransferDstOptimal &&
+			newLayout == vk::ImageLayout::eTransferSrcOptimal)
+			{
+				barrier.srcAccessMask =
+					vk::AccessFlagBits::eTransferWrite;
+
+				sourceStage =
+					vk::PipelineStageFlagBits::eTransfer;
+
+				barrier.dstAccessMask = vk::AccessFlagBits::eTransferRead;
+				destinationStage = vk::PipelineStageFlagBits::eTransfer;
+				}
 		else if (oldLayout == vk::ImageLayout::eShaderReadOnlyOptimal &&
 			newLayout == vk::ImageLayout::eTransferDstOptimal)
 		{

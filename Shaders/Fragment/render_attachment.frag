@@ -6,12 +6,12 @@ layout(set=0,binding = 0) uniform UniformBufferObject {
 } ubo;
 
 
-layout(set = 1, binding = 0) uniform sampler2D u_Scene;
+layout(set = 1, binding = 0) uniform sampler2D u_Scene1;
 layout(location = 0) in vec2 uv;
 layout(location = 0) out vec4 outColor;
 void main ()
 {
-     vec4 tex = texture(u_Scene,uv) ;
+     vec4 tex = texture(u_Scene1,uv) ;
      outColor = vec4(uv,0,1);
      outColor = vec4(tex.xyz,1);
 }
