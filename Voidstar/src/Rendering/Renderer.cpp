@@ -2157,6 +2157,26 @@ namespace Voidstar
 				viewport.minDepth = 0.0f;
 				viewport.maxDepth = 1.0f;
 
+				struct PushData
+				{
+					glm::vec4 rect;
+					glm::vec2 view;
+				};
+				if (renderItem.renderMode == RenderMode::SCREEN)
+				{
+					PushData data;
+					data.rect = renderItem.ClipRect;
+					data.view = { viewport.width ,viewport.height };
+
+					vkCmd.pushConstants(
+						layout,
+						vk::ShaderStageFlagBits::eVertex,
+						0,
+						sizeof(PushData),
+						&data
+					);
+				}
+
 				vk::Rect2D scissors;
 				scissors.offset = vk::Offset2D{
 					static_cast<int32_t>(view.Rect[0]),
@@ -2303,14 +2323,23 @@ namespace Voidstar
 	}
 
 
-	void Renderer::CreatePipelineLayout(PipelineLayoutKey& key)
+	void Renderer::CreatePipelineLayout(PipelineLayoutKey& key, std::vector<PushConstRange>& pushConstants)
 	{
 		std::vector<vk::DescriptorSetLayout> layouts;
+		std::vector<vk::PushConstantRange> ranges;
 		for (auto k : key.layoutKeys)
 		{
 			layouts.push_back(m_DescriptorLayout.at(k));
 		}
-		m_PipelineLayout[key] = MakePipelineLayout(RenderContext::GetDevice()->GetDevice(), layouts);
+		for (auto r : pushConstants)
+		{
+			vk::PushConstantRange range;
+			range.offset = r.offset;
+			range.size = r.size;
+			range.stageFlags = map(r.stage);
+			ranges.push_back(range);
+		}
+		m_PipelineLayout[key] = MakePipelineLayout(RenderContext::GetDevice()->GetDevice(), layouts, ranges);
 	}
 
 	vk::DescriptorSetLayout Renderer::CreateDescriptorLayout(const DescriptorLayoutKey& key)

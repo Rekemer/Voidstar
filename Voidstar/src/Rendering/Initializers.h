@@ -144,14 +144,15 @@ namespace Voidstar
 		return { VertexBindingDescription(0, sizeof(Voidstar::Vertex_), vk::VertexInputRate::eVertex) };
 	}
 
-	inline vk::PipelineLayout MakePipelineLayout(vk::Device device, std::vector<vk::DescriptorSetLayout>& layout) {
+	inline vk::PipelineLayout MakePipelineLayout(vk::Device device, std::vector<vk::DescriptorSetLayout>& layout, std::vector<vk::PushConstantRange> pushRanges ={}) {
 
 		vk::PipelineLayoutCreateInfo layoutInfo;
 		layoutInfo.flags = vk::PipelineLayoutCreateFlags();
 		layoutInfo.setLayoutCount = layout.size();
 		layoutInfo.pSetLayouts = layout.data();
 
-		layoutInfo.pushConstantRangeCount = 0;
+		layoutInfo.pushConstantRangeCount = static_cast<uint32_t>(pushRanges.size());
+		layoutInfo.pPushConstantRanges = pushRanges.data();
 		try
 		{
 			return device.createPipelineLayout(layoutInfo);

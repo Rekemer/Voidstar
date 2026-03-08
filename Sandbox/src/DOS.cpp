@@ -208,15 +208,21 @@ void DOS::Update(float deltaTime)
 	std::cout << pixelX << " " << pixelY << "\n";
 	std::cout << hit << std::endl;
 
-
-	AddSplat(pixelX,pixelY,2);
+	if (hit && Input::IsMousePressed(0))
+	{
+		AddSplat(pixelX, pixelY,300);
+	}
 
 	auto texture = GetColorTexture(m_SurfaceMask);
 	
-	ReadTexture(texture, maskData.data());
-
 	UpdateTexture(texture, maskData.data(), sizeof(maskData[0])*maskData.size());
-
+	
+	int screenWidth = Application::GetScreenWidth();
+	int screenHeight = Application::GetScreenHeight();
+	int width = 500;
+	int height = 400;
+	SetClipRect(screenWidth - width, screenHeight - height, width, height);
+	SetRenderMode(RenderMode::SCREEN);
 
 	BindAttachmentAsTexture("u_Scene1", texture);
 

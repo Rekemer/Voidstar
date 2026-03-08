@@ -383,7 +383,8 @@ namespace Voidstar
 		RenderState State;
 		ResourceBindings Bindings;
 		glm::vec3 GroupCount;
-
+		glm::vec4 ClipRect; // x y w h
+		RenderMode renderMode = RenderMode::WORLD;
 		size_t MatrixIndex = 0;
 		size_t ObjectCount = 1;
 	};
@@ -513,6 +514,8 @@ namespace Voidstar
 	void SubmitInit(InitParams);
 
 	void SetTransform(const glm::mat4& world);
+	void SetClipRect(int x,int y,int w, int h);
+	void SetRenderMode(RenderMode mode);
 	void SetViewTransform(PassID id, glm::mat4& view, glm::mat4& proj);
 	void SetViewRect(PassID id , size_t x, size_t y, size_t width, size_t height);
 	void SetFramebuffer(PassID id, FrameBufferHandle handle);

@@ -16,6 +16,12 @@ namespace Voidstar
 		VERTEX,
 		INSTANCE
 	};
+
+	enum class RenderMode
+	{ 
+		WORLD,
+		SCREEN
+	};
 	struct VertexLayout
 	{
 		struct VertexLayoutElement

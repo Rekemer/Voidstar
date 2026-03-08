@@ -645,6 +645,16 @@ namespace Voidstar
 		auto item = g_Submission->Submit->CurrentRenderItem;
 		item->IndexBuffer = handle;
 	};
+	void SetRenderMode(RenderMode mode)
+	{
+		auto item = g_Submission->Submit->CurrentRenderItem;
+		item->renderMode = mode;
+	}
+	void SetClipRect(int x, int y, int w, int h)
+	{
+		auto item = g_Submission->Submit->CurrentRenderItem;
+		item->ClipRect = glm::vec4{x,y,w,h};
+	}
 	void SetTransform(const glm::mat4& world)
 	{
 		g_Submission->Submit->Matricies[g_Submission->Submit->CurrentFreeMatrix++] = world;

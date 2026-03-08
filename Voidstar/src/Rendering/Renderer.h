@@ -170,7 +170,8 @@ namespace Voidstar
 		void CreateVertexBuffer(Memory& mem, VertexBufferHandle vertHandle,
 			ResourceUsage hint = ResourceUsage::Vertex);
 		void CreateIndexBuffer(Memory& mem, IndexBufferHandle indexHandle);
-		void CreatePipelineLayout(PipelineLayoutKey& key);
+		void CreatePipelineLayout(PipelineLayoutKey& key,
+			std::vector<PushConstRange>& pushConstants);
 		vk::DescriptorSetLayout CreateDescriptorLayout(const DescriptorLayoutKey& key);
 		void CopyImageToBuffer(SPtr<Image> image, SPtr<Buffer> buffer);
 		TextureHandle GetFBTextureHandle(FrameBufferHandle fb);
