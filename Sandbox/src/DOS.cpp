@@ -3,7 +3,6 @@
 
 struct Particle
 {
-	glm::vec4 pos = {0,0,0,0};
 	glm::vec4 lifetime;
 };
 VertexBufferHandle m_VertexHandle;
@@ -31,11 +30,12 @@ Particle* m_MappedPtr;
 glm::mat4 world;
 PassID GrondPass = 0;
 PassID Flipbook = 1;
-#define FLIPBOOK 0
+#define FLIPBOOK 1
+#define GROUND 0
 
 std::vector<uint8_t> maskData;
 std::vector<uint8_t> blurredMaskData;
-
+std::vector<glm::mat4> fireWorlds;
 
 float planeHalfSize = 5;
 float planeSize = 10;
@@ -200,7 +200,28 @@ DOS::DOS(std::string appName, size_t screenWidth, size_t screenHeight) : Voidsta
 
 #if FLIPBOOK
 	m_DefaultShader = LoadProgram("flipbook.vert", "flipbook.frag");
-	m_FramePerParticle = { {{ 0,0,0,0 },{0,1000,0,0} } };
+	int count = 10;
+	for (int i = 0; i < count; ++i)
+	{
+		// 1. Calculate the angle in radians
+		// 2 * PI / count gives the step for each item
+		float angle = (2.0f * glm::pi<float>() * i) / (float)count;
+
+		// 2. Calculate X and Z positions (assuming Y is up)
+		float x = std::cos(angle) * 4;
+		float z = std::sin(angle) * 4;
+		float y = 0.0f; // Keep it on the ground plane
+
+		// 3. Create the translation matrix
+		glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(x, y, z));
+
+		
+
+		fireWorlds.push_back(model);
+	}
+
+	
+	m_FramePerParticle = { { {0,1000,0,0} } };
 
 	m_ParticleHandle = CreateBuffer(Memory{ reinterpret_cast<uint8_t*>(m_FramePerParticle.data()), m_FramePerParticle.size() * sizeof(m_FramePerParticle[0]) },ResourceUsage::StorageRead | ResourceUsage::StorageWrite | ResourceUsage::Readback);
 #endif
@@ -232,6 +253,9 @@ DOS::DOS(std::string appName, size_t screenWidth, size_t screenHeight) : Voidsta
 	world = glm::mat4(1);
 	world = glm::rotate(world, glm::radians(90.f), glm::vec3(1, 0, 0));
 	world = glm::scale(world, glm::vec3(10.0f));
+
+	
+
 }
 
 auto frame = 0;
@@ -365,7 +389,7 @@ void DOS::Update(float deltaTime)
 	auto texture = GetColorTexture(m_SurfaceMask);
 	UpdateTexture(texture, maskData.data(), sizeof(maskData[0])*maskData.size());
 
-
+#if GROUND
 	SetViewRect(GrondPass, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
 	SetViewTransform(GrondPass, GetCamera()->GetView(), GetCamera()->GetProj());
 	
@@ -388,24 +412,28 @@ void DOS::Update(float deltaTime)
 	BindAttachmentAsTexture("u_Scene", texture);
 	BindTexture("u_Noise", NoiseTexture);
 	Submit(GrondPass, m_DebugShader, 1);
-
+#endif
 
 #if FLIPBOOK
-	SetViewRect(0, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
-	SetViewTransform(0, GetCamera()->GetView(), GetCamera()->GetProj());
+	SetViewRect(GrondPass, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
+	SetViewTransform(GrondPass, GetCamera()->GetView(), GetCamera()->GetProj());
 	m_MappedPtr = static_cast<Particle*>(ReadMappedPtr(ResourceType::StorageBuffer, m_ParticleHandle.idx));
 
 	age += deltaTime;
 	m_MappedPtr->lifetime.x = age*1000;
 	//(m_MappedPtr+1)->lifetime.x = age*1000;
-	
+
+	for (auto& mat : fireWorlds)
+	{
+		SetTransform(mat);
+	}
 	BindVertexBuffer(0, m_VertexHandle);
 	BindIndexBuffer(m_IndexHandle);
 	
-	BindTexture("u_Texture", m_FireTexture);
 	BindBuffer("particles", m_ParticleHandle);
+	BindTexture("u_Texture", m_FireTexture);
 	
-	Submit(0, m_DefaultShader, 1);
+	Submit(GrondPass, m_DefaultShader, fireWorlds.size());
 	frame++;
 	frame = frame % 255;
 #endif

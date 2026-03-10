@@ -387,6 +387,7 @@ namespace Voidstar
 		RenderMode renderMode = RenderMode::WORLD;
 		size_t MatrixIndex = 0;
 		size_t ObjectCount = 1;
+		size_t internalOffset = 0;
 	};
 	struct View
 	{
