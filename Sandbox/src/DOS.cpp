@@ -58,28 +58,56 @@ float RandomRange(float min, float max) {
 	return dist(gen);
 }
 
-
-void AddSplat(int cx, int cy, float radius)
+void AddInverseSplat(int cx, int cy, float radius)
 {
+	float rSq = radius * radius;
 	for (int y = cy - radius; y <= cy + radius; ++y)
 	{
 		for (int x = cx - radius; x <= cx + radius; ++x)
 		{
-			if (x < 0 || x >= gridW || y < 0 || y >= gridH)
-				continue;
+			float distSq = (x - cx) * (x - cx) + (y - cy) * (y - cy);
+			if (distSq < rSq)
+			{
+				// The Metaball formula: intensity drops off exponentially
+				float intensity = (rSq - distSq) / rSq;
 
-			float dist = glm::distance(glm::vec2(x, y), glm::vec2(cx, cy));
-
-			float edgeNoise = RandomRange(-6.0f, 6.0f);
-			float influence = glm::clamp(1.0 - dist / radius, 0.0, 1.0);
-			int cell = y * gridW + x;
-			maskData[cell] = glm::max(float(maskData[cell]), influence);
-			if (dist < radius + edgeNoise)
-				maskData[y * gridW + x] = 255;
-
-			//maskData[y * 1024 + x] = 255;
+				int idx = y * gridW + x;
+				float current = float(maskData[idx]) / 255.0f;
+				// Additive blending: this allows blobs to "merge" when they touch
+				maskData[idx] = uint8_t(glm::clamp(current + intensity, 0.0f, 1.0f) * 255.0f);
+			}
 		}
 	}
+}
+void AddSplat(int cx, int cy, float radius)
+{
+	auto& grid = maskData;
+	for (int y = std::max(0, int(cy - radius - 2)); y <= std::min(gridH - 1, int(cy + radius + 2)); ++y)
+	{
+		for (int x = std::max(0, int(cx - radius - 2)); x <= std::min(gridW - 1, int(cx + radius + 2)); ++x)
+		{
+			float dx = float(x) - float(cx);
+			float dy = float(y) - float(cy);
+			float dist = std::sqrt(dx * dx + dy * dy);
+
+			// solid interior
+			if (dist < radius - 0.2f)
+			{
+				grid[y * gridW + x] = 255;
+				continue;
+			}
+
+			// outside
+			if (dist > radius + 2.0f)
+				continue;
+
+			// only edge gets noise
+			float jitter = RandomRange(-2.0f, 2.0f);
+			if (dist < radius + jitter)
+				grid[y * gridW + x] = 255;
+		}
+	}
+}
 
 	/*for (int y = std::max(0, int(cy - radius)); y <= std::min(gridH - 1, int(cy + radius)); ++y)
 	{
@@ -98,7 +126,7 @@ void AddSplat(int cx, int cy, float radius)
 			maskData[idx] = std::max(maskData[idx], uint8_t(value * 255.0f));
 		}
 	}*/
-}
+
 void DilateMask(const std::vector<uint8_t>& src, std::vector<uint8_t>& dst, int width, int height)
 {
 	for (int y = 0; y < height; ++y)
@@ -164,7 +192,7 @@ DOS::DOS(std::string appName, size_t screenWidth, size_t screenHeight) : Voidsta
 #if FLIPBOOK 
 	m_FireTexture = LoadTexture("fire/fire1_64.png");
 #endif
-	m_StoneTexture = LoadTexture("Cobblestone.png");
+	m_StoneTexture = LoadTexture("Morgana.png");
 	NoiseTexture = LoadTexture("dos_2_noise.png");
 
 	GetCamera()->SetPosition({ 17,-14,17 });
@@ -280,14 +308,26 @@ void DOS::Update(float deltaTime)
 	//std::cout << pixelX << " " << pixelY << "\n";
 	//std::cout << hit << std::endl;
 
-	//if (hit && Input::IsMouseClicked(VS_MOUSE_LEFT))
 	if (hit && Input::IsMousePressed(VS_MOUSE_LEFT))
+	//if (hit && Input::IsMouseClicked(VS_MOUSE_LEFT))
 	{
-		float radius = 10;
-		float jitteredRadius = radius * RandomRange(0.25f, 1.15f);
-		int jitterX = pixelX + RandomRangeInt(-2, 2);
-		int jitterY = pixelY + RandomRangeInt(-2, 2);
-		AddSplat(jitterX, jitterY, jitteredRadius);
+		int numSplats =1; // Number of "fire particles" in one click
+		float baseRadius = 5.0f;
+
+		for (int i = 0; i < numSplats; ++i)
+		{
+			// Give each splat a slightly different center and size
+			float jitteredRadius = baseRadius * RandomRange(0.5f, 1.2f);
+			int jitterX = pixelX + RandomRangeInt(-8, 8);
+			int jitterY = pixelY + RandomRangeInt(-8, 8);
+
+			AddSplat(pixelX, pixelY, jitteredRadius);
+		}
+		//float radius = 10;
+		//float jitteredRadius = radius * RandomRange(0.25f, 1.15f);
+		//int jitterX = pixelX + RandomRangeInt(-2, 2);
+		//int jitterY = pixelY + RandomRangeInt(-2, 2);
+		//AddSplat(jitterX, jitterY, jitteredRadius);
 	}
 
 	auto texture = GetColorTexture(m_SurfaceMask);

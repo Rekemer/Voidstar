@@ -21,7 +21,7 @@ layout(set = 1, binding = 2) uniform sampler2D u_Noise;
 
 float sampleFieldBilinear(vec2 uv)
 {
-    vec2 texSize = vec2(1024/2);
+    vec2 texSize = textureSize(u_Grid,0).xy;
     // uv in [0,1]
     vec2 texelPos = uv * texSize - vec2(0.5);
     vec2 base = floor(texelPos);
@@ -44,29 +44,18 @@ float sampleFieldBilinear(vec2 uv)
 
 void main() 
 {
+    vec2 noiseVec = texture(u_Noise, fract(out_uv * 5.0)).rg * 2.0 - 1.0;
+    vec2 distortedUV = out_uv + noiseVec * 0.008;
 
-  
-    vec4 tex = texture(u_Texture,vec2(fract(out_uv * 5)));
-    vec4 grid = texture(u_Grid,vec2(out_uv));
-    vec4 noise = texture(u_Noise,vec2(fract(out_uv * 5)));
+    float field = sampleFieldBilinear(distortedUV);
+    float baseCoverage = smoothstep(0.2, 0.6, field);
 
-    vec2 distortion = vec2(noise.x - 0.5) * 0.05; 
-    vec2 distortedUV = out_uv + distortion;
+    float noiseVal = texture(u_Noise, fract(out_uv * 3.0)).r;
+    float edgeBand = 1.0 - abs(baseCoverage * 2.0 - 1.0);
 
-    float field = sampleFieldBilinear(out_uv);
- 
+    float shapedField = field + (noiseVal - 0.5) * 0.06 * edgeBand;
+    float coverage = smoothstep(0.2, 0.4, shapedField);
 
-    // shape it into a cleaner blob
-    //float coverage = smoothstep(0.2, 0.6, noise.x*field);
-    float coverage = step(0.3, noise.x*field);
-    vec3 surfaceColor = vec3(1.0, 1.0, 1.0);
-    vec3 finalColor = mix(vec3(0,0,0),surfaceColor, coverage);
-   //if (out_uv.x < 0.5)
-   //color = vec4(vec3(field), 1.0);
-   //else
-    color = vec4(finalColor, 1.0);
-    //color.xyz = mix(vec3(0,0,0),surfaceColor, noise.xyz);
-    //color.xyz = coverage * noise.xyz; 
-    color.a = 1;
+    color = vec4(vec3(coverage), 1.0);
 
 }
