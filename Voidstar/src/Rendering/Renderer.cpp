@@ -1948,16 +1948,33 @@ namespace Voidstar
 		{
 			m_DescriptorSet[key].resize(RenderContext::GetFrameAmount());
 		}
-		if (m_DescriptorSet[key][frameIndex].size() <= itemIndex)
-		{
-			auto& list = m_DescriptorSet.at(key)[frameIndex];
+
+		auto& list = m_DescriptorSet[key][frameIndex];
+
+		if (list.size() <= itemIndex) {
+			size_t oldSize = list.size();
+			size_t newSize = itemIndex + 1;
+			list.resize(newSize);
 			auto& layout = m_DescriptorLayout.at(key);
+			for (size_t i = oldSize; i < newSize; ++i) {
+				list[i] = m_UniversalPool->AllocateDescriptorSets(1, &layout)[0];
+			}
 			Log::GetLog()->info("Descriptor set is allocated");
-			auto set =m_UniversalPool->AllocateDescriptorSets(1, &layout)[0];
-			list.push_back(set);
-			return set;
 		}
-		return m_DescriptorSet.at(key)[frameIndex][itemIndex];
+
+		
+		return list[itemIndex];
+
+		//if (m_DescriptorSet[key][frameIndex].size() < itemIndex)
+		//{
+		//	auto& list = m_DescriptorSet.at(key)[frameIndex];
+		//	auto& layout = m_DescriptorLayout.at(key);
+		//	Log::GetLog()->info("Descriptor set is allocated");
+		//	auto set =m_UniversalPool->AllocateDescriptorSets(1, &layout)[0];
+		//	list.push_back(set);
+		//	return set;
+		//}
+		//return m_DescriptorSet.at(key)[frameIndex][itemIndex];
 	}
 
 	void Renderer::UpdateDescriptors(vk::PipelineBindPoint bindPoint, Item& item, std::vector<DescriptorLayoutKey>& keys, ProgramMeta& meta, CommandBuffer& cmd, vk::PipelineLayout layout, int itemIndex)
@@ -2002,7 +2019,8 @@ namespace Voidstar
 
 					}
 
-					m_Device->UpdateDescriptorSet(GetDescriptorSet(k, m_CurrentFrame, itemIndex), bindNumber, descirptors, bind.kind);
+					auto set = GetDescriptorSet(k, m_CurrentFrame, itemIndex);
+					m_Device->UpdateDescriptorSet(set, bindNumber, descirptors, bind.kind);
 				}
 				else if (bind.kind == ResourceType::StorageBuffer)
 				{
@@ -2091,6 +2109,8 @@ namespace Voidstar
 
 			UpdateUniformBuffer(view.Proj, view.View, m_App->GetExeTime());
 
+
+
 			// prepare to rendering
 			{
 				for (int ii = 0; ii < view.FreeIndex; ++ii)
@@ -2102,6 +2122,8 @@ namespace Voidstar
 					std::vector<DescriptorLayoutKey>& keys = meta.descriptorKey;
 
 					vk::PipelineLayout layout = m_PipelineLayout.at({keys});
+					auto set = GetDescriptorSet(SystemDescriptorLayoutKey, m_CurrentFrame, itemIndex);
+					m_Device->UpdateDescriptorSet(set, 0,  1, *m_UniformBuffers[m_CurrentFrame], ResourceType::UniformBuffer);
 					UpdateDescriptors(vk::PipelineBindPoint::eGraphics, renderItem, keys, meta, cmd, layout, itemIndex);
 
 					if (renderItem.ObjectCount > 0)
@@ -2135,7 +2157,7 @@ namespace Voidstar
 
 				PipelineKey key = { renderItem.Program, renderItem.State, keys, fb };
 
-				vk::Pipeline pipeline = GetPipeline(key, renderItem.VertexBindings, renderItem.Bindings.currentBinding);
+				vk::Pipeline pipeline = GetPipeline(key, renderItem.VertexBindings, renderItem.Bindings.vertexCurrentBinding);
 			
 				
 				auto vkCmd = cmd.GetCommandBuffer();
@@ -2145,7 +2167,8 @@ namespace Voidstar
 					for (int iii = 0; iii < keys.size(); iii++)
 					{
 						auto k = keys.at(iii);
-						vkCmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, layout, iii, GetDescriptorSet(k,m_CurrentFrame,itemIndex),nullptr);
+						auto set = GetDescriptorSet(k, m_CurrentFrame, itemIndex);
+						vkCmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, layout, iii, set,nullptr);
 
 					}
 				}
@@ -2190,10 +2213,10 @@ namespace Voidstar
 				vkCmd.setViewport(0, 1, &viewport);
 				vkCmd.setScissor(0, 1, &scissors);
 				std::vector<vk::Buffer> vertexBuffers;
-				vertexBuffers.reserve(renderItem.Bindings.currentBinding);
-				std::vector<vk::DeviceSize> offsets(renderItem.Bindings.currentBinding, 0);
+				vertexBuffers.reserve(renderItem.Bindings.vertexCurrentBinding);
+				std::vector<vk::DeviceSize> offsets(renderItem.Bindings.vertexCurrentBinding, 0);
 
-				for (int iii = 0; iii < renderItem.Bindings.currentBinding; ++iii)
+				for (int iii = 0; iii < renderItem.Bindings.vertexCurrentBinding; ++iii)
 				{
 					auto handle = renderItem.VertexBindings.at(iii).VertexHandle;
 					vk::Buffer buffer =

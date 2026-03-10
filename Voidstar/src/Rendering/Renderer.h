@@ -271,7 +271,10 @@ namespace Voidstar
 		Map<PipelineLayoutKey, vk::PipelineLayout, PipelineLayoutKeyHash> m_PipelineLayout;
 		Map<PipelineKey, vk::Pipeline, PipelineKeyHash> m_Pipelines;
 
-		Map<DescriptorLayoutKey, std::vector<std::vector<vk::DescriptorSet>>, DescriptorLayoutKeyHash> m_DescriptorSet;
+		Map<DescriptorLayoutKey, 
+			std::vector<
+			std::vector<vk::DescriptorSet>>,
+			DescriptorLayoutKeyHash> m_DescriptorSet;
 
 		std::vector<TextureHandle> m_ColorSwapchainHandles;
 		

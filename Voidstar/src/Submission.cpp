@@ -665,7 +665,7 @@ namespace Voidstar
 		item->VertexBindings[location].Mode = mode;
 		item->VertexBindings[location].VertexHandle = handle;
 		item->VertexBindings[location].LayoutHandle = g_Submission->VertexLayoutMap.at(handle);
-		item->Bindings.currentBinding++;
+		item->Bindings.vertexCurrentBinding++;
 	};
 
 

@@ -1,4 +1,5 @@
 #include "DOS.h"
+#include <random>
 
 struct Particle
 {
@@ -17,6 +18,7 @@ std::vector<IndexType> m_Indicies;
 VertexLayout m_VertexLayout;
 VertexLayout m_InstanceLayout;
 TextureHandle m_MorganaTex;
+TextureHandle NoiseTexture;
 BufferHandle m_ParticleHandle;
 TextureHandle m_FireTexture;
 TextureHandle m_StoneTexture;
@@ -32,29 +34,99 @@ PassID Flipbook = 1;
 #define FLIPBOOK 0
 
 std::vector<uint8_t> maskData;
+std::vector<uint8_t> blurredMaskData;
+
+
 float planeHalfSize = 5;
 float planeSize = 10;
 float maskRes = 1024.f;
-float r = 10;
-void AddSplat(int pixelX,int pixelY, float radius) {
-	
-	// 2. Iterate pixels in a bounding box around the hit
-	for (int y = pixelY - r; y < pixelY + r; ++y) {
-		for (int x = pixelX - r; x < pixelX + r; ++x) {
-			float dist = glm::distance(glm::vec2(x, y), glm::vec2(pixelX, pixelY));
-			if (dist < radius) {
-				maskData[y * maskRes + x] = 255; 
+
+
+void BlurMask(const std::vector<uint8_t>& src, std::vector<uint8_t>& dst, int width, int height)
+{
+	for (int y = 0; y < height; ++y)
+	{
+		for (int x = 0; x < width; ++x)
+		{
+			int sum = 0;
+			int count = 0;
+
+			for (int oy = -1; oy <= 1; ++oy)
+			{
+				for (int ox = -1; ox <= 1; ++ox)
+				{
+					int sx = x + ox;
+					int sy = y + oy;
+
+					if (sx < 0 || sx >= width || sy < 0 || sy >= height)
+						continue;
+
+					sum += src[sy * width + sx];
+					count++;
+				}
 			}
+
+			dst[y * width + x] = static_cast<uint8_t>(sum / count);
 		}
 	}
-	
 }
 
+void AddSplat(int pixelX, int pixelY, float radius)
+{
+	int minX = std::max(0, int(pixelX - radius));
+	int maxX = std::min(int(maskRes) - 1, int(pixelX + radius));
+	int minY = std::max(0, int(pixelY - radius));
+	int maxY = std::min(int(maskRes) - 1, int(pixelY + radius));
+
+	for (int y = minY; y <= maxY; ++y)
+	{
+		for (int x = minX; x <= maxX; ++x)
+		{
+			float dist = glm::distance(glm::vec2(x, y), glm::vec2(pixelX, pixelY));
+			if (dist > radius) continue;
+
+			float t = 1.0f - dist / radius;   // 1 at center, 0 at edge
+			float falloff = t * t;            // softer brush
+
+			int idx = y * int(maskRes) + x;
+			uint8_t value = static_cast<uint8_t>(255.0f * falloff);
+
+			maskData[idx] = std::max(maskData[idx], value);
+			//maskData[idx] = 255;
+		}
+	}
+}
+void DilateMask(const std::vector<uint8_t>& src, std::vector<uint8_t>& dst, int width, int height)
+{
+	for (int y = 0; y < height; ++y)
+	{
+		for (int x = 0; x < width; ++x)
+		{
+			uint8_t m = 0;
+
+			for (int oy = -1; oy <= 1; ++oy)
+			{
+				for (int ox = -1; ox <= 1; ++ox)
+				{
+					int sx = x + ox;
+					int sy = y + oy;
+
+					if (sx < 0 || sx >= width || sy < 0 || sy >= height)
+						continue;
+
+					m = std::max(m, src[sy * width + sx]);
+				}
+			}
+
+			dst[y * width + x] = m;
+		}
+	}
+}
 
 DOS::DOS(std::string appName, size_t screenWidth, size_t screenHeight) : Voidstar::Application(appName, screenWidth, screenHeight)
 {
 
-	m_GroundShader = LoadProgram("basic.vert", "texture.frag");
+	m_GroundShader = LoadProgram("ground_splat.vert", "ground_splat.frag");
 	m_DebugShader = LoadProgram("screen.vert", "render_attachment.frag");
 	m_VertexLayout.AddVertex(ShaderDataType::FLOAT3, 0)
 		.AddVertex(ShaderDataType::FLOAT2, 0);
@@ -79,6 +151,8 @@ DOS::DOS(std::string appName, size_t screenWidth, size_t screenHeight) : Voidsta
 		Memory{ reinterpret_cast<uint8_t*>(m_Indicies.data()), m_Indicies.size() * sizeof(m_Indicies[0]) }
 	);
 	maskData = std::vector<uint8_t>(1024 * 1024);
+	blurredMaskData.resize(maskData.size());
+
 	m_SurfaceAttachment = CreateAttachment(AttachmentType::COLOR,TextureFormat::R8_UNORM,1024,1024,SampleCount::e1,
 		AttachmentHint::ResolveDst | AttachmentHint::ResolveSrc
 		| AttachmentHint::SampledLater);
@@ -88,6 +162,7 @@ DOS::DOS(std::string appName, size_t screenWidth, size_t screenHeight) : Voidsta
 	m_FireTexture = LoadTexture("fire/fire1_64.png");
 #endif
 	m_StoneTexture = LoadTexture("Cobblestone.png");
+	NoiseTexture = LoadTexture("dos_2_noise.png");
 
 	GetCamera()->SetPosition({ 17,-14,17 });
 	GetCamera()->SetCameraControl(CameraControlMode::DIRECT_CONTROL);
@@ -174,16 +249,25 @@ bool IntersectPlane(const Ray& worldRay, const glm::mat4& model, glm::vec3& outH
 	return false;
 }
 
+
+// Returns a random integer in the range [min, max] (inclusive)
+int RandomRangeInt(int min, int max) {
+	static std::random_device rd;
+	static std::mt19937 gen(rd());
+	std::uniform_int_distribution<int> dist(min, max);
+	return dist(gen);
+}
+
+// Returns a random float in the range [min, max] (inclusive)
+float RandomRange(float min, float max) {
+	static std::random_device rd;
+	static std::mt19937 gen(rd());
+	std::uniform_real_distribution<float> dist(min, max);
+	return dist(gen);
+}
+
 void DOS::Update(float deltaTime)
 {
-	SetViewRect(GrondPass, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
-	SetViewTransform(GrondPass, GetCamera()->GetView(), GetCamera()->GetProj());
-	SetTransform(world);
-	//SetTransform(glm::translate(world, glm::vec3(10,0,0)));
-	BindTexture("u_Texture", m_StoneTexture);
-	BindVertexBuffer(0, m_VertexHandle);
-	BindIndexBuffer(m_IndexHandle);
-	Submit(GrondPass, m_GroundShader, 1);
 
 	auto mousePos = Input::GetMousePos();
 	Ray ray = ScreenPointToRay(std::get<0>(mousePos), std::get<1>(mousePos), Application::GetScreenWidth(), Application::GetScreenHeight(), GetCamera()->GetView(), GetCamera()->GetProj());
@@ -205,28 +289,45 @@ void DOS::Update(float deltaTime)
 	int pixelY = static_cast<int>(v * (maskRes - 1));
 
 	//worldHit =  GetCamera()->GetPosition();
-	std::cout << pixelX << " " << pixelY << "\n";
-	std::cout << hit << std::endl;
+	//std::cout << pixelX << " " << pixelY << "\n";
+	//std::cout << hit << std::endl;
 
 	if (hit && Input::IsMousePressed(0))
 	{
-		AddSplat(pixelX, pixelY,300);
+		float radius = 100;
+		float jitteredRadius = radius * RandomRange(0.85f, 1.15f);
+		int jitterX = pixelX + RandomRangeInt(-2, 2);
+		int jitterY = pixelY + RandomRangeInt(-2, 2);
+		AddSplat(jitterX, jitterY, jitteredRadius);
 	}
 
 	auto texture = GetColorTexture(m_SurfaceMask);
-	
 	UpdateTexture(texture, maskData.data(), sizeof(maskData[0])*maskData.size());
+
+
+	SetViewRect(GrondPass, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
+	SetViewTransform(GrondPass, GetCamera()->GetView(), GetCamera()->GetProj());
 	
+
+	SetTransform(world);
+	//SetTransform(glm::translate(world, glm::vec3(10,0,0)));
+	BindTexture("u_Texture", m_StoneTexture);
+	BindTexture("u_Grid", texture);
+	BindTexture("u_Noise", NoiseTexture);
+	BindVertexBuffer(0, m_VertexHandle);
+	BindIndexBuffer(m_IndexHandle);
+	Submit(GrondPass, m_GroundShader, 1);
+
 	int screenWidth = Application::GetScreenWidth();
 	int screenHeight = Application::GetScreenHeight();
 	int width = 500;
 	int height = 400;
 	SetClipRect(screenWidth - width, screenHeight - height, width, height);
 	SetRenderMode(RenderMode::SCREEN);
-
-	BindAttachmentAsTexture("u_Scene1", texture);
-
+	BindAttachmentAsTexture("u_Scene", texture);
+	BindTexture("u_Noise", NoiseTexture);
 	Submit(GrondPass, m_DebugShader, 1);
+
 
 #if FLIPBOOK
 	SetViewRect(0, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());

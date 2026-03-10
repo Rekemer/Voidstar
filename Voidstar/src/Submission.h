@@ -260,9 +260,9 @@ namespace Voidstar
 	};
 
 	struct BlendMode {
-		bool        enabled = false;
-		BlendFactor srcColor = BlendFactor::One;
-		BlendFactor dstColor = BlendFactor::Zero;
+		bool        enabled = true;
+		BlendFactor srcColor = BlendFactor::SrcAlpha; 
+		BlendFactor dstColor = BlendFactor::OneMinusSrcAlpha; 
 		BlendOp     colorOp = BlendOp::Add;
 		BlendFactor srcAlpha = BlendFactor::One;
 		BlendFactor dstAlpha = BlendFactor::Zero;
@@ -351,12 +351,12 @@ namespace Voidstar
 		static constexpr int MAX_RES_BINDING = 10;
 		std::array<ResourceBinding, MAX_RES_BINDING> ResBindings = {};
 		int currentResBinding = 0;
-		int currentBinding = 0;
+		int vertexCurrentBinding = 0;
 
 		void Reset()
 		{
 			currentResBinding = 0;
-			currentBinding = 0;
+			vertexCurrentBinding = 0;
 			for (auto& bind : ResBindings)
 			{
 				bind.currentHandle = 0;
