@@ -39,8 +39,9 @@ std::vector<uint8_t> blurredMaskData;
 
 float planeHalfSize = 5;
 float planeSize = 10;
-float maskRes = 1024.f;
 
+int gridH = 1024/2;
+int gridW = 1024/2;
 // Returns a random integer in the range [min, max] (inclusive)
 int RandomRangeInt(int min, int max) {
 	static std::random_device rd;
@@ -64,19 +65,39 @@ void AddSplat(int cx, int cy, float radius)
 	{
 		for (int x = cx - radius; x <= cx + radius; ++x)
 		{
-			if (x < 0 || x >= 1024 || y < 0 || y >= 1024)
+			if (x < 0 || x >= gridW || y < 0 || y >= gridH)
 				continue;
 
 			float dist = glm::distance(glm::vec2(x, y), glm::vec2(cx, cy));
 
 			float edgeNoise = RandomRange(-6.0f, 6.0f);
-
+			float influence = glm::clamp(1.0 - dist / radius, 0.0, 1.0);
+			int cell = y * gridW + x;
+			maskData[cell] = glm::max(float(maskData[cell]), influence);
 			if (dist < radius + edgeNoise)
-				maskData[y * 1024 + x] = 255;
+				maskData[y * gridW + x] = 255;
 
-			maskData[y * 1024 + x] = 255;
+			//maskData[y * 1024 + x] = 255;
 		}
 	}
+
+	/*for (int y = std::max(0, int(cy - radius)); y <= std::min(gridH - 1, int(cy + radius)); ++y)
+	{
+		for (int x = std::max(0, int(cx - radius)); x <= std::min(gridW - 1, int(cx + radius)); ++x)
+		{
+			float dx = float(x) - float(cx);
+			float dy = float(y) - float(cy);
+			float dist = std::sqrt(dx * dx + dy * dy);
+
+			if (dist > radius) continue;
+
+			float t = 1.0f - dist / radius;   
+			float value = t;                  
+
+			int idx = y * gridW + x;
+			maskData[idx] = std::max(maskData[idx], uint8_t(value * 255.0f));
+		}
+	}*/
 }
 void DilateMask(const std::vector<uint8_t>& src, std::vector<uint8_t>& dst, int width, int height)
 {
@@ -132,10 +153,10 @@ DOS::DOS(std::string appName, size_t screenWidth, size_t screenHeight) : Voidsta
 	(
 		Memory{ reinterpret_cast<uint8_t*>(m_Indicies.data()), m_Indicies.size() * sizeof(m_Indicies[0]) }
 	);
-	maskData = std::vector<uint8_t>(1024 * 1024);
+	maskData = std::vector<uint8_t>(gridH * gridW);
 	blurredMaskData.resize(maskData.size());
 
-	m_SurfaceAttachment = CreateAttachment(AttachmentType::COLOR,TextureFormat::R8_UNORM,1024,1024,SampleCount::e1,
+	m_SurfaceAttachment = CreateAttachment(AttachmentType::COLOR,TextureFormat::R8_UNORM,gridW,gridH,SampleCount::e1,
 		AttachmentHint::ResolveDst | AttachmentHint::ResolveSrc
 		| AttachmentHint::SampledLater);
 	m_SurfaceMask = CreateFramebuffer({m_SurfaceAttachment});
@@ -252,17 +273,18 @@ void DOS::Update(float deltaTime)
 	float v = (localHit.y + 1.0f) * 0.5f;
 
 	// 2. UV -> Pixel [0, maskRes]
-	int pixelX = static_cast<int>(u * (maskRes - 1));
-	int pixelY = static_cast<int>(v * (maskRes - 1));
+	int pixelX = static_cast<int>(u * (gridW - 1));
+	int pixelY = static_cast<int>(v * (gridH- 1));
 
 	//worldHit =  GetCamera()->GetPosition();
 	//std::cout << pixelX << " " << pixelY << "\n";
 	//std::cout << hit << std::endl;
 
-	if (hit && Input::IsMousePressed(0))
+	//if (hit && Input::IsMouseClicked(VS_MOUSE_LEFT))
+	if (hit && Input::IsMousePressed(VS_MOUSE_LEFT))
 	{
 		float radius = 10;
-		float jitteredRadius = radius * RandomRange(0.85f, 1.15f);
+		float jitteredRadius = radius * RandomRange(0.25f, 1.15f);
 		int jitterX = pixelX + RandomRangeInt(-2, 2);
 		int jitterY = pixelY + RandomRangeInt(-2, 2);
 		AddSplat(jitterX, jitterY, jitteredRadius);

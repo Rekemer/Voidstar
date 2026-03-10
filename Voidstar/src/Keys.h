@@ -122,3 +122,6 @@
 #define VS_KEY_RIGHT_ALT          346
 #define VS_KEY_RIGHT_SUPER        347
 #define VS_KEY_MENU               348
+#define VS_MOUSE_LEFT 0
+#define VS_MOUSE_RIGHT 1
+#define VS_MOUSE_MIDDLE 1

@@ -10,6 +10,8 @@ namespace Voidstar {
 
 	bool Input::m_keysCurrentFrame[1024];
 	bool Input::m_keysLastFrame[1024];
+	bool Input::m_LastMouseStates[3];
+	bool Input::m_CurrentMouseStates[3];
 	bool Input::m_keysTyped[1024];
 
 	double Input::m_MouseLastPosX = 0.0;
@@ -56,6 +58,11 @@ namespace Voidstar {
 		}
 	}
 
+	bool Input::IsMouseClicked(int button) 
+	{
+		return (m_CurrentMouseStates[button] && !m_LastMouseStates[button]);
+	}
+
 	bool Input::IsMousePressed(int mouse) 
 	{
 		return glfwGetMouseButton(m_currentWindow->GetRaw(), mouse);
@@ -89,6 +96,12 @@ namespace Voidstar {
 			m_keysTyped[i] = m_keysCurrentFrame[i] && !m_keysLastFrame[i];
 		}
 		memcpy(m_keysLastFrame, m_keysCurrentFrame, sizeof(m_keysCurrentFrame));
+
+		for (int i = 0; i < 3; ++i) {
+			m_LastMouseStates[i] = m_CurrentMouseStates[i];
+			m_CurrentMouseStates[i] = glfwGetMouseButton(m_currentWindow->GetRaw(), i);
+		}
+
 		GetMousePos();
 	}
 }

@@ -12,6 +12,7 @@ namespace Voidstar
 		static bool IsKeyPressed(int keycode);
 		static bool IsKeyTyped(int keycode);
 		static bool IsMousePressed(int mouse);
+		static bool IsMouseClicked(int button);
 		static void SetMousePos(float x, float y);
 		static double GetMouseDeltaX();
 		static double GetMouseDeltaY();
@@ -21,6 +22,8 @@ namespace Voidstar
 		friend static void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 		static void Update();
 	private:
+		static bool m_LastMouseStates[3];
+		static bool m_CurrentMouseStates[3];
 		static bool m_keysCurrentFrame[1024];
 		static bool m_keysLastFrame[1024];
 		static bool m_keysTyped[1024];
