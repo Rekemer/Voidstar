@@ -79,7 +79,36 @@ void AddInverseSplat(int cx, int cy, float radius)
 		}
 	}
 }
+
+
 void AddSplat(int cx, int cy, float radius)
+{
+	float rSq = radius * radius;
+	// Iterate only over the bounding box
+	for (int y = std::max(0, int(cy - radius)); y <= std::min(gridH - 1, int(cy + radius)); ++y)
+	{
+		for (int x = std::max(0, int(cx - radius)); x <= std::min(gridW - 1, int(cx + radius)); ++x)
+		{
+			float dx = float(x) - float(cx);
+			float dy = float(y) - float(cy);
+			float distSq = dx * dx + dy * dy;
+
+			if (distSq < rSq)
+			{
+				// Soft falloff: 1.0 at center, 0.0 at edge
+				float intensity = 1.0f - (std::sqrt(distSq) / radius);
+
+				int idx = y * gridW + x;
+				float current = float(maskData[idx]) / 255.0f;
+
+				// Additive blending allows blobs to merge (Metaball effect)
+				maskData[idx] = uint8_t(glm::clamp(current + intensity, 0.0f, 1.0f) * 255.0f);
+			}
+		}
+	}
+}
+
+void AddSplat2(int cx, int cy, float radius)
 {
 	auto& grid = maskData;
 	for (int y = std::max(0, int(cy - radius - 2)); y <= std::min(gridH - 1, int(cy + radius + 2)); ++y)
@@ -312,7 +341,7 @@ void DOS::Update(float deltaTime)
 	//if (hit && Input::IsMouseClicked(VS_MOUSE_LEFT))
 	{
 		int numSplats =1; // Number of "fire particles" in one click
-		float baseRadius = 5.0f;
+		float baseRadius = 10.0f;
 
 		for (int i = 0; i < numSplats; ++i)
 		{
@@ -320,8 +349,11 @@ void DOS::Update(float deltaTime)
 			float jitteredRadius = baseRadius * RandomRange(0.5f, 1.2f);
 			int jitterX = pixelX + RandomRangeInt(-8, 8);
 			int jitterY = pixelY + RandomRangeInt(-8, 8);
-
-			AddSplat(pixelX, pixelY, jitteredRadius);
+			AddSplat2(pixelX, pixelY, jitteredRadius);
+			//if (RandomRangeInt(-1, 1) > 0)
+			//{
+			//}
+			//else AddSplat(pixelX, pixelY, jitteredRadius);
 		}
 		//float radius = 10;
 		//float jitteredRadius = radius * RandomRange(0.25f, 1.15f);
