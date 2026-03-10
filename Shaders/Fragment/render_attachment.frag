@@ -63,15 +63,7 @@ float bicubic(vec2 scaledUv)
 void main() {
     
     
-   float mask = texture(u_Scene, uv).r;
-float noise = texture(u_Noise, uv * 4.0).r;
-
-float edge = smoothstep(0.3, 0.6, mask + noise * 0.15);
-
-vec3 base = texture(u_Scene, uv * 8.0).rgb;
-vec3 poisonColor = vec3(0.2, 0.8, 0.2);
-
-vec3 finalColor = mix(vec3(0), poisonColor, edge);
+vec3 mask = texture(u_Scene, uv).xyz;
 outColor.a = 1;
-outColor.xyz = finalColor;
+outColor.xyz = mask;
 }

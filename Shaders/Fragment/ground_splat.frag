@@ -42,24 +42,26 @@ float sampleFieldBilinear(vec2 uv)
     return mix(x0, x1, f.y);
 }
 
-
 void main() 
 {
-    //vec4 tex1 = texture(u_Texture1,vec2(out_uv));
-    //color = vec4( out_uv,0,1);
-    //float fact = (sin(ubo.time * 1000) + 1)/ 2;
-    //color = vec4( tex.xyz + tex1.xyz,1 * fact);
+
   
     vec4 tex = texture(u_Texture,vec2(fract(out_uv * 5)));
     vec4 grid = texture(u_Grid,vec2(out_uv));
-    vec4 noise = texture(u_Noise,vec2(out_uv));
+    vec4 noise = texture(u_Noise,vec2(fract(out_uv * 5)));
 
     float field = sampleFieldBilinear(out_uv);
 
     // shape it into a cleaner blob
-    float coverage = smoothstep(0.2, 0.6, field);
-    vec3 surfaceColor = vec3(1.0, 0.0, 1.0);
-    vec3 finalColor = mix(tex.xyz, surfaceColor, coverage*noise.x);
+    float coverage = smoothstep(0.2, 0.4, field);
+    vec3 surfaceColor = vec3(1.0, 1.0, 1.0);
+    vec3 finalColor = mix(vec3(0,0,0),surfaceColor, coverage);
     color.xyz = finalColor;
+    color.xyz = vec3(coverage);
+    if (out_uv.x < 0.5)
+    color = vec4(vec3(grid), 1.0);
+    else
+    color = vec4(vec3(coverage), 1.0);
+    //color.xyz = grid.xyz;
     color.a = 1;
 }

@@ -41,58 +41,40 @@ float planeHalfSize = 5;
 float planeSize = 10;
 float maskRes = 1024.f;
 
-
-void BlurMask(const std::vector<uint8_t>& src, std::vector<uint8_t>& dst, int width, int height)
-{
-	for (int y = 0; y < height; ++y)
-	{
-		for (int x = 0; x < width; ++x)
-		{
-			int sum = 0;
-			int count = 0;
-
-			for (int oy = -1; oy <= 1; ++oy)
-			{
-				for (int ox = -1; ox <= 1; ++ox)
-				{
-					int sx = x + ox;
-					int sy = y + oy;
-
-					if (sx < 0 || sx >= width || sy < 0 || sy >= height)
-						continue;
-
-					sum += src[sy * width + sx];
-					count++;
-				}
-			}
-
-			dst[y * width + x] = static_cast<uint8_t>(sum / count);
-		}
-	}
+// Returns a random integer in the range [min, max] (inclusive)
+int RandomRangeInt(int min, int max) {
+	static std::random_device rd;
+	static std::mt19937 gen(rd());
+	std::uniform_int_distribution<int> dist(min, max);
+	return dist(gen);
 }
 
-void AddSplat(int pixelX, int pixelY, float radius)
+// Returns a random float in the range [min, max] (inclusive)
+float RandomRange(float min, float max) {
+	static std::random_device rd;
+	static std::mt19937 gen(rd());
+	std::uniform_real_distribution<float> dist(min, max);
+	return dist(gen);
+}
+
+
+void AddSplat(int cx, int cy, float radius)
 {
-	int minX = std::max(0, int(pixelX - radius));
-	int maxX = std::min(int(maskRes) - 1, int(pixelX + radius));
-	int minY = std::max(0, int(pixelY - radius));
-	int maxY = std::min(int(maskRes) - 1, int(pixelY + radius));
-
-	for (int y = minY; y <= maxY; ++y)
+	for (int y = cy - radius; y <= cy + radius; ++y)
 	{
-		for (int x = minX; x <= maxX; ++x)
+		for (int x = cx - radius; x <= cx + radius; ++x)
 		{
-			float dist = glm::distance(glm::vec2(x, y), glm::vec2(pixelX, pixelY));
-			if (dist > radius) continue;
+			if (x < 0 || x >= 1024 || y < 0 || y >= 1024)
+				continue;
 
-			float t = 1.0f - dist / radius;   // 1 at center, 0 at edge
-			float falloff = t * t;            // softer brush
+			float dist = glm::distance(glm::vec2(x, y), glm::vec2(cx, cy));
 
-			int idx = y * int(maskRes) + x;
-			uint8_t value = static_cast<uint8_t>(255.0f * falloff);
+			float edgeNoise = RandomRange(-6.0f, 6.0f);
 
-			maskData[idx] = std::max(maskData[idx], value);
-			//maskData[idx] = 255;
+			if (dist < radius + edgeNoise)
+				maskData[y * 1024 + x] = 255;
+
+			maskData[y * 1024 + x] = 255;
 		}
 	}
 }
@@ -250,21 +232,6 @@ bool IntersectPlane(const Ray& worldRay, const glm::mat4& model, glm::vec3& outH
 }
 
 
-// Returns a random integer in the range [min, max] (inclusive)
-int RandomRangeInt(int min, int max) {
-	static std::random_device rd;
-	static std::mt19937 gen(rd());
-	std::uniform_int_distribution<int> dist(min, max);
-	return dist(gen);
-}
-
-// Returns a random float in the range [min, max] (inclusive)
-float RandomRange(float min, float max) {
-	static std::random_device rd;
-	static std::mt19937 gen(rd());
-	std::uniform_real_distribution<float> dist(min, max);
-	return dist(gen);
-}
 
 void DOS::Update(float deltaTime)
 {
@@ -294,7 +261,7 @@ void DOS::Update(float deltaTime)
 
 	if (hit && Input::IsMousePressed(0))
 	{
-		float radius = 100;
+		float radius = 10;
 		float jitteredRadius = radius * RandomRange(0.85f, 1.15f);
 		int jitterX = pixelX + RandomRangeInt(-2, 2);
 		int jitterY = pixelY + RandomRangeInt(-2, 2);
