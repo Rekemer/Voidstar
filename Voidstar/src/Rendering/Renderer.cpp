@@ -1977,11 +1977,24 @@ namespace Voidstar
 		//return m_DescriptorSet.at(key)[frameIndex][itemIndex];
 	}
 
+	// FIX: we should not update it every frame
 	void Renderer::UpdateDescriptors(vk::PipelineBindPoint bindPoint, Item& item, std::vector<DescriptorLayoutKey>& keys, ProgramMeta& meta, CommandBuffer& cmd, vk::PipelineLayout layout, int itemIndex)
 	{
 		
 		auto vkCmd = cmd.GetCommandBuffer();
 	
+		if (keys.size() > 0)
+		{
+			auto systemKey = keys.at(0);
+			for (auto bind : systemKey.bindings)
+			{
+				auto& buffer = bind.kind == ResourceType::UniformBuffer ? *m_UniformBuffers[m_CurrentFrame] 
+					: *m_ObjectsBuffers[m_CurrentFrame];
+				m_Device->UpdateDescriptorSet(GetDescriptorSet(SystemDescriptorLayoutKey, m_CurrentFrame, itemIndex), 
+					bind.binding, bind.count, buffer, bind.kind);
+			}
+
+		}
 
 		for (int ii = 0; ii < item.Bindings.currentResBinding; ii++)
 		{
@@ -2246,7 +2259,7 @@ namespace Voidstar
 					vkCmd.draw(6, 1, 0, 0);
 				}
 
-				renderItem.Bindings.Reset();
+				renderItem.Reset();
 			}
 			view.FreeIndex = 0;
 			cmd.EndRenderPass();

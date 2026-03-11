@@ -388,6 +388,15 @@ namespace Voidstar
 		size_t MatrixIndex = 0;
 		size_t ObjectCount = 1;
 		size_t internalOffset = 0;
+
+		void Reset()
+		{
+			MatrixIndex = 0;
+			ObjectCount = 1;
+			internalOffset = 0;
+			Bindings.Reset();
+		}
+
 	};
 	struct View
 	{

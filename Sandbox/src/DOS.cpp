@@ -31,7 +31,7 @@ glm::mat4 world;
 PassID GrondPass = 0;
 PassID Flipbook = 1;
 #define FLIPBOOK 1
-#define GROUND 0
+#define GROUND 1
 
 std::vector<uint8_t> maskData;
 std::vector<uint8_t> blurredMaskData;
@@ -210,7 +210,7 @@ DOS::DOS(std::string appName, size_t screenWidth, size_t screenHeight) : Voidsta
 		// 2. Calculate X and Z positions (assuming Y is up)
 		float x = std::cos(angle) * 4;
 		float z = std::sin(angle) * 4;
-		float y = 0.0f; // Keep it on the ground plane
+		float y = -2.0f; // Keep it on the ground plane
 
 		// 3. Create the translation matrix
 		glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(x, y, z));

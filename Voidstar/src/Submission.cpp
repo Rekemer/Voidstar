@@ -326,7 +326,7 @@ namespace Voidstar
 		g_Submission->Submit->LastView = viewID;
 		// we can create pipeline
 		g_Submission->Submit->NextItem();
-		
+		g_Submission->Submit->CurrentRenderItem->MatrixIndex = g_Submission->Submit->CurrentFreeMatrix;
 	}
 
 	void SetWindow(SPtr<Window> window)
@@ -657,6 +657,7 @@ namespace Voidstar
 	}
 	void SetTransform(const glm::mat4& world)
 	{
+		
 		g_Submission->Submit->Matricies[g_Submission->Submit->CurrentFreeMatrix++] = world;
 	};
 	void BindVertexBuffer(uint16_t location, VertexBufferHandle handle, VertexStreamMode mode)
