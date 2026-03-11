@@ -50,8 +50,8 @@ void main()
     vec3 cameraUp    = vec3(ubo.view[0][1], ubo.view[1][1], ubo.view[2][1]);
     
     vec3 billboardedPos = worldCenter.xyz 
-                        + cameraRight * in_pos.x * scaleX 
-                        + cameraUp    * in_pos.y * scaleY;
+                        + cameraRight * in_pos.x 
+                        + cameraUp    * in_pos.y * 1.5;
 
     // 4. Transform to Clip Space
     gl_Position = ubo.proj * ubo.view * vec4(billboardedPos, 1.0);
@@ -63,10 +63,10 @@ void main()
     out_age =p.time.x;
     out_lfietime = p.time.y; 
     float noiseOffset = hash(gl_InstanceIndex) * 10.0;
-    int cols = 10;
-    int rows = 6;
+    int cols = 8;
+    int rows = 8;
     int frameCount = cols * rows;
-    float animFps = 40.0;  
+    float animFps = 30.0;  
     int frame = int(floor((out_age + noiseOffset) * animFps)) % frameCount; 
     out_frame = frame;
 

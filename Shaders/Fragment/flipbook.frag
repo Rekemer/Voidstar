@@ -15,12 +15,11 @@ float random(vec2 st) {
 
 void main()
 {
-    int cols = 10;
-    int rows = 6;
+    int cols = 8;
+    int rows = 8;
     int frameCount = cols * rows;
 
-    float t = clamp(out_age / out_lifetime, 0.0, 1.0);
-   float animFps = 40.0;                 // try 12..30
+    float t = clamp(out_age / out_lifetime, 0.0, 1.0);              
 
     
     int frame = out_frame;
@@ -38,6 +37,11 @@ void main()
     //uv_fb += (noise - 0.5) * 0.004; 
 
     vec4 tex = texture(u_Texture, uv_fb);
+    float brightness = dot(tex.rrr, vec3(0.2126, 0.7152, 0.0722));
+    // Set alpha based on how bright the pixel is
+    tex.a = clamp(brightness * 2.0, 0.0, 1.0);
     color = tex;
+
+
     
 }

@@ -265,7 +265,7 @@ namespace Voidstar
 		BlendFactor dstColor = BlendFactor::OneMinusSrcAlpha; 
 		BlendOp     colorOp = BlendOp::Add;
 		BlendFactor srcAlpha = BlendFactor::One;
-		BlendFactor dstAlpha = BlendFactor::OneMinusSrcAlpha;
+		BlendFactor dstAlpha = BlendFactor::One;
 		BlendOp     alphaOp = BlendOp::Add;
 
 		bool operator==(const BlendMode& o) const {

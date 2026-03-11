@@ -216,6 +216,7 @@ DOS::DOS(std::string appName, size_t screenWidth, size_t screenHeight) : Voidsta
 		glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(x, y, z));
 
 		auto randScale = RandomRange(0.3, 1);
+		randScale = 1;
 		model = glm::scale(model,glm::vec3(randScale));
 
 		fireWorlds.push_back(model);
@@ -241,7 +242,7 @@ DOS::DOS(std::string appName, size_t screenWidth, size_t screenHeight) : Voidsta
 	m_SurfaceMask = CreateFramebuffer({m_SurfaceAttachment});
 	//m_MorganaTex = LoadTexture("morgana.png");
 #if FLIPBOOK 
-	m_FireTexture = LoadTexture("fire/fire1_64.png");
+	m_FireTexture = LoadTexture("fire/fire_dos2.png");
 #endif
 	m_StoneTexture = LoadTexture("Morgana.png");
 	NoiseTexture = LoadTexture("dos_2_noise.png");
