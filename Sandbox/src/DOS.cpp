@@ -31,7 +31,7 @@ glm::mat4 world;
 PassID GrondPass = 0;
 PassID Flipbook = 1;
 #define FLIPBOOK 1
-#define GROUND 1
+#define GROUND 0
 
 std::vector<uint8_t> maskData;
 std::vector<uint8_t> blurredMaskData;
@@ -215,13 +215,14 @@ DOS::DOS(std::string appName, size_t screenWidth, size_t screenHeight) : Voidsta
 		// 3. Create the translation matrix
 		glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(x, y, z));
 
-		
+		auto randScale = RandomRange(0.3, 1);
+		model = glm::scale(model,glm::vec3(randScale));
 
 		fireWorlds.push_back(model);
 	}
 
 	
-	m_FramePerParticle = { { {0,1000,0,0} } };
+	m_FramePerParticle = std::vector<Particle>(fireWorlds.size(), { {0,1000,0,0}, });
 
 	m_ParticleHandle = CreateBuffer(Memory{ reinterpret_cast<uint8_t*>(m_FramePerParticle.data()), m_FramePerParticle.size() * sizeof(m_FramePerParticle[0]) },ResourceUsage::StorageRead | ResourceUsage::StorageWrite | ResourceUsage::Readback);
 #endif
@@ -249,10 +250,6 @@ DOS::DOS(std::string appName, size_t screenWidth, size_t screenHeight) : Voidsta
 	GetCamera()->SetCameraControl(CameraControlMode::DIRECT_CONTROL);
 	GetCamera()->LookAt({ 0,0,0 });
 	ExecuteFrame(0,true);
-
-	world = glm::mat4(1);
-	world = glm::rotate(world, glm::radians(90.f), glm::vec3(1, 0, 0));
-	world = glm::scale(world, glm::vec3(10.0f));
 
 	
 
@@ -418,15 +415,29 @@ void DOS::Update(float deltaTime)
 	SetViewRect(GrondPass, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
 	SetViewTransform(GrondPass, GetCamera()->GetView(), GetCamera()->GetProj());
 	m_MappedPtr = static_cast<Particle*>(ReadMappedPtr(ResourceType::StorageBuffer, m_ParticleHandle.idx));
-
+	SetDepthWrite(false);
 	age += deltaTime;
-	m_MappedPtr->lifetime.x = age*1000;
-	//(m_MappedPtr+1)->lifetime.x = age*1000;
 
-	for (auto& mat : fireWorlds)
+
+	glm::vec3 camPos = GetCamera()->GetPosition();
+
+	std::sort(fireWorlds.begin(), fireWorlds.end(), [&](const glm::mat4& a, const glm::mat4& b) {
+		// Get world positions (column 3)
+		glm::vec3 posA = glm::vec3(a[3]);
+		glm::vec3 posB = glm::vec3(b[3]);
+
+		// Sort by squared distance (farthest first)
+		return glm::distance(camPos, posA) > glm::distance(camPos, posB);
+		});
+
+	for (auto i = 0; i < fireWorlds.size(); i++)
 	{
-		SetTransform(mat);
+		(m_MappedPtr+i)->lifetime.x = age*1000;
+
+		
+		SetTransform(fireWorlds[i]);
 	}
+
 	BindVertexBuffer(0, m_VertexHandle);
 	BindIndexBuffer(m_IndexHandle);
 	

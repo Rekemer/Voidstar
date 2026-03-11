@@ -655,6 +655,12 @@ namespace Voidstar
 		auto item = g_Submission->Submit->CurrentRenderItem;
 		item->ClipRect = glm::vec4{x,y,w,h};
 	}
+
+	void SetDepthWrite(bool write)
+	{
+		g_Submission->Submit->CurrentRenderItem->State.depthWrite = write;
+	}
+
 	void SetTransform(const glm::mat4& world)
 	{
 		

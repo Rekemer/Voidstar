@@ -129,9 +129,13 @@ namespace Voidstar
 		// for read only optimal image layout of attachment 
 		vk::PhysicalDeviceSynchronization2Features sync2;
 		sync2.synchronization2 = true;
+		
 		vk::PhysicalDeviceTimelineSemaphoreFeatures timelineEnable{};
 		timelineEnable.timelineSemaphore = true;
-
+		
+		vk::PhysicalDeviceShaderDrawParametersFeatures drawParams{};
+		drawParams.shaderDrawParameters = true;
+		timelineEnable.pNext = &drawParams;
 		sync2.pNext = &timelineEnable;
 		deviceInfo.pNext = &sync2;
 		try {

@@ -390,11 +390,17 @@ namespace Voidstar
 			m_WriteMask = write;
 			m_CompareMask = compare;
 		}
-		void SetBlendOp(vk::BlendOp op, vk::BlendFactor src, vk::BlendFactor dst)
+		void SetBlendOp(vk::BlendOp op, vk::BlendFactor src, 
+			vk::BlendFactor dst, vk::BlendOp alphaOp, vk::BlendFactor srcAlpha,
+			vk::BlendFactor dstAlpha)
 		{
 			m_BlendOp = op;
 			m_BlendSrc = src;
 			m_BlendDst = dst;
+
+			m_AlphaOp = alphaOp;
+			m_SrcAlpha = srcAlpha;
+			m_DstAlpha = dstAlpha;
 		}
 		void SetSampleShading(vk::Bool32 state)
 		{
@@ -431,8 +437,11 @@ namespace Voidstar
 		vk::Bool32 m_SampleShadingEnable = VK_FALSE;
 		float m_MinSampleShading = .2f;
 		vk::BlendOp m_BlendOp = vk::BlendOp::eAdd;
+		vk::BlendOp m_AlphaOp = vk::BlendOp::eAdd;
 		vk::BlendFactor m_BlendSrc = vk::BlendFactor::eSrcAlpha;
 		vk::BlendFactor m_BlendDst = vk::BlendFactor::eOneMinusSrcAlpha;
+		vk::BlendFactor m_SrcAlpha = vk::BlendFactor::eOne;
+		vk::BlendFactor m_DstAlpha = vk::BlendFactor::eOneMinusSrcAlpha;
 
 	};
 
@@ -498,7 +507,7 @@ namespace Voidstar
 		m_PatchControlPoints = amountPoints;
 	}
 
-	void PipelineBuilder::WriteToDepthBuffer(bool wrtite)
+	void PipelineBuilder::WriteToDepthBuffer(bool write)
 	{
 		m_WriteToDepthBuffer = write;
 	}
@@ -672,7 +681,9 @@ namespace Voidstar
 		colorBlendAttachment.colorBlendOp = m_BlendOp;
 		colorBlendAttachment.srcColorBlendFactor = m_BlendSrc;
 		colorBlendAttachment.dstColorBlendFactor = m_BlendDst;
-
+		colorBlendAttachment.alphaBlendOp= m_AlphaOp;
+		colorBlendAttachment.srcAlphaBlendFactor = m_SrcAlpha;
+		colorBlendAttachment.dstAlphaBlendFactor = m_DstAlpha;
 
 
 		vk::PipelineColorBlendStateCreateInfo colorBlending = {};
@@ -1673,6 +1684,7 @@ namespace Voidstar
 		m_Framebuffers[handle] = framebuffers;
 	}
 
+
 	vk::Pipeline Renderer::GetPipeline(const PipelineKey& key, 
 		std::array<VertexBinding, Item::MAX_VERTEX_BINDING>& bindings,
 		int bindingAmount)
@@ -1693,14 +1705,26 @@ namespace Voidstar
 		PipelineBuilder builder;
 		auto& rs = key.rs;
 		builder.EnableStencilTest(rs.stencilTest);
-		builder.SetDepthTest(true);
+		builder.SetDepthTest(rs.depthTest);
 		builder.EnableBlend(rs.blend->enabled);
+
+		{
+			auto blOp = map(rs.blend->colorOp);
+			auto srcColor = map(rs.blend->srcColor);
+			auto dstColor = map(rs.blend->dstColor);
+			auto alphaOp = map(rs.blend->alphaOp);
+			auto srcAlpha = map(rs.blend->srcAlpha);
+			auto dstAlpha = map(rs.blend->dstAlpha);
+			builder.SetBlendOp(blOp,srcColor,dstColor,alphaOp,srcAlpha,dstAlpha);
+
+		}
+
 		auto& renderPass = m_RenderPasses.at(key.fb);
 
 		builder.SetRenderPass(renderPass.m_RenderPass);
 		builder.AddExtent(renderPass.m_Extent);
 
-		builder.WriteToDepthBuffer(true);
+		builder.WriteToDepthBuffer(rs.depthWrite);
 		builder.SetSamples(renderPass.samples);
 		auto shaderMeta = m_Compiler.m_Programs.at(key.program);
 		for (auto& stage : shaderMeta.stages)
@@ -2458,7 +2482,6 @@ namespace Voidstar
 		info.extensions.push_back("VK_EXT_debug_utils");
 		//tracy
 		info.extensions.push_back("VK_EXT_calibrated_timestamps");
-
 		info.layers.push_back("VK_LAYER_KHRONOS_validation");
 		RenderContext::CreateInstance(info);
 		m_Instance = RenderContext::GetInstance();

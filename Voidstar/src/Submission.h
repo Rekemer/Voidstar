@@ -265,7 +265,7 @@ namespace Voidstar
 		BlendFactor dstColor = BlendFactor::OneMinusSrcAlpha; 
 		BlendOp     colorOp = BlendOp::Add;
 		BlendFactor srcAlpha = BlendFactor::One;
-		BlendFactor dstAlpha = BlendFactor::Zero;
+		BlendFactor dstAlpha = BlendFactor::OneMinusSrcAlpha;
 		BlendOp     alphaOp = BlendOp::Add;
 
 		bool operator==(const BlendMode& o) const {
@@ -370,6 +370,9 @@ namespace Voidstar
 		RENDER,
 		COMPUTE,
 	};
+
+	void SetDepthWrite(bool write);
+
 	// render items learns about the view at submit
 	struct Item
 	{
