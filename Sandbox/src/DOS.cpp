@@ -4,6 +4,8 @@
 struct Particle
 {
 	glm::vec4 lifetime;
+	glm::mat4 world;    	
+	float distanceSq;   
 };
 VertexBufferHandle m_VertexHandle;
 BufferHandle m_InstanceHandle;
@@ -12,7 +14,7 @@ ProgramHandle m_DefaultShader;
 ProgramHandle m_GroundShader;
 ProgramHandle m_DebugShader;
 std::vector<Vertex> m_Verticies;
-std::vector<Particle> m_FramePerParticle;
+std::vector<glm::vec4> m_FramePerParticle;
 std::vector<IndexType> m_Indicies;
 VertexLayout m_VertexLayout;
 VertexLayout m_InstanceLayout;
@@ -26,7 +28,7 @@ TextureHandle m_StoneTexture;
 FrameBufferHandle m_SurfaceMask;
 AttachmentHandle m_SurfaceAttachment;
 
-Particle* m_MappedPtr;
+glm::vec4* m_MappedPtr;
 glm::mat4 worldGround;
 PassID GrondPass = 0;
 PassID Flipbook = 1;
@@ -36,7 +38,7 @@ PassID Flipbook = 1;
 std::vector<uint8_t> maskData;
 std::vector<glm::vec2> clickedPixels;
 std::vector<uint8_t> blurredMaskData;
-std::vector<glm::mat4> fireWorlds;
+std::vector<Particle> fireWorlds;
 
 float planeSize = 10;
 float planeHalfSize = planeSize/2;
@@ -77,7 +79,11 @@ void SpawnParticle(int index, glm::vec3 pos)
 	glm::mat4 model = glm::translate(glm::mat4(1.0f), pos);
 	auto randScale = RandomRange(0.3,0.9);
 	model = glm::scale(model, glm::vec3(randScale));
-	fireWorlds.push_back(model);
+	Particle p;
+	p.world = model;
+	p.lifetime = { 0,1000,0,0 };
+	p.distanceSq = 0;
+	fireWorlds.push_back(p);
 }
 
 void AddZone(int pixelX, int pixelY)
@@ -253,7 +259,7 @@ DOS::DOS(std::string appName, size_t screenWidth, size_t screenHeight) : Voidsta
 	//}
 
 	
-	m_FramePerParticle = std::vector<Particle>(100, { {0,1000,0,0}, });
+	m_FramePerParticle = std::vector<glm::vec4>(100,  {0,1000,0,0});
 
 
 
@@ -443,26 +449,35 @@ void DOS::Update(float deltaTime)
 #if FLIPBOOK
 	SetViewRect(GrondPass, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
 	SetViewTransform(GrondPass, GetCamera()->GetView(), GetCamera()->GetProj());
-	m_MappedPtr = static_cast<Particle*>(ReadMappedPtr(ResourceType::StorageBuffer, m_ParticleHandle.idx));
+	m_MappedPtr = static_cast<glm::vec4*>(ReadMappedPtr(ResourceType::StorageBuffer, m_ParticleHandle.idx));
 	SetDepthWrite(false);
 	age += deltaTime;
 
 
-	glm::vec3 camPos = GetCamera()->GetPosition();
-
-	std::sort(fireWorlds.begin(), fireWorlds.end(), [&](const glm::mat4& a, const glm::mat4& b) {
-		// Get world positions (column 3)
-		glm::vec3 posA = glm::vec3(a[3]);
-		glm::vec3 posB = glm::vec3(b[3]);
 	
-		// Sort by squared distance (farthest first)
-		return glm::distance(camPos, posA) > glm::distance(camPos, posB);
-		});
 
-	for (auto i = 0; i < fireWorlds.size(); i++)
-	{
-		(m_MappedPtr+i)->lifetime.x = age*1000;
-		SetTransform(fireWorlds[i]);
+	// 2. Update distances and Sort (Back-to-Front)
+	glm::vec3 camPos = GetCamera()->GetPosition();
+	for (auto& p : fireWorlds) {
+		glm::vec3 pos = glm::vec3(p.world[3]); // Extract world position
+		p.distanceSq = glm::distance(camPos, pos);
+	}
+
+	//std::sort(fireWorlds.begin(), fireWorlds.end(),
+	//	[](const Particle& a, const Particle& b) {
+	//		return a.distanceSq > b.distanceSq; // Farthest first
+	//	});
+
+	// 3. Map to GPU Buffer
+	// 'm_MappedPtr' must be updated to match the NEW sorted order
+	for (int i = 0; i < fireWorlds.size(); i++) {
+		// Age = Now - Birth
+		float individualAge = age * 1000.0f;
+
+		m_MappedPtr[i].x = individualAge;
+
+		// Set the transform for this specific instance
+		SetTransform(fireWorlds[i].world);
 	}
 
 	BindVertexBuffer(0, m_VertexHandle);

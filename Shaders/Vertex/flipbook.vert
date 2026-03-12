@@ -16,6 +16,7 @@ layout(location = 1) in vec2 in_uv;
 
 
 struct Particle {
+    
     vec4 time;
 };
 
