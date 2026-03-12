@@ -51,6 +51,7 @@ namespace Voidstar
 
     void Camera::UpdateProj(float width, float height, float fov)
     {
+        if (width == 0 || height == 0) return;
         this->width = width;
         this->height= height;
         m_Fov = fov;

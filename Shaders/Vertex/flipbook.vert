@@ -16,7 +16,6 @@ layout(location = 1) in vec2 in_uv;
 
 
 struct Particle {
-    
     vec4 time;
 };
 
@@ -27,7 +26,7 @@ layout(std430, set = 1, binding=0) readonly buffer Particles {
 
 layout(location = 0) out vec2 out_uv;
 layout(location = 1) out float out_age;
-layout(location = 2) out float out_lfietime;
+layout(location = 2) out float out_lifetime;
 layout(location = 3) out flat int out_frame;
 
 float hash(uint x) {
@@ -63,7 +62,7 @@ void main()
     out_uv = in_uv;
     Particle p = particles.p[localIdx];
     out_age =p.time.x;
-    out_lfietime = p.time.y; 
+    out_lifetime = p.time.y; 
     float noiseOffset = hash(localIdx) * 10.0;
     int cols = 8;
     int rows = 8;

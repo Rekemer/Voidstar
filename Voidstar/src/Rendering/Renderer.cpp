@@ -2034,7 +2034,7 @@ namespace Voidstar
 				if (bind.kind == ResourceType::CombinedSampler || bind.kind == ResourceType::StorageImage)
 				{
 
-					for (int i = 0; i < bind.currentHandle; i++)
+					for (int i = 0; i < bind.currentFreeTextureHandle; i++)
 					{
 						auto handle = bind.handles.at(i);
 						if (!handle.Valid()) break;

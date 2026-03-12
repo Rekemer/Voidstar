@@ -20,6 +20,9 @@ VertexLayout m_VertexLayout;
 VertexLayout m_InstanceLayout;
 TextureHandle m_MorganaTex;
 TextureHandle NoiseTexture;
+TextureHandle NoiseTexture1;
+TextureHandle NoiseTexture2;
+TextureHandle NoiseTexture3;
 BufferHandle m_ParticleHandle;
 TextureHandle m_FireTexture;
 TextureHandle m_StoneTexture;
@@ -77,7 +80,7 @@ glm::vec3 PixelToWorldOnPlane(int x, int y, glm::mat4& world)
 void SpawnParticle(int index, glm::vec3 pos)
 {
 	glm::mat4 model = glm::translate(glm::mat4(1.0f), pos);
-	auto randScale = RandomRange(0.3,0.9);
+	auto randScale = RandomRange(0.6f, 1.2f);
 	model = glm::scale(model, glm::vec3(randScale));
 	Particle p;
 	p.world = model;
@@ -89,7 +92,7 @@ void SpawnParticle(int index, glm::vec3 pos)
 void AddZone(int pixelX, int pixelY)
 {
 	// Inside your Update() function when hit && Input::IsMousePressed
-	float minSeparation = 40.0f + RandomRange(-5.0f, 5.0f); // Minimum pixels between fire sources
+	float minSeparation = RandomRange(40.0f, 60.0f)+ RandomRange(-5.0f, 5.0f);
 	bool tooClose = false;
 
 	for (const auto& zone : clickedPixels) {
@@ -113,7 +116,7 @@ void AddZone(int pixelX, int pixelY)
 		// Jitter the position so they don't look like they are in a grid
 		spawnPos.x += RandomRange(-0.2f, 0.2f);
 		spawnPos.z += RandomRange(-0.2f, 0.2f);
-		spawnPos.y -= 1;
+		spawnPos.y -= 1 ;
 		clicked++;
 		SpawnParticle(clicked - 1, spawnPos);
 
@@ -245,22 +248,13 @@ DOS::DOS(std::string appName, size_t screenWidth, size_t screenHeight) : Voidsta
 #if FLIPBOOK
 	m_DefaultShader = LoadProgram("flipbook.vert", "flipbook.frag");
 	int count = 100;
-	//for (int i = 0; i < count; ++i)
-	//{
-	//	// 1. Calculate the angle in radians
-	//	// 2 * PI / count gives the step for each item
-	//	float angle = (2.0f * glm::pi<float>() * i) / (float)count;
-	//
-	//	// 2. Calculate X and Z positions (assuming Y is up)
-	//	float x = std::cos(angle) * 4;
-	//	float z = std::sin(angle) * 4;
-	//	float y = -2.0f; // Keep it on the ground plane
-	//	SpawnParticle(glm::vec3(x, y, z));
-	//}
 
-	
 	m_FramePerParticle = std::vector<glm::vec4>(100,  {0,1000,0,0});
 
+	for (auto& p : m_FramePerParticle)
+	{
+		p.x = RandomRange(0.0f, p.y);
+	}
 
 
 	m_ParticleHandle = CreateBuffer(Memory{ reinterpret_cast<uint8_t*>(m_FramePerParticle.data()), m_FramePerParticle.size() * sizeof(m_FramePerParticle[0]) },
@@ -285,6 +279,9 @@ DOS::DOS(std::string appName, size_t screenWidth, size_t screenHeight) : Voidsta
 #endif
 	m_StoneTexture = LoadTexture("Morgana.png");
 	NoiseTexture = LoadTexture("dos_2_noise.png");
+	NoiseTexture1 = LoadTexture("dos_2_noise_1.png");
+	NoiseTexture2 = LoadTexture("dos_2_noise_2.png");
+	NoiseTexture3 = LoadTexture("dos_2_noise_3.png");
 
 	GetCamera()->SetPosition({ 17,-14,17 });
 	GetCamera()->SetCameraControl(CameraControlMode::DIRECT_CONTROL);
@@ -430,7 +427,7 @@ void DOS::Update(float deltaTime)
 	//SetTransform(glm::translate(world, glm::vec3(10,0,0)));
 	BindTexture("u_Texture", m_StoneTexture);
 	BindTexture("u_Grid", texture);
-	BindTexture("u_Noise", NoiseTexture);
+	BindTextures("u_Noise", { NoiseTexture,NoiseTexture1,NoiseTexture2,NoiseTexture3 });
 	BindVertexBuffer(0, m_VertexHandle);
 	BindIndexBuffer(m_IndexHandle);
 	Submit(GrondPass, m_GroundShader, 1);
@@ -451,12 +448,8 @@ void DOS::Update(float deltaTime)
 	SetViewTransform(GrondPass, GetCamera()->GetView(), GetCamera()->GetProj());
 	m_MappedPtr = static_cast<glm::vec4*>(ReadMappedPtr(ResourceType::StorageBuffer, m_ParticleHandle.idx));
 	SetDepthWrite(false);
-	age += deltaTime;
-
-
 	
 
-	// 2. Update distances and Sort (Back-to-Front)
 	glm::vec3 camPos = GetCamera()->GetPosition();
 	for (auto& p : fireWorlds) {
 		glm::vec3 pos = glm::vec3(p.world[3]); // Extract world position
@@ -468,15 +461,10 @@ void DOS::Update(float deltaTime)
 	//		return a.distanceSq > b.distanceSq; // Farthest first
 	//	});
 
-	// 3. Map to GPU Buffer
-	// 'm_MappedPtr' must be updated to match the NEW sorted order
-	for (int i = 0; i < fireWorlds.size(); i++) {
-		// Age = Now - Birth
-		float individualAge = age * 1000.0f;
-
-		m_MappedPtr[i].x = individualAge;
-
-		// Set the transform for this specific instance
+	
+	for (int i = 0; i < fireWorlds.size(); i++)
+	{
+		m_MappedPtr[i].x += deltaTime * 2200;
 		SetTransform(fireWorlds[i].world);
 	}
 
@@ -486,7 +474,7 @@ void DOS::Update(float deltaTime)
 	BindBuffer("particles", m_ParticleHandle);
 	BindTexture("u_Texture", m_FireTexture);
 	
-	Submit(GrondPass, m_DefaultShader, clicked);
+	Submit(GrondPass, m_DefaultShader, fireWorlds.size());
 	frame++;
 	frame = frame % 255;
 #endif

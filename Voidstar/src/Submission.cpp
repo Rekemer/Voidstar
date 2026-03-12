@@ -191,7 +191,7 @@ namespace Voidstar
 
 		bind.uniform = name;
 		bind.dirty = true;
-		bind.handles[bind.currentHandle++] = handle;
+		bind.handles[bind.currentFreeTextureHandle++] = handle;
 		bind.kind = ResourceType::CombinedSampler;
 	}
 	TextureHandle GetColorTexture(FrameBufferHandle fb)
@@ -241,6 +241,7 @@ namespace Voidstar
 		bind.dirty = true;
 		std::copy_n(handles.begin(),handles.size(), bind.handles.begin());
 		bind.kind = ResourceType::CombinedSampler;
+		bind.currentFreeTextureHandle += handles.size();
 	}
 	void BindImages(std::string_view uniformName, const std::vector<TextureHandle>& handles)
 	{
@@ -250,7 +251,7 @@ namespace Voidstar
 		bind.uniform = uniformName;
 		bind.dirty = true;
 		std::copy_n(handles.begin(), handles.size(), bind.handles.begin());
-		bind.currentHandle += handles.size();
+		bind.currentFreeTextureHandle += handles.size();
 		bind.kind = ResourceType::StorageImage;
 	}
 
@@ -262,7 +263,7 @@ namespace Voidstar
 
 		bind.uniform = uniformName;
 		bind.dirty = true;
-		bind.handles[bind.currentHandle++] = handle;
+		bind.handles[bind.currentFreeTextureHandle++] = handle;
 		bind.kind = ResourceType::StorageImage;
 	}
 
@@ -273,7 +274,7 @@ namespace Voidstar
 		bind.uniform = uniformName;
 		bind.dirty = true;
 		bind.kind = ResourceType::StorageBuffer;
-		bind.buffers[bind.currentHandle2++] = handle;
+		bind.buffers[bind.currentFreeBufferHandle++] = handle;
 
 	}
 	void BindTexture(std::string_view uniformName, TextureHandle handle)
@@ -286,7 +287,7 @@ namespace Voidstar
 
 		bind.uniform = uniformName;
 		bind.dirty = true;
-		bind.handles[bind.currentHandle++] = handle;
+		bind.handles[bind.currentFreeTextureHandle++] = handle;
 		bind.kind = ResourceType::CombinedSampler;
 	}
 	void SetViewTransform(PassID id, glm::mat4& view, glm::mat4& proj)

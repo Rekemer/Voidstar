@@ -340,8 +340,8 @@ namespace Voidstar
 		std::string uniform;
 		std::array<TextureHandle, 12> handles;
 		std::array<BufferHandle,  12> buffers;
-		int currentHandle = 0;
-		int currentHandle2 = 0;
+		int currentFreeTextureHandle = 0;
+		int currentFreeBufferHandle = 0;
 		bool dirty;
 		ResourceType kind;
 	};
@@ -359,8 +359,8 @@ namespace Voidstar
 			vertexCurrentBinding = 0;
 			for (auto& bind : ResBindings)
 			{
-				bind.currentHandle = 0;
-				bind.currentHandle2 = 0;
+				bind.currentFreeTextureHandle = 0;
+				bind.currentFreeBufferHandle = 0;
 			}
 		}
 	};
