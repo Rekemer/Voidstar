@@ -1,5 +1,5 @@
 #version 450
-
+#extension GL_ARB_shader_draw_parameters : require
 layout(set=0,binding = 0) uniform UniformBufferObject {
     mat4 view;
     mat4 proj;
@@ -21,7 +21,8 @@ layout(location = 1) out vec3 out_worldPos;
 
 void main() 
 {
-    mat4 model = instances.model[gl_InstanceIndex];
+    uint localIdx = gl_InstanceIndex - gl_BaseInstanceARB;
+    mat4 model = instances.model[localIdx];
     vec4 worldPos = model * vec4(in_pos,1);
     vec4 clipSpace = ubo.proj * ubo.view * worldPos ;
     gl_Position = clipSpace;

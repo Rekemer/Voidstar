@@ -157,7 +157,7 @@ namespace Voidstar
 	}
 
 	inline bool operator==(const DescriptorLayoutKey& a, const DescriptorLayoutKey& b) {
-		return a.set == b.set && a.bindings == b.bindings; // relies on BindingDesc::operator==
+		return  a.set == b.set && a.bindings == b.bindings; // relies on BindingDesc::operator==
 	}
 
 	inline bool operator==(const PipelineLayoutKey& a, const PipelineLayoutKey& b) {

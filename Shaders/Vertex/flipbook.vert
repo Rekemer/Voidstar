@@ -11,7 +11,6 @@ layout(std430, set = 0, binding = 1) buffer InstanceBuffer {
     mat4 worlds[];
 };
 
-
 layout(location = 0) in vec3 in_pos;
 layout(location = 1) in vec2 in_uv;
 
@@ -49,9 +48,11 @@ void main()
     vec3 cameraRight = vec3(ubo.view[0][0], ubo.view[1][0], ubo.view[2][0]);
     vec3 cameraUp    = vec3(ubo.view[0][1], ubo.view[1][1], ubo.view[2][1]);
     
+
+
     vec3 billboardedPos = worldCenter.xyz 
-                        + cameraRight * in_pos.x 
-                        + cameraUp    * in_pos.y * 1.5;
+                        + cameraRight * in_pos.x * scaleX 
+                        + cameraUp    * in_pos.y * 1.5* scaleY;
 
     // 4. Transform to Clip Space
     gl_Position = ubo.proj * ubo.view * vec4(billboardedPos, 1.0);

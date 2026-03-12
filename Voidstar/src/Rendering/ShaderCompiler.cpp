@@ -295,10 +295,13 @@ namespace Voidstar
 		assert(shaderAmount == m_StageMetas.size());
 		ProgramMeta meta;
 		// number of set and its key
+		ShaderType pipelineAccess = ShaderType::NONE;
 		std::unordered_map<int, DescriptorLayoutKey> keysMap;
+
 		for (int i = 0; i < shaderAmount; i++)
 		{
 			auto& sMeta = m_StageMetas.top();
+			pipelineAccess |= sMeta.stage;
 			for (auto& [set, bindings] : sMeta.bindings)
 			{
 				auto& descKey = keysMap[set];

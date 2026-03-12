@@ -27,18 +27,18 @@ FrameBufferHandle m_SurfaceMask;
 AttachmentHandle m_SurfaceAttachment;
 
 Particle* m_MappedPtr;
-glm::mat4 world;
+glm::mat4 worldGround;
 PassID GrondPass = 0;
 PassID Flipbook = 1;
 #define FLIPBOOK 1
-#define GROUND 0
+#define GROUND 1
 
 std::vector<uint8_t> maskData;
 std::vector<uint8_t> blurredMaskData;
 std::vector<glm::mat4> fireWorlds;
 
-float planeHalfSize = 5;
 float planeSize = 10;
+float planeHalfSize = planeSize/2;
 
 int gridH = 1024/2;
 int gridW = 1024/2;
@@ -182,7 +182,13 @@ void DilateMask(const std::vector<uint8_t>& src, std::vector<uint8_t>& dst, int 
 		}
 	}
 }
-
+void SpawnParticle(glm::vec3 pos)
+{
+	glm::mat4 model = glm::translate(glm::mat4(1.0f), pos);
+	auto randScale = RandomRange(0.3, 1);
+	model = glm::scale(model, glm::vec3(randScale));
+	fireWorlds.push_back(model);
+}
 DOS::DOS(std::string appName, size_t screenWidth, size_t screenHeight) : Voidstar::Application(appName, screenWidth, screenHeight)
 {
 
@@ -206,20 +212,12 @@ DOS::DOS(std::string appName, size_t screenWidth, size_t screenHeight) : Voidsta
 		// 1. Calculate the angle in radians
 		// 2 * PI / count gives the step for each item
 		float angle = (2.0f * glm::pi<float>() * i) / (float)count;
-
+	
 		// 2. Calculate X and Z positions (assuming Y is up)
 		float x = std::cos(angle) * 4;
 		float z = std::sin(angle) * 4;
 		float y = -2.0f; // Keep it on the ground plane
-
-		// 3. Create the translation matrix
-		glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(x, y, z));
-
-		auto randScale = RandomRange(0.3, 1);
-		randScale = 1;
-		model = glm::scale(model,glm::vec3(randScale));
-
-		fireWorlds.push_back(model);
+		SpawnParticle(glm::vec3(x, y, z));
 	}
 
 	
@@ -252,7 +250,9 @@ DOS::DOS(std::string appName, size_t screenWidth, size_t screenHeight) : Voidsta
 	GetCamera()->LookAt({ 0,0,0 });
 	ExecuteFrame(0,true);
 
-	
+	worldGround = glm::mat4(1);
+	worldGround = glm::rotate(worldGround, glm::radians(90.f), glm::vec3(1, 0, 0));
+	worldGround = glm::scale(worldGround, glm::vec3(planeSize));
 
 }
 
@@ -332,22 +332,33 @@ bool IntersectPlane(const Ray& worldRay, const glm::mat4& model, glm::vec3& outH
 }
 
 
+glm::vec3 PixelToWorldOnPlane(int x, int y, glm::mat4& world)
+{
+	float u = (x + 0.5f) / float(gridW);
+	float v = (y+ 0.5f) / float(gridH);
+	float localX = u * 2.0f - 1.0; 
+	float localY = v * 2.0f - 1.0f;
 
+	glm::vec3 local(localX, localY, 0.0f);
+
+	return glm::vec3(world * glm::vec4(local, 1.0f));
+
+
+}
 void DOS::Update(float deltaTime)
 {
 
 	auto mousePos = Input::GetMousePos();
 	Ray ray = ScreenPointToRay(std::get<0>(mousePos), std::get<1>(mousePos), Application::GetScreenWidth(), Application::GetScreenHeight(), GetCamera()->GetView(), GetCamera()->GetProj());
 
-	glm::vec3 worldHit;
 	glm::vec3 localHit;
 	bool hit = IntersectPlane(
 		ray,
-		world,
+		worldGround,
 		localHit
 	);
+	glm::vec3 worldHit = glm::vec3(worldGround * glm::vec4(localHit,1));
 	
-	// 1. World -> UV [0, 1]
 	float u = (localHit.x + 1.0f) * 0.5f;
 	float v = (localHit.y + 1.0f) * 0.5f;
 
@@ -355,9 +366,7 @@ void DOS::Update(float deltaTime)
 	int pixelX = static_cast<int>(u * (gridW - 1));
 	int pixelY = static_cast<int>(v * (gridH- 1));
 
-	//worldHit =  GetCamera()->GetPosition();
-	//std::cout << pixelX << " " << pixelY << "\n";
-	//std::cout << hit << std::endl;
+	
 
 	if (hit && Input::IsMousePressed(VS_MOUSE_LEFT))
 	//if (hit && Input::IsMouseClicked(VS_MOUSE_LEFT))
@@ -371,17 +380,20 @@ void DOS::Update(float deltaTime)
 			float jitteredRadius = baseRadius * RandomRange(0.5f, 1.2f);
 			int jitterX = pixelX + RandomRangeInt(-8, 8);
 			int jitterY = pixelY + RandomRangeInt(-8, 8);
-			AddSplat2(pixelX, pixelY, jitteredRadius);
-			//if (RandomRangeInt(-1, 1) > 0)
-			//{
-			//}
-			//else AddSplat(pixelX, pixelY, jitteredRadius);
+			if (RandomRangeInt(-1, 1) > 0)
+			{
+				AddInverseSplat(pixelX, pixelY, jitteredRadius);
+			}
+			else AddSplat(pixelX, pixelY, jitteredRadius);
+
+			glm::vec3 spawnPos = PixelToWorldOnPlane(jitterX, jitterY, worldGround);
+			// Jitter the position so they don't look like they are in a grid
+			spawnPos.x += RandomRange(-0.2f, 0.2f);
+			spawnPos.z += RandomRange(-0.2f, 0.2f);
+			spawnPos.y -= 1;
+			SpawnParticle(spawnPos);
 		}
-		//float radius = 10;
-		//float jitteredRadius = radius * RandomRange(0.25f, 1.15f);
-		//int jitterX = pixelX + RandomRangeInt(-2, 2);
-		//int jitterY = pixelY + RandomRangeInt(-2, 2);
-		//AddSplat(jitterX, jitterY, jitteredRadius);
+		
 	}
 
 	auto texture = GetColorTexture(m_SurfaceMask);
@@ -392,7 +404,7 @@ void DOS::Update(float deltaTime)
 	SetViewTransform(GrondPass, GetCamera()->GetView(), GetCamera()->GetProj());
 	
 
-	SetTransform(world);
+	SetTransform(worldGround);
 	//SetTransform(glm::translate(world, glm::vec3(10,0,0)));
 	BindTexture("u_Texture", m_StoneTexture);
 	BindTexture("u_Grid", texture);

@@ -19,7 +19,7 @@
 
 namespace Voidstar
 {
-	const size_t MAX_OBJECTS = 255;
+	const size_t MAX_OBJECTS = 1024;
 
 	enum class ResourceType : uint8_t
 	{
