@@ -34,12 +34,13 @@ PassID Flipbook = 1;
 #define GROUND 1
 
 std::vector<uint8_t> maskData;
+std::vector<glm::vec2> clickedPixels;
 std::vector<uint8_t> blurredMaskData;
 std::vector<glm::mat4> fireWorlds;
 
 float planeSize = 10;
 float planeHalfSize = planeSize/2;
-
+int clicked = 0;
 int gridH = 1024/2;
 int gridW = 1024/2;
 // Returns a random integer in the range [min, max] (inclusive)
@@ -58,9 +59,66 @@ float RandomRange(float min, float max) {
 	return dist(gen);
 }
 
+glm::vec3 PixelToWorldOnPlane(int x, int y, glm::mat4& world)
+{
+	float u = (x + 0.5f) / float(gridW);
+	float v = (y + 0.5f) / float(gridH);
+	float localX = u * 2.0f - 1.0;
+	float localY = v * 2.0f - 1.0f;
+
+	glm::vec3 local(localX, localY, 0.0f);
+
+	return glm::vec3(world * glm::vec4(local, 1.0f));
+
+
+}
+void SpawnParticle(int index, glm::vec3 pos)
+{
+	glm::mat4 model = glm::translate(glm::mat4(1.0f), pos);
+	auto randScale = RandomRange(0.3,0.9);
+	model = glm::scale(model, glm::vec3(randScale));
+	fireWorlds.push_back(model);
+}
+
+void AddZone(int pixelX, int pixelY)
+{
+	// Inside your Update() function when hit && Input::IsMousePressed
+	float minSeparation = 40.0f + RandomRange(-5.0f, 5.0f); // Minimum pixels between fire sources
+	bool tooClose = false;
+
+	for (const auto& zone : clickedPixels) {
+		float dx = (float)pixelX - (float)zone.x;
+		float dy = (float)pixelY - (float)zone.y;
+		float distSq = dx * dx + dy * dy;
+
+		if (distSq < (minSeparation * minSeparation)) {
+			tooClose = true;
+			// Optional: Refresh the strength of the existing zone so it doesn't die
+			// zone.strength = 1.0f; 
+			break;
+		}
+	}
+
+	if (!tooClose) {
+		// Only add a new spawning source if we aren't standing on an old one
+		clickedPixels.push_back({ pixelX, pixelY });
+
+		glm::vec3 spawnPos = PixelToWorldOnPlane(pixelX, pixelY, worldGround);
+		// Jitter the position so they don't look like they are in a grid
+		spawnPos.x += RandomRange(-0.2f, 0.2f);
+		spawnPos.z += RandomRange(-0.2f, 0.2f);
+		spawnPos.y -= 1;
+		clicked++;
+		SpawnParticle(clicked - 1, spawnPos);
+
+	}
+}
+
 void AddInverseSplat(int cx, int cy, float radius)
 {
 	float rSq = radius * radius;
+	AddZone(cx, cy);
+
 	for (int y = cy - radius; y <= cy + radius; ++y)
 	{
 		for (int x = cx - radius; x <= cx + radius; ++x)
@@ -84,6 +142,7 @@ void AddInverseSplat(int cx, int cy, float radius)
 void AddSplat(int cx, int cy, float radius)
 {
 	float rSq = radius * radius;
+	AddZone(cx, cy);
 	// Iterate only over the bounding box
 	for (int y = std::max(0, int(cy - radius)); y <= std::min(gridH - 1, int(cy + radius)); ++y)
 	{
@@ -103,6 +162,7 @@ void AddSplat(int cx, int cy, float radius)
 
 				// Additive blending allows blobs to merge (Metaball effect)
 				maskData[idx] = uint8_t(glm::clamp(current + intensity, 0.0f, 1.0f) * 255.0f);
+
 			}
 		}
 	}
@@ -111,6 +171,7 @@ void AddSplat(int cx, int cy, float radius)
 void AddSplat2(int cx, int cy, float radius)
 {
 	auto& grid = maskData;
+	AddZone(cx,cy);
 	for (int y = std::max(0, int(cy - radius - 2)); y <= std::min(gridH - 1, int(cy + radius + 2)); ++y)
 	{
 		for (int x = std::max(0, int(cx - radius - 2)); x <= std::min(gridW - 1, int(cx + radius + 2)); ++x)
@@ -132,8 +193,11 @@ void AddSplat2(int cx, int cy, float radius)
 
 			// only edge gets noise
 			float jitter = RandomRange(-2.0f, 2.0f);
+			auto idx = y * gridW + x;
 			if (dist < radius + jitter)
-				grid[y * gridW + x] = 255;
+			{
+				grid[idx] = 255;
+			}
 		}
 	}
 }
@@ -156,39 +220,7 @@ void AddSplat2(int cx, int cy, float radius)
 		}
 	}*/
 
-void DilateMask(const std::vector<uint8_t>& src, std::vector<uint8_t>& dst, int width, int height)
-{
-	for (int y = 0; y < height; ++y)
-	{
-		for (int x = 0; x < width; ++x)
-		{
-			uint8_t m = 0;
 
-			for (int oy = -1; oy <= 1; ++oy)
-			{
-				for (int ox = -1; ox <= 1; ++ox)
-				{
-					int sx = x + ox;
-					int sy = y + oy;
-
-					if (sx < 0 || sx >= width || sy < 0 || sy >= height)
-						continue;
-
-					m = std::max(m, src[sy * width + sx]);
-				}
-			}
-
-			dst[y * width + x] = m;
-		}
-	}
-}
-void SpawnParticle(glm::vec3 pos)
-{
-	glm::mat4 model = glm::translate(glm::mat4(1.0f), pos);
-	auto randScale = RandomRange(0.3, 1);
-	model = glm::scale(model, glm::vec3(randScale));
-	fireWorlds.push_back(model);
-}
 DOS::DOS(std::string appName, size_t screenWidth, size_t screenHeight) : Voidstar::Application(appName, screenWidth, screenHeight)
 {
 
@@ -206,24 +238,27 @@ DOS::DOS(std::string appName, size_t screenWidth, size_t screenHeight) : Voidsta
 
 #if FLIPBOOK
 	m_DefaultShader = LoadProgram("flipbook.vert", "flipbook.frag");
-	int count = 10;
-	for (int i = 0; i < count; ++i)
-	{
-		// 1. Calculate the angle in radians
-		// 2 * PI / count gives the step for each item
-		float angle = (2.0f * glm::pi<float>() * i) / (float)count;
-	
-		// 2. Calculate X and Z positions (assuming Y is up)
-		float x = std::cos(angle) * 4;
-		float z = std::sin(angle) * 4;
-		float y = -2.0f; // Keep it on the ground plane
-		SpawnParticle(glm::vec3(x, y, z));
-	}
+	int count = 100;
+	//for (int i = 0; i < count; ++i)
+	//{
+	//	// 1. Calculate the angle in radians
+	//	// 2 * PI / count gives the step for each item
+	//	float angle = (2.0f * glm::pi<float>() * i) / (float)count;
+	//
+	//	// 2. Calculate X and Z positions (assuming Y is up)
+	//	float x = std::cos(angle) * 4;
+	//	float z = std::sin(angle) * 4;
+	//	float y = -2.0f; // Keep it on the ground plane
+	//	SpawnParticle(glm::vec3(x, y, z));
+	//}
 
 	
-	m_FramePerParticle = std::vector<Particle>(fireWorlds.size(), { {0,1000,0,0}, });
+	m_FramePerParticle = std::vector<Particle>(100, { {0,1000,0,0}, });
 
-	m_ParticleHandle = CreateBuffer(Memory{ reinterpret_cast<uint8_t*>(m_FramePerParticle.data()), m_FramePerParticle.size() * sizeof(m_FramePerParticle[0]) },ResourceUsage::StorageRead | ResourceUsage::StorageWrite | ResourceUsage::Readback);
+
+
+	m_ParticleHandle = CreateBuffer(Memory{ reinterpret_cast<uint8_t*>(m_FramePerParticle.data()), m_FramePerParticle.size() * sizeof(m_FramePerParticle[0]) },
+		ResourceUsage::StorageRead | ResourceUsage::StorageWrite | ResourceUsage::Readback);
 #endif
 
 
@@ -332,19 +367,7 @@ bool IntersectPlane(const Ray& worldRay, const glm::mat4& model, glm::vec3& outH
 }
 
 
-glm::vec3 PixelToWorldOnPlane(int x, int y, glm::mat4& world)
-{
-	float u = (x + 0.5f) / float(gridW);
-	float v = (y+ 0.5f) / float(gridH);
-	float localX = u * 2.0f - 1.0; 
-	float localY = v * 2.0f - 1.0f;
 
-	glm::vec3 local(localX, localY, 0.0f);
-
-	return glm::vec3(world * glm::vec4(local, 1.0f));
-
-
-}
 void DOS::Update(float deltaTime)
 {
 
@@ -367,13 +390,12 @@ void DOS::Update(float deltaTime)
 	int pixelY = static_cast<int>(v * (gridH- 1));
 
 	
-
+	
 	if (hit && Input::IsMousePressed(VS_MOUSE_LEFT))
 	//if (hit && Input::IsMouseClicked(VS_MOUSE_LEFT))
 	{
 		int numSplats =1; // Number of "fire particles" in one click
-		float baseRadius = 10.0f;
-
+		float baseRadius = 20.0f;
 		for (int i = 0; i < numSplats; ++i)
 		{
 			// Give each splat a slightly different center and size
@@ -386,12 +408,6 @@ void DOS::Update(float deltaTime)
 			}
 			else AddSplat(pixelX, pixelY, jitteredRadius);
 
-			glm::vec3 spawnPos = PixelToWorldOnPlane(jitterX, jitterY, worldGround);
-			// Jitter the position so they don't look like they are in a grid
-			spawnPos.x += RandomRange(-0.2f, 0.2f);
-			spawnPos.z += RandomRange(-0.2f, 0.2f);
-			spawnPos.y -= 1;
-			SpawnParticle(spawnPos);
 		}
 		
 	}
@@ -438,7 +454,7 @@ void DOS::Update(float deltaTime)
 		// Get world positions (column 3)
 		glm::vec3 posA = glm::vec3(a[3]);
 		glm::vec3 posB = glm::vec3(b[3]);
-
+	
 		// Sort by squared distance (farthest first)
 		return glm::distance(camPos, posA) > glm::distance(camPos, posB);
 		});
@@ -446,8 +462,6 @@ void DOS::Update(float deltaTime)
 	for (auto i = 0; i < fireWorlds.size(); i++)
 	{
 		(m_MappedPtr+i)->lifetime.x = age*1000;
-
-		
 		SetTransform(fireWorlds[i]);
 	}
 
@@ -457,7 +471,7 @@ void DOS::Update(float deltaTime)
 	BindBuffer("particles", m_ParticleHandle);
 	BindTexture("u_Texture", m_FireTexture);
 	
-	Submit(GrondPass, m_DefaultShader, fireWorlds.size());
+	Submit(GrondPass, m_DefaultShader, clicked);
 	frame++;
 	frame = frame % 255;
 #endif
