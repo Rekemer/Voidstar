@@ -31,12 +31,19 @@ TextureHandle m_StoneTexture;
 FrameBufferHandle m_SurfaceMask;
 AttachmentHandle m_SurfaceAttachment;
 
+FrameBufferHandle downsampleFramebuffer;
+AttachmentHandle bloomAttachments[3];
+FrameBufferHandle upsampleFramebuffer;
+
+
 glm::vec4* m_MappedPtr;
 glm::mat4 worldGround;
 PassID GrondPass = 0;
 PassID Flipbook = 1;
-#define FLIPBOOK 1
+#define FLIPBOOK 0
+#define BLOOM 0
 #define GROUND 1
+#define DEBUG 1
 
 std::vector<uint8_t> maskData;
 std::vector<glm::vec2> clickedPixels;
@@ -233,7 +240,7 @@ void AddSplat2(int cx, int cy, float radius)
 DOS::DOS(std::string appName, size_t screenWidth, size_t screenHeight) : Voidstar::Application(appName, screenWidth, screenHeight)
 {
 
-	m_GroundShader = LoadProgram("ground_splat.vert", "ground_splat.frag");
+	m_GroundShader = LoadProgram("ground_splat.vert", "bloom_test.frag");
 	m_DebugShader = LoadProgram("screen.vert", "render_attachment.frag");
 	m_VertexLayout.AddVertex(ShaderDataType::FLOAT3, 0)
 		.AddVertex(ShaderDataType::FLOAT2, 0);
@@ -244,6 +251,15 @@ DOS::DOS(std::string appName, size_t screenWidth, size_t screenHeight) : Voidsta
 	m_VertexHandle = CreateVertexBuffer({
 		reinterpret_cast<uint8_t*>(m_Verticies.data()),m_Verticies.size() * sizeof(m_Verticies[0]) }
 	, m_VertexLayout);
+
+	bloomAttachments[0] = CreateAttachment(AttachmentType::COLOR,TextureFormat::RGBA16_SFLOAT, Application::GetScreenWidth(), Application::GetScreenHeight(),SampleCount::e1,AttachmentHint::None);
+	bloomAttachments[1] =  CreateAttachment(AttachmentType::COLOR,TextureFormat::RGBA16_SFLOAT, Application::GetScreenWidth(), Application::GetScreenHeight(),SampleCount::e1,AttachmentHint::None);
+	bloomAttachments[2] = CreateAttachment(AttachmentType::COLOR, TextureFormat::RGBA16_SFLOAT, Application::GetScreenWidth(), Application::GetScreenHeight(), SampleCount::e1, AttachmentHint::None);
+	downsampleFramebuffer = CreateFramebuffer({ bloomAttachments[0],bloomAttachments[1]});
+	upsampleFramebuffer= CreateFramebuffer({ bloomAttachments[2]});
+
+
+	//downsampleFramebuffer = CreateFramebuffer
 
 #if FLIPBOOK
 	m_DefaultShader = LoadProgram("flipbook.vert", "flipbook.frag");
@@ -422,25 +438,31 @@ void DOS::Update(float deltaTime)
 	SetViewRect(GrondPass, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
 	SetViewTransform(GrondPass, GetCamera()->GetView(), GetCamera()->GetProj());
 	
-
+	
+	SetFramebuffer(GrondPass,downsampleFramebuffer);
+	SetBlendState(1, {});
+	
 	SetTransform(worldGround);
 	//SetTransform(glm::translate(world, glm::vec3(10,0,0)));
-	BindTexture("u_Texture", m_StoneTexture);
-	BindTexture("u_Grid", texture);
-	BindTextures("u_Noise", { NoiseTexture,NoiseTexture1,NoiseTexture2,NoiseTexture3 });
+	//BindTexture("u_Texture", m_StoneTexture);
+	//BindTexture("u_Grid", texture);
+	//BindTextures("u_Noise", { NoiseTexture,NoiseTexture1,NoiseTexture2,NoiseTexture3 });
 	BindVertexBuffer(0, m_VertexHandle);
 	BindIndexBuffer(m_IndexHandle);
 	Submit(GrondPass, m_GroundShader, 1);
-
-	int screenWidth = Application::GetScreenWidth();
-	int screenHeight = Application::GetScreenHeight();
-	int width = 500;
-	int height = 400;
-	SetClipRect(screenWidth - width, screenHeight - height, width, height);
-	SetRenderMode(RenderMode::SCREEN);
-	BindAttachmentAsTexture("u_Scene", texture);
-	BindTexture("u_Noise", NoiseTexture);
-	Submit(GrondPass, m_DebugShader, 1);
+	#if DEBUG
+	SetViewRect(Flipbook, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
+	SetViewTransform(Flipbook, GetCamera()->GetView(), GetCamera()->GetProj());
+		int screenWidth = Application::GetScreenWidth();
+		int screenHeight = Application::GetScreenHeight();
+		int width = 500;
+		int height = 400;
+		SetClipRect(screenWidth - width, screenHeight - height, width, height);
+		SetRenderMode(RenderMode::SCREEN);
+		BindAttachmentAsTexture("u_Scene", texture);
+		BindTexture("u_Noise", NoiseTexture);
+		Submit(Flipbook, m_DebugShader, 1);
+	#endif
 #endif
 
 #if FLIPBOOK

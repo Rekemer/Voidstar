@@ -303,8 +303,9 @@ namespace Voidstar
 		bool      depthWrite = true;
 		bool	  stencilTest = false;
 		CompareOp depthFunc = CompareOp::LessEqual;
+		std::vector<BlendMode> blend{ {} };
 		// depends on amount of colour targets
-		BlendMode blend[1]{};
+		//BlendMode blend[1]{};
 		//StencilMode stencil{};
 
 		bool operator==(const RenderState& o) const noexcept {
@@ -532,6 +533,8 @@ namespace Voidstar
 	void SetViewTransform(PassID id, glm::mat4& view, glm::mat4& proj);
 	void SetViewRect(PassID id , size_t x, size_t y, size_t width, size_t height);
 	void SetFramebuffer(PassID id, FrameBufferHandle handle);
+
+	void SetBlendState(int attachmentIndex, BlendMode state);
 
 	void Submit(PassID id, ProgramHandle program,
 		size_t instances = 1);

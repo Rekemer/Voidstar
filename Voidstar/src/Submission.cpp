@@ -299,6 +299,17 @@ namespace Voidstar
 	{
 		g_Submission->Submit->Views[id].Fbh= handle;
 	}
+
+	void SetBlendState(int attachmentIndex, BlendMode state)
+	{
+		auto item = g_Submission->Submit->CurrentRenderItem;
+		if (attachmentIndex <= item->State.blend.size())
+		{
+			item->State.blend.resize(attachmentIndex + 1);
+			item->State.blend[attachmentIndex] = state;
+		}
+	}
+
 	void SetViewRect(PassID id, size_t x, size_t y, size_t width, size_t height)
 	{
 		g_Submission->Submit->Views[id].Rect = { x,y,width,height };
@@ -337,6 +348,9 @@ namespace Voidstar
 
 	void SubmitInit(InitParams init)
 	{
+
+
+
 #if THREADING
 		g_Submission->Submit = g_Submission->Frames;
 		g_Submission->Render = g_Submission->Frames+1;

@@ -352,7 +352,7 @@ namespace Voidstar
 
 
 
-
+	
 	class  PipelineBuilder
 	{
 	public:
@@ -373,10 +373,6 @@ namespace Voidstar
 		void SetSamples(vk::SampleCountFlagBits samples);
 		void SetRenderPass(vk::RenderPass renderPass);
 		void SetSubpassIndex(int amount);
-		void EnableBlend(bool state)
-		{
-			m_BlendEnable = state;
-		}
 		void SetStencilRefNumber(uint32_t number)
 		{
 			m_StencilRefNumber = number;
@@ -390,17 +386,23 @@ namespace Voidstar
 			m_WriteMask = write;
 			m_CompareMask = compare;
 		}
-		void SetBlendOp(vk::BlendOp op, vk::BlendFactor src, 
+		void SetBlend(bool enable,vk::BlendOp op, vk::BlendFactor src,
 			vk::BlendFactor dst, vk::BlendOp alphaOp, vk::BlendFactor srcAlpha,
 			vk::BlendFactor dstAlpha)
 		{
-			m_BlendOp = op;
-			m_BlendSrc = src;
-			m_BlendDst = dst;
 
-			m_AlphaOp = alphaOp;
-			m_SrcAlpha = srcAlpha;
-			m_DstAlpha = dstAlpha;
+			vk::PipelineColorBlendAttachmentState colorBlendAttachment = {};
+			colorBlendAttachment.colorWriteMask = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA;
+
+			colorBlendAttachment.blendEnable = enable;
+			colorBlendAttachment.colorBlendOp = op;
+			colorBlendAttachment.srcColorBlendFactor = src;
+			colorBlendAttachment.dstColorBlendFactor = dst;
+			colorBlendAttachment.alphaBlendOp = alphaOp;
+			colorBlendAttachment.srcAlphaBlendFactor = srcAlpha;
+			colorBlendAttachment.dstAlphaBlendFactor = dstAlpha;
+
+			m_AttachmentBlends.push_back(colorBlendAttachment);
 		}
 		void SetSampleShading(vk::Bool32 state)
 		{
@@ -409,6 +411,18 @@ namespace Voidstar
 		vk::Pipeline Build();
 		~PipelineBuilder();
 	private:
+
+		struct AttachmentBlend
+		{
+			vk::Bool32 m_BlendEnable = VK_TRUE;
+			vk::BlendOp m_BlendOp = vk::BlendOp::eAdd;
+			vk::BlendOp m_AlphaOp = vk::BlendOp::eAdd;
+			vk::BlendFactor m_BlendSrc = vk::BlendFactor::eSrcAlpha;
+			vk::BlendFactor m_BlendDst = vk::BlendFactor::eOneMinusSrcAlpha;
+			vk::BlendFactor m_SrcAlpha = vk::BlendFactor::eOne;
+			vk::BlendFactor m_DstAlpha = vk::BlendFactor::eOneMinusSrcAlpha;
+		};
+
 		std::vector<vk::ShaderModule> m_Modules;
 		vk::PrimitiveTopology m_Topology = vk::PrimitiveTopology::eTriangleList;
 		vk::PolygonMode m_PolygonMode;
@@ -433,15 +447,11 @@ namespace Voidstar
 		vk::RenderPass m_RenderPass;
 		int m_SubpassNumber = 0;
 
-		vk::Bool32 m_BlendEnable = VK_TRUE;
 		vk::Bool32 m_SampleShadingEnable = VK_FALSE;
 		float m_MinSampleShading = .2f;
-		vk::BlendOp m_BlendOp = vk::BlendOp::eAdd;
-		vk::BlendOp m_AlphaOp = vk::BlendOp::eAdd;
-		vk::BlendFactor m_BlendSrc = vk::BlendFactor::eSrcAlpha;
-		vk::BlendFactor m_BlendDst = vk::BlendFactor::eOneMinusSrcAlpha;
-		vk::BlendFactor m_SrcAlpha = vk::BlendFactor::eOne;
-		vk::BlendFactor m_DstAlpha = vk::BlendFactor::eOneMinusSrcAlpha;
+
+		
+		std::vector<vk::PipelineColorBlendAttachmentState> m_AttachmentBlends;
 
 	};
 
@@ -672,26 +682,15 @@ namespace Voidstar
 		multisampling.rasterizationSamples = m_Samples;
 		pipelineInfo.pMultisampleState = &multisampling;
 
-		//Color Blend
-		vk::PipelineColorBlendAttachmentState colorBlendAttachment = {};
-		colorBlendAttachment.colorWriteMask = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA;
-
-
-		colorBlendAttachment.blendEnable = m_BlendEnable;
-		colorBlendAttachment.colorBlendOp = m_BlendOp;
-		colorBlendAttachment.srcColorBlendFactor = m_BlendSrc;
-		colorBlendAttachment.dstColorBlendFactor = m_BlendDst;
-		colorBlendAttachment.alphaBlendOp= m_AlphaOp;
-		colorBlendAttachment.srcAlphaBlendFactor = m_SrcAlpha;
-		colorBlendAttachment.dstAlphaBlendFactor = m_DstAlpha;
+	
 
 
 		vk::PipelineColorBlendStateCreateInfo colorBlending = {};
 		colorBlending.flags = vk::PipelineColorBlendStateCreateFlags();
 		colorBlending.logicOpEnable = VK_FALSE;
 		colorBlending.logicOp = vk::LogicOp::eCopy;
-		colorBlending.attachmentCount = 1;
-		colorBlending.pAttachments = &colorBlendAttachment;
+		colorBlending.attachmentCount = m_AttachmentBlends.size();
+		colorBlending.pAttachments = m_AttachmentBlends.data();
 		colorBlending.blendConstants[0] = 0.0f;
 		colorBlending.blendConstants[1] = 0.0f;
 		colorBlending.blendConstants[2] = 0.0f;
@@ -1706,16 +1705,15 @@ namespace Voidstar
 		auto& rs = key.rs;
 		builder.EnableStencilTest(rs.stencilTest);
 		builder.SetDepthTest(rs.depthTest);
-		builder.EnableBlend(rs.blend->enabled);
-
+		for (auto& b : rs.blend)
 		{
-			auto blOp = map(rs.blend->colorOp);
-			auto srcColor = map(rs.blend->srcColor);
-			auto dstColor = map(rs.blend->dstColor);
-			auto alphaOp = map(rs.blend->alphaOp);
-			auto srcAlpha = map(rs.blend->srcAlpha);
-			auto dstAlpha = map(rs.blend->dstAlpha);
-			builder.SetBlendOp(blOp,srcColor,dstColor,alphaOp,srcAlpha,dstAlpha);
+			auto blOp = map(b.colorOp);
+			auto srcColor = map(b.srcColor);
+			auto dstColor = map(b.dstColor);
+			auto alphaOp = map(b.alphaOp);
+			auto srcAlpha = map(b.srcAlpha);
+			auto dstAlpha = map(b.dstAlpha);
+			builder.SetBlend(b.enabled,blOp,srcColor,dstColor,alphaOp,srcAlpha,dstAlpha);
 
 		}
 
