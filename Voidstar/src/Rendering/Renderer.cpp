@@ -1448,9 +1448,10 @@ namespace Voidstar
 
 		buffer->SetData(data, size);
 	}
-	TextureHandle Renderer::GetFBTextureHandle(FrameBufferHandle fb)
+	TextureHandle Renderer::GetFBTextureHandle(FrameBufferHandle fb, int index)
 	{
-		auto attHandle = m_FBAttachments.at(fb)[0];
+		assert(index < m_FBAttachments.at(fb).size());
+		auto attHandle = m_FBAttachments.at(fb)[index];
 		return m_AttachmentManager.GetColorTexture(attHandle,m_CurrentFrame);
 	}
 	
@@ -2109,7 +2110,7 @@ namespace Voidstar
 
 		auto& cmd = m_RenderCommandBuffer[m_CurrentFrame];
 		cmd.BeginRendering();
-
+		uint32_t currentMatrixOffset = 0;
 		for (int i = 0; i <= render->LastView; ++i)
 		{
 			auto& view = render->Views[i];
@@ -2145,7 +2146,7 @@ namespace Voidstar
 			UpdateUniformBuffer(view.Proj, view.View, m_App->GetExeTime());
 
 
-			uint32_t currentMatrixOffset = 0;
+			
 			// prepare to rendering
 			{
 				for (int ii = 0; ii < view.FreeIndex; ++ii)

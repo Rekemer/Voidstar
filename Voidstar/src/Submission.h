@@ -510,7 +510,7 @@ namespace Voidstar
 
 	FrameBufferHandle CreateFramebuffer(const std::vector<AttachmentHandle>& attachments);
 	
-	TextureHandle GetColorTexture(FrameBufferHandle fb);
+	TextureHandle GetColorTexture(FrameBufferHandle fb, int index = 0);
 	void BindAttachmentAsTexture(std::string_view name, TextureHandle tex);
 	
 	void BindBuffer(std::string_view uniformName, 

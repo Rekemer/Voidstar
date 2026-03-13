@@ -194,9 +194,9 @@ namespace Voidstar
 		bind.handles[bind.currentFreeTextureHandle++] = handle;
 		bind.kind = ResourceType::CombinedSampler;
 	}
-	TextureHandle GetColorTexture(FrameBufferHandle fb)
+	TextureHandle GetColorTexture(FrameBufferHandle fb, int index)
 	{
-		auto handle = Renderer::Instance()->GetFBTextureHandle(fb);
+		auto handle = Renderer::Instance()->GetFBTextureHandle(fb,index);
 		if (!handle.Valid()) assert(false);
 		return handle;
 	}

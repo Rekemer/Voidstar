@@ -174,7 +174,7 @@ namespace Voidstar
 			std::vector<PushConstRange>& pushConstants);
 		vk::DescriptorSetLayout CreateDescriptorLayout(const DescriptorLayoutKey& key);
 		void CopyImageToBuffer(SPtr<Image> image, SPtr<Buffer> buffer);
-		TextureHandle GetFBTextureHandle(FrameBufferHandle fb);
+		TextureHandle GetFBTextureHandle(FrameBufferHandle fb, int index);
 		void UpdateBuffer(BufferHandle handle, void* data,size_t size);
 		SPtr<Image> GetTexture(TextureHandle handle);
 

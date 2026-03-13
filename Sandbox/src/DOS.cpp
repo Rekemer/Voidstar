@@ -13,6 +13,8 @@ IndexBufferHandle m_IndexHandle;
 ProgramHandle m_DefaultShader;
 ProgramHandle m_GroundShader;
 ProgramHandle m_DebugShader;
+ProgramHandle m_DownSamplingShader;
+ProgramHandle m_UpsamplingShader;
 std::vector<Vertex> m_Verticies;
 std::vector<glm::vec4> m_FramePerParticle;
 std::vector<IndexType> m_Indicies;
@@ -39,16 +41,27 @@ FrameBufferHandle upsampleFramebuffer;
 glm::vec4* m_MappedPtr;
 glm::mat4 worldGround;
 PassID GrondPass = 0;
-PassID Flipbook = 1;
+PassID DownSampling = 1;
+PassID Flipbook = 2;
 #define FLIPBOOK 0
 #define BLOOM 0
 #define GROUND 1
 #define DEBUG 1
 
+struct BloomLevel
+{
+	int w;
+	int h;
+	AttachmentHandle attachment;
+	FrameBufferHandle fbh;
+};
+
 std::vector<uint8_t> maskData;
 std::vector<glm::vec2> clickedPixels;
 std::vector<uint8_t> blurredMaskData;
 std::vector<Particle> fireWorlds;
+std::vector<BloomLevel> m_DownsampleChain;
+
 
 float planeSize = 10;
 float planeHalfSize = planeSize/2;
@@ -242,6 +255,8 @@ DOS::DOS(std::string appName, size_t screenWidth, size_t screenHeight) : Voidsta
 
 	m_GroundShader = LoadProgram("ground_splat.vert", "bloom_test.frag");
 	m_DebugShader = LoadProgram("screen.vert", "render_attachment.frag");
+	m_DownSamplingShader = LoadProgram("render_screen_quad.vert", "downsample.frag");
+	m_UpsamplingShader = LoadProgram("render_screen_quad.vert", "upsample.frag");
 	m_VertexLayout.AddVertex(ShaderDataType::FLOAT3, 0)
 		.AddVertex(ShaderDataType::FLOAT2, 0);
 	
@@ -259,7 +274,30 @@ DOS::DOS(std::string appName, size_t screenWidth, size_t screenHeight) : Voidsta
 	upsampleFramebuffer= CreateFramebuffer({ bloomAttachments[2]});
 
 
-	//downsampleFramebuffer = CreateFramebuffer
+	std::vector<BloomLevel> m_DownsampleChain;
+
+	uint32_t w = Application::GetScreenWidth() / 2;
+	uint32_t h = Application::GetScreenHeight() / 2;
+
+	for (int i = 0; i < 6; i++) { // 6 levels of blur
+		BloomLevel level;
+		level.w= w;
+		level.h= h;
+
+		// Create attachment at this specific size
+		level.attachment= CreateAttachment(AttachmentType::COLOR, TextureFormat::RGBA16_SFLOAT, w, h, SampleCount::e1, AttachmentHint::None);
+
+		// Create a framebuffer specifically for this size
+		level.fbh = CreateFramebuffer({ level.attachment });
+
+		m_DownsampleChain.push_back(level);
+
+		// Shrink for next level
+		w = std::max(1u, w / 2);
+		h = std::max(1u, h / 2);
+	}
+
+
 
 #if FLIPBOOK
 	m_DefaultShader = LoadProgram("flipbook.vert", "flipbook.frag");
@@ -391,7 +429,11 @@ void DOS::Update(float deltaTime)
 {
 
 	auto mousePos = Input::GetMousePos();
-	Ray ray = ScreenPointToRay(std::get<0>(mousePos), std::get<1>(mousePos), Application::GetScreenWidth(), Application::GetScreenHeight(), GetCamera()->GetView(), GetCamera()->GetProj());
+
+	auto screenWidth = Application::GetScreenWidth();
+	auto screenHeight = Application::GetScreenHeight();
+
+	Ray ray = ScreenPointToRay(std::get<0>(mousePos), std::get<1>(mousePos), screenWidth, screenHeight, GetCamera()->GetView(), GetCamera()->GetProj());
 
 	glm::vec3 localHit;
 	bool hit = IntersectPlane(
@@ -435,7 +477,7 @@ void DOS::Update(float deltaTime)
 	UpdateTexture(texture, maskData.data(), sizeof(maskData[0])*maskData.size());
 
 #if GROUND
-	SetViewRect(GrondPass, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
+	SetViewRect(GrondPass, 0, 0, screenWidth,screenHeight);
 	SetViewTransform(GrondPass, GetCamera()->GetView(), GetCamera()->GetProj());
 	
 	
@@ -450,11 +492,42 @@ void DOS::Update(float deltaTime)
 	BindVertexBuffer(0, m_VertexHandle);
 	BindIndexBuffer(m_IndexHandle);
 	Submit(GrondPass, m_GroundShader, 1);
+
+
+
+	SetViewRect(DownSampling, 0, 0, screenWidth / 2, screenHeight / 2);
+
+	SetFramebuffer(DownSampling, m_DownsampleChain[0].fbh);
+
+	auto attachment = GetColorTexture(downsampleFramebuffer);
+
+	BindAttachmentAsTexture("u_Source", attachment);
+
+	// 3. Draw the fullscreen quad
+	//Submit(DownSampling, m_DownsampleShader, 1);
+
+
+
+	//for (auto& level : m_DownsampleChain)
+	//{
+	//	PassID pass = DownPassIDs[i];
+
+	//	// SOURCE is the texture from the previous FB
+	//	BindAttachmentAsTexture("u_Source", GetColorTexture(level.attachment));
+
+	//	// DESTINATION is the next FB in the chain
+	//	SetFramebuffer(pass, m_DownsampleFBs[i + 1]);
+
+	//	Submit(pass, m_DownsampleShader, 1);
+	//}
+
+
+
+
 	#if DEBUG
-	SetViewRect(Flipbook, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
+	SetViewRect(Flipbook, 0, 0, screenWidth, screenHeight);
 	SetViewTransform(Flipbook, GetCamera()->GetView(), GetCamera()->GetProj());
-		int screenWidth = Application::GetScreenWidth();
-		int screenHeight = Application::GetScreenHeight();
+		
 		int width = 500;
 		int height = 400;
 		SetClipRect(screenWidth - width, screenHeight - height, width, height);
