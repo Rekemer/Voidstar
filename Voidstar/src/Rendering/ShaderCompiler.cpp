@@ -318,6 +318,14 @@ namespace Voidstar
 				descKey.bindings.insert(bindings.begin(), bindings.end());
 			}
 
+			if (!keysMap.contains(0))
+			{
+				for (auto& bind : Renderer::Instance()->SystemDescriptorLayoutKey.bindings)
+				{
+					keysMap[0].bindings.insert(bind);
+				}
+			}
+
 			// we can have only one same set thorughouta all shader in render pass
 			for (auto [k, v] : sMeta.uniforms)
 			{

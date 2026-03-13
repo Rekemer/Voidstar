@@ -1013,14 +1013,14 @@ namespace Voidstar
 
 		std::vector<vk::DescriptorPoolSize> pool_sizes =
 		{
-			{ vk::DescriptorType::eCombinedImageSampler, 64 },
-			{ vk::DescriptorType::eStorageImage, 64 },
-			{ vk::DescriptorType::eStorageBuffer, 64 },
-			{ vk::DescriptorType::eInputAttachment, 64 },
-			{ vk::DescriptorType::eUniformBuffer, 64 },
+			{ vk::DescriptorType::eCombinedImageSampler, 128 },
+			{ vk::DescriptorType::eStorageImage, 128 },
+			{ vk::DescriptorType::eStorageBuffer, 128 },
+			{ vk::DescriptorType::eInputAttachment, 128 },
+			{ vk::DescriptorType::eUniformBuffer, 128 },
 		};
 
-		m_UniversalPool = DescriptorPool::Create(pool_sizes, 64);
+		m_UniversalPool = DescriptorPool::Create(pool_sizes, 128);
 
 	
 		auto frameAmount = RenderContext::GetFrameAmount();
@@ -2111,7 +2111,7 @@ namespace Voidstar
 		auto& cmd = m_RenderCommandBuffer[m_CurrentFrame];
 		cmd.BeginRendering();
 		uint32_t currentMatrixOffset = 0;
-		for (int i = 0; i <= render->LastView; ++i)
+		for (auto i : render->LastView)
 		{
 			auto& view = render->Views[i];
 			if (view.FreeIndex == 0)
@@ -2120,7 +2120,7 @@ namespace Voidstar
 			FrameBufferHandle fb = view.Fbh.Valid() ? view.Fbh : DEFAULT_FRAME_BUFFER;
 
 			bool viewIsPresent = false;
-			uint32_t index = GetIndex(fb, viewIsPresent, i == render->LastView);
+			uint32_t index = GetIndex(fb, viewIsPresent, i == render->LastView.back());
 			if (viewIsPresent)
 			{
 				isPresent = true;

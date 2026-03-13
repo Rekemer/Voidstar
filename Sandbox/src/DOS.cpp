@@ -41,8 +41,7 @@ FrameBufferHandle upsampleFramebuffer;
 glm::vec4* m_MappedPtr;
 glm::mat4 worldGround;
 PassID GrondPass = 0;
-PassID DownSampling = 1;
-PassID Flipbook = 2;
+PassID Flipbook = 1;
 #define FLIPBOOK 0
 #define BLOOM 0
 #define GROUND 1
@@ -60,7 +59,6 @@ std::vector<uint8_t> maskData;
 std::vector<glm::vec2> clickedPixels;
 std::vector<uint8_t> blurredMaskData;
 std::vector<Particle> fireWorlds;
-std::vector<BloomLevel> m_DownsampleChain;
 
 
 float planeSize = 10;
@@ -249,7 +247,9 @@ void AddSplat2(int cx, int cy, float radius)
 		}
 	}*/
 
-
+std::vector<BloomLevel> m_DownsampleChain;
+std::vector<PassID> m_DownsamplePasses;
+int bloomPasses = 6;
 DOS::DOS(std::string appName, size_t screenWidth, size_t screenHeight) : Voidstar::Application(appName, screenWidth, screenHeight)
 {
 
@@ -267,25 +267,33 @@ DOS::DOS(std::string appName, size_t screenWidth, size_t screenHeight) : Voidsta
 		reinterpret_cast<uint8_t*>(m_Verticies.data()),m_Verticies.size() * sizeof(m_Verticies[0]) }
 	, m_VertexLayout);
 
-	bloomAttachments[0] = CreateAttachment(AttachmentType::COLOR,TextureFormat::RGBA16_SFLOAT, Application::GetScreenWidth(), Application::GetScreenHeight(),SampleCount::e1,AttachmentHint::None);
-	bloomAttachments[1] =  CreateAttachment(AttachmentType::COLOR,TextureFormat::RGBA16_SFLOAT, Application::GetScreenWidth(), Application::GetScreenHeight(),SampleCount::e1,AttachmentHint::None);
-	bloomAttachments[2] = CreateAttachment(AttachmentType::COLOR, TextureFormat::RGBA16_SFLOAT, Application::GetScreenWidth(), Application::GetScreenHeight(), SampleCount::e1, AttachmentHint::None);
+	bloomAttachments[0] = CreateAttachment(AttachmentType::COLOR,TextureFormat::RGBA16_SFLOAT, 
+		Application::GetScreenWidth(), Application::GetScreenHeight(),SampleCount::e1,AttachmentHint::SampledLater);
+	bloomAttachments[1] =  CreateAttachment(AttachmentType::COLOR,TextureFormat::RGBA16_SFLOAT,
+ Application::GetScreenWidth(), Application::GetScreenHeight(),SampleCount::e1,AttachmentHint::SampledLater);
+	bloomAttachments[2] = CreateAttachment(AttachmentType::COLOR, TextureFormat::RGBA16_SFLOAT,
+ Application::GetScreenWidth(), Application::GetScreenHeight(), SampleCount::e1, AttachmentHint::None);
 	downsampleFramebuffer = CreateFramebuffer({ bloomAttachments[0],bloomAttachments[1]});
 	upsampleFramebuffer= CreateFramebuffer({ bloomAttachments[2]});
 
 
-	std::vector<BloomLevel> m_DownsampleChain;
 
 	uint32_t w = Application::GetScreenWidth() / 2;
 	uint32_t h = Application::GetScreenHeight() / 2;
 
-	for (int i = 0; i < 6; i++) { // 6 levels of blur
+	for (int i = 1; i < bloomPasses+1; i++)
+	{
+		m_DownsamplePasses.push_back(Flipbook+i);
+	}
+
+	for (int i = 0; i < bloomPasses; i++) { // 6 levels of blur
 		BloomLevel level;
 		level.w= w;
 		level.h= h;
 
 		// Create attachment at this specific size
-		level.attachment= CreateAttachment(AttachmentType::COLOR, TextureFormat::RGBA16_SFLOAT, w, h, SampleCount::e1, AttachmentHint::None);
+		level.attachment= CreateAttachment(AttachmentType::COLOR, TextureFormat::RGBA16_SFLOAT, w, h, SampleCount::e1, 
+			AttachmentHint::SampledLater);
 
 		// Create a framebuffer specifically for this size
 		level.fbh = CreateFramebuffer({ level.attachment });
@@ -495,31 +503,31 @@ void DOS::Update(float deltaTime)
 
 
 
-	SetViewRect(DownSampling, 0, 0, screenWidth / 2, screenHeight / 2);
+	SetViewRect(m_DownsamplePasses[0], 0, 0, screenWidth / 2, screenHeight / 2);
 
-	SetFramebuffer(DownSampling, m_DownsampleChain[0].fbh);
+	SetFramebuffer(m_DownsamplePasses[0], m_DownsampleChain[0].fbh);
 
-	auto attachment = GetColorTexture(downsampleFramebuffer);
+	auto attachment = GetColorTexture(downsampleFramebuffer,1);
 
 	BindAttachmentAsTexture("u_Source", attachment);
 
-	// 3. Draw the fullscreen quad
-	//Submit(DownSampling, m_DownsampleShader, 1);
+	Submit(m_DownsamplePasses[0], m_DownSamplingShader, 1);
 
 
+	for (auto i =0; i < m_DownsampleChain.size() - 1; i++)
+	{
+		auto& level = m_DownsampleChain[i];
+		PassID pass = m_DownsamplePasses[i+1];
+		auto& destLevel = m_DownsampleChain[i + 1];
+		SetViewRect(pass, 0, 0, destLevel.w, destLevel.h);
+		// SOURCE is the texture from the previous FB
+		BindAttachmentAsTexture("u_Source", GetColorTexture(level.fbh));
 
-	//for (auto& level : m_DownsampleChain)
-	//{
-	//	PassID pass = DownPassIDs[i];
+		// DESTINATION is the next FB in the chain
+		SetFramebuffer(pass, m_DownsampleChain[i + 1].fbh);
 
-	//	// SOURCE is the texture from the previous FB
-	//	BindAttachmentAsTexture("u_Source", GetColorTexture(level.attachment));
-
-	//	// DESTINATION is the next FB in the chain
-	//	SetFramebuffer(pass, m_DownsampleFBs[i + 1]);
-
-	//	Submit(pass, m_DownsampleShader, 1);
-	//}
+		Submit(pass, m_DownSamplingShader, 1);
+	}
 
 
 

@@ -241,7 +241,6 @@ namespace Voidstar
 		bind.dirty = true;
 		std::copy_n(handles.begin(),handles.size(), bind.handles.begin());
 		bind.kind = ResourceType::CombinedSampler;
-		bind.currentFreeTextureHandle += handles.size();
 	}
 	void BindImages(std::string_view uniformName, const std::vector<TextureHandle>& handles)
 	{
@@ -335,7 +334,7 @@ namespace Voidstar
 		renderItem->Type = ItemType::RENDER;
 		auto& freeIndex = g_Submission->Submit->Views[viewID].FreeIndex;
 		g_Submission->Submit->Views[viewID].ItemsIndex[freeIndex++] = g_Submission->Submit->CurrentRenderItemIndex;
-		g_Submission->Submit->LastView = viewID;
+		g_Submission->Submit->LastView.push_back(viewID);
 		// we can create pipeline
 		g_Submission->Submit->NextItem();
 		g_Submission->Submit->CurrentRenderItem->MatrixIndex = g_Submission->Submit->CurrentFreeMatrix;
@@ -348,9 +347,6 @@ namespace Voidstar
 
 	void SubmitInit(InitParams init)
 	{
-
-
-
 #if THREADING
 		g_Submission->Submit = g_Submission->Frames;
 		g_Submission->Render = g_Submission->Frames+1;

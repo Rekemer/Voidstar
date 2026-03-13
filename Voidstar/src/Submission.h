@@ -13,6 +13,7 @@
 #include <cstdint>
 #include <array>
 #include <vector>
+#include <list>
 #include <variant>
 #include "Memory.h"
 #include "Rendering/Generation.h"
@@ -418,7 +419,7 @@ namespace Voidstar
 		Item m_renderItem[256];
 
 		Item* CurrentRenderItem =&m_renderItem[CurrentRenderItemIndex];
-		int LastView = 0;
+		std::list<int> LastView;
 		View Views[256];
 		size_t FrameNumber = 0;
 		size_t CurrentFreeMatrix = 0;
@@ -431,7 +432,7 @@ namespace Voidstar
 		}
 		void Reset() 
 		{
-			LastView = 0;
+			LastView.resize(0);
 			CurrentRenderItemIndex = 0;
 			CurrentFreeMatrix = 0;
 			CurrentRenderItem = &m_renderItem[CurrentRenderItemIndex];
