@@ -657,6 +657,7 @@ namespace Voidstar
 		auto item = g_Submission->Submit->CurrentRenderItem;
 		item->IndexBuffer = handle;
 	};
+	
 	void SetRenderMode(RenderMode mode)
 	{
 		auto item = g_Submission->Submit->CurrentRenderItem;
@@ -672,7 +673,10 @@ namespace Voidstar
 	{
 		g_Submission->Submit->CurrentRenderItem->State.depthWrite = write;
 	}
-
+	void SetDepthTest(bool test)
+	{
+		g_Submission->Submit->CurrentRenderItem->State.depthTest = test;
+	}
 	void SetTransform(const glm::mat4& world)
 	{
 		

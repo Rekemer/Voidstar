@@ -374,6 +374,7 @@ namespace Voidstar
 	};
 
 	void SetDepthWrite(bool write);
+	void SetDepthTest(bool test);
 
 	// render items learns about the view at submit
 	struct Item

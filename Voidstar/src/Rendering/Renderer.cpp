@@ -2080,16 +2080,27 @@ namespace Voidstar
 	int Renderer::GetIndex(FrameBufferHandle handle, bool& isPresent, bool lastRenderItem)
 	{
 
-		if (handle == DEFAULT_FRAME_BUFFER && lastRenderItem)
+		if (handle == DEFAULT_FRAME_BUFFER)
 		{
-			assert(isPresent == false);
-			uint32_t imageIndex = 0;
-			auto swapchain = RenderContext::GetSwapchain();
-			m_Device->GetDevice().acquireNextImageKHR(swapchain->m_Swapchain, UINT64_MAX, m_ImageAvailableSemaphore[m_CurrentFrame].GetSemaphore(), nullptr, &imageIndex);
-			
-		    isPresent = true;
-			return imageIndex;
+			if (!m_IsSwapchainAcquired)
+			{
+				auto swapchain = RenderContext::GetSwapchain();
+				// This only happens once per frame, and only if needed
+				m_Device->GetDevice().acquireNextImageKHR(
+					swapchain->m_Swapchain,
+					UINT64_MAX,
+					m_ImageAvailableSemaphore[m_CurrentFrame].GetSemaphore(),
+					nullptr,
+					&m_SwapchainIndex
+				);
+				m_IsSwapchainAcquired = true;
+			}
+			isPresent = true;
+			return m_SwapchainIndex;
 		}
+
+		// For offscreen buffers, just return the current frame flight index
+		isPresent = false;
 		return m_CurrentFrame;
 	}
 
@@ -2098,13 +2109,12 @@ namespace Voidstar
 		Timer timer;
 		if (render->CurrentRenderItemIndex == 0) return;
 		
-
 		auto& currentFence = m_InFlightFence[m_CurrentFrame];
 		Renderer::Instance()->Wait(currentFence.GetFence());
 		Renderer::Instance()->Reset(currentFence.GetFence());
 
+		m_IsSwapchainAcquired = false;
 		bool isPresent = false; 
-		uint32_t presentIndex = 0;
 		
 
 		auto& cmd = m_RenderCommandBuffer[m_CurrentFrame];
@@ -2120,11 +2130,7 @@ namespace Voidstar
 
 			bool viewIsPresent = false;
 			uint32_t index = GetIndex(fb, viewIsPresent, i == render->LastView.back());
-			if (viewIsPresent)
-			{
-				isPresent = true;
-				presentIndex = index;
-			}
+			
 
 			auto frameBuffer = m_Framebuffers.at(fb)[index];
 			auto& renderPass = m_RenderPasses.at(fb);
@@ -2291,7 +2297,7 @@ namespace Voidstar
 
 		std::vector<vk::Semaphore> waitSemaphores;
 		std::vector<vk::Semaphore> signal;
-		if (isPresent)
+		if (m_IsSwapchainAcquired)
 		{
 			waitSemaphores.push_back(m_ImageAvailableSemaphore[m_CurrentFrame].GetSemaphore());
 			signal.push_back(m_RenderFinishedSemaphore[m_CurrentFrame].GetSemaphore());
@@ -2300,7 +2306,7 @@ namespace Voidstar
 		auto fence = m_InFlightFence[m_CurrentFrame].GetFence();
 		cmd.Submit(waitSemaphores, signal, &fence);
 		
-		if (isPresent)
+		if (m_IsSwapchainAcquired)
 		{
 			vk::PresentInfoKHR presentInfo = {};
 			presentInfo.waitSemaphoreCount = signal.size();
@@ -2310,7 +2316,7 @@ namespace Voidstar
 			presentInfo.swapchainCount = 1;
 			presentInfo.pSwapchains = swapChains;
 
-			presentInfo.pImageIndices = &presentIndex;
+			presentInfo.pImageIndices = &m_SwapchainIndex;
 			vk::Result present;
 			try {
 				ZoneScopedN("Presenting");

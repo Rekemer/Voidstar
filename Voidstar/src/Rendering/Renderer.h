@@ -250,6 +250,9 @@ namespace Voidstar
 		int GetIndex(FrameBufferHandle handle,bool& isPresent, bool lastRenderItem);
 		SparseSet<RenderPassHandle_> g_RenderPassAllocator;
 	private:
+
+		uint32_t m_SwapchainIndex = 0;
+		bool     m_IsSwapchainAcquired = false;
 		Application* m_App;
 		Voidstar::Instance* m_Instance;
 		Device* m_Device;

@@ -57,7 +57,7 @@ PassID CompositePass = 2;
 #define FLIPBOOK 1
 #define BLOOM 1
 #define GROUND 1
-#define DEBUG 0
+#define DEBUG 1
 
 struct BloomLevel
 {
@@ -653,18 +653,6 @@ void DOS::Update(float deltaTime)
 #endif
 #endif
 auto bloomTex = GetColorTexture(m_UpsampleChain[0].fbh);
-#if DEBUG
-SetViewRect(Flipbook, 0, 0, screenWidth, screenHeight);
-SetViewTransform(Flipbook, GetCamera()->GetView(), GetCamera()->GetProj());
-int width = screenWidth/4;
-int height = screenHeight/4;
-SetClipRect(screenWidth - width, 0, width, height);
-SetRenderMode(RenderMode::SCREEN);
-
-BindAttachmentAsTexture("u_Scene", texture);
-BindTexture("u_Noise", NoiseTexture);
-Submit(Flipbook, m_DebugShader, 1);
-#endif
 
 
 
@@ -680,6 +668,17 @@ Submit(Flipbook, m_DebugShader, 1);
 	BindAttachmentAsTexture("u_Scene", scene);
 	Submit(CompositePass, m_CompositeShader);
 
+#if DEBUG
+	int width = screenWidth/4;
+	int height = screenHeight/4;
+	SetViewTransform(CompositePass, GetCamera()->GetView(), GetCamera()->GetProj());
+	SetClipRect(screenWidth - width, 0, width, height);
+	SetRenderMode(RenderMode::SCREEN);
+	SetDepthTest(false);
+	BindAttachmentAsTexture("u_Scene", texture);
+	BindTexture("u_Noise", NoiseTexture);
+	Submit(CompositePass, m_DebugShader, 1);
+#endif
 	ExecuteFrame(deltaTime);
 
 }
