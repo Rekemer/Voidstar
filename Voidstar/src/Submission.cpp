@@ -239,6 +239,7 @@ namespace Voidstar
 		assert(handles.size() <= bind.handles.size());
 		bind.uniform = uniformName;
 		bind.dirty = true;
+		bind.currentFreeTextureHandle += handles.size();
 		std::copy_n(handles.begin(),handles.size(), bind.handles.begin());
 		bind.kind = ResourceType::CombinedSampler;
 	}

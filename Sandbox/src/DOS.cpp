@@ -7,6 +7,15 @@ struct Particle
 	glm::mat4 world;    	
 	float distanceSq;   
 };
+struct FireData
+{
+	glm::vec4 colorLow = { 0.8f, 0.1f, 0.0f, 1.0f };
+	glm::vec4 colorMid = { 1.0f, 0.4f, 0.0f, 1.0f };
+	glm::vec4 colorHigh = { 1.0f, 0.9f, 0.4f, 1.0f };
+	float intensity = 4.0f;
+	float padding[3];
+};
+
 VertexBufferHandle m_VertexHandle;
 BufferHandle m_InstanceHandle;
 IndexBufferHandle m_IndexHandle;
@@ -27,6 +36,7 @@ TextureHandle NoiseTexture1;
 TextureHandle NoiseTexture2;
 TextureHandle NoiseTexture3;
 BufferHandle m_ParticleHandle;
+BufferHandle m_FireHandle;
 TextureHandle m_FireTexture;
 TextureHandle m_StoneTexture;
 
@@ -44,8 +54,8 @@ glm::mat4 worldGround;
 PassID GrondPass = 0;
 PassID Flipbook = 1;
 PassID CompositePass = 2;
-#define FLIPBOOK 0
-#define BLOOM 0
+#define FLIPBOOK 1
+#define BLOOM 1
 #define GROUND 1
 #define DEBUG 0
 
@@ -104,7 +114,7 @@ glm::vec3 PixelToWorldOnPlane(int x, int y, glm::mat4& world)
 void SpawnParticle(int index, glm::vec3 pos)
 {
 	glm::mat4 model = glm::translate(glm::mat4(1.0f), pos);
-	auto randScale = RandomRange(0.6f, 1.2f);
+	auto randScale = RandomRange(0.2f, 1.f);
 	model = glm::scale(model, glm::vec3(randScale));
 	Particle p;
 	p.world = model;
@@ -138,11 +148,19 @@ void AddZone(int pixelX, int pixelY)
 
 		glm::vec3 spawnPos = PixelToWorldOnPlane(pixelX, pixelY, worldGround);
 		// Jitter the position so they don't look like they are in a grid
-		spawnPos.x += RandomRange(-0.2f, 0.2f);
-		spawnPos.z += RandomRange(-0.2f, 0.2f);
-		spawnPos.y -= 1 ;
-		clicked++;
-		SpawnParticle(clicked - 1, spawnPos);
+
+		int c = RandomRange(0, 6);
+		c = 1;
+		for (int i = 0; i < c; i++)
+		{
+			auto dist = float(20)/60;
+			spawnPos.x += RandomRange(-dist,dist);
+			spawnPos.z += RandomRange(-dist, dist);
+			spawnPos.y -= 0 ;
+			clicked++;
+			SpawnParticle(clicked - 1, spawnPos);
+
+		}
 
 	}
 }
@@ -257,7 +275,7 @@ void AddSplat2(int cx, int cy, float radius)
 DOS::DOS(std::string appName, size_t screenWidth, size_t screenHeight) : Voidstar::Application(appName, screenWidth, screenHeight)
 {
 
-	m_GroundShader = LoadProgram("ground_splat.vert", "bloom_test.frag");
+	m_GroundShader = LoadProgram("ground_splat.vert", "ground_splat.frag");
 	m_DebugShader = LoadProgram("screen.vert", "render_attachment.frag");
 	m_DownSamplingShader = LoadProgram("render_screen_quad.vert", "downsample.frag");
 	m_UpsamplingShader = LoadProgram("render_screen_quad.vert", "upsample.frag");
@@ -344,6 +362,8 @@ DOS::DOS(std::string appName, size_t screenWidth, size_t screenHeight) : Voidsta
 	m_ParticleHandle = CreateBuffer(Memory{ reinterpret_cast<uint8_t*>(m_FramePerParticle.data()), m_FramePerParticle.size() * sizeof(m_FramePerParticle[0]) },
 		ResourceUsage::StorageRead | ResourceUsage::StorageWrite | ResourceUsage::Readback);
 #endif
+	FireData fire;
+	m_FireHandle = CreateBuffer(Memory{ reinterpret_cast<uint8_t*>(&fire),sizeof(fire) }, ResourceUsage::StorageRead);
 
 
 	m_IndexHandle = CreateIndexBuffer
@@ -361,7 +381,7 @@ DOS::DOS(std::string appName, size_t screenWidth, size_t screenHeight) : Voidsta
 #if FLIPBOOK 
 	m_FireTexture = LoadTexture("fire/fire_dos2.png");
 #endif
-	m_StoneTexture = LoadTexture("Morgana.png");
+	m_StoneTexture = LoadTexture("Cobblestone.png");
 	NoiseTexture = LoadTexture("dos_2_noise.png");
 	NoiseTexture1 = LoadTexture("dos_2_noise_1.png");
 	NoiseTexture2 = LoadTexture("dos_2_noise_2.png");
@@ -495,9 +515,9 @@ void DOS::Update(float deltaTime)
 			int jitterY = pixelY + RandomRangeInt(-8, 8);
 			if (RandomRangeInt(-1, 1) > 0)
 			{
-				AddInverseSplat(pixelX, pixelY, jitteredRadius);
+				AddSplat(jitterX, jitterY, jitteredRadius);
 			}
-			else AddSplat(pixelX, pixelY, jitteredRadius);
+			else AddSplat2(jitterX, jitterY, jitteredRadius);
 
 		}
 		
@@ -519,28 +539,70 @@ void DOS::Update(float deltaTime)
 	
 	SetTransform(worldGround);
 	//SetTransform(glm::translate(world, glm::vec3(10,0,0)));
-	//BindTexture("u_Texture", m_StoneTexture);
-	//BindTexture("u_Grid", texture);
-	//BindTextures("u_Noise", { NoiseTexture,NoiseTexture1,NoiseTexture2,NoiseTexture3 });
+	BindTexture("u_Texture", m_StoneTexture);
+	BindTexture("u_Grid", texture);
+	BindTextures("u_Noise", { NoiseTexture,NoiseTexture1,NoiseTexture2,NoiseTexture3 });
+	BindBuffer("fire", m_FireHandle);
 	BindVertexBuffer(0, m_VertexHandle);
 	BindIndexBuffer(m_IndexHandle);
 	Submit(GrondPass, m_GroundShader, 1);
 
 
-	SetViewRect(m_DownsamplePasses[0], 0, 0, screenWidth / 2, screenHeight / 2);
+	#if FLIPBOOK
+		SetViewRect(GrondPass, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
+		SetViewTransform(GrondPass, GetCamera()->GetView(), GetCamera()->GetProj());
+		m_MappedPtr = static_cast<glm::vec4*>(ReadMappedPtr(ResourceType::StorageBuffer,	m_ParticleHandle.idx));
+		SetDepthWrite(false);
+		{
+			BlendMode state;
+			state.enabled = true;
+			state.srcColor = BlendFactor::SrcAlpha;
+			state.dstColor = BlendFactor::OneMinusSrcAlpha;
+			state.alphaOp = BlendOp::Add;
+			state.srcAlpha = BlendFactor::One;
+			state.dstAlpha = BlendFactor::OneMinusSrcAlpha;
+			SetBlendState(0, state);
+			SetBlendState(1, state);
+		}
+		glm::vec3 camPos = GetCamera()->GetPosition();
+		for (auto& p : fireWorlds) {
+			glm::vec3 pos = glm::vec3(p.world[3]); // Extract world position
+			p.distanceSq = glm::distance(camPos, pos);
+		}
+	
+		std::sort(fireWorlds.begin(), fireWorlds.end(),
+			[](const Particle& a, const Particle& b) {
+				return a.distanceSq > b.distanceSq; // Farthest first
+			});
+	
+	
+		for (int i = 0; i < fireWorlds.size(); i++)
+		{
+			m_MappedPtr[i].x += deltaTime * 2200;
+			SetTransform(fireWorlds[i].world);
+		}
+	
+		BindVertexBuffer(0, m_VertexHandle);
+		BindIndexBuffer(m_IndexHandle);
+	
+		BindBuffer("particles", m_ParticleHandle);
+		BindBuffer("fire", m_FireHandle);
+		BindTexture("u_Texture", m_FireTexture);
+	
+		Submit(GrondPass, m_DefaultShader, fireWorlds.size());
+		frame++;
+		frame = frame % 255;
+	#endif
 
+#if BLOOM
+	SetViewRect(m_DownsamplePasses[0], 0, 0, screenWidth / 2, screenHeight / 2);
 	SetFramebuffer(m_DownsamplePasses[0], m_DownsampleChain[0].fbh);
 	BlendMode mode;
 	mode.enabled = false;
 	SetBlendState(0, mode);
-
-
 	auto attachment = GetColorTexture(downsampleFramebuffer,1);
-
 	BindAttachmentAsTexture("u_Source", attachment);
-
 	Submit(m_DownsamplePasses[0], m_DownSamplingShader, 1);
-
 	for (auto i =0; i < m_DownsampleChain.size() - 1; i++)
 	{
 		auto& level = m_DownsampleChain[i];
@@ -557,7 +619,6 @@ void DOS::Update(float deltaTime)
 
 		Submit(pass, m_DownSamplingShader, 1);
 	}
-
 	for (int i = bloomPasses - 1; i > 0; i--)
 	{
 		BloomLevel currentLowRes;
@@ -588,7 +649,7 @@ void DOS::Update(float deltaTime)
 		Submit(upPass, m_UpsamplingShader, 1);
 	}
 
-
+#endif
 #endif
 auto bloomTex = GetColorTexture(m_UpsampleChain[0].fbh);
 #if DEBUG
@@ -599,46 +660,12 @@ int height = screenHeight/4;
 SetClipRect(screenWidth - width, 0, width, height);
 SetRenderMode(RenderMode::SCREEN);
 
-BindAttachmentAsTexture("u_Scene", bloomTex);
+BindAttachmentAsTexture("u_Scene", texture);
 BindTexture("u_Noise", NoiseTexture);
 Submit(Flipbook, m_DebugShader, 1);
 #endif
 
-#if FLIPBOOK
-	SetViewRect(GrondPass, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
-	SetViewTransform(GrondPass, GetCamera()->GetView(), GetCamera()->GetProj());
-	m_MappedPtr = static_cast<glm::vec4*>(ReadMappedPtr(ResourceType::StorageBuffer, m_ParticleHandle.idx));
-	SetDepthWrite(false);
-	
 
-	glm::vec3 camPos = GetCamera()->GetPosition();
-	for (auto& p : fireWorlds) {
-		glm::vec3 pos = glm::vec3(p.world[3]); // Extract world position
-		p.distanceSq = glm::distance(camPos, pos);
-	}
-
-	//std::sort(fireWorlds.begin(), fireWorlds.end(),
-	//	[](const Particle& a, const Particle& b) {
-	//		return a.distanceSq > b.distanceSq; // Farthest first
-	//	});
-
-	
-	for (int i = 0; i < fireWorlds.size(); i++)
-	{
-		m_MappedPtr[i].x += deltaTime * 2200;
-		SetTransform(fireWorlds[i].world);
-	}
-
-	BindVertexBuffer(0, m_VertexHandle);
-	BindIndexBuffer(m_IndexHandle);
-	
-	BindBuffer("particles", m_ParticleHandle);
-	BindTexture("u_Texture", m_FireTexture);
-	
-	Submit(GrondPass, m_DefaultShader, fireWorlds.size());
-	frame++;
-	frame = frame % 255;
-#endif
 
 	SetViewRect(CompositePass, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
 	SetViewTransform(CompositePass, GetCamera()->GetView(), GetCamera()->GetProj());

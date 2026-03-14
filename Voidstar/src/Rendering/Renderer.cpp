@@ -2069,6 +2069,7 @@ namespace Voidstar
 					}
 				}
 
+
 				bind.dirty = false;
 			}
 		}

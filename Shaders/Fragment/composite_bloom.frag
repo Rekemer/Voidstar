@@ -6,6 +6,7 @@ layout(location = 0) out vec4 outColor;
 layout(set = 1, binding = 0) uniform sampler2D u_Scene; 
 layout(set = 1, binding = 1) uniform sampler2D u_Bloom;  
 
+
 vec3 ACESFilm(vec3 x) {
     float a = 2.51;
     float b = 0.03;
@@ -19,10 +20,10 @@ void main() {
     vec3 sceneColor = texture(u_Scene, v_TexCoord).rgb;
     vec3 bloomColor = texture(u_Bloom, v_TexCoord).rgb;
 
-    float bloomIntensity = .5;
+    float bloomIntensity = .2;
     vec3 result = sceneColor + (bloomColor * bloomIntensity);
 
-    float exposure = 1.2;
+    float exposure = 1.2/3;
     result *= exposure;
     vec3 mapped = ACESFilm(result);
 
