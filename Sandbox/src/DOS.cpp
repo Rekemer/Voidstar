@@ -43,10 +43,11 @@ glm::vec4* m_MappedPtr;
 glm::mat4 worldGround;
 PassID GrondPass = 0;
 PassID Flipbook = 1;
+PassID CompositePass = 2;
 #define FLIPBOOK 0
 #define BLOOM 0
-#define GROUND 0
-#define DEBUG 1
+#define GROUND 1
+#define DEBUG 0
 
 struct BloomLevel
 {
@@ -288,7 +289,7 @@ DOS::DOS(std::string appName, size_t screenWidth, size_t screenHeight) : Voidsta
 
 	for (int i = 1; i < bloomPasses+1; i++)
 	{
-		m_DownsamplePasses.push_back(Flipbook+i);
+		m_DownsamplePasses.push_back(CompositePass +i);
 	}
 	for (int i = 1; i < bloomPasses + 1; i++)
 	{
@@ -528,7 +529,6 @@ void DOS::Update(float deltaTime)
 
 	Submit(m_DownsamplePasses[0], m_DownSamplingShader, 1);
 
-	std::cout << "BEGIN\n";
 	for (auto i =0; i < m_DownsampleChain.size() - 1; i++)
 	{
 		auto& level = m_DownsampleChain[i];
@@ -536,7 +536,6 @@ void DOS::Update(float deltaTime)
 		auto& destLevel = m_DownsampleChain[i + 1];
 		SetViewRect(pass, 0, 0, destLevel.w, destLevel.h);
 		auto tex = GetColorTexture(level.fbh);
-		std::cout << tex.idx << "\n";
 		BindAttachmentAsTexture("u_Source", tex);
 		BlendMode mode;
 		mode.enabled = false;
@@ -546,7 +545,6 @@ void DOS::Update(float deltaTime)
 
 		Submit(pass, m_DownSamplingShader, 1);
 	}
-	std::cout << "END\n";
 
 	// Start from the second-to-last level
 	for (int i = m_DownsampleChain.size() - 1; i > 0; i--)
@@ -560,15 +558,17 @@ void DOS::Update(float deltaTime)
 		SetFramebuffer(upPass, bigLevel.fbh); 
 		BindAttachmentAsTexture("u_Source", GetColorTexture(smallLevel.fbh));
 		BlendMode mode;
-		mode.enabled = false;
+		mode.enabled = true;
 		mode.srcColor = BlendFactor::One;
 		mode.dstColor = BlendFactor::One;
+		mode.colorOp = BlendOp::Add;
 		SetBlendState(0, mode);
 		Submit(upPass, m_UpsamplingShader, 1);
 	}
 
 
 #endif
+auto bloomTex = GetColorTexture(m_DownsampleChain[0].fbh);
 #if DEBUG
 SetViewRect(Flipbook, 0, 0, screenWidth, screenHeight);
 SetViewTransform(Flipbook, GetCamera()->GetView(), GetCamera()->GetProj());
@@ -576,7 +576,7 @@ int width = screenWidth/4;
 int height = screenHeight/4;
 SetClipRect(screenWidth - width, 0, width, height);
 SetRenderMode(RenderMode::SCREEN);
-auto bloomTex = GetColorTexture(m_DownsampleChain[0].fbh);
+
 BindAttachmentAsTexture("u_Scene", bloomTex);
 BindTexture("u_Noise", NoiseTexture);
 Submit(Flipbook, m_DebugShader, 1);
@@ -618,12 +618,18 @@ Submit(Flipbook, m_DebugShader, 1);
 	frame = frame % 255;
 #endif
 
-	/*SetViewRect(GrondPass, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
-	SetViewTransform(GrondPass, GetCamera()->GetView(), GetCamera()->GetProj());
+	SetViewRect(CompositePass, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
+	SetViewTransform(CompositePass, GetCamera()->GetView(), GetCamera()->GetProj());
 	BindAttachmentAsTexture("u_Bloom", bloomTex);
 	auto scene = GetColorTexture(downsampleFramebuffer, 0);
+	{
+		BlendMode mode;
+		mode.enabled = false;
+		SetBlendState(0, mode);
+	}
 	BindAttachmentAsTexture("u_Scene", scene);
-	Submit(GrondPass, m_CompositeShader);*/
+	Submit(CompositePass, m_CompositeShader);
+
 	ExecuteFrame(deltaTime);
 
 }

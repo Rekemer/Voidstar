@@ -41,8 +41,10 @@ void main()
 	// | 1 2 1 |
 	// | 2 4 2 | * 1/16
 	// | 1 2 1 |
-	color = cc * 4.0;
-	color += (tt + ll + rr + bb) * 2.0;
-	color += (tl + tr + bl + br) * 1.0;
-	color *= 1.0 / 16.0;
+	vec4 upsampleBlur = cc* 4.0;
+    upsampleBlur += (tt + ll + rr + bb) * 2.0;
+    upsampleBlur += (tl + tr + bl + br) * 1.0;
+    upsampleBlur *= (1.0 / 16.0);
+	color = upsampleBlur;
+	
 }

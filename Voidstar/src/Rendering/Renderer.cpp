@@ -55,8 +55,7 @@ namespace std
 	};
 
 }
-
-
+vk::ClearValue m_DefaultClearColor = { std::array<float, 4>{0,0,0,0} };
 
 namespace Voidstar
 {
@@ -1185,10 +1184,9 @@ namespace Voidstar
 
 		vk::Extent2D extent = { static_cast<uint32_t>(screenWidth),static_cast<uint32_t>(screenHeight)};
 
-		vk::ClearValue clearColor = { std::array<float, 4>{137.f / 255.f, 189.f / 255.f, 199.f / 255.f, 1.0f} };
-		//clearColor = { std::array<float, 4>{0,0,0,0} };
+		
 		vk::ClearValue clearDepth = vk::ClearDepthStencilValue{ 1.0f, 0 };
-		std::vector<vk::ClearValue> clearValues{ clearColor ,clearDepth, clearColor };
+		std::vector<vk::ClearValue> clearValues{ m_DefaultClearColor ,clearDepth, m_DefaultClearColor };
 		m_RenderPasses[DEFAULT_FRAME_BUFFER] = builder.Build(m_AttachmentManager, RenderContext::GetFrameAmount(), extent, clearValues);
 
 
@@ -1312,7 +1310,7 @@ namespace Voidstar
 
 		vk::Extent2D extent = { static_cast<uint32_t>(screenWidth),static_cast<uint32_t>(screenHeight) };
 
-		vk::ClearValue clearColor = { std::array<float, 4>{137.f / 255.f, 189.f / 255.f, 199.f / 255.f, 1.0f} };
+		vk::ClearValue clearColor = m_DefaultClearColor;
 		vk::ClearValue clearDepth = vk::ClearDepthStencilValue{ 1.0f, 0 };
 		std::vector<vk::ClearValue> clearValues{ clearColor ,clearDepth, clearColor };
 		m_RenderPasses[DEFAULT_FRAME_BUFFER] = builder.Build(m_AttachmentManager, RenderContext::GetFrameAmount(), extent, clearValues);
@@ -1513,7 +1511,7 @@ namespace Voidstar
 			if (m_AttachmentInfo[h].type == AttachmentType::DEPTH_STENCIL)
 				clearValues.push_back(vk::ClearDepthStencilValue{ 1.0f, 0 });
 			else
-				clearValues.push_back(vk::ClearColorValue(std::array<float, 4>{137.f / 255.f, 189.f / 255.f, 199.f / 255.f, 1}));
+				clearValues.push_back(m_DefaultClearColor);
 		}
 
 		vk::Extent2D extent = { static_cast<uint32_t>(m_AttachmentInfo[handles[0]].width),static_cast<uint32_t>(m_AttachmentInfo[handles[0]].height) };

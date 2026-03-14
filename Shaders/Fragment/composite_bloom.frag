@@ -10,12 +10,17 @@ void main() {
     vec3 sceneColor = texture(u_Scene, v_TexCoord).rgb;
     vec3 bloomColor = texture(u_Bloom, v_TexCoord).rgb;
 
-    float bloomIntensity = 0.05;
+    float bloomIntensity = 0.124;
+    float exposure = 113.0;
+   
     vec3 result = sceneColor + (bloomColor * bloomIntensity);
-
+    result *= exposure;
+  
     vec3 mapped = result / (result + vec3(1.0));
 
+   
     mapped = pow(mapped, vec3(1.0 / 2.2));
 
+    
     outColor = vec4(mapped, 1.0);
 }
