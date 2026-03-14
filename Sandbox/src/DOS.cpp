@@ -15,6 +15,7 @@ ProgramHandle m_GroundShader;
 ProgramHandle m_DebugShader;
 ProgramHandle m_DownSamplingShader;
 ProgramHandle m_UpsamplingShader;
+ProgramHandle m_CompositeShader;
 std::vector<Vertex> m_Verticies;
 std::vector<glm::vec4> m_FramePerParticle;
 std::vector<IndexType> m_Indicies;
@@ -44,7 +45,7 @@ PassID GrondPass = 0;
 PassID Flipbook = 1;
 #define FLIPBOOK 0
 #define BLOOM 0
-#define GROUND 1
+#define GROUND 0
 #define DEBUG 1
 
 struct BloomLevel
@@ -258,6 +259,9 @@ DOS::DOS(std::string appName, size_t screenWidth, size_t screenHeight) : Voidsta
 	m_DebugShader = LoadProgram("screen.vert", "render_attachment.frag");
 	m_DownSamplingShader = LoadProgram("render_screen_quad.vert", "downsample.frag");
 	m_UpsamplingShader = LoadProgram("render_screen_quad.vert", "upsample.frag");
+	m_CompositeShader = LoadProgram("render_screen_quad.vert", "composite_bloom.frag");
+	
+	
 	m_VertexLayout.AddVertex(ShaderDataType::FLOAT3, 0)
 		.AddVertex(ShaderDataType::FLOAT2, 0);
 	
@@ -564,19 +568,18 @@ void DOS::Update(float deltaTime)
 	}
 
 
-	#if DEBUG
-	SetViewRect(Flipbook, 0, 0, screenWidth, screenHeight);
-	SetViewTransform(Flipbook, GetCamera()->GetView(), GetCamera()->GetProj());
-		
-		int width = screenWidth/4;
-		int height = screenHeight/4;
-		SetClipRect(screenWidth - width, 0, width, height);
-		SetRenderMode(RenderMode::SCREEN);
-		auto bloomTex = GetColorTexture(m_DownsampleChain[0].fbh);
-		BindAttachmentAsTexture("u_Scene", bloomTex);
-		BindTexture("u_Noise", NoiseTexture);
-		Submit(Flipbook, m_DebugShader, 1);
-	#endif
+#endif
+#if DEBUG
+SetViewRect(Flipbook, 0, 0, screenWidth, screenHeight);
+SetViewTransform(Flipbook, GetCamera()->GetView(), GetCamera()->GetProj());
+int width = screenWidth/4;
+int height = screenHeight/4;
+SetClipRect(screenWidth - width, 0, width, height);
+SetRenderMode(RenderMode::SCREEN);
+auto bloomTex = GetColorTexture(m_DownsampleChain[0].fbh);
+BindAttachmentAsTexture("u_Scene", bloomTex);
+BindTexture("u_Noise", NoiseTexture);
+Submit(Flipbook, m_DebugShader, 1);
 #endif
 
 #if FLIPBOOK
@@ -614,6 +617,13 @@ void DOS::Update(float deltaTime)
 	frame++;
 	frame = frame % 255;
 #endif
+
+	/*SetViewRect(GrondPass, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
+	SetViewTransform(GrondPass, GetCamera()->GetView(), GetCamera()->GetProj());
+	BindAttachmentAsTexture("u_Bloom", bloomTex);
+	auto scene = GetColorTexture(downsampleFramebuffer, 0);
+	BindAttachmentAsTexture("u_Scene", scene);
+	Submit(GrondPass, m_CompositeShader);*/
 	ExecuteFrame(deltaTime);
 
 }

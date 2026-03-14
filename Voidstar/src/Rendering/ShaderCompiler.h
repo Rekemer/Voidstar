@@ -119,6 +119,9 @@ namespace Voidstar
 	{
 		// multiple sets
 		std::vector<DescriptorLayoutKey> layoutKeys;
+
+		// Add push constant ranges to the key
+		std::vector<PushConstRange> pushConstants;
 	};
 
 
@@ -161,7 +164,7 @@ namespace Voidstar
 	}
 
 	inline bool operator==(const PipelineLayoutKey& a, const PipelineLayoutKey& b) {
-		return a.layoutKeys == b.layoutKeys;
+		return a.layoutKeys == b.layoutKeys && a.pushConstants == b.pushConstants;;
 	}
 	inline bool operator==(const PipelineKey& a ,const PipelineKey& b) noexcept {
 		return a.program == b.program

@@ -2187,27 +2187,25 @@ namespace Voidstar
 				if (item->Type != ItemType::RENDER)
 				{
 					assert(false && "Conpute passes are broken currently, since stuff is done per view now");
-					continue; 
+					continue;
 				}
 
 				auto& renderItem = *item;
 				assert(renderItem.Program.Valid());
 
 				auto& meta = m_Compiler.m_Programs.at(renderItem.Program);
-				std::vector<DescriptorLayoutKey>& keys = meta.descriptorKey;
-
-				PipelineKey key = { renderItem.Program, renderItem.State, keys, fb };
+				PipelineKey key = { renderItem.Program, renderItem.State, {meta.descriptorKey,meta.pushes}, fb };
 
 				vk::Pipeline pipeline = GetPipeline(key, renderItem.VertexBindings, renderItem.Bindings.vertexCurrentBinding);
 			
 				
 				auto vkCmd = cmd.GetCommandBuffer();
-				vk::PipelineLayout layout = m_PipelineLayout.at({ keys });
+				vk::PipelineLayout layout = m_PipelineLayout.at({ meta.descriptorKey,meta.pushes });
 				vkCmd.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
 				{
-					for (int iii = 0; iii < keys.size(); iii++)
+					for (int iii = 0; iii < meta.descriptorKey.size(); iii++)
 					{
-						auto k = keys.at(iii);
+						auto k = meta.descriptorKey.at(iii);
 						auto set = GetDescriptorSet(k, m_CurrentFrame, itemIndex);
 						vkCmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, layout, iii, set,nullptr);
 
@@ -2387,7 +2385,7 @@ namespace Voidstar
 	}
 
 
-	void Renderer::CreatePipelineLayout(PipelineLayoutKey& key, std::vector<PushConstRange>& pushConstants)
+	void Renderer::CreatePipelineLayout(PipelineLayoutKey& key)
 	{
 		std::vector<vk::DescriptorSetLayout> layouts;
 		std::vector<vk::PushConstantRange> ranges;
@@ -2395,7 +2393,7 @@ namespace Voidstar
 		{
 			layouts.push_back(m_DescriptorLayout.at(k));
 		}
-		for (auto r : pushConstants)
+		for (auto r : key.pushConstants)
 		{
 			vk::PushConstantRange range;
 			range.offset = r.offset;
