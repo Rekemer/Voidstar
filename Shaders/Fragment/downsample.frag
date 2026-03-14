@@ -4,6 +4,15 @@ layout(set = 1, binding = 0) uniform sampler2D u_Source;
 
 
 layout(location = 0)  in vec2 texCoords;
+
+
+// New Helper Function for Karis Average
+// This prevents "fireflies" and helps the glow feel smoother
+vec3 KarisWeight(vec3 c) {
+    float luma = dot(c, vec3(0.2126, 0.7152, 0.0722));
+    return c / (1.0 + luma);
+}
+
 void main() 
 {
 	// Determine texel size.
@@ -65,6 +74,24 @@ void main()
 	color += (itl + itr + ibl + ibr) * 0.125;
 	color += (ett + ell + err + ebb) * 0.05;
 	color += (etl + etr + ebl + ebr) * 0.025;
+
+
+	// Instead of raw colors, we weight them
+    vec3 group1 = (etl.rgb + ett.rgb + ell.rgb + ccc.rgb) * 0.25;
+    vec3 group2 = (ett.rgb + etr.rgb + ccc.rgb + err.rgb) * 0.25;
+    vec3 group3 = (ell.rgb + ccc.rgb + ebl.rgb + ebb.rgb) * 0.25;
+    vec3 group4 = (ccc.rgb + err.rgb + ebb.rgb + ebr.rgb) * 0.25;
+    vec3 group5 = (itl.rgb + itr.rgb + ibl.rgb + ibr.rgb) * 0.25;
+
+    // Apply Karis Average to each group
+    vec3 weightedSum = (KarisWeight(group1) + KarisWeight(group2) + 
+                        KarisWeight(group3) + KarisWeight(group4) + 
+                        KarisWeight(group5)) * 0.2;
+
+    // Inverse the weighting to bring it back to HDR range
+    float finalLuma = dot(weightedSum, vec3(0.2126, 0.7152, 0.0722));
+    color.rgb = weightedSum / (1.0 - finalLuma);
+    color.a = 1.0;
 
 	//color = texture(u_Tex, texCoords);
 	//color = vec4(1,0,0,1);

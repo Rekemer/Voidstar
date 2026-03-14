@@ -1019,7 +1019,7 @@ namespace Voidstar
 			{ vk::DescriptorType::eUniformBuffer, 128 },
 		};
 
-		m_UniversalPool = DescriptorPool::Create(pool_sizes, 128);
+		m_UniversalPool = DescriptorPool::Create(pool_sizes, 1024);
 
 	
 		auto frameAmount = RenderContext::GetFrameAmount();

@@ -61,7 +61,11 @@ std::vector<uint8_t> maskData;
 std::vector<glm::vec2> clickedPixels;
 std::vector<uint8_t> blurredMaskData;
 std::vector<Particle> fireWorlds;
-
+std::vector<BloomLevel> m_DownsampleChain;
+std::vector<BloomLevel> m_UpsampleChain;
+std::vector<PassID> m_DownsamplePasses;
+std::vector<PassID> m_UpsamplePasses;
+int bloomPasses = 6;
 
 float planeSize = 10;
 float planeHalfSize = planeSize/2;
@@ -249,10 +253,7 @@ void AddSplat2(int cx, int cy, float radius)
 		}
 	}*/
 
-std::vector<BloomLevel> m_DownsampleChain;
-std::vector<PassID> m_DownsamplePasses;
-std::vector<PassID> m_UpsamplePasses;
-int bloomPasses = 6;
+
 DOS::DOS(std::string appName, size_t screenWidth, size_t screenHeight) : Voidstar::Application(appName, screenWidth, screenHeight)
 {
 
@@ -314,7 +315,18 @@ DOS::DOS(std::string appName, size_t screenWidth, size_t screenHeight) : Voidsta
 		w = std::max(1u, w / 2);
 		h = std::max(1u, h / 2);
 	}
+	for (int i = 0; i < bloomPasses; i++) {
+		BloomLevel level;
+		level.w = m_DownsampleChain[i].w;
+		level.h = m_DownsampleChain[i].h;
 
+		// New attachments for the second chain
+		level.attachment = CreateAttachment(AttachmentType::COLOR, TextureFormat::RGBA16_SFLOAT,
+			level.w, level.h, SampleCount::e1, AttachmentHint::SampledLater);
+		level.fbh = CreateFramebuffer({ level.attachment });
+
+		m_UpsampleChain.push_back(level);
+	}
 
 
 #if FLIPBOOK
@@ -546,29 +558,39 @@ void DOS::Update(float deltaTime)
 		Submit(pass, m_DownSamplingShader, 1);
 	}
 
-	// Start from the second-to-last level
-	for (int i = m_DownsampleChain.size() - 1; i > 0; i--)
+	for (int i = bloomPasses - 1; i > 0; i--)
 	{
-		auto& smallLevel = m_DownsampleChain[i];     
-		auto& bigLevel = m_DownsampleChain[i - 1];   
+		BloomLevel currentLowRes;
+		if (i == bloomPasses - 1)
+		{
+			currentLowRes = m_DownsampleChain[i];
+		}
+		else
+		{
+			currentLowRes = m_UpsampleChain[i];
+		}
+		   // The blur we just made
+		auto& detailSource = m_DownsampleChain[i - 1]; // The sharp details from downsampling
+		auto& targetHighRes = m_UpsampleChain[i - 1]; // The canvas we are writing to
 
 		PassID upPass = m_UpsamplePasses[i];
+		SetFramebuffer(upPass, targetHighRes.fbh);
+		SetViewRect(upPass, 0, 0, targetHighRes.w, targetHighRes.h);
 
-		SetViewRect(upPass, 0, 0, bigLevel.w, bigLevel.h);
-		SetFramebuffer(upPass, bigLevel.fbh); 
-		BindAttachmentAsTexture("u_Source", GetColorTexture(smallLevel.fbh));
+		BindAttachmentAsTexture("u_SourceLow", GetColorTexture(currentLowRes.fbh));
+
+		BindAttachmentAsTexture("u_SourceHigh", GetColorTexture(detailSource.fbh));
+
 		BlendMode mode;
-		mode.enabled = true;
-		mode.srcColor = BlendFactor::One;
-		mode.dstColor = BlendFactor::One;
-		mode.colorOp = BlendOp::Add;
+		mode.enabled = false;
 		SetBlendState(0, mode);
+
 		Submit(upPass, m_UpsamplingShader, 1);
 	}
 
 
 #endif
-auto bloomTex = GetColorTexture(m_DownsampleChain[0].fbh);
+auto bloomTex = GetColorTexture(m_UpsampleChain[0].fbh);
 #if DEBUG
 SetViewRect(Flipbook, 0, 0, screenWidth, screenHeight);
 SetViewTransform(Flipbook, GetCamera()->GetView(), GetCamera()->GetProj());
