@@ -8,8 +8,9 @@ void main()
 {
 	// Unlike when downsampling, we use a fixed radius in UV space rather than
  // basing it off the texel size of the target mip.
-	float offsetX = 0.015f;
-	float offsetY = 0.015f;
+	vec2 texelSize = 1.0 / vec2(textureSize(u_Source, 0));
+    float offsetX = texelSize.x * 1; 
+    float offsetY = texelSize.y * 1;
 
 	// Take 9 samples around the current texel (cc):
 	//

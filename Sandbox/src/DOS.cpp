@@ -249,6 +249,7 @@ void AddSplat2(int cx, int cy, float radius)
 
 std::vector<BloomLevel> m_DownsampleChain;
 std::vector<PassID> m_DownsamplePasses;
+std::vector<PassID> m_UpsamplePasses;
 int bloomPasses = 6;
 DOS::DOS(std::string appName, size_t screenWidth, size_t screenHeight) : Voidstar::Application(appName, screenWidth, screenHeight)
 {
@@ -284,6 +285,10 @@ DOS::DOS(std::string appName, size_t screenWidth, size_t screenHeight) : Voidsta
 	for (int i = 1; i < bloomPasses+1; i++)
 	{
 		m_DownsamplePasses.push_back(Flipbook+i);
+	}
+	for (int i = 1; i < bloomPasses + 1; i++)
+	{
+		m_UpsamplePasses.push_back(m_DownsamplePasses.back() + i);
 	}
 
 	for (int i = 0; i < bloomPasses; i++) { // 6 levels of blur
@@ -490,7 +495,10 @@ void DOS::Update(float deltaTime)
 	
 	
 	SetFramebuffer(GrondPass,downsampleFramebuffer);
-	SetBlendState(1, {});
+	BlendMode state;
+	state.enabled = false;
+	SetBlendState(0, state);
+	SetBlendState(1, state);
 	
 	SetTransform(worldGround);
 	//SetTransform(glm::translate(world, glm::vec3(10,0,0)));
@@ -502,10 +510,13 @@ void DOS::Update(float deltaTime)
 	Submit(GrondPass, m_GroundShader, 1);
 
 
-
 	SetViewRect(m_DownsamplePasses[0], 0, 0, screenWidth / 2, screenHeight / 2);
 
 	SetFramebuffer(m_DownsamplePasses[0], m_DownsampleChain[0].fbh);
+	BlendMode mode;
+	mode.enabled = false;
+	SetBlendState(0, mode);
+
 
 	auto attachment = GetColorTexture(downsampleFramebuffer,1);
 
@@ -513,34 +524,56 @@ void DOS::Update(float deltaTime)
 
 	Submit(m_DownsamplePasses[0], m_DownSamplingShader, 1);
 
-
+	std::cout << "BEGIN\n";
 	for (auto i =0; i < m_DownsampleChain.size() - 1; i++)
 	{
 		auto& level = m_DownsampleChain[i];
 		PassID pass = m_DownsamplePasses[i+1];
 		auto& destLevel = m_DownsampleChain[i + 1];
 		SetViewRect(pass, 0, 0, destLevel.w, destLevel.h);
-		// SOURCE is the texture from the previous FB
-		BindAttachmentAsTexture("u_Source", GetColorTexture(level.fbh));
-
+		auto tex = GetColorTexture(level.fbh);
+		std::cout << tex.idx << "\n";
+		BindAttachmentAsTexture("u_Source", tex);
+		BlendMode mode;
+		mode.enabled = false;
+		SetBlendState(0, mode);
 		// DESTINATION is the next FB in the chain
 		SetFramebuffer(pass, m_DownsampleChain[i + 1].fbh);
 
 		Submit(pass, m_DownSamplingShader, 1);
 	}
+	std::cout << "END\n";
 
+	// Start from the second-to-last level
+	for (int i = m_DownsampleChain.size() - 1; i > 0; i--)
+	{
+		auto& smallLevel = m_DownsampleChain[i];     
+		auto& bigLevel = m_DownsampleChain[i - 1];   
 
+		PassID upPass = m_UpsamplePasses[i];
+
+		SetViewRect(upPass, 0, 0, bigLevel.w, bigLevel.h);
+		SetFramebuffer(upPass, bigLevel.fbh); 
+		BindAttachmentAsTexture("u_Source", GetColorTexture(smallLevel.fbh));
+		BlendMode mode;
+		mode.enabled = false;
+		mode.srcColor = BlendFactor::One;
+		mode.dstColor = BlendFactor::One;
+		SetBlendState(0, mode);
+		Submit(upPass, m_UpsamplingShader, 1);
+	}
 
 
 	#if DEBUG
 	SetViewRect(Flipbook, 0, 0, screenWidth, screenHeight);
 	SetViewTransform(Flipbook, GetCamera()->GetView(), GetCamera()->GetProj());
 		
-		int width = 500;
-		int height = 400;
-		SetClipRect(screenWidth - width, screenHeight - height, width, height);
+		int width = screenWidth/4;
+		int height = screenHeight/4;
+		SetClipRect(screenWidth - width, 0, width, height);
 		SetRenderMode(RenderMode::SCREEN);
-		BindAttachmentAsTexture("u_Scene", texture);
+		auto bloomTex = GetColorTexture(m_DownsampleChain[0].fbh);
+		BindAttachmentAsTexture("u_Scene", bloomTex);
 		BindTexture("u_Noise", NoiseTexture);
 		Submit(Flipbook, m_DebugShader, 1);
 	#endif

@@ -31,7 +31,7 @@ void main()
     ndc.y = 2.0 * pixelPos.y / pc.viewport.y - 1.0;
 
     // flip Y if your screen-space origin is top-left
-    ndc.y = -ndc.y;
+    //ndc.y = -ndc.y;
 
     gl_Position = vec4(ndc, 0.0, 1.0);
     uv = local;
