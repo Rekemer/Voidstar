@@ -118,7 +118,7 @@ void SpawnParticle(int index, glm::vec3 pos)
 	model = glm::scale(model, glm::vec3(randScale));
 	Particle p;
 	p.world = model;
-	p.lifetime = { 0,1000,0,0 };
+	p.lifetime = { 0,1000,index,0 };
 	p.distanceSq = 0;
 	fireWorlds.push_back(p);
 }
@@ -578,7 +578,8 @@ void DOS::Update(float deltaTime)
 	
 		for (int i = 0; i < fireWorlds.size(); i++)
 		{
-			m_MappedPtr[i].x += deltaTime * 2200;
+			fireWorlds[i].lifetime.x += deltaTime * 800;
+			m_MappedPtr[i] = fireWorlds[i].lifetime;
 			SetTransform(fireWorlds[i].world);
 		}
 	

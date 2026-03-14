@@ -63,7 +63,7 @@ void main()
     Particle p = particles.p[localIdx];
     out_age =p.time.x;
     out_lifetime = p.time.y; 
-    float noiseOffset = hash(localIdx) * 10.0;
+    float noiseOffset = p.time.z;
     int cols = 8;
     int rows = 8;
     int frameCount = cols * rows;
