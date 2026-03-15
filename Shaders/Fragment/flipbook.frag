@@ -76,6 +76,7 @@ void main()
     vec2 uv_fb = uv * cell + vec2(float(fx), float(fy)) * cell;
 
     vec4 tex = texture(u_Texture, uv_fb);
+    tex.rgb *= 1.75;
     float mask = tex.r; 
 
     // --- Using the Uniform Colors ---

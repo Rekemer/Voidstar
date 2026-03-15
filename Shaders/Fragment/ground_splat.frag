@@ -110,8 +110,8 @@ void main()
 
     // --- 2. MULTI-DIRECTIONAL NOISE ---
     // n1 moves Up/Right, n2 moves Down/Left. This cancels out the "streak"
-    float n1 = texture(u_Noise[1], warpedUV * 2.5 + vec2(ubo.time * 0.1, ubo.time * 0.1)).r;
-    float n2 = texture(u_Noise[2], warpedUV * 4.0 - vec2(ubo.time * 0.15, -ubo.time * 0.1)).r;
+    float n1 = texture(u_Noise[1], warpedUV * 2.5 + vec2(ubo.time * 3.1, ubo.time * 2.1)).r;
+    float n2 = texture(u_Noise[2], warpedUV * 4.0 - vec2(ubo.time * 2.15, -ubo.time * 3.1)).r;
     
     // Use Noise 3 as a static "Grain" to break the diagonal lines
     float n3 = texture(u_Noise[3], out_uv * 20.0).r;

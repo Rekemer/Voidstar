@@ -146,25 +146,191 @@ void AddZone(int pixelX, int pixelY)
 		// Only add a new spawning source if we aren't standing on an old one
 		clickedPixels.push_back({ pixelX, pixelY });
 
-		glm::vec3 spawnPos = PixelToWorldOnPlane(pixelX, pixelY, worldGround);
-		// Jitter the position so they don't look like they are in a grid
-
-		int c = RandomRange(0, 6);
-		c = 1;
-		for (int i = 0; i < c; i++)
-		{
-			auto dist = float(20)/60;
-			spawnPos.x += RandomRange(-dist,dist);
-			spawnPos.z += RandomRange(-dist, dist);
-			spawnPos.y -= 0 ;
-			clicked++;
-			SpawnParticle(clicked - 1, spawnPos);
-
-		}
+		
 
 	}
 }
 
+bool IsFarEnoughFromExistingFire(const glm::vec3& pos, float minDist)
+{
+	float minDistSq = minDist * minDist;
+
+	for (const auto& p : fireWorlds)
+	{
+		glm::vec3 existingPos = glm::vec3(p.world[3]);
+		glm::vec3 d = existingPos - pos;
+		float distSq = glm::dot(d, d);
+		if (distSq < minDistSq)
+			return false;
+	}
+	return true;
+}
+float GetMask01Clamped(int x, int y)
+{
+	x = std::clamp(x, 0, gridW - 1);
+	y = std::clamp(y, 0, gridH - 1);
+	return maskData[y * gridW + x] / 255.0f;
+}
+
+float ComputeSpawnProbability(int px, int py)
+{
+	float center = GetMask01Clamped(px, py);
+
+	// Average nearby intensity so we prefer thicker fire regions,
+	// not just one lucky bright pixel.
+	float sum = 0.0f;
+	int count = 0;
+	for (int oy = -2; oy <= 2; ++oy)
+	{
+		for (int ox = -2; ox <= 2; ++ox)
+		{
+			sum += GetMask01Clamped(px + ox, py + oy);
+			count++;
+		}
+	}
+	float neighborhood = sum / float(count);
+
+	// Main idea:
+	// - weak mask => almost no spawn
+	// - strong center + strong neighborhood => much higher spawn
+	float p = 0.05f + center * 0.55f + neighborhood * 0.40f;
+
+	// Make low values die off harder, high values survive more.
+	p = std::pow(glm::clamp(p, 0.0f, 1.0f), 1.35f);
+
+	return glm::clamp(p, 0.0f, 0.95f);
+}
+glm::ivec2 FindNaturalSpawnPixel(int cx, int cy, float radius)
+{
+	glm::ivec2 best(cx, cy);
+	float bestScore = -1.0f;
+
+	int attempts = 10;
+
+	for (int i = 0; i < attempts; ++i)
+	{
+		// Bias toward interior + shoulder, not just exact center.
+		float angle = RandomRange(0.0f, 6.283185f);
+
+		// sqrt distributes samples more naturally over area
+		float r = std::sqrt(RandomRange(0.0f, 1.0f)) * radius;
+
+		// Optional: push some samples away from center to avoid center carpet
+		if (RandomRange(0.0f, 1.0f) < 0.55f)
+		{
+			r = glm::mix(radius * 0.35f, radius * 0.9f, RandomRange(0.0f, 1.0f));
+		}
+
+		int px = cx + int(std::cos(angle) * r);
+		int py = cy + int(std::sin(angle) * r);
+
+		px = std::clamp(px, 0, gridW - 1);
+		py = std::clamp(py, 0, gridH - 1);
+
+		float center = GetMask01Clamped(px, py);
+
+		// neighborhood average
+		float sum = 0.0f;
+		int count = 0;
+		for (int oy = -1; oy <= 1; ++oy)
+		{
+			for (int ox = -1; ox <= 1; ++ox)
+			{
+				sum += GetMask01Clamped(px + ox, py + oy);
+				count++;
+			}
+		}
+		float avg = sum / float(count);
+
+		// Penalize completely saturated pixels slightly,
+		// because otherwise everything piles up in the brightest center.
+		float overCenterPenalty = 1.0f - std::abs(center - 0.75f);
+
+		float score = avg * 0.6f + center * 0.3f + overCenterPenalty * 0.1f;
+		score += RandomRange(-0.08f, 0.08f);
+
+		if (score > bestScore)
+		{
+			bestScore = score;
+			best = { px, py };
+		}
+	}
+
+	return best;
+}
+
+float ComputeStableInterior(int px, int py)
+{
+	float sum = 0.0f;
+	int count = 0;
+
+	for (int oy = -2; oy <= 2; ++oy)
+	{
+		for (int ox = -2; ox <= 2; ++ox)
+		{
+			sum += GetMask01Clamped(px + ox, py + oy);
+			count++;
+		}
+	}
+
+	return sum / float(count);
+}
+
+bool ShouldTrySpawnCluster(int cx, int cy)
+{
+	float intensity = GetMask01Clamped(cx, cy);
+
+	if (intensity < 0.45f)
+		return false;
+
+	float p = 0.10f + intensity * 0.18f; // 0.10 -> 0.28
+	return RandomRange(0.0f, 1.0f) < p;
+}
+int CountNearbyFire(const glm::vec3& pos, float radius)
+{
+	float rSq = radius * radius;
+	int count = 0;
+
+	for (const auto& p : fireWorlds)
+	{
+		glm::vec3 existingPos = glm::vec3(p.world[3]);
+		glm::vec3 d = existingPos - pos;
+		if (glm::dot(d, d) < rSq)
+			count++;
+	}
+
+	return count;
+}
+void TrySpawnFireBillboardAtPixel(int pixelX, int pixelY)
+{
+	float probability = ComputeSpawnProbability(pixelX, pixelY) ;
+	probability *= 0.28;
+
+	if (RandomRange(0.0f, 1.0f) > probability)
+		return;
+
+	glm::vec3 spawnPos = PixelToWorldOnPlane(pixelX, pixelY, worldGround);
+
+	float jitter = 10.0f / 60.0f;
+	spawnPos.x += RandomRange(-jitter, jitter);
+	spawnPos.z += RandomRange(-jitter, jitter);
+
+	float intensity = GetMask01Clamped(pixelX, pixelY);
+
+	// Stronger areas can be denser, weaker areas need more spacing
+	float minSpacing = glm::mix(0.45f, 0.20f, intensity);
+
+	if (!IsFarEnoughFromExistingFire(spawnPos, minSpacing))
+		return;
+	if (CountNearbyFire(spawnPos, 0.9f) >= 2)
+		return;
+	float stable = ComputeStableInterior(pixelX, pixelY);
+	if (stable < 0.75f)
+		return;
+	clicked++;
+	SpawnParticle(clicked - 1, spawnPos);
+}
+int fireSpawnAttempts = 2;
 void AddInverseSplat(int cx, int cy, float radius)
 {
 	float rSq = radius * radius;
@@ -187,6 +353,8 @@ void AddInverseSplat(int cx, int cy, float radius)
 			}
 		}
 	}
+
+
 }
 
 
@@ -215,6 +383,16 @@ void AddSplat(int cx, int cy, float radius)
 				maskData[idx] = uint8_t(glm::clamp(current + intensity, 0.0f, 1.0f) * 255.0f);
 
 			}
+		}
+	}
+	if (ShouldTrySpawnCluster(cx, cy))
+	{
+		int attempts = (RandomRange(0.0f, 1.0f) < 0.75f) ? 1 : fireSpawnAttempts;
+
+		for (int i = 0; i < attempts; ++i)
+		{
+			glm::ivec2 p = FindNaturalSpawnPixel(cx, cy, radius * 0.8f);
+			TrySpawnFireBillboardAtPixel(p.x, p.y);
 		}
 	}
 }
@@ -249,6 +427,16 @@ void AddSplat2(int cx, int cy, float radius)
 			{
 				grid[idx] = 255;
 			}
+		}
+	}
+	if (ShouldTrySpawnCluster(cx, cy))
+	{
+		int attempts = (RandomRange(0.0f, 1.0f) < 0.75f) ? 1 : fireSpawnAttempts;
+
+		for (int i = 0; i < attempts; ++i)
+		{
+			glm::ivec2 p = FindNaturalSpawnPixel(cx, cy, radius * 0.8f);
+			TrySpawnFireBillboardAtPixel(p.x, p.y);
 		}
 	}
 }
@@ -553,14 +741,17 @@ void DOS::Update(float deltaTime)
 		SetViewTransform(GrondPass, GetCamera()->GetView(), GetCamera()->GetProj());
 		m_MappedPtr = static_cast<glm::vec4*>(ReadMappedPtr(ResourceType::StorageBuffer,	m_ParticleHandle.idx));
 		SetDepthWrite(false);
+		SetDepthTest(true);
 		{
 			BlendMode state;
 			state.enabled = true;
 			state.srcColor = BlendFactor::SrcAlpha;
-			state.dstColor = BlendFactor::OneMinusSrcAlpha;
+			//state.dstColor = BlendFactor::OneMinusSrcAlpha;
+			//state.srcColor = BlendFactor::One;
+			state.dstColor = BlendFactor::One;
 			state.alphaOp = BlendOp::Add;
 			state.srcAlpha = BlendFactor::One;
-			state.dstAlpha = BlendFactor::OneMinusSrcAlpha;
+			state.dstAlpha = BlendFactor::One;
 			SetBlendState(0, state);
 			SetBlendState(1, state);
 		}
