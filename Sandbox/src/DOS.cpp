@@ -12,7 +12,7 @@ struct FireData
 	glm::vec4 colorLow = { 0.8f, 0.1f, 0.0f, 1.0f };
 	glm::vec4 colorMid = { 1.0f, 0.4f, 0.0f, 1.0f };
 	glm::vec4 colorHigh = { 1.0f, 0.9f, 0.4f, 1.0f };
-	float intensity = 4.0f;
+	float intensity = 1.55f;
 	float padding[3];
 };
 
@@ -57,7 +57,7 @@ PassID CompositePass = 2;
 #define FLIPBOOK 1
 #define BLOOM 1
 #define GROUND 1
-#define DEBUG 1
+#define DEBUG 0
 
 struct BloomLevel
 {

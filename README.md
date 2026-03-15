@@ -12,6 +12,6 @@ A [project](https://www.youtube.com/playlist?list=PLF_V0mPHXtuJKMe45rwgXtpii-B2k
 |----|----|
 | ![](./screenshots/quadtree.gif) | ![](./screenshots/ground.gif) |
 
-| stuff | |
-|----|----|
-| ![](./screenshots/dos2.gif) |
+| Divinity: OS surface| 
+|----|
+| ![](./screenshots/DOS2_Surface.gif) 

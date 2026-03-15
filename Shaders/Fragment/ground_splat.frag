@@ -101,17 +101,22 @@ void main()
     // Use Noise 0 to create the macro-distortion of the fire shape
     // --- 1. THE SWIRL (Anti-Diagonal) ---
     // Instead of just scrolling, we rotate the UVs slightly over time
-    float angle = ubo.time * 0.5;
+    float angle = ubo.time * 1.5;
     mat2 rot = mat2(cos(angle), -sin(angle), sin(angle), cos(angle));
     
     // Warp the coordinates using Noise 0 to create organic "licking"
-    float warp = texture(u_Noise[0], (out_uv * rot) * 1.5).r;
+   vec2 warpScroll = vec2(0.0, ubo.time * 0.4); 
+    
+    // Optional: Add a tiny bit of sine oscillation so it "sways" in place
+    warpScroll.x = sin(ubo.time * 2.0) * 0.02;
+
+    float warp = texture(u_Noise[0], out_uv * 1.5 + warpScroll).r;
     vec2 warpedUV = out_uv + (warp - 0.5) * 0.08;
 
     // --- 2. MULTI-DIRECTIONAL NOISE ---
     // n1 moves Up/Right, n2 moves Down/Left. This cancels out the "streak"
-    float n1 = texture(u_Noise[1], warpedUV * 2.5 + vec2(ubo.time * 3.1, ubo.time * 2.1)).r;
-    float n2 = texture(u_Noise[2], warpedUV * 4.0 - vec2(ubo.time * 2.15, -ubo.time * 3.1)).r;
+        float n1 = texture(u_Noise[1], warpedUV * 2.5 + vec2(ubo.time * 13.1, ubo.time * 12.1)).r;
+    float n2 = texture(u_Noise[2], warpedUV * 4.0 - vec2(ubo.time * 12.15, -ubo.time * 13.1)).r;
     
     // Use Noise 3 as a static "Grain" to break the diagonal lines
     float n3 = texture(u_Noise[3], out_uv * 20.0).r;
@@ -140,7 +145,7 @@ void main()
     fireColor = mix(fireColor, fire.colorHigh.rgb, smoothstep(0.85, 0.98, fireDensity));
 
     // --- 5. COMPOSITION ---
-    vec3 stone = texture(u_Texture, out_uv).rgb;
+    vec3 stone = texture(u_Texture, out_uv * 5.0).rgb;
     
     // Charring: Make sure the charring follows the FIELD, not the cracks
     float charStrength = smoothstep(0.0, 0.7, field);
