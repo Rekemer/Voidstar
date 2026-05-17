@@ -4,7 +4,7 @@ namespace Voidstar
 {
 	struct Memory
 	{
-		uint8_t* data; 
+		uint8_t* data = nullptr; 
 		size_t size; 
 	};
 }

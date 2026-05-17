@@ -239,6 +239,8 @@ namespace Voidstar
 
 		DescriptorLayoutKey SystemDescriptorLayoutKey;
 	private:
+		SPtr<Buffer> GetBuffer(BufferHandle handle, int currentFrame);
+		void PrepareDescritptors( View& view, Frame* render, CommandBuffer cmd, uint32_t& currentMatrixOffset);
 		vk::DescriptorSet GetDescriptorSet(DescriptorLayoutKey& key, int frameIndex, int itemIndex);
 		void UpdateDescriptors(vk::PipelineBindPoint bindPoint, Item& item, std::vector<DescriptorLayoutKey>& keys, ProgramMeta& meta, CommandBuffer& cmd, vk::PipelineLayout layout,int itemIndex);
 		vk::Pipeline GetComputePipeline(PipelineKey& key);
@@ -247,7 +249,7 @@ namespace Voidstar
 		void CreateInstance();
 		std::vector<vk::DescriptorSet>  AllocateSets(size_t amount, const DescriptorLayoutKey& key);
 		
-		int GetIndex(FrameBufferHandle handle,bool& isPresent, bool lastRenderItem);
+		int GetIndex(FrameBufferHandle handle, bool lastRenderItem);
 		SparseSet<RenderPassHandle_> g_RenderPassAllocator;
 	private:
 

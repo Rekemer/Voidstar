@@ -23,7 +23,7 @@ void main ()
     
     outColor = vec4(0.0, 0.0, 0.1, 1.0); 
     return;
-}
+    }
 
     float amountOfTiles = exp2(index.b);
     vec2 offset = (fract(uv * amountOfTiles))  ;

@@ -557,12 +557,12 @@ namespace Voidstar
 		return image;
 	}
 
-	void Image::Fill(glm::vec4 value, CommandBuffer& cmd, SPtr<Buffer> stageBuffer, int bufferOffset)
+	void Image::Fill(glm::vec4 value,  CommandBuffer& cmd, void* mappedPtr, SPtr<Buffer> stageBuffer, int bufferOffset)
 	{
-		auto ptr = RenderContext::GetDevice()->GetDevice().mapMemory(stageBuffer->GetMemory(), 0, m_Size);
+		//auto ptr = RenderContext::GetDevice()->GetDevice().mapMemory(stageBuffer->GetMemory(), 0, m_Size);
 		std::vector<glm::vec4> values(m_Width * m_Height, value);
-		memcpy(ptr, values.data(), m_Size);
-		RenderContext::GetDevice()->GetDevice().unmapMemory(stageBuffer->GetMemory());
+		memcpy(mappedPtr, values.data(), m_Size);
+		//RenderContext::GetDevice()->GetDevice().unmapMemory(stageBuffer->GetMemory());
 		auto prevLayout = m_ImageLayout;
 		cmd.MemBufferBarrier(stageBuffer->GetBuffer(), stageBuffer->GetSize(),
 			vk::PipelineStageFlagBits::eTopOfPipe,

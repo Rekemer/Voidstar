@@ -134,8 +134,7 @@ public:
 			ResourceUsage::StorageWrite);
 		m_PageTableMipMaps = GenerateMipMapsAsTextures(m_PageTable, pageTableMipLevels);
 		int bufferOffset = 0;
-		ExecuteFrame(0);
-		ExecuteFrame(0);
+		ExecuteFrame(0,true);
 		auto mipMapSize = 0;
 		for (auto mipMap : m_PageTableMipMaps)
 		{
@@ -146,7 +145,6 @@ public:
 			mem.size = pageTableWidth * pageTableHeight * 8 * 4 + mipMapSize;
 			m_FillBuffer = CreateBuffer(mem, ResourceUsage::TransferSrc| ResourceUsage::TransferDst| ResourceUsage::Upload);
 		}
-
 		FillImage(m_PageTable, glm::vec4{ -1, -1, -1, -1 },m_FillBuffer, bufferOffset);
 
 		for (auto mipMaps : m_PageTableMipMaps)
@@ -156,7 +154,6 @@ public:
 		}
 
 
-		//ExecuteFrame(0);
 		auto usage = ResourceUsage::Sampled | ResourceUsage::TransferDst;
 		m_WorkingSet = CreateEmptyTexture(pageWidth, pageHeight,TextureFormat::RGBA8_UNORM, usage, 1, SampleCount::e1, FilterMode::Linear, FilterMode::Linear, workingSetPageAmount, false);
 
@@ -180,11 +177,10 @@ public:
 		m_FeedbackAttachments[0] = CreateAttachment(AttachmentType::COLOR,TextureFormat::RGBA32_SFLOAT,
 			feedbackSize.x,feedbackSize.y, SampleCount::e1, AttachmentHint::SampledLater | AttachmentHint::Readback);
 		m_FeedbackFramebuffer = CreateFramebuffer( {m_FeedbackAttachments[0]});
-
-	
 		
-		ExecuteFrame(0);
-		ExecuteFrame(0);
+		ExecuteFrame(0, true);
+		
+	
 		data = std::make_unique<uint8_t[]>(sizeof(FeedbackRes) * feedbackSize.x * feedbackSize.y);
 		m_FeedbackRes.resize(feedbackSize.x * feedbackSize.y);
 		m_Clear = std::vector<PageEntry>(virtualTextureTiles.x * virtualTextureTiles.y);
@@ -213,15 +209,7 @@ public:
 
 
 		auto scene = GetColorTexture(m_FeedbackFramebuffer);
-		//BindAttachmentAsTexture("u_Scene", scene);
-		
-		//SetViewRect(m_FinalRenderPass, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
-		//SetViewTransform(m_FinalRenderPass, GetCamera()->GetView(), GetCamera()->GetProj());
-		//Submit(m_FinalRenderPass, m_FinalShader);
-		
-		//ExecuteFrame(deltaTime);
 		ExecuteFrame(deltaTime);
-		ExecuteFrame(0);
 
 		ReadTexture(scene, data.get());
 		ExecuteFrame(deltaTime);
@@ -229,29 +217,21 @@ public:
 	#if 1
 
 			static uint64_t lastProcessed = 0;
+			auto ptr = reinterpret_cast<float*>(data.get());
+			uint64_t bufferSize = sizeof(FeedbackRes) * feedbackSize.x * feedbackSize.y;
 
-			//ExecuteFrame(deltaTime);
-		
-			auto currentFrame = GetCurrentFrame();
-			//if (frameWait > lastProcessed)
-			//{
-			
-				auto ptr = reinterpret_cast<float*>(data.get());
-				uint64_t bufferSize = sizeof(FeedbackRes) * feedbackSize.x * feedbackSize.y;
-
-				for (int i = 0, memoryRead = 0; memoryRead < bufferSize; memoryRead += sizeof(FeedbackRes), i++)
-				{
-					auto r = *(float*)(ptr);
-					ptr++;
-					auto g = *(float*)(ptr);
-					ptr++;
-					auto b = *(float*)(ptr);
-					ptr++;
-					auto a = *(float*)(ptr);
-					ptr++;
-					m_FeedbackRes[i] = { r,g,b,a };
-				}
-			//}
+			for (int i = 0, memoryRead = 0; memoryRead < bufferSize; memoryRead += sizeof(FeedbackRes), i++)
+			{
+				auto r = *(float*)(ptr);
+				ptr++;
+				auto g = *(float*)(ptr);
+				ptr++;
+				auto b = *(float*)(ptr);
+				ptr++;
+				auto a = *(float*)(ptr);
+				ptr++;
+				m_FeedbackRes[i] = { r,g,b,a };
+			}
 			static std::unordered_map<int, std::string_view> mipTiles =
 			{
 				{9,"pages_65536_32768/"},
@@ -393,6 +373,7 @@ public:
 				SetData(m_StorageBuffers, m_TilesWeSee.data(), m_TilesWeSee.size() * sizeof(m_TilesWeSee.at(0)));
 
 			}
+				
 		
 
 			{
@@ -407,7 +388,6 @@ public:
 					FillImage(mipMaps, glm::vec4{ -1, -1, -1, -1 }, m_FillBuffer, bufferOffset);
 				}
 			
-		
 
 			}
 
@@ -422,10 +402,11 @@ public:
 		BindImages("storageImage", images);
 		BindBuffer("u_StorageBuffer",m_StorageBuffers);
 		SubmitCompute(m_UpdatePageTablePass[0], m_ComputeShaders[0], m_TilesWeSee.size(), 1, 1);
+		
 		BindImages("storageImage", m_PageTableMipMaps);
 		BindImage("final", m_PageTable);
-		SubmitCompute(m_UpdatePageTablePass[1], m_ComputeShaders[1], pageTableWidth, pageTableHeight, 1);
-
+		SubmitCompute(m_UpdatePageTablePass[0], m_ComputeShaders[1], pageTableWidth, pageTableHeight, 1);
+		
 		
 		SetViewRect(m_FinalRenderPass, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
 		SetViewTransform(m_FinalRenderPass, GetCamera()->GetView(), GetCamera()->GetProj());
@@ -434,11 +415,9 @@ public:
 		BindTexture("PageTable", m_PageTable);
 		BindTexture("WorkingSet", m_WorkingSet);
 		
-		Submit(m_FinalRenderPass, m_FinalShaderWorkingSet);
 		
+		Submit(m_FinalRenderPass, m_FinalShaderWorkingSet);
 		ExecuteFrame(deltaTime);
-
-			
 	}
 	
 	

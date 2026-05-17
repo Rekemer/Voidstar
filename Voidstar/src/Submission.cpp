@@ -317,12 +317,12 @@ namespace Voidstar
 	void SubmitCompute(PassID id, ProgramHandle program, size_t x, size_t y, size_t z)
 	{
 		auto item = g_Submission->Submit->CurrentRenderItem;
-		item->Type = ItemType::COMPUTE;
-
 		item->Program = program;
 		item->GroupCount = { x,y,z };
 		item->View = id;
-		g_Submission->Submit->NextItem();
+
+		g_Submission->Submit->Views[id].Type = ItemType::COMPUTE;
+		g_Submission->Submit->NextItem(id);
 	}
 	void Submit(PassID viewID, ProgramHandle programHandle, size_t instances)
 	{
@@ -331,13 +331,10 @@ namespace Voidstar
 		renderItem->ObjectCount = instances;
 		renderItem->Program = programHandle;
 		renderItem->View =viewID;
-
-		renderItem->Type = ItemType::RENDER;
-		auto& freeIndex = g_Submission->Submit->Views[viewID].FreeIndex;
-		g_Submission->Submit->Views[viewID].ItemsIndex[freeIndex++] = g_Submission->Submit->CurrentRenderItemIndex;
-		g_Submission->Submit->LastView.push_back(viewID);
-		// we can create pipeline
-		g_Submission->Submit->NextItem();
+		
+		g_Submission->Submit->Views[viewID].Type = ItemType::RENDER;
+		
+		g_Submission->Submit->NextItem(viewID);
 		g_Submission->Submit->CurrentRenderItem->MatrixIndex = g_Submission->Submit->CurrentFreeMatrix;
 	}
 
@@ -733,10 +730,7 @@ namespace Voidstar
 		return bufferHandle;
 
 	}
-	size_t GetCurrentFrame()
-	{
-		return g_Submission->Submit->FrameNumber;
-	}
+
 
 	void UpdateImageRegionWithImage(
 		const Memory& loadedImage,
@@ -907,6 +901,25 @@ namespace Voidstar
 		g_Submission->Submit->Matricies[g_Submission->Submit->CurrentRenderItem->MatrixIndex] = world;
 		Submit(pass, program);
 		return;
+	}
+
+	void Frame::NextItem(PassID viewID)
+	{	
+		auto& freeIndex = g_Submission->Submit->Views[viewID].FreeIndex;
+		g_Submission->Submit->Views[viewID].ItemsIndex[freeIndex++] = g_Submission->Submit->CurrentRenderItemIndex;
+
+		if (g_Submission->Submit->LastView.size() == 0)
+		{
+			g_Submission->Submit->LastView.push_back(viewID);
+		}
+		// so can have chains of items per view in frame
+		else if (g_Submission->Submit->LastView.back() != viewID)
+		{
+			g_Submission->Submit->LastView.push_back(viewID);
+		}
+
+		CurrentRenderItemIndex++;
+		CurrentRenderItem = &m_renderItem[CurrentRenderItemIndex];
 	}
 }
 

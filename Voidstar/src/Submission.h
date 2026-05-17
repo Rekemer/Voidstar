@@ -379,7 +379,6 @@ namespace Voidstar
 	// render items learns about the view at submit
 	struct Item
 	{
-		ItemType Type = ItemType::RENDER;
 		ProgramHandle Program;
 		PassID View;
 		// buffers binded for draw call
@@ -412,6 +411,7 @@ namespace Voidstar
 		FrameBufferHandle Fbh;
 		int FreeIndex = 0;
 		std::array<int,256> ItemsIndex;
+		ItemType Type = ItemType::RENDER;
 	};
 
 	struct Frame
@@ -426,11 +426,8 @@ namespace Voidstar
 		size_t CurrentFreeMatrix = 0;
 		std::array<glm::mat4, MAX_OBJECTS> Matricies;
 		float deltaTime;
-		void NextItem()
-		{
-			CurrentRenderItemIndex++;
-			CurrentRenderItem = &m_renderItem[CurrentRenderItemIndex];
-		}
+		void NextItem(PassID viewID);
+		
 		void Reset() 
 		{
 			LastView.resize(0);
@@ -552,7 +549,6 @@ namespace Voidstar
 	IndexBufferHandle CreateIndexBuffer(Memory mem);
 	BufferHandle CreateBuffer (Memory mem , ResourceUsage usage);
 
-	size_t GetCurrentFrame();
 	void ExecuteFrame(float deltaTime,bool wait = false);
 
 	void RunRender_(std::atomic_bool& isRunning);

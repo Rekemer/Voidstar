@@ -2,9 +2,9 @@
 
 #define mipMaps 9
 
-layout(binding = 0, rgba32f) uniform readonly image2D storageImage[mipMaps];
+layout(set = 1, binding = 0, rgba32f) uniform readonly image2D storageImage[mipMaps];
 
-layout(binding = 1, rgba32f) uniform writeonly image2D final;
+layout(set = 1, binding = 1, rgba32f) uniform writeonly image2D final;
 
 layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 

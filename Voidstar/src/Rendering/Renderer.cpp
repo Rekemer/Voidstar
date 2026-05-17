@@ -1385,9 +1385,13 @@ namespace Voidstar
 	{
 		auto commandBuffer = m_TransferCommandBuffer[m_CurrentFrame];
 		auto image = GetTexture(texture);
-		auto buffer = m_Buffers.at(bufferHandle).at(m_CurrentFrame);
+		
+		auto bufferPtr = GetMappedPtr(ResourceType::StorageBuffer,bufferHandle.idx);
+		auto buffer = GetBuffer(bufferHandle, m_CurrentFrame);
+
+		assert(buffer != nullptr);
 		commandBuffer.BeginTransfering();
-		image->Fill(glm::vec4(-1, -1, -1, -1), commandBuffer, buffer, offset);
+		image->Fill(glm::vec4(-1, -1, -1, -1), commandBuffer, bufferPtr,buffer, offset);
 		commandBuffer.EndTransfering();
 		commandBuffer.SubmitSingle();
 	}
@@ -1426,7 +1430,7 @@ namespace Voidstar
 	}
 	void* Renderer::GetMappedPtr(ResourceType type,Handle<void>::Type handle)
 	{
-		return m_Mapped.at({type,handle})[m_CurrentFrame];
+		return m_Mapped.at({type,handle}).at(m_CurrentFrame);
 	}
 	Renderer* Renderer::Instance()
 	{
@@ -1439,12 +1443,18 @@ namespace Voidstar
 		auto image = m_Textures.at(handle);
 		image->UpdateImage(data,size);
 	}
-
+	SPtr<Buffer> Renderer::GetBuffer(BufferHandle handle, int currentFrame)
+	{
+		return m_Dynamic[{ResourceType::StorageBuffer, handle.idx}] ?
+			m_Buffers.at(handle).at(m_CurrentFrame)
+			: m_Buffers.at(handle).at(0);
+	}
 	void Renderer::UpdateBuffer(BufferHandle handle, void* data,size_t size)
 	{
-		auto buffer = m_Buffers.at(handle)[m_CurrentFrame];
 
-		buffer->SetData(data, size);
+		auto buffer = GetBuffer(handle, m_CurrentFrame);
+		auto ptr = GetMappedPtr(ResourceType::StorageBuffer,handle.idx);
+		buffer->SetData(data, ptr, size);
 	}
 	TextureHandle Renderer::GetFBTextureHandle(FrameBufferHandle fb, int index)
 	{
@@ -2061,9 +2071,9 @@ namespace Voidstar
 					for (auto handle : bind.buffers)
 					{
 						if (!handle.Valid()) break;
-						auto buffer = m_Dynamic[{ResourceType::StorageBuffer, handle.idx}] ?
-							m_Buffers.at(handle).at(m_CurrentFrame)
-							: m_Buffers.at(handle).at(0);
+
+						auto buffer = GetBuffer(handle, m_CurrentFrame);
+
 						m_Device->UpdateDescriptorSet(
 							GetDescriptorSet(k, m_CurrentFrame,itemIndex), bindNumber, 1, *buffer, ResourceType::StorageBuffer);
 					}
@@ -2077,7 +2087,7 @@ namespace Voidstar
 	}
 
 
-	int Renderer::GetIndex(FrameBufferHandle handle, bool& isPresent, bool lastRenderItem)
+	int Renderer::GetIndex(FrameBufferHandle handle, bool lastRenderItem)
 	{
 
 		if (handle == DEFAULT_FRAME_BUFFER)
@@ -2095,13 +2105,45 @@ namespace Voidstar
 				);
 				m_IsSwapchainAcquired = true;
 			}
-			isPresent = true;
 			return m_SwapchainIndex;
 		}
 
 		// For offscreen buffers, just return the current frame flight index
-		isPresent = false;
 		return m_CurrentFrame;
+	}
+
+	void Renderer::PrepareDescritptors(
+		View& view,
+		Frame*  render,
+		CommandBuffer cmd,
+		uint32_t& currentMatrixOffset)
+	{
+		for (int ii = 0; ii < view.FreeIndex; ++ii)
+		{
+			int itemIndex = view.ItemsIndex[ii];
+			auto* item = &render->m_renderItem[itemIndex];
+			auto& renderItem = *item;
+			auto& meta = m_Compiler.m_Programs.at(renderItem.Program);
+			std::vector<DescriptorLayoutKey>& keys = meta.descriptorKey;
+
+			vk::PipelineLayout layout = m_PipelineLayout.at({ keys });
+			UpdateDescriptors(view.Type == ItemType::RENDER ?
+				vk::PipelineBindPoint::eGraphics :
+				vk::PipelineBindPoint::eCompute, renderItem, keys, meta, cmd, layout, itemIndex);
+
+			if (renderItem.ObjectCount > 0)
+			{
+				// BUG: ovewrite bug 
+				auto dest = (glm::mat4*)m_ObjectsBuffersMapped[m_CurrentFrame]
+					+ currentMatrixOffset;
+					auto* src = &render->Matricies.at(renderItem.MatrixIndex);
+					memcpy(dest, src, sizeof(glm::mat4) * renderItem.ObjectCount);
+					renderItem.internalOffset = currentMatrixOffset;
+					currentMatrixOffset += renderItem.ObjectCount;
+
+			}
+
+		}
 	}
 
 	void Renderer::RenderFrame(Frame* render, float deltaTime)
@@ -2118,18 +2160,51 @@ namespace Voidstar
 		
 
 		auto& cmd = m_RenderCommandBuffer[m_CurrentFrame];
-		cmd.BeginRendering();
 		uint32_t currentMatrixOffset = 0;
+		cmd.BeginRendering();
 		for (auto i : render->LastView)
 		{
 			auto& view = render->Views[i];
 			if (view.FreeIndex == 0)
 				continue;
 
+			PrepareDescritptors(view, render, cmd, currentMatrixOffset);
+
+			if (view.Type == ItemType::COMPUTE)
+			{
+				for (int ii = 0; ii < view.FreeIndex; ++ii)
+				{
+					int itemIndex = view.ItemsIndex[ii];
+					auto* item = &render->m_renderItem[itemIndex];
+
+					auto& computeItem = *item;
+					
+					auto vkCmd = cmd.GetCommandBuffer();
+					auto& meta = m_Compiler.m_Programs.at(computeItem.Program);
+					std::vector<DescriptorLayoutKey>& keys = meta.descriptorKey;
+					PipelineKey key = { computeItem.Program,{},keys,{} };
+					vk::Pipeline pipeline = GetComputePipeline(key);
+					vk::PipelineLayout layout = m_PipelineLayout.at(key.layout);
+
+					vkCmd.bindPipeline(vk::PipelineBindPoint::eCompute, pipeline);
+					for (int iii = 0; iii < meta.descriptorKey.size(); iii++)
+					{
+						auto k = meta.descriptorKey.at(iii);
+						auto set = GetDescriptorSet(k, m_CurrentFrame, itemIndex);
+						vkCmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, layout, iii, set,nullptr);
+					}
+
+					vkCmd.dispatch(computeItem.GroupCount.x, computeItem.GroupCount.y,computeItem.GroupCount.z);
+					computeItem.Reset();
+
+				}
+				view.FreeIndex = 0;
+				continue;
+			}
+
 			FrameBufferHandle fb = view.Fbh.Valid() ? view.Fbh : DEFAULT_FRAME_BUFFER;
 
-			bool viewIsPresent = false;
-			uint32_t index = GetIndex(fb, viewIsPresent, i == render->LastView.back());
+			uint32_t index = GetIndex(fb, i == render->LastView.back());
 			
 
 			auto frameBuffer = m_Framebuffers.at(fb)[index];
@@ -2150,38 +2225,6 @@ namespace Voidstar
 
 			UpdateUniformBuffer(view.Proj, view.View, m_App->GetExeTime());
 
-
-			
-			// prepare to rendering
-			{
-				for (int ii = 0; ii < view.FreeIndex; ++ii)
-				{
-					int itemIndex = view.ItemsIndex[ii];
-					auto* item = &render->m_renderItem[itemIndex];
-					auto& renderItem = *item;
-					auto& meta = m_Compiler.m_Programs.at(renderItem.Program);
-					std::vector<DescriptorLayoutKey>& keys = meta.descriptorKey;
-
-					vk::PipelineLayout layout = m_PipelineLayout.at({keys});
-					//auto set = GetDescriptorSet(SystemDescriptorLayoutKey, m_CurrentFrame, itemIndex);
-					//m_Device->UpdateDescriptorSet(set, 0,  1, *m_UniformBuffers[m_CurrentFrame], ResourceType::UniformBuffer);
-					UpdateDescriptors(vk::PipelineBindPoint::eGraphics, renderItem, keys, meta, cmd, layout, itemIndex);
-
-					if (renderItem.ObjectCount > 0)
-					{
-						// BUG: ovewrite bug 
-						auto dest = (glm::mat4*)m_ObjectsBuffersMapped[m_CurrentFrame] 
-							+ currentMatrixOffset;
-						auto* src = &render->Matricies.at(renderItem.MatrixIndex);
-						memcpy(dest, src, sizeof(glm::mat4) * renderItem.ObjectCount);
-						renderItem.internalOffset = currentMatrixOffset;
-						currentMatrixOffset += renderItem.ObjectCount;
-
-					}
-
-				}
-			}
-
 			cmd.BeginRenderPass(renderPass.m_RenderPass, frameBuffer, renderPass.m_Extent, renderPass.m_ClearValues);
 
 			for (int ii = 0; ii < view.FreeIndex; ++ii)
@@ -2189,11 +2232,7 @@ namespace Voidstar
 				int itemIndex = view.ItemsIndex[ii];
 				auto* item = &render->m_renderItem[itemIndex];
 
-				if (item->Type != ItemType::RENDER)
-				{
-					assert(false && "Conpute passes are broken currently, since stuff is done per view now");
-					continue;
-				}
+				
 
 				auto& renderItem = *item;
 				assert(renderItem.Program.Valid());
@@ -2213,7 +2252,6 @@ namespace Voidstar
 						auto k = meta.descriptorKey.at(iii);
 						auto set = GetDescriptorSet(k, m_CurrentFrame, itemIndex);
 						vkCmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, layout, iii, set,nullptr);
-
 					}
 				}
 				vk::Viewport viewport;

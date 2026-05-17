@@ -132,7 +132,7 @@ namespace Voidstar
 		static SPtr<Image> CreateImage(std::string_view path);
 		
 		static SPtr<Image> CreateCubemap(std::vector<std::string> pathes);
-		void Fill(glm::vec4  value, CommandBuffer& cmd, SPtr<Buffer> stageBuffer, int bufferOffset);
+		void Fill(glm::vec4  value, CommandBuffer& cmd, void* mappedPtr, SPtr<Buffer> stageBuffer, int bufferOffset);
 		static SPtr<Image> CreateEmptyImage( int width, int height,vk::Format format,
 			vk::ImageUsageFlags usage,
 			int mipLevels = 1,
