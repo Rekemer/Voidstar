@@ -1980,7 +1980,7 @@ namespace Voidstar
 		{
 			m_DescriptorSet[key].resize(RenderContext::GetFrameAmount());
 		}
-
+		itemIndex = key.set == 0 ? 0 : itemIndex;
 		auto& list = m_DescriptorSet[key][frameIndex];
 
 		if (list.size() <= itemIndex) {
@@ -1991,7 +1991,7 @@ namespace Voidstar
 			for (size_t i = oldSize; i < newSize; ++i) {
 				stats.descriptorsSetsAllocated++;
 				list[i] = m_UniversalPool->AllocateDescriptorSets(1, &layout)[0];
-				Log::GetLog()->info("Descriptor set is allocated");
+				Log::GetLog()->info("Descriptor set is allocated: key {} item index {} frame {}", key.set,itemIndex, frameIndex);
 			}
 		}
 
@@ -2004,18 +2004,7 @@ namespace Voidstar
 		
 		auto vkCmd = cmd.GetCommandBuffer();
 	
-		if (keys.size() > 0)
-		{
-			auto systemKey = keys.at(0);
-			for (auto bind : systemKey.bindings)
-			{
-				auto& buffer = bind.kind == ResourceType::UniformBuffer ? *m_UniformBuffers[m_CurrentFrame] 
-					: *m_ObjectsBuffers[m_CurrentFrame];
-				m_Device->UpdateDescriptorSet(GetDescriptorSet(SystemDescriptorLayoutKey, m_CurrentFrame, itemIndex), 
-					bind.binding, bind.count, buffer, bind.kind);
-			}
-
-		}
+		
 
 		for (int ii = 0; ii < item.Bindings.currentResBinding; ii++)
 		{
@@ -2151,6 +2140,19 @@ namespace Voidstar
 
 		auto& cmd = m_RenderCommandBuffer[m_CurrentFrame];
 		uint32_t currentMatrixOffset = 0;
+
+	
+		//auto systemKey = keys.at(0);
+		//for (auto bind : systemKey.bindings)
+		//{
+		//	auto& buffer = bind.kind == ResourceType::UniformBuffer ? *m_UniformBuffers[m_CurrentFrame]
+		//		: *m_ObjectsBuffers[m_CurrentFrame];
+		//		m_Device->UpdateDescriptorSet(GetDescriptorSet(SystemDescriptorLayoutKey, m_CurrentFrame, 0),
+		//			bind.binding, bind.count, buffer, bind.kind);
+		//}
+
+		
+
 		cmd.BeginRendering();
 		for (auto i : render->LastView)
 		{
@@ -2390,10 +2392,11 @@ namespace Voidstar
 	}
 	void Renderer::EndFrame(Frame* frame)
 	{
+		std::println("Descriptor sets allocated {}", stats.descriptorsSetsAllocated);
+
 		if (frame->CurrentRenderItemIndex > 0)
 		m_CurrentFrame = (m_CurrentFrame + 1) % RenderContext::GetFrameAmount();
 
-		std::println("Descriptor sets allocated {}", stats.descriptorsSetsAllocated);
 
 	}
 
