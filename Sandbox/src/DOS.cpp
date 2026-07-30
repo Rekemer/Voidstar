@@ -761,10 +761,7 @@ void DOS::Update(float deltaTime)
 			p.distanceSq = glm::distance(camPos, pos);
 		}
 	
-		std::sort(fireWorlds.begin(), fireWorlds.end(),
-			[](const Particle& a, const Particle& b) {
-				return a.distanceSq > b.distanceSq; // Farthest first
-			});
+	
 	
 	
 		for (int i = 0; i < fireWorlds.size(); i++)
