@@ -5,7 +5,7 @@ workspace "Voidstar"
 	architecture "x86_64"
 	startproject "Sandbox"
     language "C++"
-    cppdialect "C++20"
+    cppdialect "C++23"
 	configurations
 	{
 		"Debug",

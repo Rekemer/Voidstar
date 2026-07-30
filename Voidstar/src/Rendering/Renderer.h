@@ -139,7 +139,10 @@ namespace Voidstar
 	class DescriptorSetLayout;
 	class CommandPoolManager;
 
-
+	struct Stats
+	{
+		int descriptorsSetsAllocated = 0;
+	};
 	class VOIDSTAR_API Renderer
 	{
 	public:
@@ -225,9 +228,9 @@ namespace Voidstar
 		std::vector<UPtr<Buffer>> m_ObjectsBuffers;
 		std::vector<void*> m_UniformBuffersMapped;
 		std::vector<void*> m_ObjectsBuffersMapped;
-		void Draw(Quad& quad, glm::mat4& world);
-		void Draw(Sphere& drawable);
-		void Draw(QuadRangle& drawable);
+
+		Stats stats;
+
 		void UpdateUniformBuffer(const glm::mat4& proj, const glm::mat4& view,float time);
 		void AddFramebuffers(FrameBufferHandle handle, std::vector<vk::Framebuffer>& framebuffers);
 		size_t m_CurrentFrame = 0;
@@ -252,7 +255,7 @@ namespace Voidstar
 		int GetIndex(FrameBufferHandle handle, bool lastRenderItem);
 		SparseSet<RenderPassHandle_> g_RenderPassAllocator;
 	private:
-
+		
 		uint32_t m_SwapchainIndex = 0;
 		bool     m_IsSwapchainAcquired = false;
 		Application* m_App;

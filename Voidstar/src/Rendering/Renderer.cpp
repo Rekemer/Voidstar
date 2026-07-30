@@ -38,6 +38,7 @@
 #include <gtc/quaternion.hpp>
 #include <fstream>
 #include <algorithm>
+#include <print>
 
 
 
@@ -1988,24 +1989,13 @@ namespace Voidstar
 			list.resize(newSize);
 			auto& layout = m_DescriptorLayout.at(key);
 			for (size_t i = oldSize; i < newSize; ++i) {
+				stats.descriptorsSetsAllocated++;
 				list[i] = m_UniversalPool->AllocateDescriptorSets(1, &layout)[0];
+				Log::GetLog()->info("Descriptor set is allocated");
 			}
-			Log::GetLog()->info("Descriptor set is allocated");
 		}
 
-		
 		return list[itemIndex];
-
-		//if (m_DescriptorSet[key][frameIndex].size() < itemIndex)
-		//{
-		//	auto& list = m_DescriptorSet.at(key)[frameIndex];
-		//	auto& layout = m_DescriptorLayout.at(key);
-		//	Log::GetLog()->info("Descriptor set is allocated");
-		//	auto set =m_UniversalPool->AllocateDescriptorSets(1, &layout)[0];
-		//	list.push_back(set);
-		//	return set;
-		//}
-		//return m_DescriptorSet.at(key)[frameIndex][itemIndex];
 	}
 
 	// FIX: we should not update it every frame
@@ -2402,6 +2392,9 @@ namespace Voidstar
 	{
 		if (frame->CurrentRenderItemIndex > 0)
 		m_CurrentFrame = (m_CurrentFrame + 1) % RenderContext::GetFrameAmount();
+
+		std::println("Descriptor sets allocated {}", stats.descriptorsSetsAllocated);
+
 	}
 
 	static vk::DescriptorSetLayout CreateDescriptorSetLayout(std::vector<vk::DescriptorSetLayoutBinding>& bindings)
