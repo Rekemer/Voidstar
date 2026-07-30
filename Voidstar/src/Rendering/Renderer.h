@@ -250,8 +250,6 @@ namespace Voidstar
 		vk::Pipeline GetPipeline(const PipelineKey& key, std::array<VertexBinding, Item::MAX_VERTEX_BINDING>& bindings,
 			int bindingAmount);
 		void CreateInstance();
-		std::vector<vk::DescriptorSet>  AllocateSets(size_t amount, const DescriptorLayoutKey& key);
-		
 		int GetIndex(FrameBufferHandle handle, bool lastRenderItem);
 		SparseSet<RenderPassHandle_> g_RenderPassAllocator;
 	private:
@@ -278,9 +276,12 @@ namespace Voidstar
 		Map<PipelineLayoutKey, vk::PipelineLayout, PipelineLayoutKeyHash> m_PipelineLayout;
 		Map<PipelineKey, vk::Pipeline, PipelineKeyHash> m_Pipelines;
 
+
+		// what frame uses which descirptor layouts and what render items in the frame
+		// use what descirptor set
+		// each new set is a different DescriptorLayoutKey
 		Map<DescriptorLayoutKey, 
-			std::vector<
-			std::vector<vk::DescriptorSet>>,
+			std::vector<Map<int, vk::DescriptorSet>>,
 			DescriptorLayoutKeyHash> m_DescriptorSet;
 
 		std::vector<TextureHandle> m_ColorSwapchainHandles;
@@ -306,11 +307,8 @@ namespace Voidstar
 		Map<BufferHandle, std::vector<SPtr<Buffer>>> m_Buffers;
 
 		Map<TextureHandle, SPtr<Image>> m_Textures;
-
 		
-		
-		
-		
+	
 		
 
 

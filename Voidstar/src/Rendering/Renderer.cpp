@@ -839,33 +839,6 @@ namespace Voidstar
 	}
 
 
-
-
-	
-	std::vector<vk::DescriptorSet> Renderer::AllocateSets(size_t amount,
-		const DescriptorLayoutKey& key)
-	{
-		
-		if (m_DescriptorSet.find(key) == m_DescriptorSet.end())
-		{
-			if (m_DescriptorSet[key].size() <= RenderContext::GetFrameAmount())
-			{
-				m_DescriptorSet[key].resize(RenderContext::GetFrameAmount());
-			}
-			auto& layout = m_DescriptorLayout.at(key);
-			std::vector<vk::DescriptorSetLayout> layouts{amount, layout};
-			auto sets = m_UniversalPool->AllocateDescriptorSets(amount, layouts.data());
-			for (int i = 0; i < amount; i++)
-			{
-				m_DescriptorSet[key][i].push_back(sets[i]);
-			}
-		
-		}
-		return  m_DescriptorSet[key][m_CurrentFrame];
-	}
-
-
-
 	CommandBuffer& Renderer::GetRenderCommandBuffer(size_t frameindex)
 	{
 		assert(frameindex < m_RenderCommandBuffer.size());
@@ -1973,29 +1946,32 @@ namespace Voidstar
 		}
 
 	}
-
+	
 	vk::DescriptorSet Renderer::GetDescriptorSet(DescriptorLayoutKey& key, int frameIndex,int itemIndex)
 	{
 		if (m_DescriptorSet[key].size() < RenderContext::GetFrameAmount())
 		{
 			m_DescriptorSet[key].resize(RenderContext::GetFrameAmount());
 		}
-		itemIndex = key.set == 0 ? 0 : itemIndex;
-		auto& list = m_DescriptorSet[key][frameIndex];
 
-		if (list.size() <= itemIndex) {
-			size_t oldSize = list.size();
-			size_t newSize = itemIndex + 1;
-			list.resize(newSize);
-			auto& layout = m_DescriptorLayout.at(key);
-			for (size_t i = oldSize; i < newSize; ++i) {
-				stats.descriptorsSetsAllocated++;
-				list[i] = m_UniversalPool->AllocateDescriptorSets(1, &layout)[0];
-				Log::GetLog()->info("Descriptor set is allocated: key {} item index {} frame {}", key.set,itemIndex, frameIndex);
-			}
-		}
+		if (key.set == 0) itemIndex = 0; 
 
-		return list[itemIndex];
+		// how many items use this descriptor layout in the frame
+		auto& perFrame = m_DescriptorSet[key][frameIndex];
+		auto it = perFrame.find(itemIndex);
+		if (it != perFrame.end())
+			return it->second;
+
+		auto& layout = m_DescriptorLayout.at(key);
+		auto set = m_UniversalPool->AllocateDescriptorSets(1, &layout)[0];
+		perFrame[itemIndex] = set;
+
+		stats.descriptorsSetsAllocated++;
+		Log::GetLog()->info("Descriptor set is allocated: key {} item {} frame {}", key.set, itemIndex, frameIndex);
+
+		return set;
+
+
 	}
 
 	// FIX: we should not update it every frame
