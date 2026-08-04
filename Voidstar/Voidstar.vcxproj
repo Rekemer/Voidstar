@@ -209,6 +209,7 @@
     <ClCompile Include="src\Input.cpp" />
     <ClCompile Include="src\Jobs.cpp" />
     <ClCompile Include="src\Log.cpp" />
+    <ClCompile Include="src\Memory.cpp" />
     <ClCompile Include="src\MemoryTracker.cpp" />
     <ClCompile Include="src\Prereq.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>

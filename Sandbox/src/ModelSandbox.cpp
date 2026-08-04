@@ -4,25 +4,52 @@
 
 void Rotate(float deltaTime, float rotateSpeed, float& yaw, float& pitch, glm::mat4& world)
 {
-
-	if (Input::IsKeyPressed(VS_KEY_A)) yaw -= rotateSpeed * deltaTime; // Left
-	if (Input::IsKeyPressed(VS_KEY_D)) yaw += rotateSpeed * deltaTime; // Right
-	if (Input::IsKeyPressed(VS_KEY_W)) pitch += rotateSpeed * deltaTime; // Up (Loop)
-	if (Input::IsKeyPressed(VS_KEY_S)) pitch -= rotateSpeed * deltaTime; // Down (Loop)
-
-	// 2. Position the model at the camera/target point
-
-	// 3. Rotate YAW (Horizontal)
-	// We rotate around the Y-axis (0, 1, 0)
-	world = glm::rotate(world, yaw, glm::vec3(0, 1, 0));
-
-	// 4. Rotate PITCH (Vertical)
-	// We rotate around the X-axis (1, 0, 0)
-	// Because there is no clamp, this will allow full 360 vertical loops
-	world = glm::rotate(world, pitch, glm::vec3(1, 0, 0));
-
-	// 5. Scale
-	world = glm::scale(world, glm::vec3(2.0f));
+	#define MOUSE 1
+	#if MOUSE == 0
+		if (Input::IsKeyPressed(VS_KEY_A)) yaw -= rotateSpeed * deltaTime; // Left
+		if (Input::IsKeyPressed(VS_KEY_D)) yaw += rotateSpeed * deltaTime; // Right
+		if (Input::IsKeyPressed(VS_KEY_W)) pitch += rotateSpeed * deltaTime; // Up (Loop)
+		if (Input::IsKeyPressed(VS_KEY_S)) pitch -= rotateSpeed * deltaTime; // Down (Loop)
+	
+		// 2. Position the model at the camera/target point
+	
+		// 3. Rotate YAW (Horizontal)
+		// We rotate around the Y-axis (0, 1, 0)
+		world = glm::rotate(world, yaw, glm::vec3(0, 1, 0));
+	
+		// 4. Rotate PITCH (Vertical)
+		// We rotate around the X-axis (1, 0, 0)
+		// Because there is no clamp, this will allow full 360 vertical loops
+		world = glm::rotate(world, pitch, glm::vec3(1, 0, 0));
+	
+		// 5. Scale
+		world = glm::scale(world, glm::vec3(2.0f));
+	#else
+		static bool dragging = false;
+		if (Input::IsMousePressed(VS_MOUSE_LEFT))
+		{
+			if (!dragging)
+			{
+				dragging = true;
+			}
+			else
+			{
+				auto  deltaX = Input::GetMouseDeltaX();
+				auto  deltaY = Input::GetMouseDeltaY();
+				yaw += deltaX * rotateSpeed * deltaTime;
+				pitch += deltaY * rotateSpeed * deltaTime; 
+			}
+		}
+		else
+		{
+			dragging = false;
+		}
+	
+		world = glm::mat4(1.0f);
+		world = glm::rotate(world, yaw, glm::vec3(0, 1, 0));
+		world = glm::rotate(world, pitch, glm::vec3(1, 0, 0));
+		world = glm::scale(world, glm::vec3(2.0f));
+	#endif
 }
 
 
@@ -31,7 +58,7 @@ void Rotate(float deltaTime, float rotateSpeed, float& yaw, float& pitch, glm::m
 ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t screenHeight) : Voidstar::Application(appName, screenWidth, screenHeight)
 	{
 #if MODEL
-		m_DefaultShader = LoadProgram("model.vert", "texture.frag");
+		m_DefaultShader = LoadProgram("model.vert", "model.frag");
 		m_Model = LoadModel("DamagedHelmet/glTF-Binary/DamagedHelmet.glb");
 
 #else

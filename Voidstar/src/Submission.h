@@ -446,6 +446,9 @@ namespace Voidstar
 	struct Model
 	{
 		TextureHandle Albedo;
+		TextureHandle Normal;
+		TextureHandle Metallic;
+		TextureHandle Roughness;
 		VertexLayoutHandle m_Layout;
 		VertexBufferHandle m_VertexBuffer;
 		IndexBufferHandle m_IndexBuffer;

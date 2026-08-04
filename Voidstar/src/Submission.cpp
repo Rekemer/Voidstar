@@ -4,6 +4,7 @@
 #include "Rendering/RenderContext.h"
 #include "Rendering/Renderer.h"
 #include <semaphore>
+#include <print>
 
 
 #define CGLTF_IMPLEMENTATION
@@ -779,7 +780,41 @@ namespace Voidstar
 		return nullptr;
 	}
 
+	static TextureHandle LoadGLTFTexture(cgltf_image* img, const std::filesystem::path& basePath)
+	{
+		if (!img) { assert(false); }
 
+		stbi_uc* pixels = nullptr;
+		int w = 0, h = 0, comp = 0;
+
+		if (img->buffer_view)
+		{
+			// Embedded in .glb / buffer
+			const cgltf_buffer_view* bv = img->buffer_view;
+			const cgltf_buffer* buf = bv->buffer;
+			assert(buf && buf->data && "Call cgltf_load_buffers first!");
+			const uint8_t* bytes = (const uint8_t*)buf->data + bv->offset;
+			const int byteCount = (int)bv->size;
+			pixels = stbi_load_from_memory(bytes, byteCount, &w, &h, &comp, 4);
+		}
+		else if (img->uri)
+		{
+			// External file referenced by relative path
+			std::filesystem::path imgPath = basePath.parent_path() / img->uri;
+			pixels = stbi_load(imgPath.string().c_str(), &w, &h, &comp, 4);
+			assert(pixels && "Failed to load external texture");
+		}
+
+		if (!pixels) { assert(false); }
+
+		Memory mem;
+		mem.size = w * h * 4;
+		mem.allocate = AllocateWay::STBI;
+		mem.cleanUp = true;
+		mem.data = pixels;
+		auto tex = LoadTextureFrom(mem, w, h);
+		return tex;
+	}
 
 	SPtr<Model> LoadModel(std::string_view file)
 	{
@@ -813,30 +848,25 @@ namespace Voidstar
 			cgltf_material* m = prim->material; 
 			if (m)
 			{
-				cgltf_texture* t = m->pbr_metallic_roughness.base_color_texture.texture;
-				cgltf_image* img = t->image; // this is what you loa
-				if (img->buffer_view)
-				{
+				// Albedo / base color
+				if (m->pbr_metallic_roughness.base_color_texture.texture)
+					model->Albedo = LoadGLTFTexture(
+						m->pbr_metallic_roughness.base_color_texture.texture->image, pathFile);
+
+				// Normal map
+				if (m->normal_texture.texture)
+					model->Normal = LoadGLTFTexture(m->normal_texture.texture->image, pathFile);
 				
-					const cgltf_buffer_view* bv = img->buffer_view;
-					const cgltf_buffer* buf = bv->buffer;
+				// Metallic/Roughness (packed: G=roughness, B=metallic in glTF spec)
+				if (m->pbr_metallic_roughness.metallic_roughness_texture.texture)
+					model->Metallic = LoadGLTFTexture(
+						m->pbr_metallic_roughness.metallic_roughness_texture.texture->image, pathFile);
 
-					assert(buf && buf->data && "Call cgltf_load_buffers first!");
+				// Ambient occlusion
+				//m->occlusion_texture.texture->image
 
-					const uint8_t* bytes = (const uint8_t*)buf->data + bv->offset;
-					const int byteCount = (int)bv->size;
-
-					stbi_uc* pixels = nullptr;
-					int w, h, comp;
-					pixels = stbi_load_from_memory(bytes, byteCount, &w, &h, &comp, 4);
-
-					Memory mem;
-					mem.data = static_cast<uint8_t*>(pixels);
-					mem.size = w * h * comp;
-					//Upload
-					model->Albedo = LoadTextureFrom(mem, w, h);
-
-				}
+				// Emissive
+				//m->emissive_texture.texture->image
 			}
 
 			size_t vCount = pos->count;
@@ -854,7 +884,10 @@ namespace Voidstar
 					vertices[i].Normal[2] = 0;
 				}
 
-				if (uv)  cgltf_accessor_read_float(uv, i, &vertices[i].UV.x, 2);
+				if (uv)
+				{
+					cgltf_accessor_read_float(uv, i, &vertices[i].UV.x, 2);
+				}
 				else 
 				{ 
 					vertices[i].UV[0] = 0;
@@ -896,7 +929,9 @@ namespace Voidstar
 	{
 		BindVertexBuffer(pass, model->m_VertexBuffer);
 		BindIndexBuffer(model->m_IndexBuffer);
-		BindTexture("u_Texture",model->Albedo);
+		BindTexture("u_Albedo", model->Albedo);
+		BindTexture("u_Normal", model->Normal);
+		BindTexture("u_Metallic", model->Metallic);
 		g_Submission->Submit->CurrentRenderItem->MatrixIndex = g_Submission->Submit->CurrentFreeMatrix++;
 		g_Submission->Submit->Matricies[g_Submission->Submit->CurrentRenderItem->MatrixIndex] = world;
 		Submit(pass, program);

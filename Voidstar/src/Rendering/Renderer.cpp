@@ -1395,8 +1395,6 @@ namespace Voidstar
 				m_TransferCommandBuffer[0].SubmitSingle();
 			}
 		}
-
-
 	}
 	size_t Renderer::GetSize(TextureHandle handle)
 	{
@@ -1575,6 +1573,11 @@ namespace Voidstar
 	void Renderer::CreateTextureFrom(TextureHandle handle, Memory& mem, int w, int h)
 	{
 		auto image = Image::CreateImageFrom(mem,w,h);
+		if (mem.cleanUp)
+		{
+			FreeMemory(mem);
+		}
+
 		m_Textures[handle] = image;
 	}
 	void Renderer::CreateTexture(TextureHandle handle, std::string_view path)
@@ -1626,10 +1629,6 @@ namespace Voidstar
 			
 			HandleMapped(vertHandle.idx, ResourceType::VertexBuffer,m_VertexBuffers[vertHandle][i]->GetMemory(), mem.size,usage);
 		}
-
-
-	
-		
 	}
 
 	void Renderer::CreateIndexBuffer(Memory& mem, IndexBufferHandle indexHandle)
@@ -1965,10 +1964,7 @@ namespace Voidstar
 		auto& layout = m_DescriptorLayout.at(key);
 		auto set = m_UniversalPool->AllocateDescriptorSets(1, &layout)[0];
 		perFrame[itemIndex] = set;
-
 		stats.descriptorsSetsAllocated++;
-		Log::GetLog()->info("Descriptor set is allocated: key {} item {} frame {}", key.set, itemIndex, frameIndex);
-
 		return set;
 
 
@@ -2368,12 +2364,8 @@ namespace Voidstar
 	}
 	void Renderer::EndFrame(Frame* frame)
 	{
-		std::println("Descriptor sets allocated {}", stats.descriptorsSetsAllocated);
-
 		if (frame->CurrentRenderItemIndex > 0)
 		m_CurrentFrame = (m_CurrentFrame + 1) % RenderContext::GetFrameAmount();
-
-
 	}
 
 	static vk::DescriptorSetLayout CreateDescriptorSetLayout(std::vector<vk::DescriptorSetLayoutBinding>& bindings)

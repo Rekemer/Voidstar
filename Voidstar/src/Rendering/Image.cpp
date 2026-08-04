@@ -120,6 +120,8 @@ namespace Voidstar
 
 		Memory mem;
 		mem.data = pixels;
+		mem.allocate = AllocateWay::STBI;
+		mem.cleanUp = true;
 		mem.size = imageSize;
 		return mem;
 	}
@@ -308,6 +310,9 @@ namespace Voidstar
 		image->m_MipMapLevels = mipMaps;
 		//mipMaps = 1;
 		InitVulkanImageFromRGBA8(*image, pixels, image->m_Width, image->m_Height,true);
+		
+		stbi_image_free(pixels);
+		
 		return image;
 	}
 	SPtr<Image> Image::CreateCubemap(std::vector<std::string> pathes)
@@ -399,7 +404,7 @@ namespace Voidstar
 
 		commandBuffer.Free();
 		for (int i = 0; i < 6; ++i) {
-			free(pixels[i]);
+			stbi_image_free(pixels[i]);
 		}
 
 
