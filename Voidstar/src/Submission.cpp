@@ -816,6 +816,78 @@ namespace Voidstar
 		return tex;
 	}
 
+
+//https://gamedev.stackexchange.com/questions/68612/how-to-compute-tangent-and-bitangent-vectors
+	static void CalculateTangents(std::vector<VertexModel_>& vertices,
+		const std::vector<IndexType>& indexes)
+	{
+		size_t vertexCount = vertices.size();
+		std::vector<glm::vec3> tan1(vertexCount, glm::vec3(0.0f));
+		std::vector<glm::vec3> tan2(vertexCount, glm::vec3(0.0f));
+
+		for (size_t i = 0; i < indexes.size(); i += 3)
+		{
+			uint32_t i1 = indexes[i + 0];
+			uint32_t i2 = indexes[i + 1];
+			uint32_t i3 = indexes[i + 2];
+
+			const glm::vec3& v1 = vertices[i1].Position;
+			const glm::vec3& v2 = vertices[i2].Position;
+			const glm::vec3& v3 = vertices[i3].Position;
+
+			const glm::vec2& w1 = vertices[i1].UV;
+			const glm::vec2& w2 = vertices[i2].UV;
+			const glm::vec2& w3 = vertices[i3].UV;
+
+			float x1 = v2.x - v1.x;
+			float x2 = v3.x - v1.x;
+			float y1 = v2.y - v1.y;
+			float y2 = v3.y - v1.y;
+			float z1 = v2.z - v1.z;
+			float z2 = v3.z - v1.z;
+
+			float s1 = w2.x - w1.x;
+			float s2 = w3.x - w1.x;
+			float t1 = w2.y - w1.y;
+			float t2 = w3.y - w1.y;
+
+			float denom = (s1 * t2 - s2 * t1);
+			float r = (std::abs(denom) < 1e-8f) ? 0.0f : 1.0f / denom;
+
+			glm::vec3 sdir(
+				(t2 * x1 - t1 * x2) * r,
+				(t2 * y1 - t1 * y2) * r,
+				(t2 * z1 - t1 * z2) * r);
+			glm::vec3 tdir(
+				(s1 * x2 - s2 * x1) * r,
+				(s1 * y2 - s2 * y1) * r,
+				(s1 * z2 - s2 * z1) * r);
+
+			tan1[i1] += sdir;
+			tan1[i2] += sdir;
+			tan1[i3] += sdir;
+
+			tan2[i1] += tdir;
+			tan2[i2] += tdir;
+			tan2[i3] += tdir;
+		}
+
+		for (size_t a = 0; a < vertexCount; a++)
+		{
+			const glm::vec3& n = vertices[a].Normal;
+			const glm::vec3& t = tan1[a];
+
+			// Gram-Schmidt orthogonalize
+			glm::vec3 tangent = glm::normalize(t - n * glm::dot(n, t));
+			float len = glm::length(tangent);
+			// Handedness
+			float w = (glm::dot(glm::cross(n, t), tan2[a]) < 0.0f) ? -1.0f : 1.0f;
+
+			vertices[a].Tangent = glm::vec4(tangent, w);
+			//vertices[a].Tangent = glm::vec4(2, 2, 2, 7);
+		}
+	}
+
 	SPtr<Model> LoadModel(std::string_view file)
 	{
 		using namespace std::filesystem;
@@ -842,6 +914,7 @@ namespace Voidstar
 
 			auto pos = FindAttr(prim, "POSITION");
 			auto nrm = FindAttr(prim, "NORMAL");
+			auto tgt = FindAttr(prim, "TANGENT");
 			auto uv = FindAttr(prim, "TEXCOORD_0");
 
 
@@ -893,20 +966,33 @@ namespace Voidstar
 					vertices[i].UV[0] = 0;
 					vertices[i].UV[1] = 0;
 				}
+
 			}
 
 			std::vector<IndexType> indexes;
 
 			if (prim->indices) {
 				indexes.resize(prim->indices->count);
-				for (size_t i = 0; i < indexes.size(); i++)
+				for (size_t i = 0; i < indexes.size(); i += 1)
+				{
 					indexes[i] = (IndexType)cgltf_accessor_read_index(prim->indices, i);
+				}
+				if (tgt)
+				{
+					for (cgltf_size i = 0; i < pos->count; i++)
+						cgltf_accessor_read_float(tgt, i, &vertices[i].Tangent.x, 4);
+				}
+				else
+				{
+					CalculateTangents(vertices, indexes);
+				}
 			}
 
 			VertexLayout layout;
 			layout.AddVertex(ShaderDataType::FLOAT3);
 			layout.AddVertex(ShaderDataType::FLOAT3);
 			layout.AddVertex(ShaderDataType::FLOAT2);
+			layout.AddVertex(ShaderDataType::FLOAT4);
 
 			Memory mem;
 			mem.data = reinterpret_cast<uint8_t*>(vertices.data());

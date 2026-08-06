@@ -1,4 +1,5 @@
 #include "ModelSandbox.h"
+#include <print>
 
 
 
@@ -83,7 +84,8 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 
 		
 
-		GetCamera()->SetCameraControl(CameraControlMode::NO_CONTROL);
+		GetCamera()->SetCameraControl(CameraControlMode::DIRECT_CONTROL);
+		
 		GetCamera()->LookAt({ 0,0,0 });
 		ExecuteFrame(0);
 	}
@@ -96,9 +98,10 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 #if MODEL 
 		// 1. Start with Identity
 		glm::mat4 world = glm::mat4(1.0f);
-		static float m_Yaw = 0, m_Pitch = 0;
+		static float m_Yaw = 0, m_Pitch = glm::radians(-90.0);
 		Rotate(deltaTime,1400,m_Yaw,m_Pitch, world);
-		
+		//auto pos = GetCamera()->GetPosition();
+		//std::println("{} {} {}", pos.x, pos.y, pos.z);
 		SubmitModel(m_Model,0,m_DefaultShader,world);
 #else
 		BindVertexBuffer(0, m_VertexHandle);

@@ -14,6 +14,6 @@ namespace Voidstar
 		glm::vec3 Position;
 		glm::vec3 Normal;
 		glm::vec2 UV;
-		//glm::vec4 Tangent; 
+		glm::vec4 Tangent; 
 	};
 }
