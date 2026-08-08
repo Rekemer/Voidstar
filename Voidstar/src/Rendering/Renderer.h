@@ -222,18 +222,18 @@ namespace Voidstar
 		UPtr<IndexBuffer> m_QuadBufferBatchIndex{ nullptr };
 		UPtr<Buffer> m_InstanceBuffer{ nullptr };
 		
-		Vertex_ * m_BatchQuad;
-		Vertex_ * m_BatchQuadStart;
-		//InstanceData* m_BatchInstance; 
-		//InstanceData* m_BatchInstanceStart;
-		
-		int m_QuadIndex= 0;
+		int m_QuadIndex = 0;
 		void CreateSyncObjects();
 		
 		std::vector<UPtr<Buffer>> m_UniformBuffers;
-		std::vector<UPtr<Buffer>> m_ObjectsBuffers;
 		std::vector<void*> m_UniformBuffersMapped;
+
+		std::vector<UPtr<Buffer>> m_ObjectsBuffers;
 		std::vector<void*> m_ObjectsBuffersMapped;
+
+		std::vector<UPtr<Buffer>> m_BatchQuadBuffers;
+		// start and current
+		std::vector<std::pair<Vertex_*, Vertex_*>> m_BatchQuadBuffersMapped;
 
 		Stats stats;
 

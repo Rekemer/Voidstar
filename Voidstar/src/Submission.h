@@ -21,6 +21,7 @@
 namespace Voidstar
 {
 	const size_t MAX_OBJECTS = 1024;
+	const size_t MAX_QUADS = 1024;
 
 	enum class ResourceType : uint8_t
 	{
@@ -395,14 +396,15 @@ namespace Voidstar
 		
 		glm::vec4 ClipRect; // x y w h
 		RenderMode renderMode = RenderMode::WORLD;
+		// the last entry in array
 		size_t MatrixIndex = 0;
-		size_t ObjectCount = 1;
+		size_t ObjectCount = 0;
 		size_t internalOffset = 0;
 
 		void Reset()
 		{
 			MatrixIndex = 0;
-			ObjectCount = 1;
+			ObjectCount = 0;
 			internalOffset = 0;
 			Bindings.Reset();
 		}
@@ -428,7 +430,7 @@ namespace Voidstar
 		std::list<int> LastView;
 		View Views[256];
 		size_t FrameNumber = 0;
-		size_t CurrentFreeMatrix = 0;
+		size_t FreeMatrixIndex = 0;
 		std::array<glm::mat4, MAX_OBJECTS> Matricies;
 		float deltaTime;
 		void NextItem(PassID viewID);
@@ -437,7 +439,7 @@ namespace Voidstar
 		{
 			LastView.resize(0);
 			CurrentRenderItemIndex = 0;
-			CurrentFreeMatrix = 0;
+			FreeMatrixIndex = 0;
 			CurrentRenderItem = &m_renderItem[CurrentRenderItemIndex];
 
 		};
@@ -539,17 +541,17 @@ namespace Voidstar
 	void SetTransform(const glm::mat4& world);
 	void SetClipRect(int x,int y,int w, int h);
 	void SetRenderMode(RenderMode mode);
-	void SetViewTransform(PassID id, glm::mat4& view, glm::mat4& proj);
+	void SetViewTransform(PassID id, const glm::mat4& view, const glm::mat4& proj);
 	void SetViewRect(PassID id , size_t x, size_t y, size_t width, size_t height);
 	void SetFramebuffer(PassID id, FrameBufferHandle handle);
 
 	void SetBlendState(int attachmentIndex, BlendMode state);
 
-	void Submit(PassID id, ProgramHandle program,
-		size_t instances = 1);
+	void Submit(PassID id, ProgramHandle program);
 
-	void SubmitModel(SPtr<Model> model, PassID pass, ProgramHandle program, const glm::mat4& world);
-	
+	void SubmitModel(SPtr<Model> model, int location, PassID pass, ProgramHandle program, const std::vector< glm::mat4>& worlds);
+	void SubmitQuad(const glm::vec2& pos, float scale, const glm::vec4& color);
+
 	void SubmitCompute(PassID id, ProgramHandle program, size_t x, size_t y,size_t z);
 	
 	void BindIndexBuffer(IndexBufferHandle handle);

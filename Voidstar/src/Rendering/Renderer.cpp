@@ -863,6 +863,7 @@ namespace Voidstar
 
 	void Renderer::DrawTxt(vk::CommandBuffer commandBuffer, std::string_view str, glm::vec2 pos, std::map< unsigned char, Character>& characters)
 	{
+#if 0 
 		float scale = 1;
 		float scaleX = 1;
 		auto offset = pos;
@@ -888,36 +889,37 @@ namespace Voidstar
 
 			}
 			if (characters.find(e) == characters.end()) continue;
-		auto& characterData = characters.at(e);
-		offset.x = offset.x + characterData.Bearing.x* scale;
-		// to account for letter like p and q
-		offset.y = pos.y - ( characterData.Size.y - characterData.Bearing.y)* scale;
-		glm::vec4 color{ 1 };
-		glm::mat4 world{ 1 };
-		// left bottom
-		m_BatchQuad->Position = glm::vec3{ offset.x ,offset.y,0};
-		m_BatchQuad->UV = { characterData.minUv.x,characterData.maxUv.y };
-		
-		m_BatchQuad++;
-		// right bottom
-		m_BatchQuad->Position = glm::vec3{ offset.x + characterData.Size.x * scaleX ,offset.y,0 };
-		m_BatchQuad->UV = { characterData.maxUv.x,characterData.maxUv.y };
-		m_BatchQuad++;
-		// right top
-		m_BatchQuad->Position = glm::vec3{ offset.x + characterData.Size.x * scaleX,offset.y + characterData.Size.y * scale,0 };
-		m_BatchQuad->UV = { characterData.maxUv.x,characterData.minUv.y };
-		m_BatchQuad++;
-		
-		
-		// left top
-		m_BatchQuad->Position = glm::vec3{ offset.x ,offset.y + characterData.Size.y * scale,0 };
-		m_BatchQuad->UV = { characterData.minUv.x,characterData.minUv.y };
-		m_BatchQuad++;
-		
-		
-		offset.x += characterData.Advance / 64.f* scaleX;
-		m_QuadIndex += 6;
+			auto& characterData = characters.at(e);
+			offset.x = offset.x + characterData.Bearing.x* scale;
+			// to account for letter like p and q
+			offset.y = pos.y - ( characterData.Size.y - characterData.Bearing.y)* scale;
+			glm::vec4 color{ 1 };
+			glm::mat4 world{ 1 };
+			// left bottom
+			m_BatchQuad->Position = glm::vec3{ offset.x ,offset.y,0};
+			m_BatchQuad->UV = { characterData.minUv.x,characterData.maxUv.y };
+			
+			m_BatchQuad++;
+			// right bottom
+			m_BatchQuad->Position = glm::vec3{ offset.x + characterData.Size.x * scaleX ,offset.y,0 };
+			m_BatchQuad->UV = { characterData.maxUv.x,characterData.maxUv.y };
+			m_BatchQuad++;
+			// right top
+			m_BatchQuad->Position = glm::vec3{ offset.x + characterData.Size.x * scaleX,offset.y + characterData.Size.y * scale,0 };
+			m_BatchQuad->UV = { characterData.maxUv.x,characterData.minUv.y };
+			m_BatchQuad++;
+			
+			
+			// left top
+			m_BatchQuad->Position = glm::vec3{ offset.x ,offset.y + characterData.Size.y * scale,0 };
+			m_BatchQuad->UV = { characterData.minUv.x,characterData.minUv.y };
+			m_BatchQuad++;
+			
+			
+			offset.x += characterData.Advance / 64.f* scaleX;
+			m_QuadIndex += 6;
 		}
+#endif
 	}
 
 
@@ -1009,36 +1011,48 @@ namespace Voidstar
 		// get frame amount
 		auto framesAmount = RenderContext::GetFrameAmount();
 		auto m_Device = RenderContext::GetDevice();
-		auto bufferSize = sizeof(UniformBufferObject);
+		const auto UNIFORM_BUFFER_SIZE = sizeof(UniformBufferObject);
 		m_UniformBuffers.resize(framesAmount);
 		m_UniformBuffersMapped.resize(framesAmount);
+		m_BatchQuadBuffers.resize(framesAmount);
 
 
 		BufferInputChunk inputUniformBuffer;
-		inputUniformBuffer.size = bufferSize;
+		inputUniformBuffer.size = UNIFORM_BUFFER_SIZE;
 		inputUniformBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
 		inputUniformBuffer.usage = vk::BufferUsageFlagBits::eUniformBuffer;
 
+		const auto OBJECT_BUFFER_SIZE = sizeof(glm::mat4) * MAX_OBJECTS;
 		BufferInputChunk inputObjectBuffer;
-		inputObjectBuffer.size = sizeof(glm::mat4) * MAX_OBJECTS;
+		inputObjectBuffer.size = OBJECT_BUFFER_SIZE;
 		inputObjectBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
 		inputObjectBuffer.usage = vk::BufferUsageFlagBits::eStorageBuffer;
 		
+
+		const auto BATCH_QUAD_BUFFER_SIZE = sizeof(Vertex_) * 4 * MAX_QUADS;
+		BufferInputChunk inputBatchQuadBuffer;
+		inputBatchQuadBuffer.size = BATCH_QUAD_BUFFER_SIZE;
+		inputBatchQuadBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+		inputBatchQuadBuffer.usage = vk::BufferUsageFlagBits::eVertexBuffer;
+
+
 		m_ObjectsBuffers.resize(framesAmount);
 		m_ObjectsBuffersMapped.resize(framesAmount);
-		
+		m_BatchQuadBuffersMapped.resize(frameAmount);
+
 		for (size_t i = 0; i < framesAmount; i++)
 		{
 			m_UniformBuffers[i] = CreateUPtr<Buffer>(inputUniformBuffer);
 
 			m_ObjectsBuffers[i] = CreateUPtr<Buffer>(inputObjectBuffer);
+
+			m_BatchQuadBuffers[i] = CreateUPtr<Buffer>(inputBatchQuadBuffer);
 			
-			m_UniformBuffersMapped[i] = m_Device->GetDevice().mapMemory(m_UniformBuffers[i]->GetMemory(), 0, bufferSize);
-			m_ObjectsBuffersMapped[i] = m_Device->GetDevice().mapMemory(m_ObjectsBuffers[i]->GetMemory(), 0, bufferSize);
+			m_UniformBuffersMapped[i] = m_Device->GetDevice().mapMemory(m_UniformBuffers[i]->GetMemory(), 0, UNIFORM_BUFFER_SIZE);
+			m_ObjectsBuffersMapped[i] = m_Device->GetDevice().mapMemory(m_ObjectsBuffers[i]->GetMemory(), 0, OBJECT_BUFFER_SIZE);
+			auto ptr = static_cast<Vertex_*>(m_Device->GetDevice().mapMemory(m_BatchQuadBuffers[i]->GetMemory(), 0, BATCH_QUAD_BUFFER_SIZE));
+			m_BatchQuadBuffersMapped[i] = { ptr,ptr };
 		}
-
-
-	
 
 
 
@@ -2215,10 +2229,11 @@ namespace Voidstar
 
 			if (renderItem.ObjectCount > 0)
 			{
-				// BUG: ovewrite bug 
 				auto dest = (glm::mat4*)m_ObjectsBuffersMapped[m_CurrentFrame]
 					+ currentMatrixOffset;
-					auto* src = &render->Matricies.at(renderItem.MatrixIndex);
+					auto startIndex = renderItem.MatrixIndex - renderItem.ObjectCount;
+					assert(startIndex >= 0);
+					auto* src = &render->Matricies.at(startIndex);
 					memcpy(dest, src, sizeof(glm::mat4) * renderItem.ObjectCount);
 					renderItem.internalOffset = currentMatrixOffset;
 					currentMatrixOffset += renderItem.ObjectCount;
@@ -2243,18 +2258,6 @@ namespace Voidstar
 
 		auto& cmd = m_RenderCommandBuffer[m_CurrentFrame];
 		uint32_t currentMatrixOffset = 0;
-
-	
-		//auto systemKey = keys.at(0);
-		//for (auto bind : systemKey.bindings)
-		//{
-		//	auto& buffer = bind.kind == ResourceType::UniformBuffer ? *m_UniformBuffers[m_CurrentFrame]
-		//		: *m_ObjectsBuffers[m_CurrentFrame];
-		//		m_Device->UpdateDescriptorSet(GetDescriptorSet(SystemDescriptorLayoutKey, m_CurrentFrame, 0),
-		//			bind.binding, bind.count, buffer, bind.kind);
-		//}
-
-		
 
 		cmd.BeginRendering();
 		for (auto i : render->LastView)

@@ -1,6 +1,8 @@
 #pragma once
 #pragma once
 #include "glm.hpp"
+
+// user defined verticies
 struct Vertex
 {
 	glm::vec3 Position;

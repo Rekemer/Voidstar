@@ -45,6 +45,7 @@ namespace Voidstar
 
 
 
+	static void AddTransforms(const std::vector<glm::mat4>& worlds); 
 
 	TextureHandle GetTextureHandle()
 	{
@@ -292,7 +293,7 @@ namespace Voidstar
 		bind.handles[bind.currentFreeTextureHandle++] = handle;
 		bind.kind = ResourceType::CombinedSampler;
 	}
-	void SetViewTransform(PassID id, glm::mat4& view, glm::mat4& proj)
+	void SetViewTransform(PassID id, const glm::mat4& view, const glm::mat4& proj)
 	{
 		g_Submission->Submit->Views[id].View = view;
 		g_Submission->Submit->Views[id].Proj= proj;
@@ -326,18 +327,17 @@ namespace Voidstar
 		g_Submission->Submit->Views[id].Type = ItemType::COMPUTE;
 		g_Submission->Submit->NextItem(id);
 	}
-	void Submit(PassID viewID, ProgramHandle programHandle, size_t instances)
+	void Submit(PassID viewID, ProgramHandle programHandle)
 	{
 		// creates render item
 		auto renderItem =g_Submission->Submit->CurrentRenderItem;
-		renderItem->ObjectCount = instances;
 		renderItem->Program = programHandle;
 		renderItem->View =viewID;
 		
 		g_Submission->Submit->Views[viewID].Type = ItemType::RENDER;
 		
 		g_Submission->Submit->NextItem(viewID);
-		g_Submission->Submit->CurrentRenderItem->MatrixIndex = g_Submission->Submit->CurrentFreeMatrix;
+		//g_Submission->Submit->CurrentRenderItem->MatrixIndex = g_Submission->Submit->CurrentFreeMatrix;
 	}
 
 	void SetWindow(SPtr<Window> window)
@@ -686,8 +686,8 @@ namespace Voidstar
 	}
 	void SetTransform(const glm::mat4& world)
 	{
-		
-		g_Submission->Submit->Matricies[g_Submission->Submit->CurrentFreeMatrix++] = world;
+		//assert(false);
+		AddTransforms({ world });
 	};
 	void BindVertexBuffer(uint16_t location, VertexBufferHandle handle, VertexStreamMode mode)
 	{
@@ -701,9 +701,8 @@ namespace Voidstar
 
 	VertexBufferHandle CreateVertexBuffer(Memory mem, VertexLayout& layout, ResourceUsage usage)
 	{
-		auto bufferHandle = VertexBufferHandle{ g_VertexBufferHandleAllocator.GetId() };
-		
 
+		auto bufferHandle = VertexBufferHandle{ g_VertexBufferHandleAllocator.GetId() };
 		auto layoutHandle = VertexLayoutHandle{g_LayoutHandleAllocator.GetId()};
 		g_Submission->Layouts.insert({layoutHandle,layout});
 		g_Submission->VertexLayoutMap.insert({ bufferHandle, layoutHandle });
@@ -1020,16 +1019,41 @@ namespace Voidstar
 
 		return model;
 	}
-	void SubmitModel(SPtr<Model> model, PassID pass, ProgramHandle program, const glm::mat4& world)
+
+	void SubmitQuad(const glm::vec2& pos, float scale, const glm::vec4& color)
 	{
-		BindVertexBuffer(pass, model->m_VertexBuffer);
-		BindIndexBuffer(model->m_IndexBuffer);
+		glm::mat4 world(1);
+		world = glm::translate(world, glm::vec3(pos.x, pos.y, 0));
+		world = glm::scale(world, glm::vec3(scale));
+		AddTransforms({ world });
+	}
+
+	static void AddTransforms(const std::vector<glm::mat4>& worlds)
+	{
+		g_Submission->Submit->CurrentRenderItem->ObjectCount += worlds.size();
+		auto& matrixes = g_Submission->Submit->Matricies;
+		auto startIndex = g_Submission->Submit->FreeMatrixIndex;
+		auto objCount = worlds.size();
+		int worldIndex = 0;
+		for (auto i = startIndex;
+			i < startIndex + objCount;
+			i++)
+		{
+			matrixes[i] = worlds[worldIndex++];
+		}
+		g_Submission->Submit->FreeMatrixIndex = startIndex + objCount;
+		g_Submission->Submit->CurrentRenderItem->MatrixIndex = g_Submission->Submit->FreeMatrixIndex;
+	}
+
+	void SubmitModel(SPtr<Model> model, int location, PassID pass, ProgramHandle program, const std::vector<glm::mat4>& worlds)
+	{
+		//BindVertexBuffer(location, model->m_VertexBuffer);
+		//BindIndexBuffer(model->m_IndexBuffer);
 		BindTexture("u_Albedo", model->Albedo);
 		BindTexture("u_Normal", model->Normal);
 		BindTexture("u_Metallic", model->Metallic);
-		g_Submission->Submit->CurrentRenderItem->MatrixIndex = g_Submission->Submit->CurrentFreeMatrix++;
-		g_Submission->Submit->Matricies[g_Submission->Submit->CurrentRenderItem->MatrixIndex] = world;
-		Submit(pass, program);
+		AddTransforms(worlds);
+		//Submit(pass, program);
 		return;
 	}
 

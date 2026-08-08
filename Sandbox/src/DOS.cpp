@@ -733,7 +733,7 @@ void DOS::Update(float deltaTime)
 	BindBuffer("fire", m_FireHandle);
 	BindVertexBuffer(0, m_VertexHandle);
 	BindIndexBuffer(m_IndexHandle);
-	Submit(GrondPass, m_GroundShader, 1);
+	Submit(GrondPass, m_GroundShader);
 
 
 	#if FLIPBOOK
@@ -777,8 +777,9 @@ void DOS::Update(float deltaTime)
 		BindBuffer("particles", m_ParticleHandle);
 		BindBuffer("fire", m_FireHandle);
 		BindTexture("u_Texture", m_FireTexture);
-	
-		Submit(GrondPass, m_DefaultShader, fireWorlds.size());
+		
+		// fix instancing tracking here
+		Submit(GrondPass, m_DefaultShader);
 		frame++;
 		frame = frame % 255;
 	#endif
@@ -791,7 +792,7 @@ void DOS::Update(float deltaTime)
 	SetBlendState(0, mode);
 	auto attachment = GetColorTexture(downsampleFramebuffer,1);
 	BindAttachmentAsTexture("u_Source", attachment);
-	Submit(m_DownsamplePasses[0], m_DownSamplingShader, 1);
+	Submit(m_DownsamplePasses[0], m_DownSamplingShader);
 	for (auto i =0; i < m_DownsampleChain.size() - 1; i++)
 	{
 		auto& level = m_DownsampleChain[i];
@@ -806,7 +807,7 @@ void DOS::Update(float deltaTime)
 		// DESTINATION is the next FB in the chain
 		SetFramebuffer(pass, m_DownsampleChain[i + 1].fbh);
 
-		Submit(pass, m_DownSamplingShader, 1);
+		Submit(pass, m_DownSamplingShader);
 	}
 	for (int i = bloomPasses - 1; i > 0; i--)
 	{
@@ -835,7 +836,7 @@ void DOS::Update(float deltaTime)
 		mode.enabled = false;
 		SetBlendState(0, mode);
 
-		Submit(upPass, m_UpsamplingShader, 1);
+		Submit(upPass, m_UpsamplingShader);
 	}
 
 #endif

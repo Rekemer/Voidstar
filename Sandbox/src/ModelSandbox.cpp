@@ -56,11 +56,12 @@ static void Rotate(float deltaTime, float rotateSpeed, float& yaw, float& pitch,
 
 
 #define MODEL 1
-#define TEXT 0
+#define TEXT 1
 ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t screenHeight) : Voidstar::Application(appName, screenWidth, screenHeight)
 	{
 #if MODEL
 		m_DefaultShader = LoadProgram("model.vert", "model.frag");
+		m_FontShader = LoadProgram("render_instance_quad.vert", "solid_color.frag");
 		m_Model = LoadModel("DamagedHelmet/glTF-Binary/DamagedHelmet.glb");
 
 #else
@@ -82,8 +83,21 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 
 		m_MorganaTex = LoadTexture("morgana.png");
 #endif
+		auto [verts, indices] = GeneratePlane<Vertex_>(1);
 
-		
+		m_VertexLayoutQuad.AddVertex(ShaderDataType::FLOAT3);
+		m_VertexLayoutQuad.AddVertex(ShaderDataType::FLOAT4);
+		m_VertexLayoutQuad.AddVertex(ShaderDataType::FLOAT2);
+
+		m_Quad = verts;
+		m_IndexQuad = indices;
+		m_VertexQuadBuffer = CreateVertexBuffer({
+			reinterpret_cast<uint8_t*>(m_Quad.data()),m_Quad.size() * sizeof(m_Quad[0]) }
+		, m_VertexLayoutQuad);
+		m_IndexQuadBuffer = CreateIndexBuffer
+		(
+			Memory{ reinterpret_cast<uint8_t*>(m_IndexQuad.data()), m_IndexQuad.size() * sizeof(m_IndexQuad[0]) }
+		);
 		m_Font = LoadFont("Fonts/Inter/static/Inter_24pt-Regular.ttf");
 		GetCamera()->SetCameraControl(CameraControlMode::DIRECT_CONTROL);
 		
@@ -99,23 +113,34 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 #if MODEL 
 		// 1. Start with Identity
 		glm::mat4 world = glm::mat4(1.0f);
+		glm::mat4 world2 = glm::translate(glm::mat4(1.0f), glm::vec3(1,0,0));
+		glm::mat4 world3 = glm::translate(glm::mat4(1.0f), glm::vec3(3,0,0));
+		glm::mat4 world4 = glm::translate(glm::mat4(1.0f), glm::vec3(5,0,0));
 		static float m_Yaw = 0, m_Pitch = glm::radians(-90.0);
 		Rotate(deltaTime,1400,m_Yaw,m_Pitch, world);
 		//auto pos = GetCamera()->GetPosition();
 		//std::println("{} {} {}", pos.x, pos.y, pos.z);
-		SubmitModel(m_Model,0,m_DefaultShader,world);
-
+		BindVertexBuffer(0, m_Model->m_VertexBuffer);
+		BindIndexBuffer(m_Model->m_IndexBuffer);
+		SubmitModel(m_Model, 0, 0, m_DefaultShader, { world, world2,world3, world4 });
+		Submit(0, m_DefaultShader);
 
 		auto screenWidth = GetScreenWidth();
 		auto screenHeight = GetScreenHeight();
-
+		ExecuteFrame(deltaTime);
 #if TEXT
-		int width = screenWidth / 4;
+		int width = screenWidth / 4; 
 		int height = screenHeight / 4;
-		SetViewTransform(1, GetCamera()->GetView(), GetCamera()->GetProj());
+
+		auto proj = glm::ortho(0.0f, (float)screenWidth, (float)screenHeight, 0.0f);
+		SetViewTransform(1, glm::mat4(1), proj);
+		SetViewRect(1, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
+		BindVertexBuffer(0, m_VertexQuadBuffer);
+		BindIndexBuffer(m_IndexQuadBuffer);
+		SubmitQuad(glm::vec2(250,250),50,glm::vec4(1,1,1,1));
 		//SubmitText("Voidstar", screenWidth - width, 0, m_Font);
-		SetDepthTest(false);
-		//Submit(1, , 1);
+		SetDepthTest(true);
+		Submit(1, m_FontShader);
 #endif
 
 
