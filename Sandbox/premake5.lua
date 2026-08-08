@@ -16,11 +16,10 @@ project "Sandbox"
         "../Voidstar/src",
         VULKAN_HEADER,
         "../" .. TRACY_HEADERS,
-        "../" .. FREE_TYPE_HEADERS,
         "../" .. SPDLOG_HEADERS
     }
     libdirs { os.getenv("VULKAN_SDK") .. "/Lib" }
-    links { "Voidstar","Freetype", "ImGui","vulkan-1.lib"  }
+    links { "Voidstar","ImGui","vulkan-1.lib"  }
 
 -- if we are to make renderer a dll 
 --     postbuildcommands {

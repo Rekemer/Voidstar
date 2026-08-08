@@ -22,6 +22,7 @@ project "Voidstar"
         "../"..SPDLOG_HEADERS,
         "%{wks.location}/Dependencies/",
         "../"..TRACY_HEADERS,
+        "../" .. FREE_TYPE_HEADERS,
         "../"..SPIRV_CROSS_HEADERS,
         "../"..CGLTF_HEADERS,
         "%{wks.location}/Dependencies/ImGui",
@@ -30,7 +31,7 @@ project "Voidstar"
     }
     libdirs { "%{wks.location}/Dependencies/GLFW/lib-vc2019", os.getenv("VULKAN_SDK") .. "/Lib" }
     
-    links { "glfw3dll.lib", "vulkan-1.lib", "SPIRV-Cross"}
+    links { "glfw3dll.lib", "FreeType","vulkan-1.lib", "SPIRV-Cross"}
 
     -- Exclude tracy.cpp from using precompiled headers
     filter "files:../Dependencies/Tracy/public/**.cpp"

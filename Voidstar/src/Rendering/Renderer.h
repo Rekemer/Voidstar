@@ -130,8 +130,12 @@ namespace Voidstar
 	};
 
 
-
-
+	struct Font
+	{
+		SPtr<Image> Atlas;
+		int LineSpacing;
+		std::unordered_map<unsigned char, Character> Characters;
+	};
 
 	class Instance;
 	class Device;
@@ -164,13 +168,14 @@ namespace Voidstar
 		void CreateTextureFrom(TextureHandle handle, Memory& mem, int w, int h);
 		void CreateAttachment(AttachmentHandle handle, AttachmentInfo_ info);
 		void CreateFramebuffer(FrameBufferHandle handle, const std::vector<AttachmentHandle>& info);
+		void LoadFont(FontHandle handle, std::string path);
 
 		void CreateBuffer(BufferHandle handle, Memory mem, ResourceUsage usage);
 		
 		void HandleDynamic(Voidstar::ResourceUsage usage, ResourceType type, Handle<void>::Type handle, int& frames);
 		void HandleMapped(Handle<void>::Type idx, ResourceType type, vk::DeviceMemory mem,
 			size_t size, ResourceUsage usage);
-
+		
 		void CreateVertexBuffer(Memory& mem, VertexBufferHandle vertHandle,
 			ResourceUsage hint = ResourceUsage::Vertex);
 		void CreateIndexBuffer(Memory& mem, IndexBufferHandle indexHandle);
@@ -188,7 +193,7 @@ namespace Voidstar
 		
 		void BeginFrame(Frame* frame);
 		void EndFrame(Frame* frame);
-	
+		
 
 		CommandPoolManager* GetCommandPoolManager()
 		{
@@ -309,25 +314,17 @@ namespace Voidstar
 
 		Map<TextureHandle, SPtr<Image>> m_Textures;
 		
-	
+		Map<FontHandle, Font> m_Fonts;
 		
-
-
+		
 		std::vector<CommandBuffer> m_RenderCommandBuffer,
 			m_TransferCommandBuffer, m_ComputeCommandBuffer;
 		vk::CommandPool m_FrameCommandPool;
 		
-				
-
-
-
-
 		SPtr<DescriptorPool> m_UniversalPool;
-
 
 		UPtr<CommandPoolManager> m_CommandPoolManager;
 		
-
 		std::vector<Semaphore> m_ImageAvailableSemaphore;
 		std::vector<Semaphore> m_RenderFinishedSemaphore;
 		std::vector<Semaphore> m_TimelineSemaphore;
@@ -337,9 +334,6 @@ namespace Voidstar
 
 
 		SPtr<Window> m_Window;
-
-		
-	
 	};
 
 }

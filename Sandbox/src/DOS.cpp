@@ -464,7 +464,7 @@ DOS::DOS(std::string appName, size_t screenWidth, size_t screenHeight) : Voidsta
 {
 
 	m_GroundShader = LoadProgram("ground_splat.vert", "ground_splat.frag");
-	m_DebugShader = LoadProgram("screen.vert", "render_attachment.frag");
+	m_DebugShader = LoadProgram("screen_pushConstant.vert", "render_attachment.frag");
 	m_DownSamplingShader = LoadProgram("render_screen_quad.vert", "downsample.frag");
 	m_UpsamplingShader = LoadProgram("render_screen_quad.vert", "upsample.frag");
 	m_CompositeShader = LoadProgram("render_screen_quad.vert", "composite_bloom.frag");

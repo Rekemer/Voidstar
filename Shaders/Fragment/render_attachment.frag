@@ -60,10 +60,9 @@ float bicubic(vec2 scaledUv)
 
 }
 
-void main() {
-    
-    
-vec3 mask = texture(u_Scene, uv).xyz;
-outColor.a = 1;
-outColor.xyz = mask;
+void main()
+{
+    vec3 mask = texture(u_Scene, uv).xyz;
+    outColor.a = 1;
+    outColor.xyz = mask;
 }

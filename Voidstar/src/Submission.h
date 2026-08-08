@@ -43,6 +43,7 @@ namespace Voidstar
 	struct TextureTag {};
 	struct UniformTag {};
 	struct AttachmentTag {};
+	struct FontTag {};
 
 	using ProgramHandle = Handle<ProgramTag>;
 	using ShaderHandle = Handle<ShaderTag>;
@@ -54,6 +55,7 @@ namespace Voidstar
 	using BufferHandle = Handle<BufferTag>;
 	using TextureHandle = Handle<TextureTag>;
 	using UniformHandle = Handle<UniformTag>;
+	using FontHandle = Handle<FontTag>;
 	using PassID = uint16_t;
 
 
@@ -387,7 +389,10 @@ namespace Voidstar
 		IndexBufferHandle IndexBuffer;
 		RenderState State;
 		ResourceBindings Bindings;
+		
+		// Compute
 		glm::vec3 GroupCount;
+		
 		glm::vec4 ClipRect; // x y w h
 		RenderMode renderMode = RenderMode::WORLD;
 		size_t MatrixIndex = 0;
@@ -442,6 +447,8 @@ namespace Voidstar
 		ResourceCommandBuffer CmdPost;
 	};
 	
+
+
 
 	struct Model
 	{
@@ -571,5 +578,7 @@ namespace Voidstar
 		BufferHandle buffer, size_t bufferOffset);
 
 	size_t GetSize(TextureHandle handle);
+
+	FontHandle LoadFont(std::string_view path);
 }
 

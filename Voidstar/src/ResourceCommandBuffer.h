@@ -34,6 +34,8 @@ namespace Voidstar
 		ResizeTexture,
 		CreateAttachment,
 		CreateFrameBuffer,
+		LoadFont,
+
 		//CreateUniform,
 		UpdateViewName, // ?
 		SetName,

@@ -10,6 +10,7 @@ public:
 	void Update(float deltaTime) override;
 private:
 	SPtr<Model> m_Model;
+	FontHandle m_Font;
 	PassID m_DefaultRenderPass;
 	VertexBufferHandle m_VertexHandle;
 	IndexBufferHandle m_IndexHandle;

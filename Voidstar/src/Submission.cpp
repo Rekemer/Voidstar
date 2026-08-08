@@ -30,6 +30,7 @@ namespace Voidstar
 	SparseSet<UniformHandle> g_UniformHandleAllocator;
 	SparseSet<FrameBufferHandle> g_FramebufferHandleAllocator;
 	SparseSet<AttachmentHandle> g_AttachmentrHandleAllocator;
+	SparseSet<FontHandle> g_FontHandleAllocator;
 
 	struct UpdateImageRegion
 	{
@@ -402,6 +403,14 @@ namespace Voidstar
 					Renderer::Instance()->CreateVertexBuffer(mem,  bufferHandle, usage);
 				}
 				break;
+				case Voidstar::ResourceCommand::LoadFont:
+				{
+					auto handle = commandBuffer.ReadObject<FontHandle>();
+					auto path = commandBuffer.ReadString();
+					Renderer::Instance()->LoadFont(handle, std::string{ path });
+
+				}
+					break;
 				case Voidstar::ResourceCommand::CreateDynamicIndexBuffer:
 					break;
 				case Voidstar::ResourceCommand::UpdateDynamicIndexBuffer:
@@ -1022,6 +1031,16 @@ namespace Voidstar
 		g_Submission->Submit->Matricies[g_Submission->Submit->CurrentRenderItem->MatrixIndex] = world;
 		Submit(pass, program);
 		return;
+	}
+
+
+	FontHandle LoadFont(std::string_view path)
+	{
+		auto font = g_FontHandleAllocator.GetId();
+		auto& cmd = g_Submission->GetCommandBuffer(ResourceCommand::LoadFont);
+		cmd.WriteObject(font);
+		cmd.WriteString(path.data());
+		return font;
 	}
 
 	void Frame::NextItem(PassID viewID)

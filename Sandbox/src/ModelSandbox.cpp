@@ -3,7 +3,7 @@
 
 
 
-void Rotate(float deltaTime, float rotateSpeed, float& yaw, float& pitch, glm::mat4& world)
+static void Rotate(float deltaTime, float rotateSpeed, float& yaw, float& pitch, glm::mat4& world)
 {
 	#define MOUSE 1
 	#if MOUSE == 0
@@ -56,6 +56,7 @@ void Rotate(float deltaTime, float rotateSpeed, float& yaw, float& pitch, glm::m
 
 
 #define MODEL 1
+#define TEXT 0
 ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t screenHeight) : Voidstar::Application(appName, screenWidth, screenHeight)
 	{
 #if MODEL
@@ -83,7 +84,7 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 #endif
 
 		
-
+		m_Font = LoadFont("Fonts/Inter/static/Inter_24pt-Regular.ttf");
 		GetCamera()->SetCameraControl(CameraControlMode::DIRECT_CONTROL);
 		
 		GetCamera()->LookAt({ 0,0,0 });
@@ -103,6 +104,21 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 		//auto pos = GetCamera()->GetPosition();
 		//std::println("{} {} {}", pos.x, pos.y, pos.z);
 		SubmitModel(m_Model,0,m_DefaultShader,world);
+
+
+		auto screenWidth = GetScreenWidth();
+		auto screenHeight = GetScreenHeight();
+
+#if TEXT
+		int width = screenWidth / 4;
+		int height = screenHeight / 4;
+		SetViewTransform(1, GetCamera()->GetView(), GetCamera()->GetProj());
+		//SubmitText("Voidstar", screenWidth - width, 0, m_Font);
+		SetDepthTest(false);
+		//Submit(1, , 1);
+#endif
+
+
 #else
 		BindVertexBuffer(0, m_VertexHandle);
 		BindIndexBuffer(m_IndexHandle);
