@@ -44,11 +44,12 @@ namespace Voidstar
 		float m_Fov = glm::radians(45.f);;
 		float m_Yaw = 90.0f; // around y axis
 		float m_Pitch = 0.f; // around x axis
-		float speed = 2.f;
+		float m_Speed = 1825.f;
+		float m_RotateSpeed = 0.005;
 		//bool m_IsControlEnabled = true;
 		float width;
 		float height;
-		const float farPlane = 100;
+		const float farPlane = 50;
 		const float nearPlane = 0.1;
 	};
 }

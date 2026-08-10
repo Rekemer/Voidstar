@@ -582,5 +582,7 @@ namespace Voidstar
 	size_t GetSize(TextureHandle handle);
 
 	FontHandle LoadFont(std::string_view path);
+	void WakeUpRender_();
+
 }
 

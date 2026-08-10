@@ -1,6 +1,7 @@
 #include "Prereq.h"
 #include "Input.h"
 #include <glfw3.h>
+#include <print>
 
 #include "Window.h"
 
@@ -43,6 +44,11 @@ namespace Voidstar {
 		glfwSetScrollCallback(window->GetRaw(), ScrollCallback);
 		glfwSetKeyCallback(window->GetRaw(), KeyCallback);
 
+
+		glfwGetCursorPos(window->GetRaw(), &m_MouseCurrentPosX, &m_MouseCurrentPosY);
+		m_MouseLastPosX = m_MouseCurrentPosX;
+		m_MouseLastPosY = m_MouseCurrentPosY;
+
 	}
 	bool Input::IsKeyPressed(int keycode)
 	{
@@ -83,9 +89,6 @@ namespace Voidstar {
 	}
 	std::tuple<float, float> Input::GetMousePos()
 	{
-		m_MouseLastPosX = m_MouseCurrentPosX;
-		m_MouseLastPosY = m_MouseCurrentPosY;
-		glfwGetCursorPos(m_currentWindow->GetRaw(), &m_MouseCurrentPosX, &m_MouseCurrentPosY);
 		return { m_MouseCurrentPosX,m_MouseCurrentPosY };
 	}
 	void Input::Update()
@@ -101,8 +104,10 @@ namespace Voidstar {
 			m_LastMouseStates[i] = m_CurrentMouseStates[i];
 			m_CurrentMouseStates[i] = glfwGetMouseButton(m_currentWindow->GetRaw(), i);
 		}
+		m_MouseLastPosX = m_MouseCurrentPosX;
+		m_MouseLastPosY = m_MouseCurrentPosY;
 
-		GetMousePos();
+		glfwGetCursorPos(m_currentWindow->GetRaw(), &m_MouseCurrentPosX, &m_MouseCurrentPosY);
 	}
 }
 

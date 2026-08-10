@@ -37,8 +37,8 @@ static void Rotate(float deltaTime, float rotateSpeed, float& yaw, float& pitch,
 			{
 				auto  deltaX = Input::GetMouseDeltaX();
 				auto  deltaY = Input::GetMouseDeltaY();
-				yaw += deltaX * rotateSpeed * deltaTime;
-				pitch += deltaY * rotateSpeed * deltaTime; 
+				yaw += deltaX * rotateSpeed ;
+				pitch += deltaY * rotateSpeed ; 
 			}
 		}
 		else
@@ -46,7 +46,7 @@ static void Rotate(float deltaTime, float rotateSpeed, float& yaw, float& pitch,
 			dragging = false;
 		}
 	
-		world = glm::mat4(1.0f);
+		
 		world = glm::rotate(world, yaw, glm::vec3(0, 1, 0));
 		world = glm::rotate(world, pitch, glm::vec3(1, 0, 0));
 		world = glm::scale(world, glm::vec3(2.0f));
@@ -56,7 +56,7 @@ static void Rotate(float deltaTime, float rotateSpeed, float& yaw, float& pitch,
 
 
 #define MODEL 1
-#define TEXT 1
+#define TEXT 0
 ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t screenHeight) : Voidstar::Application(appName, screenWidth, screenHeight)
 	{
 #if MODEL
@@ -99,7 +99,7 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 			Memory{ reinterpret_cast<uint8_t*>(m_IndexQuad.data()), m_IndexQuad.size() * sizeof(m_IndexQuad[0]) }
 		);
 		m_Font = LoadFont("Fonts/Inter/static/Inter_24pt-Regular.ttf");
-		GetCamera()->SetCameraControl(CameraControlMode::DIRECT_CONTROL);
+		GetCamera()->SetCameraControl(CameraControlMode::NO_CONTROL);
 		
 		GetCamera()->LookAt({ 0,0,0 });
 		ExecuteFrame(0);
@@ -117,7 +117,15 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 		glm::mat4 world3 = glm::translate(glm::mat4(1.0f), glm::vec3(3,0,0));
 		glm::mat4 world4 = glm::translate(glm::mat4(1.0f), glm::vec3(5,0,0));
 		static float m_Yaw = 0, m_Pitch = glm::radians(-90.0);
-		Rotate(deltaTime,1400,m_Yaw,m_Pitch, world);
+		static float time = 0;
+		time += deltaTime;
+		auto offset = glm::sin(time * 4000) ;
+		auto move = offset * 3;
+		glm::vec3 pos= { 0,0, 0 };
+		pos.x += move;
+		std::println("{} ",pos.x);
+		world = glm::translate(world, pos);
+		Rotate(deltaTime,0.005,m_Yaw,m_Pitch, world);
 		//auto pos = GetCamera()->GetPosition();
 		//std::println("{} {} {}", pos.x, pos.y, pos.z);
 		BindVertexBuffer(0, m_Model->m_VertexBuffer);

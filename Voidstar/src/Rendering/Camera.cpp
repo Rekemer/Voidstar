@@ -81,14 +81,17 @@ namespace Voidstar
     void Camera::ProcessInput(CameraControlMode mode, float deltaTime)
 	{
         if (mode == CameraControlMode::NO_CONTROL) return;
+
+
+        const float rotateSpeed = m_RotateSpeed; 
+        const float moveSpeed = m_Speed;
+
         if (mode == CameraControlMode::ROUND_CONTROL)
         {
             
             float m_Radius = 15.0f;
             static float m_Yaw = 0.0f;
             static float m_Pitch = 0.0f;
-            const float rotateSpeed = speed;
-            const float deltaTime = 0.01f;
 
             // 1. Update Angles
             if (Input::IsKeyPressed(VS_KEY_A)) m_Yaw -= rotateSpeed * deltaTime;
@@ -125,15 +128,13 @@ namespace Voidstar
         }
         else if (mode == CameraControlMode::DIRECT_CONTROL)
         {
-            const float rotateSpeed = 0.5f; // Lowered: 200.0f is too fast for raw pixel deltas
-            const float moveSpeed = 10.0f;
-            const float deltaTime = 0.01f;
+            
 
             // 1. MOUSE ROTATION
-            if (Input::IsMousePressed(1)) {
+            if (Input::IsMousePressed(VS_MOUSE_RIGHT)) {
                 // Use the raw delta from your Mouse update logic
-                m_Yaw += (float)Input::GetMouseDeltaX() * rotateSpeed * deltaTime;
-                m_Pitch += (float)Input::GetMouseDeltaY() * rotateSpeed * deltaTime;
+                m_Yaw += (float)Input::GetMouseDeltaX() * rotateSpeed;
+                m_Pitch += (float)Input::GetMouseDeltaY() * rotateSpeed;
             }
             // 2. CALCULATE DIRECTION VECTORS (Based on Angles)
             // We calculate Front and Up first so we know which way to move

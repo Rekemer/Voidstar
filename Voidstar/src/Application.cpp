@@ -57,18 +57,21 @@ namespace Voidstar
 			m_IsRunning = !(m_Window->IsClosed() || Input::IsKeyPressed(VS_KEY_ESCAPE));
 
 
-			Input::Update();
 			if (!m_IsRunning)
 			{
 				m_Window->Close();
-				// to do shutdown signals
+				// in case render thread sleeps
+				#if THREADING
+				WakeUpRender_();
+				#endif 
+				break;
 			}
 			float deltaTime = 0;
 			m_Window->Update(deltaTime);
+			Input::Update();
 			m_ExeTime += deltaTime;
 			m_Camera->Update(deltaTime);
 			Update(deltaTime);
 		}
-		std::cout << "Application::Run is finished";
 	}
 }

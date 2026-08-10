@@ -32,12 +32,10 @@ namespace Voidstar
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 		//resizing breaks the swapchain, we'll disable it for now
 		glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
-
 		m_Window = glfwCreateWindow(screenWidth, screenHeight, windowName.c_str(), nullptr, nullptr);
 		glfwSetWindowUserPointer(m_Window, this);
 		glfwSetWindowSizeCallback(m_Window, &Window::ResizeCallback);
-		//glfwSetInputMode(m_Window, GLFW_CURSOR, GLFW_CURSOR);
-		
+		//glfwSetInputMode(m_Window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 		if (!m_Window)
 		{
 			Log::GetLog()->error("Window is not created!");

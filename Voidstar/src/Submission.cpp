@@ -585,11 +585,14 @@ namespace Voidstar
 		commandBuffer.Reset();
 	}
 
-	//std::mutex m;
-	//std::condition_variable cv;
-	//bool ready = false;
 	std::binary_semaphore renderSem{0};
 	std::binary_semaphore apiSem{1};
+
+
+	void WakeUpRender_()
+	{
+		renderSem.release();
+	}
 
 	void RunRender_(std::atomic_bool& isRunning)
 	{
@@ -615,6 +618,7 @@ namespace Voidstar
 			g_Submission->Render->Reset();
 			apiSem.release();
 		}
+		Log::GetLog()->debug("Render thread finished");
 	}
 
 	// start calling implementation
@@ -631,7 +635,7 @@ namespace Voidstar
 		std::swap(g_Submission->Submit, g_Submission->Render);
 
 		// signal renderer to do the work
-		renderSem.release();
+		WakeUpRender_();
 		
 		// wait until renderer is finished with previous frame
 		if (wait)
@@ -1085,6 +1089,8 @@ namespace Voidstar
 		CurrentRenderItemIndex++;
 		CurrentRenderItem = &m_renderItem[CurrentRenderItemIndex];
 	}
+
+	
 }
 
 

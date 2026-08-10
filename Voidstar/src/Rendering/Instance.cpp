@@ -2,12 +2,10 @@
 #include"Instance.h"
 #include "glfw3.h"
 #include "../Log.h"
-#if 0
-#define BEST_PRACTISES
-#else 
-#
+#include <vector>
+
+#define BEST_PRACTISES 0
 #define VALIDATION 1 
-#endif // 1
 
 namespace Voidstar
 {
@@ -39,15 +37,20 @@ namespace Voidstar
 #if VALIDATION
 
 		extensions.push_back("VK_EXT_debug_utils");
+		extensions.push_back(VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME);
 		layers.push_back("VK_LAYER_KHRONOS_validation");
 #endif // 0
 
 
-		VkValidationFeatureEnableEXT enables[] = { VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT };
+		std::vector<VkValidationFeatureEnableEXT> enables = { 
+#if BEST_PRACTISES
+			VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT,
+#endif
+			VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT };
 		VkValidationFeaturesEXT features = {};
 		features.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
-		features.enabledValidationFeatureCount = 1;
-		features.pEnabledValidationFeatures = enables;
+		features.enabledValidationFeatureCount = enables.size();
+		features.pEnabledValidationFeatures = enables.data();
 
 
 
@@ -61,10 +64,10 @@ namespace Voidstar
 			extensions.size(), extensions.data() // enabled extensions
 		);
 
-#ifdef BEST_PRACTISES
-
+#if VALIDATION
 		createInfo.pNext = &features;
-#endif // BEST_PRACTISES
+#endif
+
 		try
 		{
 

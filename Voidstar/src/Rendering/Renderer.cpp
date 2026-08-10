@@ -2248,6 +2248,7 @@ namespace Voidstar
 		Timer timer;
 		if (render->CurrentRenderItemIndex == 0) return;
 		
+
 		auto& currentFence = m_InFlightFence[m_CurrentFrame];
 		Renderer::Instance()->Wait(currentFence.GetFence());
 		Renderer::Instance()->Reset(currentFence.GetFence());
