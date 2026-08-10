@@ -72,6 +72,9 @@ namespace Voidstar
 			m_ExeTime += deltaTime;
 			m_Camera->Update(deltaTime);
 			Update(deltaTime);
+			m_FpsCounter.Update(deltaTime);
+
+			std::println("FPS: {}", m_FpsCounter.GetFps());
 		}
 	}
 }
