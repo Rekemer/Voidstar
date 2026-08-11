@@ -126,7 +126,8 @@ namespace Voidstar
 	struct VOIDSTAR_API UniformBufferObject {
 		glm::mat4 view;
 		glm::mat4 proj;
-		alignas(4)float time;
+		float time;
+		alignas(16)glm::mat4 uiProj;
 	};
 
 
@@ -237,7 +238,7 @@ namespace Voidstar
 
 		Stats stats;
 
-		void UpdateUniformBuffer(const glm::mat4& proj, const glm::mat4& view,float time);
+		void UpdateUniformBuffer(const glm::mat4& proj, const glm::mat4& view,float time, const glm::mat4& uiProj);
 		void AddFramebuffers(FrameBufferHandle handle, std::vector<vk::Framebuffer>& framebuffers);
 		size_t m_CurrentFrame = 0;
 
@@ -271,8 +272,11 @@ namespace Voidstar
 		AttachmentHandle m_DefaultColorAttachment;
 		AttachmentHandle m_DefaultMSAAAttachment;
 		AttachmentHandle m_DefaultDepthAttachment;
-		size_t m_FrameNumber = 0;
+		
 		ShaderCompiler m_Compiler;
+
+		ProgramHandle m_OverlayProgram;
+
 		FrameBufferHandle DEFAULT_FRAME_BUFFER;
 	
 

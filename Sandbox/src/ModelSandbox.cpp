@@ -56,7 +56,7 @@ static void Rotate(float deltaTime, float rotateSpeed, float& yaw, float& pitch,
 
 
 #define MODEL 1
-#define TEXT 0
+#define TEXT 1
 ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t screenHeight) : Voidstar::Application(appName, screenWidth, screenHeight)
 	{
 #if MODEL
@@ -99,8 +99,14 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 			Memory{ reinterpret_cast<uint8_t*>(m_IndexQuad.data()), m_IndexQuad.size() * sizeof(m_IndexQuad[0]) }
 		);
 		m_Font = LoadFont("Fonts/Inter/static/Inter_24pt-Regular.ttf");
-		GetCamera()->SetCameraControl(CameraControlMode::NO_CONTROL);
+		GetCamera()->SetCameraControl(CameraControlMode::DIRECT_CONTROL);
 		
+
+
+		auto color = CreateAttachment(AttachmentType::COLOR, TextureFormat::RGBA16_SFLOAT,
+			Application::GetScreenWidth(), Application::GetScreenHeight(), SampleCount::e1, AttachmentHint::SampledLater);
+		m_UIFrameBuffer = CreateFramebuffer({color});
+
 		GetCamera()->LookAt({ 0,0,0 });
 		ExecuteFrame(0);
 	}
@@ -109,9 +115,9 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 	{
 		SetViewRect(0, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
 		SetViewTransform(0, GetCamera()->GetView(), GetCamera()->GetProj());
-
+		auto screenWidth = GetScreenWidth();
+		auto screenHeight = GetScreenHeight();
 #if MODEL 
-		// 1. Start with Identity
 		glm::mat4 world = glm::mat4(1.0f);
 		glm::mat4 world2 = glm::translate(glm::mat4(1.0f), glm::vec3(1,0,0));
 		glm::mat4 world3 = glm::translate(glm::mat4(1.0f), glm::vec3(3,0,0));
@@ -123,7 +129,7 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 		auto move = offset * 3;
 		glm::vec3 pos= { 0,0, 0 };
 		pos.x += move;
-		std::println("{} ",pos.x);
+		//std::println("{} ",pos.x);
 		world = glm::translate(world, pos);
 		Rotate(deltaTime,0.005,m_Yaw,m_Pitch, world);
 		//auto pos = GetCamera()->GetPosition();
@@ -133,22 +139,33 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 		SubmitModel(m_Model, 0, 0, m_DefaultShader, { world, world2,world3, world4 });
 		Submit(0, m_DefaultShader);
 
-		auto screenWidth = GetScreenWidth();
-		auto screenHeight = GetScreenHeight();
-		ExecuteFrame(deltaTime);
+	
+		//ExecuteFrame(deltaTime);
 #if TEXT
 		int width = screenWidth / 4; 
 		int height = screenHeight / 4;
 
-		auto proj = glm::ortho(0.0f, (float)screenWidth, (float)screenHeight, 0.0f);
-		SetViewTransform(1, glm::mat4(1), proj);
+		glm::mat4 proj = glm::ortho(0.0f, (float)screenWidth, (float)screenHeight, 0.0f, -1.0f, 1.0f);
+		SeUIProj(1, proj);
+		SeUIProj(0, proj);
+		SetFramebuffer(1, m_UIFrameBuffer);
 		SetViewRect(1, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
 		BindVertexBuffer(0, m_VertexQuadBuffer);
 		BindIndexBuffer(m_IndexQuadBuffer);
-		SubmitQuad(glm::vec2(250,250),50,glm::vec4(1,1,1,1));
+		SubmitQuad(glm::vec2(250,250),glm::vec2(50),glm::vec4(1,1,1,1));
+		SubmitQuad(glm::vec2(250+250,250),glm::vec2(20),glm::vec4(1,1,1,1));
+		SubmitQuad(glm::vec2(250,250+250),glm::vec2(30),glm::vec4(1,1,1,1));
+		SubmitQuad(glm::vec2(250+250,250+250),glm::vec2(40),glm::vec4(1,1,1,1));
 		//SubmitText("Voidstar", screenWidth - width, 0, m_Font);
-		SetDepthTest(true);
+
+
+		//BlendMode state;
+		//state.enabled = false;
+		//SetBlendState(0, state);
+
+		SetDepthTest(false);
 		Submit(1, m_FontShader);
+		SetOverlay(0,1);
 #endif
 
 
@@ -158,6 +175,7 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 		BindTexture("u_Texture",m_MorganaTex);
 		Submit(0, m_DefaultShader);
 #endif
+
 
 		ExecuteFrame(deltaTime);
 

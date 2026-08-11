@@ -16,6 +16,9 @@ private:
 	IndexBufferHandle m_IndexHandle;
 	ProgramHandle m_DefaultShader;
 	ProgramHandle m_FontShader;
+	
+	FrameBufferHandle m_UIFrameBuffer;
+
 	std::vector<Vertex> m_Cube;
 	std::vector<IndexType> m_IndexCube;
 

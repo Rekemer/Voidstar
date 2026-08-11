@@ -10,6 +10,7 @@
 #define CGLTF_IMPLEMENTATION
 #include "cgltf.h"
 #include <filesystem>
+#include <queue>
 
 
 // for loading image from gltf files
@@ -19,9 +20,7 @@ namespace Voidstar
 {
 	UPtr<Submission> g_Submission = CreateUPtr<Submission>();
 
-	SparseSet<ShaderHandle> g_ShaderHandleAllocator;
 	SparseSet<ProgramHandle> g_ProgramHandleAllocator;
-
 	SparseSet<BufferHandle> g_BufferHandleAllocator;
 	SparseSet<VertexBufferHandle> g_VertexBufferHandleAllocator;
 	SparseSet<IndexBufferHandle> g_IndexBufferHandleAllocator;
@@ -46,6 +45,12 @@ namespace Voidstar
 
 
 	static void AddTransforms(const std::vector<glm::mat4>& worlds); 
+
+
+	ProgramHandle GetProgramHandle_()
+	{
+		return g_ProgramHandleAllocator.GetId();
+	}
 
 	TextureHandle GetTextureHandle()
 	{
@@ -95,14 +100,10 @@ namespace Voidstar
 
 
 
-	ShaderHandle LoadShader(std::string_view shader)
+	 void LoadShader(std::string_view shader)
 	{
-		auto handle = g_ShaderHandleAllocator.GetId();
 		auto& cmd = g_Submission->GetCommandBuffer(ResourceCommand::CreateShader);
-
-		cmd.WriteObject(handle);
 		cmd.WriteString(shader);
-		return handle;
 	}
 
 	TextureHandle LoadTextureFrom(Memory mem, int w, int h)
@@ -164,16 +165,11 @@ namespace Voidstar
 		cmd.WriteObject(data);
 		cmd.WriteObject(size);
 	}
-	size_t ReadTexture(TextureHandle handle, void* data)
+	void ReadTexture(TextureHandle handle, void* data)
 	{
 		auto& cmd = g_Submission->GetCommandBuffer(ResourceCommand::ReadTexture);
 		cmd.WriteObject(handle);
 		cmd.WriteObject(data);
-		// we are not doing like that:
-		// current frame user asks
-		// next frame - copy data
-		// after that should be available
-		return g_Submission->Submit->FrameNumber + 2;
 	}
 
 	AttachmentHandle CreateAttachment(AttachmentType type, TextureFormat format, int width, int height, SampleCount samples, AttachmentHint hints)
@@ -421,8 +417,6 @@ namespace Voidstar
 					break;
 				case Voidstar::ResourceCommand::CreateShader:
 				{
-					auto handle = commandBuffer.Read<ShaderHandle>();
-
 					auto path = commandBuffer.ReadString();
 					Renderer::Instance()->CompileShader(path);
 					break;
@@ -621,9 +615,68 @@ namespace Voidstar
 		Log::GetLog()->debug("Render thread finished");
 	}
 
+
+
+	static std::vector<PassID> TopologicalSort(
+		const std::list<PassID>& allPasses,
+		std::unordered_map<PassID, std::vector<PassID>>& adjacency)
+	{
+		std::unordered_map<PassID, int> inCount;
+
+		for (auto p : allPasses) inCount[p] = 0;
+		for (auto& [before, after] : adjacency)
+		{
+			for (auto passAfter : after)
+			{
+				inCount[passAfter]++;
+			}
+		}
+
+		// start from the nodes 
+		// which don't have in edges
+		std::queue<PassID> ready;
+		for (auto p : allPasses)
+			if (inCount[p] == 0) ready.push(p);
+
+		std::vector<PassID> order;
+		while (!ready.empty())
+		{
+			PassID current = ready.front(); ready.pop();
+			order.push_back(current);
+			for (auto next : adjacency[current])
+			{
+				inCount[next]--;
+				if (inCount[next] == 0) ready.push(next);
+			}
+		}
+
+		assert(order.size() == allPasses.size() 
+			&& 
+			"Cycle detected in pass dependency graph!");
+
+		return order;
+	}
+
 	// start calling implementation
 	void ExecuteFrame(float deltaTime, bool wait)
 	{
+
+		const auto& allViewsIndex = g_Submission->Submit->LastView;
+		const auto& allViews = g_Submission->Submit->Views;
+		std::vector<std::pair<PassID, PassID>> edges; 
+		std::unordered_map<PassID, std::vector<PassID>> adjacency;
+		for (auto& viewIndex : allViewsIndex)
+		{
+			auto& view = allViews[viewIndex];
+			auto  read = view.TopLayer;
+			//read pass must run before view index
+			if (read != INVALID_PASS_ID)
+			adjacency[read].push_back(viewIndex);
+		}	
+
+		g_Submission->Submit->OrderedPasses 
+			= TopologicalSort(allViewsIndex, adjacency);
+
 	#if THREADING
 		// we wait until renderer is done rendering
 		apiSem.acquire();
@@ -631,7 +684,6 @@ namespace Voidstar
 		
 		// swap
 		g_Submission->Submit->deltaTime = deltaTime;
-		g_Submission->Submit->FrameNumber++;
 		std::swap(g_Submission->Submit, g_Submission->Render);
 
 		// signal renderer to do the work
@@ -647,7 +699,6 @@ namespace Voidstar
 	#else
 
 		std::swap(g_Submission->Submit, g_Submission->Render);
-		g_Submission->Submit->FrameNumber++;
 		// execute prerender commands
 		Renderer::Instance()->BeginFrame(g_Submission->Render);
 		ExecuteCommands(g_Submission->Render->CmdPre);
@@ -693,6 +744,10 @@ namespace Voidstar
 		//assert(false);
 		AddTransforms({ world });
 	};
+	void SeUIProj(PassID id, const glm::mat4& proj)
+	{
+		g_Submission->Submit->Views[id].UIProj = proj;
+	}
 	void BindVertexBuffer(uint16_t location, VertexBufferHandle handle, VertexStreamMode mode)
 	{
 		auto item = g_Submission->Submit->CurrentRenderItem;
@@ -1024,12 +1079,14 @@ namespace Voidstar
 		return model;
 	}
 
-	void SubmitQuad(const glm::vec2& pos, float scale, const glm::vec4& color)
+	void SubmitQuad(const glm::vec2& pos, const glm::vec2& scale, const glm::vec4& color)
 	{
 		glm::mat4 world(1);
 		world = glm::translate(world, glm::vec3(pos.x, pos.y, 0));
-		world = glm::scale(world, glm::vec3(scale));
+		world = glm::scale(world, glm::vec3(scale.x,scale.y,1));
 		AddTransforms({ world });
+		//g_Submission->Submit->Quads[g_Submission->Submit->FreeQuadIndex++]
+			//= QuadEntry{ pos,scale,color };
 	}
 
 	static void AddTransforms(const std::vector<glm::mat4>& worlds)
@@ -1071,6 +1128,12 @@ namespace Voidstar
 		return font;
 	}
 
+
+	void SetOverlay(PassID layer, PassID topLayer)
+	{
+		g_Submission->Submit->Views[layer].TopLayer = topLayer;
+	}
+
 	void Frame::NextItem(PassID viewID)
 	{	
 		auto& freeIndex = g_Submission->Submit->Views[viewID].FreeIndex;
@@ -1089,6 +1152,7 @@ namespace Voidstar
 		CurrentRenderItemIndex++;
 		CurrentRenderItem = &m_renderItem[CurrentRenderItemIndex];
 	}
+
 
 	
 }

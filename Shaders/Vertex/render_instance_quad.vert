@@ -5,6 +5,7 @@ layout(set = 0,binding = 0) uniform UniformBufferObject {
     mat4 view;
     mat4 proj;
     float time;
+    mat4 uiProj;
 } ubo;
 
 layout(std430, set=0, binding=1) readonly buffer Objects {
@@ -14,5 +15,5 @@ layout(std430, set=0, binding=1) readonly buffer Objects {
 void main()
 {
     mat4 world = objects.model[gl_InstanceIndex];
-    gl_Position = ubo.proj * world * vec4(in_pos.xyz, 1.0);
+    gl_Position = ubo.uiProj * world * vec4(in_pos.xyz, 1.0);
 }  

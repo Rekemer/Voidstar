@@ -47,7 +47,6 @@ namespace Voidstar
 	struct FontTag {};
 
 	using ProgramHandle = Handle<ProgramTag>;
-	using ShaderHandle = Handle<ShaderTag>;
 	using VertexBufferHandle = Handle<VertexBufferTag>;
 	using IndexBufferHandle = Handle<IndexBufferTag>;
 	using FrameBufferHandle = Handle<FramebufferTag>;
@@ -58,7 +57,8 @@ namespace Voidstar
 	using UniformHandle = Handle<UniformTag>;
 	using FontHandle = Handle<FontTag>;
 	using PassID = uint16_t;
-
+	
+	constexpr auto INVALID_PASS_ID = uint16_t(-1);
 
 	struct RenderPassTag {};
 	using RenderPassHandle_ = Handle<RenderPassTag>;
@@ -265,7 +265,9 @@ namespace Voidstar
 
 	struct BlendMode {
 		bool        enabled = true;
-		BlendFactor srcColor = BlendFactor::SrcAlpha; 
+		// 60% red
+		BlendFactor srcColor = BlendFactor::SrcAlpha;
+		// 40% green
 		BlendFactor dstColor = BlendFactor::OneMinusSrcAlpha; 
 		BlendOp     colorOp = BlendOp::Add;
 		BlendFactor srcAlpha = BlendFactor::One;
@@ -415,23 +417,42 @@ namespace Voidstar
 		glm::vec4 Rect;
 		glm::mat4 View;
 		glm::mat4 Proj;
+
+		glm::mat4 UIProj;
+
 		FrameBufferHandle Fbh;
+		// next renderItem item index we can use
 		int FreeIndex = 0;
 		std::array<int,256> ItemsIndex;
 		ItemType Type = ItemType::RENDER;
-	};
 
+		// we render this view and then if there is toplayer
+		// we overlay toplayer on this layer
+		// render to the same view our top layer
+		PassID TopLayer = INVALID_PASS_ID;
+
+	};
+	
+
+	struct QuadEntry
+	{
+		glm::vec2 pos;
+		glm::vec2 scale;
+		glm::vec4 color;
+	};
 	struct Frame
 	{
 		int  CurrentRenderItemIndex = 0;
-		Item m_renderItem[256];
+		std::array<Item,256> m_renderItem;
 
 		Item* CurrentRenderItem =&m_renderItem[CurrentRenderItemIndex];
-		std::list<int> LastView;
-		View Views[256];
-		size_t FrameNumber = 0;
+		std::list<PassID> LastView;
+		std::vector<PassID> OrderedPasses;
+		std::array<View,256> Views;
 		size_t FreeMatrixIndex = 0;
 		std::array<glm::mat4, MAX_OBJECTS> Matricies;
+		size_t FreeQuadIndex = 0;
+		std::array<QuadEntry, MAX_OBJECTS> Quads;
 		float deltaTime;
 		void NextItem(PassID viewID);
 		
@@ -439,7 +460,7 @@ namespace Voidstar
 		{
 			LastView.resize(0);
 			CurrentRenderItemIndex = 0;
-			FreeMatrixIndex = 0;
+			FreeMatrixIndex = FreeQuadIndex = 0;
 			CurrentRenderItem = &m_renderItem[CurrentRenderItemIndex];
 
 		};
@@ -495,6 +516,7 @@ namespace Voidstar
 	AttachmentHandle GetAttachmentHandle();
 	TextureHandle GetTextureHandle();
 	FrameBufferHandle GetFrameBufferHandle();
+	ProgramHandle GetProgramHandle_();
 
 	ProgramHandle LoadProgram(std::string_view vertex, std::string_view fragment);
 
@@ -502,7 +524,7 @@ namespace Voidstar
 
 	ProgramHandle LoadComputeProgram(std::string_view cmp);
 
-	ShaderHandle LoadShader(std::string_view shader);
+	void LoadShader(std::string_view shader);
 
 	TextureHandle LoadTexture(std::string_view texture);
 	TextureHandle LoadTextureFrom(Memory mem, int w, int h);
@@ -511,7 +533,7 @@ namespace Voidstar
 
 	void UpdateTexture(TextureHandle handle, uint8_t* data, size_t size);
 	// read vulkan buffer on cpu
-	size_t ReadTexture(TextureHandle handle, void* data);
+	void ReadTexture(TextureHandle handle, void* data);
 
 	// use that on gpu cpu visible buffers
 	void* ReadMappedPtr(ResourceType type, Handle<void>::Type handle);
@@ -539,9 +561,11 @@ namespace Voidstar
 	void SubmitInit(InitParams);
 
 	void SetTransform(const glm::mat4& world);
+
 	void SetClipRect(int x,int y,int w, int h);
 	void SetRenderMode(RenderMode mode);
 	void SetViewTransform(PassID id, const glm::mat4& view, const glm::mat4& proj);
+	void SeUIProj(PassID id, const glm::mat4& proj);
 	void SetViewRect(PassID id , size_t x, size_t y, size_t width, size_t height);
 	void SetFramebuffer(PassID id, FrameBufferHandle handle);
 
@@ -550,7 +574,7 @@ namespace Voidstar
 	void Submit(PassID id, ProgramHandle program);
 
 	void SubmitModel(SPtr<Model> model, int location, PassID pass, ProgramHandle program, const std::vector< glm::mat4>& worlds);
-	void SubmitQuad(const glm::vec2& pos, float scale, const glm::vec4& color);
+	void SubmitQuad(const glm::vec2& pos, const glm::vec2& scale, const glm::vec4& color);
 
 	void SubmitCompute(PassID id, ProgramHandle program, size_t x, size_t y,size_t z);
 	
@@ -583,6 +607,8 @@ namespace Voidstar
 
 	FontHandle LoadFont(std::string_view path);
 	void WakeUpRender_();
+
+	void SetOverlay(PassID layer, PassID topLayer);
 
 }
 

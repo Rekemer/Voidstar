@@ -330,7 +330,7 @@ void TrySpawnFireBillboardAtPixel(int pixelX, int pixelY)
 	clicked++;
 	SpawnParticle(clicked - 1, spawnPos);
 }
-int fireSpawnAttempts = 2;
+int fireSpawnAttempts = 4;
 void AddInverseSplat(int cx, int cy, float radius)
 {
 	float rSq = radius * radius;

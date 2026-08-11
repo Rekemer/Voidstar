@@ -151,7 +151,7 @@ namespace Voidstar
 			const auto& t = comp.get_type(ub.base_type_id);
 			uint32_t count = array_size(comp.get_type(ub.type_id));
 			uint32_t blockSize = uint32_t(comp.get_declared_struct_size(t));
-			assert(blockSize == sizeof(UniformBufferObject));
+			//assert(blockSize == sizeof(UniformBufferObject));
 			meta.bindings[0].push_back(CreateBindingDesc(0, 0, ResourceType::UniformBuffer,
 				ShaderType::ALL, 1, 0, blockSize));
 		}

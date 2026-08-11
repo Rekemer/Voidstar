@@ -48,13 +48,8 @@ layout(set=0,binding = 0) uniform UniformBufferObject {
 } ubo;
 
 
-
-layout(set = 1, binding = 0) uniform sampler2D u_Texture;
-layout(set = 12, binding = 1) uniform sampler2D u_Texture1;
-
-set shader access on level of meta to 
-use same descriptor set across pipeline
-
-
-preallocate buffer and populate it
-
+set view.Fbh to default if it is not init
+remove ui proj from ubo 
+add quad batching instead of instancing (use instancing only for models?)
+use composite as another render item to reuse resource logic?
+uncommnet ubo assert in shader compiler

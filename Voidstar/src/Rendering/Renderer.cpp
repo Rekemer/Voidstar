@@ -1184,10 +1184,12 @@ namespace Voidstar
 		m_Framebuffers[DEFAULT_FRAME_BUFFER] = _CreateFramebuffer(m_RenderPasses[DEFAULT_FRAME_BUFFER].m_RenderPass,
 			extent.width, extent.height, builder,
 			{ m_DefaultColorAttachment,m_DefaultDepthAttachment  });
-
-
 		
-			
+		m_Compiler.Compile(std::filesystem::path{"composite.vert"});
+		m_Compiler.Compile(std::filesystem::path{"composite.frag"});
+		m_OverlayProgram = GetProgramHandle_();
+		m_Compiler.Link(m_OverlayProgram,2);
+
 	}
 
 
@@ -1978,86 +1980,6 @@ namespace Voidstar
 			int m_profileCount;
 		};
 
-
-
-	class ProfileTimer
-		{
-		public:
-
-			ProfileTimer() : m_name{ "no name" }
-			{
-				m_startPoint = std::chrono::high_resolution_clock::now();
-			}
-
-			ProfileTimer(const char* name) : m_name{ name }
-			{
-				m_startPoint = std::chrono::high_resolution_clock::now();
-			}
-			~ProfileTimer()
-			{
-				Stop();
-			}
-			void Stop()
-			{
-				auto endPoint = std::chrono::high_resolution_clock::now();
-
-				auto start = std::chrono::time_point_cast<std::chrono::microseconds>(m_startPoint)
-					.time_since_epoch().count();
-				auto end = std::chrono::time_point_cast<std::chrono::microseconds>(endPoint)
-					.time_since_epoch().count();
-				auto duration = end - start;
-				double ms = duration * 0.001;
-
-				Profiler::Get().WriteProfile({ m_name, start, end });
-			}
-
-
-			double Elapsed()
-			{
-				auto endPoint = std::chrono::high_resolution_clock::now();
-
-				auto start = std::chrono::time_point_cast<std::chrono::microseconds>(m_startPoint)
-					.time_since_epoch().count();
-				auto end = std::chrono::time_point_cast<std::chrono::microseconds>(endPoint)
-					.time_since_epoch().count();
-				auto duration = end - start;
-				double ms = duration * 0.001;
-				return ms;
-			}
-		private:
-			std::chrono::time_point<std::chrono::high_resolution_clock> m_startPoint;
-			std::string m_name;
-		};
-
-
-	class Timer
-		{
-		public:
-
-			Timer()
-			{
-				m_startPoint = std::chrono::high_resolution_clock::now();
-			}
-
-			double Elapsed()
-			{
-				auto endPoint = std::chrono::high_resolution_clock::now();
-
-				auto start = std::chrono::time_point_cast<std::chrono::microseconds>(m_startPoint)
-					.time_since_epoch().count();
-				auto end = std::chrono::time_point_cast<std::chrono::microseconds>(endPoint)
-					.time_since_epoch().count();
-				auto duration = end - start;
-				double ms = duration * 0.001;
-				return ms;
-			}
-		private:
-			std::chrono::time_point<std::chrono::high_resolution_clock> m_startPoint;
-
-		};
-
-	
-
 	vk::Pipeline Renderer::GetComputePipeline(PipelineKey& key)
 	{
 		if (m_Pipelines.find(key) != m_Pipelines.end())
@@ -2245,7 +2167,6 @@ namespace Voidstar
 
 	void Renderer::RenderFrame(Frame* render, float deltaTime)
 	{
-		Timer timer;
 		if (render->CurrentRenderItemIndex == 0) return;
 		
 
@@ -2261,7 +2182,7 @@ namespace Voidstar
 		uint32_t currentMatrixOffset = 0;
 
 		cmd.BeginRendering();
-		for (auto i : render->LastView)
+		for (auto i : render->OrderedPasses)
 		{
 			auto& view = render->Views[i];
 			if (view.FreeIndex == 0)
@@ -2301,6 +2222,7 @@ namespace Voidstar
 				continue;
 			}
 
+
 			FrameBufferHandle fb = view.Fbh.Valid() ? view.Fbh : DEFAULT_FRAME_BUFFER;
 
 			uint32_t index = GetIndex(fb, i == render->LastView.back());
@@ -2322,7 +2244,27 @@ namespace Voidstar
 					image->m_MipMapLevels);
 			}
 
-			UpdateUniformBuffer(view.Proj, view.View, m_App->GetExeTime());
+
+			if (view.TopLayer != INVALID_PASS_ID)
+			{
+				auto& overlayView = render->Views[view.TopLayer];
+				auto overlayFb = overlayView.Fbh;
+
+				for (auto handle : m_FBAttachments[overlayFb])
+				{
+					auto texHandle = m_AttachmentManager.GetColorTexture(handle, m_CurrentFrame);
+					auto image = m_Textures.at(texHandle);
+					cmd.ChangeImageLayout(
+						image.get(),
+						image->GetLayout(),
+						vk::ImageLayout::eShaderReadOnlyOptimal,
+						image->m_MipMapLevels);
+				}
+
+
+
+			}
+			UpdateUniformBuffer(view.Proj, view.View, m_App->GetExeTime(), view.UIProj);
 
 			cmd.BeginRenderPass(renderPass.m_RenderPass, frameBuffer, renderPass.m_Extent, renderPass.m_ClearValues);
 
@@ -2397,6 +2339,8 @@ namespace Voidstar
 				vertexBuffers.reserve(renderItem.Bindings.vertexCurrentBinding);
 				std::vector<vk::DeviceSize> offsets(renderItem.Bindings.vertexCurrentBinding, 0);
 
+
+
 				for (int iii = 0; iii < renderItem.Bindings.vertexCurrentBinding; ++iii)
 				{
 					auto handle = renderItem.VertexBindings.at(iii).VertexHandle;
@@ -2425,6 +2369,68 @@ namespace Voidstar
 				renderItem.Reset();
 			}
 			view.FreeIndex = 0;
+
+
+			if (view.TopLayer != INVALID_PASS_ID)
+			{
+				auto& overlayView = render->Views[view.TopLayer];
+				auto& meta = m_Compiler.m_Programs.at(m_OverlayProgram);
+				RenderState state;
+				
+
+				state.depthTest = false;
+
+				PipelineKey key = { m_OverlayProgram, state, {meta.descriptorKey,meta.pushes}, view.Fbh.Valid() ? view.Fbh : DEFAULT_FRAME_BUFFER };
+
+				// empty — fullscreen triangle needs none
+				std::array<VertexBinding, Item::MAX_VERTEX_BINDING> noBindings{}; 
+
+				vk::Pipeline pipeline =
+					GetPipeline(key, noBindings, 0);
+
+				vk::PipelineLayout layout = m_PipelineLayout.at({ meta.descriptorKey,meta.pushes });
+				auto vkCmd = cmd.GetCommandBuffer();
+				vkCmd.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
+
+
+				auto set = GetDescriptorSet(meta.descriptorKey.at(1), m_CurrentFrame, -1);
+				auto overlayFb = render->Views[view.TopLayer].Fbh;
+				auto overlayTexHandle = m_AttachmentManager.GetColorTexture(m_FBAttachments[overlayFb][0], m_CurrentFrame);
+				m_Device->UpdateDescriptorSet(set, 0, 1, *m_Textures.at(overlayTexHandle), vk::ImageLayout::eShaderReadOnlyOptimal,ResourceType::CombinedSampler);
+				
+				for (int iii = 0; iii < meta.descriptorKey.size(); iii++)
+				{
+					auto k = meta.descriptorKey.at(iii);
+					auto COMPOSITE_ITEM_INDEX = -1;
+					auto set = GetDescriptorSet(k, m_CurrentFrame, COMPOSITE_ITEM_INDEX); 
+
+					vkCmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, layout, iii, set, nullptr);
+				}
+
+
+				vk::Viewport viewport;
+				viewport.x = view.Rect[0];
+				viewport.y = view.Rect[1];
+				viewport.width = view.Rect[2];
+				viewport.height = view.Rect[3];
+				viewport.minDepth = 0.0f;
+				viewport.maxDepth = 1.0f;
+				vkCmd.setViewport(0, 1, &viewport);
+
+				vk::Rect2D scissors;
+				scissors.offset = vk::Offset2D{
+					static_cast<int32_t>(view.Rect[0]),
+					static_cast<int32_t>(view.Rect[1])
+				};
+				scissors.extent = vk::Extent2D{
+					static_cast<uint32_t>(view.Rect[2]),
+					static_cast<uint32_t>(view.Rect[3])
+				};
+				vkCmd.setScissor(0, 1, &scissors);
+				vkCmd.draw(3, 1, 0, 0);
+
+			}
+
 			cmd.EndRenderPass();
 		}
 
@@ -2484,18 +2490,19 @@ namespace Voidstar
 		m_Device->GetDevice().resetFences(fence);
 	}
 
-	void Renderer::UpdateUniformBuffer(const glm::mat4& proj, const glm::mat4& view, float time)
+	void Renderer::UpdateUniformBuffer(const glm::mat4& proj, 
+		const glm::mat4& view, float time, const glm::mat4& uiProj)
 	{
 		UniformBufferObject ubo{};
 		ubo.view = view;
 		ubo.proj = proj;
 		ubo.time = time;
+		ubo.uiProj = uiProj;
 		memcpy(m_UniformBuffersMapped[m_CurrentFrame], &ubo, sizeof(ubo));
 	}
 
 	void Renderer::BeginFrame(Frame* frame)
 	{
-		m_FrameNumber = frame->FrameNumber;
 	}
 	void Renderer::EndFrame(Frame* frame)
 	{
@@ -2573,7 +2580,7 @@ namespace Voidstar
 	{
 		auto& transferBuffer = Renderer::Instance()->GetTransferCommandBuffer(m_CurrentFrame);
 
-		auto value = m_FrameNumber;
+		auto value = m_App->GetFrameNumber();
 		vk::TimelineSemaphoreSubmitInfo info{
 			 1, &(value),
 			 0, nullptr,
