@@ -2131,9 +2131,10 @@ namespace Voidstar
 		CommandBuffer cmd,
 		uint32_t& currentMatrixOffset)
 	{
-		for (int ii = 0; ii < view.FreeIndex; ++ii)
+		auto viewItemsFreeIndex = view.ItemsIndex.GetFreeIndex();
+		for (int ii = 0; ii < viewItemsFreeIndex; ++ii)
 		{
-			int itemIndex = view.ItemsIndex[ii];
+			int itemIndex = view.ItemsIndex.GetElementAt(ii);
 			auto* item = &render->m_renderItem[itemIndex];
 			auto& renderItem = *item;
 			auto& meta = m_Compiler.m_Programs.at(renderItem.Program);
@@ -2150,7 +2151,7 @@ namespace Voidstar
 					+ currentMatrixOffset;
 					auto startIndex = renderItem.MatrixIndex - renderItem.ObjectCount;
 					assert(startIndex >= 0);
-					auto* src = &render->Matricies.at(startIndex);
+					auto src = render->Matricies.GetPtrAt(startIndex);
 					memcpy(dest, src, sizeof(glm::mat4) * renderItem.ObjectCount);
 					renderItem.internalOffset = currentMatrixOffset;
 					currentMatrixOffset += renderItem.ObjectCount;
@@ -2180,16 +2181,17 @@ namespace Voidstar
 		for (auto i : render->OrderedPasses)
 		{
 			auto& view = render->Views[i];
-			if (view.FreeIndex == 0)
+			auto viewItemsFreeIndex = view.ItemsIndex.GetFreeIndex();
+			if (viewItemsFreeIndex == 0)
 				continue;
 
 			PrepareDescritptors(view, render, cmd, currentMatrixOffset);
 
 			if (view.Type == ItemType::COMPUTE)
 			{
-				for (int ii = 0; ii < view.FreeIndex; ++ii)
+				for (int ii = 0; ii < viewItemsFreeIndex; ++ii)
 				{
-					int itemIndex = view.ItemsIndex[ii];
+					int itemIndex = view.ItemsIndex.GetElementAt(ii);
 					auto* item = &render->m_renderItem[itemIndex];
 
 					auto& computeItem = *item;
@@ -2213,7 +2215,7 @@ namespace Voidstar
 					computeItem.Reset();
 
 				}
-				view.FreeIndex = 0;
+				view.Reset();
 				continue;
 			}
 
@@ -2243,9 +2245,9 @@ namespace Voidstar
 
 			cmd.BeginRenderPass(renderPass.m_RenderPass, frameBuffer, renderPass.m_Extent, renderPass.m_ClearValues);
 
-			for (int ii = 0; ii < view.FreeIndex; ++ii)
+			for (int ii = 0; ii < viewItemsFreeIndex; ++ii)
 			{
-				int itemIndex = view.ItemsIndex[ii];
+				int itemIndex = view.ItemsIndex.GetElementAt(ii);
 				auto* item = &render->m_renderItem[itemIndex];
 
 				
@@ -2343,7 +2345,7 @@ namespace Voidstar
 
 				renderItem.Reset();
 			}
-			view.FreeIndex = 0;
+			view.Reset();
 			cmd.EndRenderPass();
 		}
 

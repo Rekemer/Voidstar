@@ -16,6 +16,7 @@
 #include <list>
 #include <variant>
 #include "Memory.h"
+#include "FixedArray.h"
 #include "Rendering/Generation.h"
 
 namespace Voidstar
@@ -422,14 +423,19 @@ namespace Voidstar
 
 		FrameBufferHandle Fbh;
 		// next renderItem item index we can use
-		int FreeIndex = 0;
-		std::array<int,256> ItemsIndex;
+		FixedArray<int,256> ItemsIndex;
 		ItemType Type = ItemType::RENDER;
 
 		// we render this view and then if there is toplayer
 		// we overlay toplayer on this layer
 		// render to the same view our top layer
 		PassID TopLayer = INVALID_PASS_ID;
+
+		void Reset()
+		{
+			TopLayer = INVALID_PASS_ID;
+			ItemsIndex.Reset();
+		}
 
 	};
 	
@@ -440,6 +446,7 @@ namespace Voidstar
 		glm::vec2 scale;
 		glm::vec4 color;
 	};
+
 	struct Frame
 	{
 		int  CurrentRenderItemIndex = 0;
@@ -449,10 +456,10 @@ namespace Voidstar
 		std::list<PassID> LastView;
 		std::vector<PassID> OrderedPasses;
 		std::array<View,256> Views;
-		size_t FreeMatrixIndex = 0;
-		std::array<glm::mat4, MAX_OBJECTS> Matricies;
-		size_t FreeQuadIndex = 0;
-		std::array<QuadEntry, MAX_OBJECTS> Quads;
+
+		FixedArray<glm::mat4, MAX_OBJECTS> Matricies;
+		FixedArray<QuadEntry, MAX_OBJECTS> Quads;
+
 		float deltaTime;
 		void NextItem(PassID viewID);
 		
@@ -460,7 +467,8 @@ namespace Voidstar
 		{
 			LastView.resize(0);
 			CurrentRenderItemIndex = 0;
-			FreeMatrixIndex = FreeQuadIndex = 0;
+			Matricies.Reset();
+			Quads.Reset();
 			CurrentRenderItem = &m_renderItem[CurrentRenderItemIndex];
 
 		};

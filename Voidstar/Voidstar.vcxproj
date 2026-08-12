@@ -150,6 +150,7 @@
     <ClInclude Include="src\Application.h" />
     <ClInclude Include="src\Cache.h" />
     <ClInclude Include="src\Core.h" />
+    <ClInclude Include="src\FixedArray.h" />
     <ClInclude Include="src\Handle.h" />
     <ClInclude Include="src\InitParams.h" />
     <ClInclude Include="src\Input.h" />

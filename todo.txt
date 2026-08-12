@@ -51,5 +51,4 @@ layout(set=0,binding = 0) uniform UniformBufferObject {
 set view.Fbh to default if it is not init
 remove ui proj from ubo 
 add quad batching instead of instancing (use instancing only for models?)
-use composite as another render item to reuse resource logic?
 uncommnet ubo assert in shader compiler

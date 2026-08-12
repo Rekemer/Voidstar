@@ -1092,18 +1092,10 @@ namespace Voidstar
 	static void AddTransforms(const std::vector<glm::mat4>& worlds)
 	{
 		g_Submission->Submit->CurrentRenderItem->ObjectCount += worlds.size();
+
 		auto& matrixes = g_Submission->Submit->Matricies;
-		auto startIndex = g_Submission->Submit->FreeMatrixIndex;
-		auto objCount = worlds.size();
-		int worldIndex = 0;
-		for (auto i = startIndex;
-			i < startIndex + objCount;
-			i++)
-		{
-			matrixes[i] = worlds[worldIndex++];
-		}
-		g_Submission->Submit->FreeMatrixIndex = startIndex + objCount;
-		g_Submission->Submit->CurrentRenderItem->MatrixIndex = g_Submission->Submit->FreeMatrixIndex;
+		matrixes.Add(worlds);
+		g_Submission->Submit->CurrentRenderItem->MatrixIndex = matrixes.GetFreeIndex();
 	}
 
 	void SubmitModel(SPtr<Model> model, int location, PassID pass, ProgramHandle program, const std::vector<glm::mat4>& worlds)
@@ -1141,9 +1133,10 @@ namespace Voidstar
 
 	void Frame::NextItem(PassID viewID)
 	{	
-		auto& freeIndex = g_Submission->Submit->Views[viewID].FreeIndex;
-		g_Submission->Submit->Views[viewID].ItemsIndex[freeIndex++] = g_Submission->Submit->CurrentRenderItemIndex;
-
+		g_Submission->Submit->Views[viewID].ItemsIndex.Add(
+			{ g_Submission->Submit->CurrentRenderItemIndex }
+		);
+		
 		if (std::find(g_Submission->Submit->LastView.begin(),
 			g_Submission->Submit->LastView.end(), viewID) 
 			== 
