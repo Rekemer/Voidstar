@@ -62,6 +62,7 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 #if MODEL
 		m_DefaultShader = LoadProgram("model.vert", "model.frag");
 		m_FontShader = LoadProgram("render_instance_quad.vert", "solid_color.frag");
+		m_CompositeShader = LoadProgram("composite.vert", "composite.frag");
 		m_Model = LoadModel("DamagedHelmet/glTF-Binary/DamagedHelmet.glb");
 
 #else
@@ -165,7 +166,7 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 
 		SetDepthTest(false);
 		Submit(1, m_FontShader);
-		SetOverlay(0,1);
+		SetOverlay(0,1,m_CompositeShader);
 #endif
 
 

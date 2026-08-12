@@ -1185,11 +1185,6 @@ namespace Voidstar
 			extent.width, extent.height, builder,
 			{ m_DefaultColorAttachment,m_DefaultDepthAttachment  });
 		
-		m_Compiler.Compile(std::filesystem::path{"composite.vert"});
-		m_Compiler.Compile(std::filesystem::path{"composite.frag"});
-		m_OverlayProgram = GetProgramHandle_();
-		m_Compiler.Link(m_OverlayProgram,2);
-
 	}
 
 
@@ -2244,26 +2239,6 @@ namespace Voidstar
 					image->m_MipMapLevels);
 			}
 
-
-			if (view.TopLayer != INVALID_PASS_ID)
-			{
-				auto& overlayView = render->Views[view.TopLayer];
-				auto overlayFb = overlayView.Fbh;
-
-				for (auto handle : m_FBAttachments[overlayFb])
-				{
-					auto texHandle = m_AttachmentManager.GetColorTexture(handle, m_CurrentFrame);
-					auto image = m_Textures.at(texHandle);
-					cmd.ChangeImageLayout(
-						image.get(),
-						image->GetLayout(),
-						vk::ImageLayout::eShaderReadOnlyOptimal,
-						image->m_MipMapLevels);
-				}
-
-
-
-			}
 			UpdateUniformBuffer(view.Proj, view.View, m_App->GetExeTime(), view.UIProj);
 
 			cmd.BeginRenderPass(renderPass.m_RenderPass, frameBuffer, renderPass.m_Extent, renderPass.m_ClearValues);
@@ -2363,74 +2338,12 @@ namespace Voidstar
 				}
 				else
 				{
-					vkCmd.draw(6, 1, 0, 0);
+					vkCmd.draw(3, 1, 0, 0);
 				}
 
 				renderItem.Reset();
 			}
 			view.FreeIndex = 0;
-
-
-			if (view.TopLayer != INVALID_PASS_ID)
-			{
-				auto& overlayView = render->Views[view.TopLayer];
-				auto& meta = m_Compiler.m_Programs.at(m_OverlayProgram);
-				RenderState state;
-				
-
-				state.depthTest = false;
-
-				PipelineKey key = { m_OverlayProgram, state, {meta.descriptorKey,meta.pushes}, view.Fbh.Valid() ? view.Fbh : DEFAULT_FRAME_BUFFER };
-
-				// empty — fullscreen triangle needs none
-				std::array<VertexBinding, Item::MAX_VERTEX_BINDING> noBindings{}; 
-
-				vk::Pipeline pipeline =
-					GetPipeline(key, noBindings, 0);
-
-				vk::PipelineLayout layout = m_PipelineLayout.at({ meta.descriptorKey,meta.pushes });
-				auto vkCmd = cmd.GetCommandBuffer();
-				vkCmd.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
-
-
-				auto set = GetDescriptorSet(meta.descriptorKey.at(1), m_CurrentFrame, -1);
-				auto overlayFb = render->Views[view.TopLayer].Fbh;
-				auto overlayTexHandle = m_AttachmentManager.GetColorTexture(m_FBAttachments[overlayFb][0], m_CurrentFrame);
-				m_Device->UpdateDescriptorSet(set, 0, 1, *m_Textures.at(overlayTexHandle), vk::ImageLayout::eShaderReadOnlyOptimal,ResourceType::CombinedSampler);
-				
-				for (int iii = 0; iii < meta.descriptorKey.size(); iii++)
-				{
-					auto k = meta.descriptorKey.at(iii);
-					auto COMPOSITE_ITEM_INDEX = -1;
-					auto set = GetDescriptorSet(k, m_CurrentFrame, COMPOSITE_ITEM_INDEX); 
-
-					vkCmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, layout, iii, set, nullptr);
-				}
-
-
-				vk::Viewport viewport;
-				viewport.x = view.Rect[0];
-				viewport.y = view.Rect[1];
-				viewport.width = view.Rect[2];
-				viewport.height = view.Rect[3];
-				viewport.minDepth = 0.0f;
-				viewport.maxDepth = 1.0f;
-				vkCmd.setViewport(0, 1, &viewport);
-
-				vk::Rect2D scissors;
-				scissors.offset = vk::Offset2D{
-					static_cast<int32_t>(view.Rect[0]),
-					static_cast<int32_t>(view.Rect[1])
-				};
-				scissors.extent = vk::Extent2D{
-					static_cast<uint32_t>(view.Rect[2]),
-					static_cast<uint32_t>(view.Rect[3])
-				};
-				vkCmd.setScissor(0, 1, &scissors);
-				vkCmd.draw(3, 1, 0, 0);
-
-			}
-
 			cmd.EndRenderPass();
 		}
 

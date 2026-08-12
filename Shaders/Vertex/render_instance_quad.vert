@@ -7,7 +7,7 @@ layout(set = 0,binding = 0) uniform UniformBufferObject {
     float time;
     mat4 uiProj;
 } ubo;
-
+    
 layout(std430, set=0, binding=1) readonly buffer Objects {
     mat4 model[];
 } objects;

@@ -16,6 +16,7 @@ private:
 	IndexBufferHandle m_IndexHandle;
 	ProgramHandle m_DefaultShader;
 	ProgramHandle m_FontShader;
+	ProgramHandle m_CompositeShader;
 	
 	FrameBufferHandle m_UIFrameBuffer;
 

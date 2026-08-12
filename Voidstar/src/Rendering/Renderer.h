@@ -275,8 +275,6 @@ namespace Voidstar
 		
 		ShaderCompiler m_Compiler;
 
-		ProgramHandle m_OverlayProgram;
-
 		FrameBufferHandle DEFAULT_FRAME_BUFFER;
 	
 

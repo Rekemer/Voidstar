@@ -608,7 +608,7 @@ namespace Voidstar
 	FontHandle LoadFont(std::string_view path);
 	void WakeUpRender_();
 
-	void SetOverlay(PassID layer, PassID topLayer);
+	void SetOverlay(PassID layer, PassID topLayer, ProgramHandle shader);
 
 }
 

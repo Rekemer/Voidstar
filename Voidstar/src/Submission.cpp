@@ -1129,9 +1129,14 @@ namespace Voidstar
 	}
 
 
-	void SetOverlay(PassID layer, PassID topLayer)
+	void SetOverlay(PassID layer, PassID topLayer, ProgramHandle compositeShader)
 	{
 		g_Submission->Submit->Views[layer].TopLayer = topLayer;
+		auto& topView = g_Submission->Submit->Views[topLayer];
+		auto tex = GetColorTexture(topView.Fbh);
+		BindAttachmentAsTexture("u_TopLayer",tex);
+		SetDepthTest(false);
+		Submit(layer, compositeShader);
 	}
 
 	void Frame::NextItem(PassID viewID)
@@ -1139,16 +1144,13 @@ namespace Voidstar
 		auto& freeIndex = g_Submission->Submit->Views[viewID].FreeIndex;
 		g_Submission->Submit->Views[viewID].ItemsIndex[freeIndex++] = g_Submission->Submit->CurrentRenderItemIndex;
 
-		if (g_Submission->Submit->LastView.size() == 0)
+		if (std::find(g_Submission->Submit->LastView.begin(),
+			g_Submission->Submit->LastView.end(), viewID) 
+			== 
+			g_Submission->Submit->LastView.end())
 		{
 			g_Submission->Submit->LastView.push_back(viewID);
 		}
-		// so can have chains of items per view in frame
-		else if (g_Submission->Submit->LastView.back() != viewID)
-		{
-			g_Submission->Submit->LastView.push_back(viewID);
-		}
-
 		CurrentRenderItemIndex++;
 		CurrentRenderItem = &m_renderItem[CurrentRenderItemIndex];
 	}
