@@ -61,7 +61,7 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 	{
 #if MODEL
 		m_DefaultShader = LoadProgram("model.vert", "model.frag");
-		m_FontShader = LoadProgram("render_instance_quad.vert", "solid_color.frag");
+		m_FontShader = LoadProgram("render_batch_quad.vert", "solid_color.frag");
 		m_CompositeShader = LoadProgram("composite.vert", "composite.frag");
 		m_Model = LoadModel("DamagedHelmet/glTF-Binary/DamagedHelmet.glb");
 
@@ -84,21 +84,8 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 
 		m_MorganaTex = LoadTexture("morgana.png");
 #endif
-		auto [verts, indices] = GeneratePlane<Vertex_>(1);
-
-		m_VertexLayoutQuad.AddVertex(ShaderDataType::FLOAT3);
-		m_VertexLayoutQuad.AddVertex(ShaderDataType::FLOAT4);
-		m_VertexLayoutQuad.AddVertex(ShaderDataType::FLOAT2);
-
-		m_Quad = verts;
-		m_IndexQuad = indices;
-		m_VertexQuadBuffer = CreateVertexBuffer({
-			reinterpret_cast<uint8_t*>(m_Quad.data()),m_Quad.size() * sizeof(m_Quad[0]) }
-		, m_VertexLayoutQuad);
-		m_IndexQuadBuffer = CreateIndexBuffer
-		(
-			Memory{ reinterpret_cast<uint8_t*>(m_IndexQuad.data()), m_IndexQuad.size() * sizeof(m_IndexQuad[0]) }
-		);
+			
+		
 		m_Font = LoadFont("Fonts/Inter/static/Inter_24pt-Regular.ttf");
 		GetCamera()->SetCameraControl(CameraControlMode::DIRECT_CONTROL);
 		
@@ -143,30 +130,39 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 	
 		//ExecuteFrame(deltaTime);
 #if TEXT
-		int width = screenWidth / 4; 
-		int height = screenHeight / 4;
 
-		glm::mat4 proj = glm::ortho(0.0f, (float)screenWidth, (float)screenHeight, 0.0f, -1.0f, 1.0f);
-		SeUIProj(1, proj);
-		SeUIProj(0, proj);
-		SetFramebuffer(1, m_UIFrameBuffer);
-		SetViewRect(1, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
-		BindVertexBuffer(0, m_VertexQuadBuffer);
-		BindIndexBuffer(m_IndexQuadBuffer);
-		SubmitQuad(glm::vec2(250,250),glm::vec2(50),glm::vec4(1,1,1,1));
-		SubmitQuad(glm::vec2(250+250,250),glm::vec2(20),glm::vec4(1,1,1,1));
-		SubmitQuad(glm::vec2(250,250+250),glm::vec2(30),glm::vec4(1,1,1,1));
-		SubmitQuad(glm::vec2(250+250,250+250),glm::vec2(40),glm::vec4(1,1,1,1));
-		//SubmitText("Voidstar", screenWidth - width, 0, m_Font);
+		for (auto i = 0; i < 2; i++)
+		{
+			int width = screenWidth / 4; 
+			int height = screenHeight / 4;
+
+			glm::mat4 proj = glm::ortho(0.0f, (float)screenWidth, (float)screenHeight, 0.0f, -1.0f, 1.0f);
+
+			SetViewTransform(i+1, GetCamera()->GetView(), proj);
+			SetFramebuffer(i+1, m_UIFrameBuffer);
+			SetViewRect(i+1, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
+		
+			BindVertexBuffer(0, g_QuadBatchVertexBuffer);
+			BindIndexBuffer(g_IndexQuadBuffer);
+
+			float offsetX = i * 60.0f; 
+			float offsetY = i * 60.0f; 
+
+			SubmitQuad(glm::vec2(250 + offsetX, 250 + offsetY), glm::vec2(50), glm::vec4(1, 1, 1, 1));
+			SubmitQuad(glm::vec2(250 + 250 + offsetX, 250 + offsetY), glm::vec2(20), glm::vec4(1, 0, 1, 1));
+			SubmitQuad(glm::vec2(250 + offsetX, 250 + 250 + offsetY), glm::vec2(30), glm::vec4(1, 1, 0, 1));
+			SubmitQuad(glm::vec2(250 + 250 + offsetX, 250 + 250 + offsetY), glm::vec2(40), glm::vec4(0, 1, 1, 1));
+			//SubmitText("Voidstar", screenWidth - width, 0, m_Font);
 
 
-		//BlendMode state;
-		//state.enabled = false;
-		//SetBlendState(0, state);
+			//BlendMode state;
+			//state.enabled = false;
+			//SetBlendState(0, state);
 
-		SetDepthTest(false);
-		Submit(1, m_FontShader);
-		SetOverlay(0,1,m_CompositeShader);
+			SetDepthTest(false);
+			Submit(i+1, m_FontShader);
+			SetOverlay(i,i+1,m_CompositeShader);
+		}
 #endif
 
 

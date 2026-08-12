@@ -9,6 +9,13 @@ namespace Voidstar
 		glm::vec2 UV;
 	};
 
+	struct VertexQuad_
+	{
+		glm::vec3 Position;
+		glm::vec4 Color;
+		glm::vec2 UV;
+	};
+
 	struct VertexModel_
 	{
 		glm::vec3 Position;

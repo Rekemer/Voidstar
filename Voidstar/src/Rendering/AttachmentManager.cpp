@@ -48,7 +48,7 @@ namespace Voidstar
 			auto msaaImage = Image::CreateVKImage(specs, msaa.Samples);
 			auto msaaImageMemory = Image::CreateMemory(msaaImage, specs);
 			auto msaaImageView = Image::CreateImageView(msaaImage, specs.format, specs.imageAspect);
-			images[i] = GetTextureHandle();
+			images[i] = GetTextureHandle_();
 			auto& image = Renderer::Instance()->m_Textures[images[i]];
 			image = CreateSPtr<Image>();
 			if (usage & vk::ImageUsageFlagBits::eSampled)
@@ -104,7 +104,7 @@ namespace Voidstar
 		depth.Specs.format = depthFormat;
 		for (int i = 0; i < depth.Amount; i++)
 		{
-			images[i] = GetTextureHandle();
+			images[i] = GetTextureHandle_();
 			auto& image = Renderer::Instance()->m_Textures[images[i]];
 			image = CreateSPtr<Image>();
 			auto vkImage = Image::CreateVKImage(depth.Specs, depth.Samples);

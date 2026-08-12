@@ -23,13 +23,7 @@ private:
 	std::vector<Vertex> m_Cube;
 	std::vector<IndexType> m_IndexCube;
 
-
-	std::vector<Vertex_> m_Quad;
-	VertexBufferHandle m_VertexQuadBuffer;
-	std::vector<IndexType> m_IndexQuad;
-	IndexBufferHandle m_IndexQuadBuffer;
-	
 	VertexLayout m_VertexLayout;
-	VertexLayout m_VertexLayoutQuad;
+	
 	TextureHandle m_MorganaTex;
 };

@@ -45,6 +45,7 @@ namespace Voidstar
 
 
 	static void AddTransforms(const std::vector<glm::mat4>& worlds); 
+	static void AddQuads(const std::vector<QuadEntry>& quads); 
 
 
 	ProgramHandle GetProgramHandle_()
@@ -52,19 +53,19 @@ namespace Voidstar
 		return g_ProgramHandleAllocator.GetId();
 	}
 
-	TextureHandle GetTextureHandle()
+	TextureHandle GetTextureHandle_()
 	{
 		return g_TextureHandleAllocator.GetId();
 	}
-	FrameBufferHandle GetFrameBufferHandle()
+	FrameBufferHandle GetFrameBufferHandle_()
 	{
 		return g_FramebufferHandleAllocator.GetId();
 	}
-	AttachmentHandle GetAttachmentHandle()
+	AttachmentHandle GetAttachmentHandle_()
 	{
 		return g_AttachmentrHandleAllocator.GetId();
 	}
-	VertexLayout GetVertexLayout(VertexLayoutHandle handle)
+	VertexLayout GetVertexLayout_(VertexLayoutHandle handle)
 	{
 		return g_Submission->Layouts.at(handle);
 	}
@@ -340,6 +341,8 @@ namespace Voidstar
 	{
 		g_Submission->Window = window;
 	}
+	
+
 
 	void SubmitInit(InitParams init)
 	{
@@ -351,6 +354,44 @@ namespace Voidstar
 #endif
 		auto& cmd = g_Submission->GetCommandBuffer(ResourceCommand::RendererInit);
 		cmd.WriteObject(init);
+
+		Memory mem;
+		mem.size = MAX_QUADS * sizeof(VertexQuad_) * 4;
+
+		g_VertexLayoutQuad.AddVertex(ShaderDataType::FLOAT3);
+		g_VertexLayoutQuad.AddVertex(ShaderDataType::FLOAT4);
+		g_VertexLayoutQuad.AddVertex(ShaderDataType::FLOAT2);
+
+		g_QuadBatchVertexBuffer = CreateVertexBuffer(mem,
+			g_VertexLayoutQuad,
+			ResourceUsage::Vertex | ResourceUsage::Upload
+			);
+
+		auto [verts, _] = GeneratePlane<VertexQuad_>(1);
+
+		std::vector<IndexType> indices (MAX_QUADS * 3);
+		int offset = 0;
+		for (int i = 0; i < MAX_QUADS * 3; i += 6)
+		{
+			indices[i] = offset;
+			indices[i + 1] = offset + 1;
+			indices[i + 2] = offset + 2;
+			indices[i + 3] = offset + 2;
+			indices[i + 4] = offset + 3;
+			indices[i + 5] = offset;
+			offset += 4;
+		}
+		mem.data = new uint8_t[indices.size() * sizeof(indices[0])];
+		memcpy(mem.data, indices.data(), indices.size() * sizeof(indices[0]));
+		mem.allocate = AllocateWay::NEW;
+		mem.cleanUp = true;
+
+		g_IndexQuadBuffer = CreateIndexBuffer
+		(
+			mem
+		);
+
+
 	}
 
 	void ExecuteCommands(ResourceCommandBuffer& commandBuffer)
@@ -744,10 +785,6 @@ namespace Voidstar
 		//assert(false);
 		AddTransforms({ world });
 	};
-	void SeUIProj(PassID id, const glm::mat4& proj)
-	{
-		g_Submission->Submit->Views[id].UIProj = proj;
-	}
 	void BindVertexBuffer(uint16_t location, VertexBufferHandle handle, VertexStreamMode mode)
 	{
 		auto item = g_Submission->Submit->CurrentRenderItem;
@@ -1081,14 +1118,17 @@ namespace Voidstar
 
 	void SubmitQuad(const glm::vec2& pos, const glm::vec2& scale, const glm::vec4& color)
 	{
-		glm::mat4 world(1);
-		world = glm::translate(world, glm::vec3(pos.x, pos.y, 0));
-		world = glm::scale(world, glm::vec3(scale.x,scale.y,1));
-		AddTransforms({ world });
-		//g_Submission->Submit->Quads[g_Submission->Submit->FreeQuadIndex++]
-			//= QuadEntry{ pos,scale,color };
+		g_Submission->Submit->CurrentRenderItem->isQuadBatch = true;
+		AddQuads({ QuadEntry{ pos,scale,color } });
 	}
+	static void AddQuads(const std::vector<QuadEntry>& quads)
+	{
+		g_Submission->Submit->CurrentRenderItem->ObjectCount += quads.size();
 
+		auto& array = g_Submission->Submit->Quads;
+		array.Add(quads);
+		g_Submission->Submit->CurrentRenderItem->QuadIndex = array.GetFreeIndex();
+	}
 	static void AddTransforms(const std::vector<glm::mat4>& worlds)
 	{
 		g_Submission->Submit->CurrentRenderItem->ObjectCount += worlds.size();
@@ -1100,6 +1140,7 @@ namespace Voidstar
 
 	void SubmitModel(SPtr<Model> model, int location, PassID pass, ProgramHandle program, const std::vector<glm::mat4>& worlds)
 	{
+		g_Submission->Submit->CurrentRenderItem->isQuadBatch = false;
 		//BindVertexBuffer(location, model->m_VertexBuffer);
 		//BindIndexBuffer(model->m_IndexBuffer);
 		BindTexture("u_Albedo", model->Albedo);

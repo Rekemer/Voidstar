@@ -1013,8 +1013,7 @@ namespace Voidstar
 		auto m_Device = RenderContext::GetDevice();
 		const auto UNIFORM_BUFFER_SIZE = sizeof(UniformBufferObject);
 		m_UniformBuffers.resize(framesAmount);
-		m_UniformBuffersMapped.resize(framesAmount);
-		m_BatchQuadBuffers.resize(framesAmount);
+		m_UniformBuffersMapped.resize(framesAmount);;
 
 
 		BufferInputChunk inputUniformBuffer;
@@ -1029,29 +1028,20 @@ namespace Voidstar
 		inputObjectBuffer.usage = vk::BufferUsageFlagBits::eStorageBuffer;
 		
 
-		const auto BATCH_QUAD_BUFFER_SIZE = sizeof(Vertex_) * 4 * MAX_QUADS;
-		BufferInputChunk inputBatchQuadBuffer;
-		inputBatchQuadBuffer.size = BATCH_QUAD_BUFFER_SIZE;
-		inputBatchQuadBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
-		inputBatchQuadBuffer.usage = vk::BufferUsageFlagBits::eVertexBuffer;
-
 
 		m_ObjectsBuffers.resize(framesAmount);
 		m_ObjectsBuffersMapped.resize(framesAmount);
-		m_BatchQuadBuffersMapped.resize(frameAmount);
+	
 
 		for (size_t i = 0; i < framesAmount; i++)
 		{
 			m_UniformBuffers[i] = CreateUPtr<Buffer>(inputUniformBuffer);
 
 			m_ObjectsBuffers[i] = CreateUPtr<Buffer>(inputObjectBuffer);
-
-			m_BatchQuadBuffers[i] = CreateUPtr<Buffer>(inputBatchQuadBuffer);
-			
+	
 			m_UniformBuffersMapped[i] = m_Device->GetDevice().mapMemory(m_UniformBuffers[i]->GetMemory(), 0, UNIFORM_BUFFER_SIZE);
 			m_ObjectsBuffersMapped[i] = m_Device->GetDevice().mapMemory(m_ObjectsBuffers[i]->GetMemory(), 0, OBJECT_BUFFER_SIZE);
-			auto ptr = static_cast<Vertex_*>(m_Device->GetDevice().mapMemory(m_BatchQuadBuffers[i]->GetMemory(), 0, BATCH_QUAD_BUFFER_SIZE));
-			m_BatchQuadBuffersMapped[i] = { ptr,ptr };
+		
 		}
 
 
@@ -1095,13 +1085,13 @@ namespace Voidstar
 	}
 
 
-		m_DefaultColorAttachment = GetAttachmentHandle();
-		m_DefaultMSAAAttachment = GetAttachmentHandle();
-		m_DefaultDepthAttachment = GetAttachmentHandle();
+		m_DefaultColorAttachment = GetAttachmentHandle_();
+		m_DefaultMSAAAttachment = GetAttachmentHandle_();
+		m_DefaultDepthAttachment = GetAttachmentHandle_();
 
 		{
 			auto images = RenderContext::GetFrames();
-			m_ColorSwapchainHandles = std::vector<TextureHandle>{ {GetTextureHandle(),GetTextureHandle() ,GetTextureHandle() } };
+			m_ColorSwapchainHandles = std::vector<TextureHandle>{ {GetTextureHandle_(),GetTextureHandle_() ,GetTextureHandle_() } };
 			for (int i = 0; i < m_ColorSwapchainHandles.size(); i++)
 			{
 				auto handle = m_ColorSwapchainHandles[i];
@@ -1124,7 +1114,7 @@ namespace Voidstar
 			frameAmount);
 
 
-		DEFAULT_FRAME_BUFFER = GetFrameBufferHandle();
+		DEFAULT_FRAME_BUFFER = GetFrameBufferHandle_();
 		
 
 		RenderPassBuilder builder;
@@ -1762,6 +1752,10 @@ namespace Voidstar
 		for (auto i = 0; i < frames; i++)
 		{
 			m_VertexBuffers[vertHandle].push_back(CreateSPtr<Buffer>(input));
+			HandleMapped(vertHandle.idx, ResourceType::VertexBuffer,m_VertexBuffers[vertHandle][i]->GetMemory(), mem.size,usage);
+
+			if (!mem.data) continue;
+
 			SPtr<Buffer> stagingBuffer = Buffer::CreateStagingBuffer(mem.size);
 
 			m_TransferCommandBuffer[0].BeginTransfering();
@@ -1769,7 +1763,11 @@ namespace Voidstar
 			m_TransferCommandBuffer[0].EndTransfering();
 			m_TransferCommandBuffer[0].SubmitSingle();
 			
-			HandleMapped(vertHandle.idx, ResourceType::VertexBuffer,m_VertexBuffers[vertHandle][i]->GetMemory(), mem.size,usage);
+		}
+
+		if (mem.cleanUp)
+		{
+			FreeMemory(mem);
 		}
 	}
 
@@ -1788,6 +1786,12 @@ namespace Voidstar
 		m_TransferCommandBuffer[0].Transfer(stagingBuffer.get(), buffer.get(), mem.data, mem.size);
 		m_TransferCommandBuffer[0].EndTransfering();
 		m_TransferCommandBuffer[0].SubmitSingle();
+
+		if (mem.cleanUp)
+		{
+			FreeMemory(mem);
+		}
+
 
 	}
 	void Renderer::UpdateRegionWithImage(Memory& mem, size_t width, size_t height, TextureHandle image, vk::Offset3D offset, int layer)
@@ -1873,7 +1877,7 @@ namespace Voidstar
 		{
 			VertexBinding& binding = bindings[i];
 			
-			const auto& vertexLayout = GetVertexLayout(binding.LayoutHandle);
+			const auto& vertexLayout = GetVertexLayout_(binding.LayoutHandle);
 			auto rate =  (binding.Mode == VertexStreamMode::VERTEX) ? vk::VertexInputRate::eVertex :
 			  vk::VertexInputRate::eInstance;
 			auto vInputBindDescription = VertexBindingDescription(
@@ -2132,6 +2136,7 @@ namespace Voidstar
 		uint32_t& currentMatrixOffset)
 	{
 		auto viewItemsFreeIndex = view.ItemsIndex.GetFreeIndex();
+		auto currentQuadVertexOffset = 0;
 		for (int ii = 0; ii < viewItemsFreeIndex; ++ii)
 		{
 			int itemIndex = view.ItemsIndex.GetElementAt(ii);
@@ -2145,7 +2150,7 @@ namespace Voidstar
 				vk::PipelineBindPoint::eGraphics :
 				vk::PipelineBindPoint::eCompute, renderItem, keys, meta, cmd, layout, itemIndex);
 
-			if (renderItem.ObjectCount > 0)
+			if (renderItem.ObjectCount > 0 && !renderItem.isQuadBatch)
 			{
 				auto dest = (glm::mat4*)m_ObjectsBuffersMapped[m_CurrentFrame]
 					+ currentMatrixOffset;
@@ -2157,6 +2162,52 @@ namespace Voidstar
 					currentMatrixOffset += renderItem.ObjectCount;
 
 			}
+
+			if (item->ObjectCount > 0 && renderItem.isQuadBatch)
+			{
+				auto startIndex = item->QuadIndex - item->ObjectCount;
+				assert(startIndex >= 0);
+
+				auto start = static_cast<VertexQuad_*>(GetMappedPtr(ResourceType::VertexBuffer, item->VertexBindings[0].VertexHandle.idx));
+				auto batchQuad = start + currentQuadVertexOffset;
+				for (size_t q = 0; q < renderItem.ObjectCount; q++)
+				{
+					auto quad = render->Quads.GetElementAt(startIndex + q);
+					auto proj = view.Proj;
+
+					// left bottom
+					auto posLB = proj * glm::vec4(quad.pos, 0, 1);
+					batchQuad->Position = glm::vec3{ posLB.x, posLB.y, 0 };
+					batchQuad->UV = { 0.0f, 1.0f };
+					batchQuad->Color = quad.color;
+					batchQuad++;
+
+					// right bottom
+					auto posRB = proj * glm::vec4(quad.pos.x + quad.scale.x, quad.pos.y, 0, 1);
+					batchQuad->Position = glm::vec3{ posRB.x, posRB.y, 0 };
+					batchQuad->UV = { 1.0f, 1.0f };
+					batchQuad->Color = quad.color;
+					batchQuad++;
+
+					// right top
+					auto posRT = proj * glm::vec4(quad.pos.x + quad.scale.x, quad.pos.y + quad.scale.y, 0, 1);
+					batchQuad->Position = glm::vec3{ posRT.x, posRT.y, 0 };
+					batchQuad->UV = { 1.0f, 0.0f };
+					batchQuad->Color = quad.color;
+					batchQuad++;
+
+					// left top
+					auto posLT = proj * glm::vec4(quad.pos.x, quad.pos.y + quad.scale.y, 0, 1);
+					batchQuad->Position = glm::vec3{ posLT.x, posLT.y, 0 };
+					batchQuad->UV = { 0.0f, 0.0f };
+					batchQuad->Color = quad.color;
+					batchQuad++;
+				}
+				renderItem.internalOffset = currentQuadVertexOffset;
+				currentQuadVertexOffset += renderItem.ObjectCount * 4;
+			}
+
+
 
 		}
 	}
@@ -2241,7 +2292,7 @@ namespace Voidstar
 					image->m_MipMapLevels);
 			}
 
-			UpdateUniformBuffer(view.Proj, view.View, m_App->GetExeTime(), view.UIProj);
+			UpdateUniformBuffer(view.Proj, view.View, m_App->GetExeTime());
 
 			cmd.BeginRenderPass(renderPass.m_RenderPass, frameBuffer, renderPass.m_Extent, renderPass.m_ClearValues);
 
@@ -2251,7 +2302,6 @@ namespace Voidstar
 				auto* item = &render->m_renderItem[itemIndex];
 
 				
-
 				auto& renderItem = *item;
 				assert(renderItem.Program.Valid());
 
@@ -2321,6 +2371,7 @@ namespace Voidstar
 				for (int iii = 0; iii < renderItem.Bindings.vertexCurrentBinding; ++iii)
 				{
 					auto handle = renderItem.VertexBindings.at(iii).VertexHandle;
+
 					vk::Buffer buffer =
 						m_Dynamic[{ResourceType::VertexBuffer, handle.idx}]
 						? m_VertexBuffers.at(handle)[m_CurrentFrame]->GetBuffer()
@@ -2328,7 +2379,7 @@ namespace Voidstar
 
 					vertexBuffers.push_back(buffer);
 				}
-
+			
 				if (!vertexBuffers.empty())
 					vkCmd.bindVertexBuffers(0, static_cast<uint32_t>(vertexBuffers.size()), vertexBuffers.data(), offsets.data());
 
@@ -2336,7 +2387,16 @@ namespace Voidstar
 				{
 					auto buffer = m_IndexBuffers.at(renderItem.IndexBuffer);
 					vkCmd.bindIndexBuffer(buffer->GetBuffer(), vk::DeviceSize{ 0 }, buffer->GetIndexType());
-					vkCmd.drawIndexed(buffer->GetIndexAmount(), renderItem.ObjectCount, 0, 0, renderItem.internalOffset);
+
+					if (renderItem.isQuadBatch)
+					{
+						vkCmd.drawIndexed(renderItem.ObjectCount * 6 , 1, 0, renderItem.internalOffset,0);
+					}
+					else
+					{
+
+						vkCmd.drawIndexed(buffer->GetIndexAmount(), renderItem.ObjectCount, 0, 0, renderItem.internalOffset);
+					}
 				}
 				else
 				{
@@ -2406,13 +2466,12 @@ namespace Voidstar
 	}
 
 	void Renderer::UpdateUniformBuffer(const glm::mat4& proj, 
-		const glm::mat4& view, float time, const glm::mat4& uiProj)
+		const glm::mat4& view, float time)
 	{
 		UniformBufferObject ubo{};
 		ubo.view = view;
 		ubo.proj = proj;
 		ubo.time = time;
-		ubo.uiProj = uiProj;
 		memcpy(m_UniformBuffersMapped[m_CurrentFrame], &ubo, sizeof(ubo));
 	}
 
@@ -2423,6 +2482,8 @@ namespace Voidstar
 	{
 		if (frame->CurrentRenderItemIndex > 0)
 		m_CurrentFrame = (m_CurrentFrame + 1) % RenderContext::GetFrameAmount();
+
+
 	}
 
 	static vk::DescriptorSetLayout CreateDescriptorSetLayout(std::vector<vk::DescriptorSetLayoutBinding>& bindings)

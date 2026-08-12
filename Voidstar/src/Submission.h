@@ -24,6 +24,9 @@ namespace Voidstar
 	const size_t MAX_OBJECTS = 1024;
 	const size_t MAX_QUADS = 1024;
 
+	
+
+
 	enum class ResourceType : uint8_t
 	{
 		UniformBuffer,
@@ -71,6 +74,12 @@ namespace Voidstar
 		class Allocator = std::allocator<std::pair<const Key, T>>
 	>
 	using Map = std::unordered_map<Key, T, Hash, KeyEqual, Allocator>;
+
+
+	inline VertexBufferHandle g_QuadBatchVertexBuffer;
+	inline IndexBufferHandle g_IndexQuadBuffer;
+	inline VertexLayout g_VertexLayoutQuad;
+
 }
 
 namespace std {
@@ -399,13 +408,18 @@ namespace Voidstar
 		
 		glm::vec4 ClipRect; // x y w h
 		RenderMode renderMode = RenderMode::WORLD;
+		size_t ObjectCount = 0;
 		// the last entry in array
 		size_t MatrixIndex = 0;
-		size_t ObjectCount = 0;
+		// the last entry in array
+		size_t QuadIndex = 0;
 		size_t internalOffset = 0;
+
+		bool isQuadBatch = false;
 
 		void Reset()
 		{
+			QuadIndex = 0;
 			MatrixIndex = 0;
 			ObjectCount = 0;
 			internalOffset = 0;
@@ -419,7 +433,6 @@ namespace Voidstar
 		glm::mat4 View;
 		glm::mat4 Proj;
 
-		glm::mat4 UIProj;
 
 		FrameBufferHandle Fbh;
 		// next renderItem item index we can use
@@ -520,10 +533,11 @@ namespace Voidstar
 	};
 
 	
-	VertexLayout GetVertexLayout(VertexLayoutHandle handle);
-	AttachmentHandle GetAttachmentHandle();
-	TextureHandle GetTextureHandle();
-	FrameBufferHandle GetFrameBufferHandle();
+	VertexLayout GetVertexLayout_(VertexLayoutHandle handle);
+
+	AttachmentHandle GetAttachmentHandle_();
+	TextureHandle GetTextureHandle_();
+	FrameBufferHandle GetFrameBufferHandle_();
 	ProgramHandle GetProgramHandle_();
 
 	ProgramHandle LoadProgram(std::string_view vertex, std::string_view fragment);
@@ -573,7 +587,6 @@ namespace Voidstar
 	void SetClipRect(int x,int y,int w, int h);
 	void SetRenderMode(RenderMode mode);
 	void SetViewTransform(PassID id, const glm::mat4& view, const glm::mat4& proj);
-	void SeUIProj(PassID id, const glm::mat4& proj);
 	void SetViewRect(PassID id , size_t x, size_t y, size_t width, size_t height);
 	void SetFramebuffer(PassID id, FrameBufferHandle handle);
 

@@ -127,7 +127,6 @@ namespace Voidstar
 		glm::mat4 view;
 		glm::mat4 proj;
 		float time;
-		alignas(16)glm::mat4 uiProj;
 	};
 
 
@@ -223,7 +222,6 @@ namespace Voidstar
 		UPtr<IndexBuffer> m_QuadBufferBatchIndex{ nullptr };
 		UPtr<Buffer> m_InstanceBuffer{ nullptr };
 		
-		int m_QuadIndex = 0;
 		void CreateSyncObjects();
 		
 		std::vector<UPtr<Buffer>> m_UniformBuffers;
@@ -232,13 +230,12 @@ namespace Voidstar
 		std::vector<UPtr<Buffer>> m_ObjectsBuffers;
 		std::vector<void*> m_ObjectsBuffersMapped;
 
-		std::vector<UPtr<Buffer>> m_BatchQuadBuffers;
-		// start and current
-		std::vector<std::pair<Vertex_*, Vertex_*>> m_BatchQuadBuffersMapped;
+		
+		
 
 		Stats stats;
 
-		void UpdateUniformBuffer(const glm::mat4& proj, const glm::mat4& view,float time, const glm::mat4& uiProj);
+		void UpdateUniformBuffer(const glm::mat4& proj, const glm::mat4& view,float time);
 		void AddFramebuffers(FrameBufferHandle handle, std::vector<vk::Framebuffer>& framebuffers);
 		size_t m_CurrentFrame = 0;
 
@@ -295,6 +292,8 @@ namespace Voidstar
 		std::vector<TextureHandle> m_ColorSwapchainHandles;
 		
 		Map<VertexBufferHandle, std::vector<SPtr<Buffer>>> m_VertexBuffers;
+		// means if every frame has own resource
+		// or it is shared across multiple frames
 		Map<DynamicKey, bool> m_Dynamic;
 		// cache mapped ptrs
 		Map<DynamicKey, std::vector<void*>> m_Mapped;
