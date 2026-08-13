@@ -2136,7 +2136,7 @@ namespace Voidstar
 		uint32_t& currentMatrixOffset)
 	{
 		auto viewItemsFreeIndex = view.ItemsIndex.GetFreeIndex();
-		auto currentQuadVertexOffset = 0;
+	
 		for (int ii = 0; ii < viewItemsFreeIndex; ++ii)
 		{
 			int itemIndex = view.ItemsIndex.GetElementAt(ii);
@@ -2154,7 +2154,7 @@ namespace Voidstar
 			{
 				auto dest = (glm::mat4*)m_ObjectsBuffersMapped[m_CurrentFrame]
 					+ currentMatrixOffset;
-					auto startIndex = renderItem.MatrixIndex - renderItem.ObjectCount;
+					auto startIndex = renderItem.MatrixIndex - (renderItem.ObjectCount - 1);
 					assert(startIndex >= 0);
 					auto src = render->Matricies.GetPtrAt(startIndex);
 					memcpy(dest, src, sizeof(glm::mat4) * renderItem.ObjectCount);
@@ -2165,11 +2165,11 @@ namespace Voidstar
 
 			if (item->ObjectCount > 0 && renderItem.isQuadBatch)
 			{
-				auto startIndex = item->QuadIndex - item->ObjectCount;
+				auto startIndex = item->QuadIndex - (item->ObjectCount - 1);
 				assert(startIndex >= 0);
 
 				auto start = static_cast<VertexQuad_*>(GetMappedPtr(ResourceType::VertexBuffer, item->VertexBindings[0].VertexHandle.idx));
-				auto batchQuad = start + currentQuadVertexOffset;
+				auto batchQuad = start + m_CurrentQuadVertexOffset;
 				for (size_t q = 0; q < renderItem.ObjectCount; q++)
 				{
 					auto quad = render->Quads.GetElementAt(startIndex + q);
@@ -2203,8 +2203,8 @@ namespace Voidstar
 					batchQuad->Color = quad.color;
 					batchQuad++;
 				}
-				renderItem.internalOffset = currentQuadVertexOffset;
-				currentQuadVertexOffset += renderItem.ObjectCount * 4;
+				renderItem.internalOffset = m_CurrentQuadVertexOffset;
+				m_CurrentQuadVertexOffset += renderItem.ObjectCount * 4;
 			}
 
 
@@ -2477,13 +2477,12 @@ namespace Voidstar
 
 	void Renderer::BeginFrame(Frame* frame)
 	{
+		m_CurrentQuadVertexOffset = 0;
 	}
 	void Renderer::EndFrame(Frame* frame)
 	{
 		if (frame->CurrentRenderItemIndex > 0)
 		m_CurrentFrame = (m_CurrentFrame + 1) % RenderContext::GetFrameAmount();
-
-
 	}
 
 	static vk::DescriptorSetLayout CreateDescriptorSetLayout(std::vector<vk::DescriptorSetLayoutBinding>& bindings)

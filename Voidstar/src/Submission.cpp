@@ -1116,6 +1116,12 @@ namespace Voidstar
 		return model;
 	}
 
+	void SubmitQuads(std::vector<QuadEntry>& quads)
+	{
+		g_Submission->Submit->CurrentRenderItem->isQuadBatch = true;
+		AddQuads(quads);
+	}
+
 	void SubmitQuad(const glm::vec2& pos, const glm::vec2& scale, const glm::vec4& color)
 	{
 		g_Submission->Submit->CurrentRenderItem->isQuadBatch = true;
@@ -1127,7 +1133,7 @@ namespace Voidstar
 
 		auto& array = g_Submission->Submit->Quads;
 		array.Add(quads);
-		g_Submission->Submit->CurrentRenderItem->QuadIndex = array.GetFreeIndex();
+		g_Submission->Submit->CurrentRenderItem->QuadIndex = array.GetFreeIndex() - 1;
 	}
 	static void AddTransforms(const std::vector<glm::mat4>& worlds)
 	{
@@ -1135,7 +1141,7 @@ namespace Voidstar
 
 		auto& matrixes = g_Submission->Submit->Matricies;
 		matrixes.Add(worlds);
-		g_Submission->Submit->CurrentRenderItem->MatrixIndex = matrixes.GetFreeIndex();
+		g_Submission->Submit->CurrentRenderItem->MatrixIndex = matrixes.GetFreeIndex() - 1 ;
 	}
 
 	void SubmitModel(SPtr<Model> model, int location, PassID pass, ProgramHandle program, const std::vector<glm::mat4>& worlds)
@@ -1164,6 +1170,7 @@ namespace Voidstar
 
 	void SetOverlay(PassID layer, PassID topLayer, ProgramHandle compositeShader)
 	{
+		// submit composite draw call
 		g_Submission->Submit->Views[layer].TopLayer = topLayer;
 		auto& topView = g_Submission->Submit->Views[topLayer];
 		auto tex = GetColorTexture(topView.Fbh);

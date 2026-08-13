@@ -18,7 +18,7 @@ private:
 	ProgramHandle m_FontShader;
 	ProgramHandle m_CompositeShader;
 	
-	FrameBufferHandle m_UIFrameBuffer;
+	std::vector<FrameBufferHandle> m_UILayerFrameBuffers;
 
 	std::vector<Vertex> m_Cube;
 	std::vector<IndexType> m_IndexCube;

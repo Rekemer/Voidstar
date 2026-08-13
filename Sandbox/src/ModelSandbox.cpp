@@ -54,7 +54,7 @@ static void Rotate(float deltaTime, float rotateSpeed, float& yaw, float& pitch,
 }
 
 
-
+const auto iterLen = 12;
 #define MODEL 1
 #define TEXT 1
 ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t screenHeight) : Voidstar::Application(appName, screenWidth, screenHeight)
@@ -90,10 +90,14 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 		GetCamera()->SetCameraControl(CameraControlMode::DIRECT_CONTROL);
 		
 
+;
 
-		auto color = CreateAttachment(AttachmentType::COLOR, TextureFormat::RGBA16_SFLOAT,
-			Application::GetScreenWidth(), Application::GetScreenHeight(), SampleCount::e1, AttachmentHint::SampledLater);
-		m_UIFrameBuffer = CreateFramebuffer({color});
+		for (int i = 0; i < iterLen; i++)
+		{
+			auto color = CreateAttachment(AttachmentType::COLOR, TextureFormat::RGBA16_SFLOAT,
+				Application::GetScreenWidth(), Application::GetScreenHeight(), SampleCount::e1, AttachmentHint::SampledLater);
+			m_UILayerFrameBuffers.push_back(CreateFramebuffer({ color }));
+		}
 
 		GetCamera()->LookAt({ 0,0,0 });
 		ExecuteFrame(0);
@@ -130,28 +134,31 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 	
 		//ExecuteFrame(deltaTime);
 #if TEXT
-
-		for (auto i = 0; i < 2; i++)
+		
+		for (auto i = 1; i <= iterLen; i++)
 		{
-			int width = screenWidth / 4; 
-			int height = screenHeight / 4;
-
 			glm::mat4 proj = glm::ortho(0.0f, (float)screenWidth, (float)screenHeight, 0.0f, -1.0f, 1.0f);
-
-			SetViewTransform(i+1, GetCamera()->GetView(), proj);
-			SetFramebuffer(i+1, m_UIFrameBuffer);
-			SetViewRect(i+1, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
+			SetViewTransform(i, GetCamera()->GetView(), proj);
+			SetFramebuffer(i, m_UILayerFrameBuffers[i-1]);
+			SetViewRect(i, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
 		
 			BindVertexBuffer(0, g_QuadBatchVertexBuffer);
 			BindIndexBuffer(g_IndexQuadBuffer);
 
-			float offsetX = i * 60.0f; 
-			float offsetY = i * 60.0f; 
+			float offsetX = (i)  * 20.0f; 
+			float offsetY = (i)  * 20.0f; 
 
-			SubmitQuad(glm::vec2(250 + offsetX, 250 + offsetY), glm::vec2(50), glm::vec4(1, 1, 1, 1));
-			SubmitQuad(glm::vec2(250 + 250 + offsetX, 250 + offsetY), glm::vec2(20), glm::vec4(1, 0, 1, 1));
-			SubmitQuad(glm::vec2(250 + offsetX, 250 + 250 + offsetY), glm::vec2(30), glm::vec4(1, 1, 0, 1));
-			SubmitQuad(glm::vec2(250 + 250 + offsetX, 250 + 250 + offsetY), glm::vec2(40), glm::vec4(0, 1, 1, 1));
+			auto startX = screenWidth / 2;
+			auto startY = screenHeight / 2;
+			float scale = 10;
+			std::vector<QuadEntry> quads = {
+			QuadEntry{ glm::vec2(startX + offsetX, startY + offsetY), glm::vec2(scale), glm::vec4(1, 1, 1,	1) },
+			QuadEntry{ glm::vec2(startX - offsetX, startY + offsetY), glm::vec2(scale), glm::vec4(1, 0, 1,	1) },
+			QuadEntry{ glm::vec2(startX + offsetX, startY - offsetY), glm::vec2(scale), glm::vec4(1, 1, 0,	1) },
+			QuadEntry{ glm::vec2(startX - offsetX, startY - offsetY), glm::vec2(scale), glm::vec4(0, 1, 1, 1) },
+			};
+
+			SubmitQuads(quads);
 			//SubmitText("Voidstar", screenWidth - width, 0, m_Font);
 
 
@@ -160,8 +167,8 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 			//SetBlendState(0, state);
 
 			SetDepthTest(false);
-			Submit(i+1, m_FontShader);
-			SetOverlay(i,i+1,m_CompositeShader);
+			Submit(i, m_FontShader);
+			SetOverlay(i-1,i,m_CompositeShader);
 		}
 #endif
 

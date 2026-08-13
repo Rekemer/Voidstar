@@ -424,6 +424,7 @@ namespace Voidstar
 			ObjectCount = 0;
 			internalOffset = 0;
 			Bindings.Reset();
+			isQuadBatch = false;
 		}
 
 	};
@@ -595,6 +596,8 @@ namespace Voidstar
 	void Submit(PassID id, ProgramHandle program);
 
 	void SubmitModel(SPtr<Model> model, int location, PassID pass, ProgramHandle program, const std::vector< glm::mat4>& worlds);
+	
+	void SubmitQuads(std::vector<QuadEntry>& quads);
 	void SubmitQuad(const glm::vec2& pos, const glm::vec2& scale, const glm::vec4& color);
 
 	void SubmitCompute(PassID id, ProgramHandle program, size_t x, size_t y,size_t z);
