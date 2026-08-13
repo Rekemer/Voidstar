@@ -369,9 +369,9 @@ namespace Voidstar
 
 		auto [verts, _] = GeneratePlane<VertexQuad_>(1);
 
-		std::vector<IndexType> indices (MAX_QUADS * 3);
+		std::vector<IndexType> indices (MAX_QUADS * 6);
 		int offset = 0;
-		for (int i = 0; i < MAX_QUADS * 3; i += 6)
+		for (int i = 0; i < indices.size(); i += 6)
 		{
 			indices[i] = offset;
 			indices[i + 1] = offset + 1;

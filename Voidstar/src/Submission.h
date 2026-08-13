@@ -21,8 +21,8 @@
 
 namespace Voidstar
 {
-	const size_t MAX_OBJECTS = 1024;
-	const size_t MAX_QUADS = 1024;
+	inline const size_t MAX_OBJECTS = 1024;
+	inline const size_t MAX_QUADS = 1024*2;
 
 	
 
@@ -472,7 +472,7 @@ namespace Voidstar
 		std::array<View,256> Views;
 
 		FixedArray<glm::mat4, MAX_OBJECTS> Matricies;
-		FixedArray<QuadEntry, MAX_OBJECTS> Quads;
+		FixedArray<QuadEntry, MAX_QUADS> Quads;
 
 		float deltaTime;
 		void NextItem(PassID viewID);

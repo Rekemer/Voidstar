@@ -135,6 +135,7 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 		//ExecuteFrame(deltaTime);
 #if TEXT
 		
+#if 0
 		for (auto i = 1; i <= iterLen; i++)
 		{
 			glm::mat4 proj = glm::ortho(0.0f, (float)screenWidth, (float)screenHeight, 0.0f, -1.0f, 1.0f);
@@ -170,6 +171,65 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 			Submit(i, m_FontShader);
 			SetOverlay(i-1,i,m_CompositeShader);
 		}
+#else
+		glm::mat4 proj = glm::ortho(0.0f, (float)screenWidth, (float)screenHeight, 0.0f, -1.0f, 1.0f);
+		SetViewTransform(1, GetCamera()->GetView(), proj);
+		SetFramebuffer(1, m_UILayerFrameBuffers[0]);
+		SetViewRect(1, 0, 0, (float)screenWidth, (float)screenHeight);
+
+		BindVertexBuffer(0, g_QuadBatchVertexBuffer);
+		BindIndexBuffer(g_IndexQuadBuffer);
+
+		
+
+		const int cols = 50;
+		const int rows = 28;
+		const float padding = 4.0f;
+		const float cellW = screenWidth / (float)cols;
+		const float cellH = screenHeight / (float)rows;
+
+		std::vector<QuadEntry> quads;
+		quads.reserve(cols * rows);
+
+		for (int y = 0; y < rows; y++)
+		{
+			for (int x = 0; x < cols; x++)
+			{
+				float phase = (x + y) * 0.15f;
+				float pulse = 0.6f + 0.4f * (sin(time * 3.0f + phase) * 0.5f + 0.5f);
+				glm::vec2 size = glm::vec2(cellW - padding, cellH - padding) * pulse;
+
+				float wave = sin(time * 2.0f + x * 0.3f) * 6.0f;
+				glm::vec2 pos = {
+					x * cellW + padding * 0.5f + (cellW - padding - size.x) * 0.5f,
+					y * cellH + padding * 0.5f + wave + (cellH - padding - size.y) * 0.5f
+				};
+
+				glm::vec4 color;
+				switch ((x + y) % 4)
+				{
+				case 0: color = glm::vec4(1, 0, 0, 1); break;
+				case 1: color = glm::vec4(0, 1, 0, 1); break;
+				case 2: color = glm::vec4(0, 0, 1, 1); break;
+				case 3: color = glm::vec4(1, 1, 0, 1); break;
+				}
+
+				quads.push_back(QuadEntry{ pos, size, color });
+			}
+		}
+
+		SubmitQuads(quads);
+		//SubmitText("Voidstar", screenWidth - width, 0, m_Font);
+
+
+		//BlendMode state;
+		//state.enabled = false;
+		//SetBlendState(0, state);
+
+		SetDepthTest(false);
+		Submit(1, m_FontShader);
+		SetOverlay(0, 1, m_CompositeShader);
+#endif
 #endif
 
 
