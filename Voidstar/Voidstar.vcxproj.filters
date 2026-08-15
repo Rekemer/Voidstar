@@ -30,6 +30,9 @@
     <ClInclude Include="src\Core.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="src\FixedArray.h">
+      <Filter>src</Filter>
+    </ClInclude>
     <ClInclude Include="src\Handle.h">
       <Filter>src</Filter>
     </ClInclude>
@@ -180,7 +183,6 @@
     <ClInclude Include="src\Window.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="src\FixedArray.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Dependencies\Tracy\public\TracyClient.cpp">

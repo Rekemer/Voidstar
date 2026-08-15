@@ -37,7 +37,7 @@
 #include <gtc/matrix_transform.hpp>
 #include <gtc/quaternion.hpp>
 #include <fstream>
-#include <print>
+
 #include <ft2build.h>
 #include FT_FREETYPE_H  
 
@@ -1406,6 +1406,8 @@ namespace Voidstar
 	{
 		return m_Mapped.at({type,handle}).at(m_CurrentFrame);
 	}
+
+
 	Renderer* Renderer::Instance()
 	{
 		static Renderer* renderer = new Renderer;
@@ -1609,7 +1611,7 @@ namespace Voidstar
 		}
 	}
 
-	void Renderer::LoadFont(FontHandle handle, std::string path)
+	void Renderer::LoadFont(FontHandle handle,TextureHandle atlasHandle, std::string path)
 	{
 		
 			std::filesystem::path filePath{ path };
@@ -1662,14 +1664,16 @@ namespace Voidstar
 			maxWidthTexture = (maxWidthTexture + charactersPerRow * padding) + 10;
 			auto usage = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled;
 
+
+
 			auto& fontAtlas = m_Fonts[handle];
-
-			fontAtlas.Atlas = Image::CreateEmptyImage(maxWidthTexture, maxHeightTexture, vk::Format::eR8Unorm, usage);
-
+			auto atlasImage = Image::CreateEmptyImage(maxWidthTexture, maxHeightTexture, vk::Format::eR8Unorm, usage);
+			fontAtlas.Atlas = atlasHandle;
+			m_Textures[atlasHandle] = atlasImage;
 			auto computeCommandBuffer = Renderer::Instance()->GetComputeCommandBuffer(0);
 
 			computeCommandBuffer.BeginTransfering();
-			computeCommandBuffer.ChangeImageLayout(fontAtlas.Atlas.get(), fontAtlas.Atlas->GetLayout(), vk::ImageLayout::eTransferDstOptimal);
+			computeCommandBuffer.ChangeImageLayout(atlasImage.get(), atlasImage->GetLayout(), vk::ImageLayout::eTransferDstOptimal);
 
 			int character_count = 0;
 			int increment_x = padding;
@@ -1698,12 +1702,16 @@ namespace Voidstar
 
 				auto characterTextureSize = face->glyph->bitmap.width * face->glyph->bitmap.rows;
 				assert(MAX_CHARACTER_TEXTURE_SIZE >= characterTextureSize);
+				float texCoordLeft = increment_x;
+				float texCoordRight = increment_x + face->glyph->bitmap.width;
+				float texCoordBottom = increment_y + face->glyph->bitmap.rows;
+				float texCoordTop = increment_y;
 				if (characterTextureSize > 0)
 				{
 					memcpy(static_cast<uint8_t*>(ptr) + writeOffset, face->glyph->bitmap.buffer, characterTextureSize);
 					
 					//glTexSubImage2D(GL_TEXTURE_2D, 0, increment_x, increment_y, glyph->bitmap.width, glyph->bitmap.rows, GL_RED, GL_UNSIGNED_BYTE, glyph->bitmap.buffer); 
-					computeCommandBuffer.CopyBufferToImage(*buffer.get(), fontAtlas.Atlas->GetImage(), face->glyph->bitmap.width, face->glyph->bitmap.rows, writeOffset,{ increment_x,increment_y,0 });
+					computeCommandBuffer.CopyBufferToImage(*buffer.get(), atlasImage->GetImage(), face->glyph->bitmap.width, face->glyph->bitmap.rows, writeOffset,{ increment_x,increment_y,0 });
 
 					increment_x += face->glyph->bitmap.width + padding;
 					character_count++;
@@ -1716,14 +1724,10 @@ namespace Voidstar
 					}
 				}
 
-				float texCoordLeft = increment_x;
-				float texCoordRight = increment_x + face->glyph->bitmap.width;
-				float texCoordTop = increment_y + face->glyph->bitmap.rows;
-				float texCoordBottom = increment_y;
 
 				Character character;
-				character.minUv = { texCoordLeft / maxWidthTexture,texCoordBottom / maxHeightTexture };
-				character.maxUv = { texCoordRight / maxWidthTexture,texCoordTop / maxHeightTexture };
+				character.minUv = { texCoordLeft / maxWidthTexture,  texCoordTop / maxHeightTexture };
+				character.maxUv = { texCoordRight / maxWidthTexture, texCoordBottom / maxHeightTexture };
 				character.Advance = face->glyph->advance.x / 64.0f;
 				character.Size = { face->glyph->bitmap.width ,face->glyph->bitmap.rows };
 				character.Bearing = { face->glyph->bitmap_left,face->glyph->bitmap_top };
@@ -1733,7 +1737,7 @@ namespace Voidstar
 			RenderContext::GetDevice()->GetDevice().unmapMemory(buffer->GetMemory());
 			FT_Done_Face(face);
 			FT_Done_FreeType(ft);
-			computeCommandBuffer.ChangeImageLayout(fontAtlas.Atlas.get(), vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal);
+			computeCommandBuffer.ChangeImageLayout(atlasImage.get(), vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal);
 			computeCommandBuffer.EndTransfering();
 			computeCommandBuffer.SubmitSingle();
 	}
@@ -2175,31 +2179,32 @@ namespace Voidstar
 					auto quad = render->Quads.GetElementAt(startIndex + q);
 					auto proj = view.Proj;
 
+
 					// left bottom
-					auto posLB = proj * glm::vec4(quad.pos, 0, 1);
+					auto posLB = proj * glm::vec4(quad.pos.x,quad.pos.y + quad.scale.y, 0, 1);
 					batchQuad->Position = glm::vec3{ posLB.x, posLB.y, 0 };
-					batchQuad->UV = { 0.0f, 1.0f };
+					batchQuad->UV = quad.minMaxUv.x > 0 ? glm::vec2{quad.minMaxUv.x, quad.minMaxUv.w } : glm::vec2{ 0.0f, 1.0f };
 					batchQuad->Color = quad.color;
 					batchQuad++;
 
 					// right bottom
-					auto posRB = proj * glm::vec4(quad.pos.x + quad.scale.x, quad.pos.y, 0, 1);
+					auto posRB = proj * glm::vec4(quad.pos.x + quad.scale.x, quad.pos.y + quad.scale.y, 0, 1);
 					batchQuad->Position = glm::vec3{ posRB.x, posRB.y, 0 };
-					batchQuad->UV = { 1.0f, 1.0f };
+					batchQuad->UV = quad.minMaxUv.x > 0 ? glm::vec2{ quad.minMaxUv.z, quad.minMaxUv.w } : glm::vec2{ 1.0f, 1.0f };
 					batchQuad->Color = quad.color;
 					batchQuad++;
 
 					// right top
-					auto posRT = proj * glm::vec4(quad.pos.x + quad.scale.x, quad.pos.y + quad.scale.y, 0, 1);
+					auto posRT = proj * glm::vec4(quad.pos.x + quad.scale.x, quad.pos.y, 0, 1);
 					batchQuad->Position = glm::vec3{ posRT.x, posRT.y, 0 };
-					batchQuad->UV = { 1.0f, 0.0f };
+					batchQuad->UV = quad.minMaxUv.x > 0 ? glm::vec2{ quad.minMaxUv.z, quad.minMaxUv.y } : glm::vec2{ 1.0f, 0.0f };
 					batchQuad->Color = quad.color;
 					batchQuad++;
 
 					// left top
-					auto posLT = proj * glm::vec4(quad.pos.x, quad.pos.y + quad.scale.y, 0, 1);
+					auto posLT = proj * glm::vec4(quad.pos.x, quad.pos.y, 0, 1);
 					batchQuad->Position = glm::vec3{ posLT.x, posLT.y, 0 };
-					batchQuad->UV = { 0.0f, 0.0f };
+					batchQuad->UV = quad.minMaxUv.x > 0 ? glm::vec2{ quad.minMaxUv.x, quad.minMaxUv.y } : glm::vec2{ 0.0f, 0.0f };
 					batchQuad->Color = quad.color;
 					batchQuad++;
 				}

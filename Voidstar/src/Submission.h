@@ -458,6 +458,8 @@ namespace Voidstar
 	{
 		glm::vec2 pos;
 		glm::vec2 scale;
+		// if -1 then use only quad uv
+		glm::vec4 minMaxUv; 
 		glm::vec4 color;
 	};
 
@@ -630,6 +632,9 @@ namespace Voidstar
 	size_t GetSize(TextureHandle handle);
 
 	FontHandle LoadFont(std::string_view path);
+
+	void SubmitText(std::string_view txt, int x, int y, FontHandle font);
+
 	void WakeUpRender_();
 
 	void SetOverlay(PassID layer, PassID topLayer, ProgramHandle shader);

@@ -74,7 +74,7 @@ namespace Voidstar
 			Update(deltaTime);
 			m_FpsCounter.Update(deltaTime);
 
-			std::println("FPS: {}", m_FpsCounter.GetFps());
+			//std::println("FPS: {}", m_FpsCounter.GetFps());
 		}
 	}
 }

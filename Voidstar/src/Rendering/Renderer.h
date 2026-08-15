@@ -30,7 +30,6 @@
 #include "AttachmentManager.h"
 
 #include <array>
-#include <print>
 
 
 
@@ -130,12 +129,7 @@ namespace Voidstar
 	};
 
 
-	struct Font
-	{
-		SPtr<Image> Atlas;
-		int LineSpacing;
-		std::unordered_map<unsigned char, Character> Characters;
-	};
+	
 
 	class Instance;
 	class Device;
@@ -168,7 +162,7 @@ namespace Voidstar
 		void CreateTextureFrom(TextureHandle handle, Memory& mem, int w, int h);
 		void CreateAttachment(AttachmentHandle handle, AttachmentInfo_ info);
 		void CreateFramebuffer(FrameBufferHandle handle, const std::vector<AttachmentHandle>& info);
-		void LoadFont(FontHandle handle, std::string path);
+		void LoadFont(FontHandle handle,TextureHandle atlasHandle, std::string path);
 
 		void CreateBuffer(BufferHandle handle, Memory mem, ResourceUsage usage);
 		
@@ -191,6 +185,11 @@ namespace Voidstar
 
 		void* GetMappedPtr(ResourceType type, Handle<void>::Type handle);
 		
+		Font* GetFont(FontHandle handle)
+		{
+			return &m_Fonts.at(handle);
+		}
+
 		void BeginFrame(Frame* frame);
 		void EndFrame(Frame* frame);
 		

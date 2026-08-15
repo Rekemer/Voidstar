@@ -300,7 +300,7 @@ namespace Voidstar
 		auto image = CreateUPtr<Image>();
 		
 		image->m_CommandPool = Renderer::Instance()->GetCommandPoolManager()->GetFreePool();
-		stbi_set_flip_vertically_on_load(true);
+		stbi_set_flip_vertically_on_load(false);
 		auto pixels = stbi_load(path.data(), &image->m_Width, &image->m_Height, &image->m_Channels, STBI_rgb_alpha);
 		if (!pixels) {
 			Log::GetLog()->error("Unable to load: {0}", path);
@@ -320,7 +320,7 @@ namespace Voidstar
 		auto image = CreateUPtr<Image>();
 
 		image->m_CommandPool = Renderer::Instance()->GetCommandPoolManager()->GetFreePool();
-		stbi_set_flip_vertically_on_load(true);
+		stbi_set_flip_vertically_on_load(false);
 		stbi_uc* pixels[6];
 
 		for (int i = 0; i < 6; i++)

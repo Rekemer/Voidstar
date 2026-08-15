@@ -1,5 +1,4 @@
 #include "ModelSandbox.h"
-#include <print>
 
 
 
@@ -61,7 +60,7 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 	{
 #if MODEL
 		m_DefaultShader = LoadProgram("model.vert", "model.frag");
-		m_FontShader = LoadProgram("render_batch_quad.vert", "solid_color.frag");
+		m_FontShader = LoadProgram("render_batch_quad.vert", "font.frag");
 		m_CompositeShader = LoadProgram("composite.vert", "composite.frag");
 		m_Model = LoadModel("DamagedHelmet/glTF-Binary/DamagedHelmet.glb");
 
@@ -86,7 +85,8 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 #endif
 			
 		
-		m_Font = LoadFont("Fonts/Inter/static/Inter_24pt-Regular.ttf");
+		//m_Font = LoadFont("Fonts/Inter/static/Inter_24pt-Regular.ttf");
+		m_Font = LoadFont("Fonts/ARIAL.ttf");
 		GetCamera()->SetCameraControl(CameraControlMode::DIRECT_CONTROL);
 		
 
@@ -172,7 +172,7 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 			SetOverlay(i-1,i,m_CompositeShader);
 		}
 #else
-		glm::mat4 proj = glm::ortho(0.0f, (float)screenWidth, (float)screenHeight, 0.0f, -1.0f, 1.0f);
+		glm::mat4 proj = glm::ortho(0.0f, (float)screenWidth, 0.0f, (float)screenHeight, -1.0f, 1.0f);
 		SetViewTransform(1, GetCamera()->GetView(), proj);
 		SetFramebuffer(1, m_UILayerFrameBuffers[0]);
 		SetViewRect(1, 0, 0, (float)screenWidth, (float)screenHeight);
@@ -182,7 +182,7 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 
 		
 
-		const int cols = 50;
+		/*const int cols = 50;
 		const int rows = 28;
 		const float padding = 4.0f;
 		const float cellW = screenWidth / (float)cols;
@@ -218,8 +218,8 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 			}
 		}
 
-		SubmitQuads(quads);
-		//SubmitText("Voidstar", screenWidth - width, 0, m_Font);
+		SubmitQuads(quads);*/
+		SubmitText("Voidstar", screenWidth - 500, 0, m_Font);
 
 
 		//BlendMode state;

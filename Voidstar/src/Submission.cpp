@@ -4,7 +4,6 @@
 #include "Rendering/RenderContext.h"
 #include "Rendering/Renderer.h"
 #include <semaphore>
-#include <print>
 
 
 #define CGLTF_IMPLEMENTATION
@@ -279,10 +278,8 @@ namespace Voidstar
 	}
 	void BindTexture(std::string_view uniformName, TextureHandle handle)
 	{
-		
-		
+		assert(handle.Valid());
 		auto& bindings = GetBindings(g_Submission->Submit->CurrentRenderItem);
-
 		auto& bind = bindings.ResBindings[bindings.currentResBinding++];
 
 		bind.uniform = uniformName;
@@ -443,8 +440,9 @@ namespace Voidstar
 				case Voidstar::ResourceCommand::LoadFont:
 				{
 					auto handle = commandBuffer.ReadObject<FontHandle>();
+					auto atlasHandle = commandBuffer.ReadObject<TextureHandle>();
 					auto path = commandBuffer.ReadString();
-					Renderer::Instance()->LoadFont(handle, std::string{ path });
+					Renderer::Instance()->LoadFont(handle, atlasHandle, std::string{ path });
 
 				}
 					break;
@@ -1161,12 +1159,45 @@ namespace Voidstar
 	FontHandle LoadFont(std::string_view path)
 	{
 		auto font = g_FontHandleAllocator.GetId();
+		auto atlasHandle = g_TextureHandleAllocator.GetId();
 		auto& cmd = g_Submission->GetCommandBuffer(ResourceCommand::LoadFont);
 		cmd.WriteObject(font);
+		cmd.WriteObject(atlasHandle);
 		cmd.WriteString(path.data());
 		return font;
 	}
 
+	void SubmitText(std::string_view txt, int leftX, int topY, FontHandle fontHandle)
+	{
+		std::vector<QuadEntry> quads;
+		quads.reserve(txt.size());
+
+		auto font = Renderer::Instance()->GetFont(fontHandle);
+		float startX = leftX;
+		float startY = topY + font->LineSpacing;
+		float cursorX = startX;
+		float baselineY = startY;
+		for (auto c : txt)
+		{
+			auto ch = font->Characters.at(c);
+			
+			
+
+			glm::vec2 pos = {
+				cursorX   + ch.Bearing.x,
+				baselineY - ch.Bearing.y  // Bearing.y is height above baseline
+			};
+
+			glm::vec2 size = glm::vec2{ (float)ch.Size.x,(float)ch.Size.y };
+			glm::vec4 minMaxUv = glm::vec4{ ch.minUv.x,ch.minUv.y,ch.maxUv.x,ch.maxUv.y };
+			QuadEntry quad{ pos,size,minMaxUv,glm::vec4{1,1,1,1} };
+			quads.push_back(quad);
+			cursorX += ch.Advance;
+		}
+
+		BindTexture("u_Atlas",font->Atlas);
+		SubmitQuads(quads);
+	}
 
 	void SetOverlay(PassID layer, PassID topLayer, ProgramHandle compositeShader)
 	{
