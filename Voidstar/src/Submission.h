@@ -633,7 +633,7 @@ namespace Voidstar
 
 	FontHandle LoadFont(std::string_view path);
 
-	void SubmitText(std::string_view txt, int x, int y, FontHandle font);
+	void SubmitText(std::string_view txt, int x, int y, FontHandle font, float scale = 1.0f);
 
 	void WakeUpRender_();
 

@@ -859,70 +859,6 @@ namespace Voidstar
 	}
 
 
-
-
-	void Renderer::DrawTxt(vk::CommandBuffer commandBuffer, std::string_view str, glm::vec2 pos, std::map< unsigned char, Character>& characters)
-	{
-#if 0 
-		float scale = 1;
-		float scaleX = 1;
-		auto offset = pos;
-		for (auto e : str)
-		{
-
-			if (e == '\n')
-			{
-				offset.x = pos.x;
-				pos.y -= 3* CharacterLineSpacing /64.f;
-				continue;
-			}
-			else if (e == ' ')
-			{
-				offset.x += 5;
-				continue;
-
-			}
-			else if (e == '\t')
-			{
-				offset.x += 30;
-				continue;
-
-			}
-			if (characters.find(e) == characters.end()) continue;
-			auto& characterData = characters.at(e);
-			offset.x = offset.x + characterData.Bearing.x* scale;
-			// to account for letter like p and q
-			offset.y = pos.y - ( characterData.Size.y - characterData.Bearing.y)* scale;
-			glm::vec4 color{ 1 };
-			glm::mat4 world{ 1 };
-			// left bottom
-			m_BatchQuad->Position = glm::vec3{ offset.x ,offset.y,0};
-			m_BatchQuad->UV = { characterData.minUv.x,characterData.maxUv.y };
-			
-			m_BatchQuad++;
-			// right bottom
-			m_BatchQuad->Position = glm::vec3{ offset.x + characterData.Size.x * scaleX ,offset.y,0 };
-			m_BatchQuad->UV = { characterData.maxUv.x,characterData.maxUv.y };
-			m_BatchQuad++;
-			// right top
-			m_BatchQuad->Position = glm::vec3{ offset.x + characterData.Size.x * scaleX,offset.y + characterData.Size.y * scale,0 };
-			m_BatchQuad->UV = { characterData.maxUv.x,characterData.minUv.y };
-			m_BatchQuad++;
-			
-			
-			// left top
-			m_BatchQuad->Position = glm::vec3{ offset.x ,offset.y + characterData.Size.y * scale,0 };
-			m_BatchQuad->UV = { characterData.minUv.x,characterData.minUv.y };
-			m_BatchQuad++;
-			
-			
-			offset.x += characterData.Advance / 64.f* scaleX;
-			m_QuadIndex += 6;
-		}
-#endif
-	}
-
-
 	std::vector<vk::Framebuffer> _CreateFramebuffer(
 		vk::RenderPass renderPass,
 		int width, int height,
@@ -1628,9 +1564,7 @@ namespace Voidstar
 			{
 				Log::GetLog()->error("ERROR::FREETYPE: Failed to load font {0}", fontPath);
 			}
-			auto error = FT_Set_Pixel_Sizes(face, 0, 40);
-
-
+			auto error = FT_Set_Pixel_Sizes(face, 0, 64);
 
 			int width = 0;
 			int maxWidthTexture = 0;
@@ -1735,6 +1669,21 @@ namespace Voidstar
 				fontAtlas.Characters.insert(std::make_pair(c, character));
 			}
 			RenderContext::GetDevice()->GetDevice().unmapMemory(buffer->GetMemory());
+
+
+			// fill kerning table
+			for (unsigned char a = 32; a < 127; a++)
+			{
+				for (unsigned char b = 32; b < 127; b++)
+				{
+					FT_Vector kerning;
+					FT_Get_Kerning(face, FT_Get_Char_Index(face, a), FT_Get_Char_Index(face, b), FT_KERNING_DEFAULT, &kerning);
+					float k = kerning.x / 64.0f;
+					if (k != 0.0f)
+						fontAtlas.Kerning[{a, b}] = k;
+				}
+			}
+
 			FT_Done_Face(face);
 			FT_Done_FreeType(ft);
 			computeCommandBuffer.ChangeImageLayout(atlasImage.get(), vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal);

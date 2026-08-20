@@ -69,7 +69,7 @@ namespace std {
 			return h1 ^ (h2 + 0x9e3779b97f4a7c15ULL + (h1 << 6) + (h1 >> 2));
 		}
 	};
-} // name
+} 
 
 namespace Voidstar
 {
@@ -209,9 +209,7 @@ namespace Voidstar
 		CommandBuffer& GetRenderCommandBuffer(size_t frameindex);
 		CommandBuffer& GetComputeCommandBuffer(size_t frameindex);
 		CommandBuffer& GetTransferCommandBuffer(size_t frameindex);
-		
 
-		void DrawTxt(vk::CommandBuffer commandBuffer, std::string_view str,glm::vec2 pos, std::map<unsigned char, Character> &Characters);
 		
 		vk::Fence GetFence()
 		{

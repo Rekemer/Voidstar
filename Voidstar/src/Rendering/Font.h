@@ -3,6 +3,21 @@
 #include <unordered_map>
 #include "Types.h"
 #include "Submission.h"
+
+
+namespace std {
+	template<>
+	struct hash<std::pair<char,char>>
+	{
+		size_t operator()(const std::pair<char, char>& k) const
+		{
+			auto h1 = k.first;
+			auto h2 = k.second;
+			return h1 ^ (h2 << 1);
+		}
+	};
+}
+
 namespace Voidstar
 {
 	class Image;
@@ -19,5 +34,6 @@ namespace Voidstar
 		TextureHandle Atlas;
 		int LineSpacing;
 		std::unordered_map<unsigned char, Character> Characters;
+		std::unordered_map<std::pair<char, char>, int> Kerning;
 	};
 }

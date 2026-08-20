@@ -1167,32 +1167,47 @@ namespace Voidstar
 		return font;
 	}
 
-	void SubmitText(std::string_view txt, int leftX, int topY, FontHandle fontHandle)
+	void SubmitText(std::string_view txt, int leftX, int topY, FontHandle fontHandle,float scale)
 	{
 		std::vector<QuadEntry> quads;
 		quads.reserve(txt.size());
 
+		scale = glm::clamp(scale, 0.0f,1.0f);
+
 		auto font = Renderer::Instance()->GetFont(fontHandle);
 		float startX = leftX;
-		float startY = topY + font->LineSpacing;
+		float startY = topY + font->LineSpacing * scale;
 		float cursorX = startX;
 		float baselineY = startY;
+		char prevChar = 0;
 		for (auto c : txt)
 		{
 			auto ch = font->Characters.at(c);
-			
-			
+
+			if (prevChar != 0)
+			{
+				auto it = font->Kerning.find({ prevChar, c });
+			    if (it != font->Kerning.end()) cursorX += it->second * scale;
+			}
 
 			glm::vec2 pos = {
-				cursorX   + ch.Bearing.x,
-				baselineY - ch.Bearing.y  // Bearing.y is height above baseline
+				cursorX   + ch.Bearing.x * scale,
+				baselineY - ch.Bearing.y * scale  // Bearing.y is height above baseline
 			};
 
-			glm::vec2 size = glm::vec2{ (float)ch.Size.x,(float)ch.Size.y };
+			pos = glm::round(pos);
+
+			glm::vec2 size = glm::vec2{ (float)ch.Size.x,(float)ch.Size.y } * scale;
+
+			size = glm::round(size);
+
 			glm::vec4 minMaxUv = glm::vec4{ ch.minUv.x,ch.minUv.y,ch.maxUv.x,ch.maxUv.y };
 			QuadEntry quad{ pos,size,minMaxUv,glm::vec4{1,1,1,1} };
 			quads.push_back(quad);
-			cursorX += ch.Advance;
+			cursorX += ch.Advance * scale;
+
+
+			prevChar = c;
 		}
 
 		BindTexture("u_Atlas",font->Atlas);
