@@ -87,7 +87,7 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 		
 		//m_Font = LoadFont("Fonts/Inter/static/Inter_24pt-Regular.ttf");
 		//m_Font = LoadFont("Fonts/ARIAL.ttf");
-		m_Font = LoadFont("Fonts/DejaVu/ttf/DejaVuSerif.ttf");
+		m_Font = LoadFont("Fonts/DejaVu/ttf/DejaVuSerif-Italic.ttf");
 		GetCamera()->SetCameraControl(CameraControlMode::DIRECT_CONTROL);
 		
 
@@ -223,9 +223,9 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 		auto size = 64;
 		auto startY = screenHeight/2;
 		float scale = 0.5;
-		SubmitText("AVATAR WAVE TAO", 200, startY, m_Font, scale);
-		SubmitText("Avatar wave tao", 200, startY + size, m_Font, scale);
-		SubmitText("Voidstar Vulkan", 200, startY + size * 2, m_Font, scale);
+		SubmitText("AVATAR WAVE TAO", 200, startY, m_Font, scale,glm::vec4{ 0,1,1,1 });
+		SubmitText("Avatar wave tao", 200, startY + size, m_Font, scale, glm::vec4{1,1,0,1});
+		SubmitText("Voidstar Vulkan", 0, 10, m_Font, scale, glm::vec4{1,0,1,1});
 
 
 		//BlendMode state;

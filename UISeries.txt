@@ -1,0 +1,42 @@
+1. build ui structure
+2. render ui
+
+enum UI_SizeKind
+{
+  UI_SizeKind_Null,
+  UI_SizeKind_Pixels,
+  UI_SizeKind_TextContent,
+  UI_SizeKind_PercentOfParent,
+  UI_SizeKind_ChildrenSum,
+};
+
+because of that we need to traverse element differently
+
+alone elements
+parent before children
+chilren before parent
+checking if children are bigger than parent
+computing final positions
+
+can represent binary tree and first(first child)
+and next pointer(next sibling)
+
+
+return report on widget, flags not kinds
+
+
+// helper for managing text color stack
+#define UI_TextColor(v) UI_DeferLoop(UI_PushTextColor(v), UI_PopTextColor())
+
+// helper for managing background color stack
+#define UI_BackgroundColor(v) UI_DeferLoop(UI_PushBackgroundColor(v), UI_PopBackgroundColor())
+
+#define UI_DeferLoop(begin, end) for(int _i_ = ((begin), 0); !_i_; _i_ += 1, (end))
+
+// red text!
+UI_TextColor(V4(1, 0, 0, 1))
+{
+  UI_ButtonF("Red Button A");
+  UI_ButtonF("Red Button B");
+  UI_ButtonF("Red Button C");
+}

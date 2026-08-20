@@ -1167,7 +1167,7 @@ namespace Voidstar
 		return font;
 	}
 
-	void SubmitText(std::string_view txt, int leftX, int topY, FontHandle fontHandle,float scale)
+	void SubmitText(std::string_view txt, int leftX, int topY, FontHandle fontHandle,float scale, const glm::vec4& color)
 	{
 		std::vector<QuadEntry> quads;
 		quads.reserve(txt.size());
@@ -1202,7 +1202,7 @@ namespace Voidstar
 			size = glm::round(size);
 
 			glm::vec4 minMaxUv = glm::vec4{ ch.minUv.x,ch.minUv.y,ch.maxUv.x,ch.maxUv.y };
-			QuadEntry quad{ pos,size,minMaxUv,glm::vec4{1,1,1,1} };
+			QuadEntry quad{ pos,size,minMaxUv,color };
 			quads.push_back(quad);
 			cursorX += ch.Advance * scale;
 

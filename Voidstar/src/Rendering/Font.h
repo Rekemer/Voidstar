@@ -34,6 +34,8 @@ namespace Voidstar
 		TextureHandle Atlas;
 		int LineSpacing;
 		std::unordered_map<unsigned char, Character> Characters;
+		// most modern fonts don't support kern table anymore
+		// instead they use OpenType GPOS 
 		std::unordered_map<std::pair<char, char>, int> Kerning;
 	};
 }

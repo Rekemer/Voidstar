@@ -458,7 +458,9 @@ namespace Voidstar
 	{
 		glm::vec2 pos;
 		glm::vec2 scale;
-		// if -1 then use only quad uv
+		// if minMaxUv.x is -1 then
+		// use only quad uv 
+		// instead of atlas uv
 		glm::vec4 minMaxUv; 
 		glm::vec4 color;
 	};
@@ -633,11 +635,58 @@ namespace Voidstar
 
 	FontHandle LoadFont(std::string_view path);
 
-	void SubmitText(std::string_view txt, int x, int y, FontHandle font, float scale = 1.0f);
+	void SubmitText(std::string_view txt, int x, int y, FontHandle font,
+		float scale = 1.0f,
+		const glm::vec4& color = {1,1,1,1});
 
 	void WakeUpRender_();
 
 	void SetOverlay(PassID layer, PassID topLayer, ProgramHandle shader);
+
+}
+
+namespace Voidstar
+{
+	enum class Feats : uint32_t
+	{
+		Draggable,
+		Resizable,
+	};
+
+	struct UIBox
+	{
+		UIBox* First;
+		UIBox* Next;
+		glm::vec4 Rect;
+	};
+
+
+	struct SimplePanel
+	{
+		glm::vec2 pos;
+		glm::vec2 size;
+		glm::vec4 color;
+	};
+
+	struct SimpleButton
+	{
+		glm::vec2 relativePos; 
+		glm::vec2 size;
+		std::string label;
+	};
+
+
+	inline void SubmitPanel(const SimplePanel& panel, const std::vector<SimpleButton>& buttons, FontHandle font)
+	{
+		SubmitQuad(panel.pos, panel.size, panel.color);
+
+		for (auto& btn : buttons)
+		{
+			glm::vec2 absPos = panel.pos + btn.relativePos; 
+			SubmitQuad(absPos, btn.size, glm::vec4(0.3f, 0.3f, 0.3f, 1));
+			SubmitText(btn.label, absPos.x + 8, absPos.y + 4, font); 
+		}
+	}
 
 }
 

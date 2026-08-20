@@ -195,7 +195,6 @@
     <ClInclude Include="src\ResourceCommandBuffer.h" />
     <ClInclude Include="src\SparseSet.h" />
     <ClInclude Include="src\Submission.h" />
-    <ClInclude Include="src\Transform.h" />
     <ClInclude Include="src\Types.h" />
     <ClInclude Include="src\Util.h" />
     <ClInclude Include="src\VertexLayout.h" />
