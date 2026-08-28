@@ -458,11 +458,11 @@ namespace Voidstar
 	{
 		glm::vec2 pos;
 		glm::vec2 scale;
+		glm::vec4 color;
 		// if minMaxUv.x is -1 then
 		// use only quad uv 
 		// instead of atlas uv
 		glm::vec4 minMaxUv; 
-		glm::vec4 color;
 	};
 
 	struct Frame
@@ -647,46 +647,161 @@ namespace Voidstar
 
 namespace Voidstar
 {
+
+	
 	enum class Feats : uint32_t
 	{
-		Draggable,
-		Resizable,
+		None = 0,
+		Draggable = 1 << 0,
+		Resizable = 1 << 1,
+		Clickable = 1 << 2,
+		DrawBackground = 1 << 3,
+		DrawBorder = 1 << 4,
+		DrawText = 1 << 5,
+		DrawTitleBar = 1 << 6,
 	};
+	inline Feats operator|(Feats a, Feats b)
+	{
+		return static_cast<Feats>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+	}
 
+	inline Feats operator&(Feats a, Feats b)
+	{
+		return static_cast<Feats>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
+	}
+
+	inline bool HasFlag(Feats value, Feats flag)
+	{
+		return (static_cast<uint32_t>(value) & static_cast<uint32_t>(flag)) != 0;
+	}
+	enum UISizeKind
+	{
+		Null,
+		Pixels, // direct size in pixels
+		TextContent, // size is determing by the string attached
+		PercentOfParent, // certain percentage value of the parent widget’s size on the same axis
+		ChildrenSum, //  allows us to encode that the size on a given axis should be computed by summing the sizes of children widgets when they are laid out in order.
+	};
 	struct UIBox
 	{
-		UIBox* First;
-		UIBox* Next;
+		int First = -1;
+		int Sibling = -1;
+		// relative to parent position
+		glm::vec4 RelPos;
+		// final screen position
 		glm::vec4 Rect;
+		std::string Caption;
+		Feats Features = Feats::None;
+		UISizeKind Kind;
 	};
 
+	inline int CurrentBoxIndex;
+	inline std::vector<UIBox> Boxes;
 
-	struct SimplePanel
+	inline int GetLastChild(int parent)
 	{
-		glm::vec2 pos;
-		glm::vec2 size;
-		glm::vec4 color;
-	};
-
-	struct SimpleButton
-	{
-		glm::vec2 relativePos; 
-		glm::vec2 size;
-		std::string label;
-	};
-
-
-	inline void SubmitPanel(const SimplePanel& panel, const std::vector<SimpleButton>& buttons, FontHandle font)
-	{
-		SubmitQuad(panel.pos, panel.size, panel.color);
-
-		for (auto& btn : buttons)
+		assert(Boxes.size() > parent);
+		int current = Boxes.at(parent).First;
+		if (current == -1) return -1;
+		while (Boxes.at(current).Sibling != -1)
 		{
-			glm::vec2 absPos = panel.pos + btn.relativePos; 
-			SubmitQuad(absPos, btn.size, glm::vec4(0.3f, 0.3f, 0.3f, 1));
-			SubmitText(btn.label, absPos.x + 8, absPos.y + 4, font); 
+			current = Boxes.at(current).Sibling;
+		}
+		return current;
+	}
+
+	inline int  CreateBox (const std::string& caption, Feats features)
+	{
+		UIBox box;
+		box.Caption = caption;
+		box.Features = features;
+		Boxes.push_back(box);
+		int newIndex = (int)Boxes.size() - 1;
+
+		int lastChild = GetLastChild(CurrentBoxIndex);
+		if (lastChild == -1)
+		// if first child
+			Boxes.at(CurrentBoxIndex).First = newIndex;
+		else
+		// if we already have children
+			Boxes.at(lastChild).Sibling = newIndex;
+
+		return newIndex;
+	}
+
+
+
+	inline void UIInit()
+	{
+		UIBox root;
+		CurrentBoxIndex = 0;
+		Boxes.push_back(root);
+	}
+	inline void BeginWindow(const std::string& caption, int x, int y, int w, int h)
+	{
+		int id = CreateBox(caption, Feats::Draggable | Feats::Resizable | Feats::DrawBackground | Feats::DrawBorder | Feats::DrawTitleBar);
+		Boxes[id].Rect = { x, y, w, h }; 
+		Boxes[id].Kind = UISizeKind::Pixels;
+	}
+
+	inline void Text(const std::string& text)
+	{
+		auto id = CreateBox(text, Feats::DrawText);
+		Boxes[id].Kind = UISizeKind::TextContent;
+	}
+
+	inline void Button(const std::string& text)
+	{
+		auto id = CreateBox(text, Feats::Clickable | Feats::DrawBackground | Feats::DrawBorder | Feats::DrawText);
+		Boxes[id].Kind = UISizeKind::TextContent;
+	}
+	inline void EndWindow()
+	{
+
+	}
+
+	inline void BuildUI()
+	{
+
+	}
+	inline void MeasureString(std::string_view txt, FontHandle font, float scale)
+	{
+
+	}
+	inline void RenderBox(int idx, FontHandle font)
+	{
+		UIBox& box = Boxes[idx];
+
+		if (HasFlag(box.Features, Feats::DrawBackground))
+			SubmitQuad({ box.Rect.x, box.Rect.y }, { box.Rect.z, box.Rect.w }, glm::vec4(0.2f, 0.2f, 0.2f, 1));
+
+		//if (HasFlag(box.Features, Feats::DrawBorder))
+		//	
+
+		if (HasFlag(box.Features, Feats::DrawTitleBar))
+		{
+			SubmitQuad({ box.Rect.x, box.Rect.y }, { box.Rect.z, 24 }, glm::vec4(0.15f, 0.15f, 0.15f, 1)); 
+			//SubmitText(box.Caption, box.Rect.x + 4, box.Rect.y + 4, font);
+		}
+
+		if (HasFlag(box.Features, Feats::DrawText))
+			SubmitText(box.Caption, box.Rect.x + 4, box.Rect.y + 4, font);
+
+		int child = box.First;
+		while (child != -1)
+		{
+			RenderBox(child, font);
+			child = Boxes[child].Sibling;
 		}
 	}
+
+	inline void RenderUI(FontHandle handle)
+	{
+		RenderBox(CurrentBoxIndex, handle);
+		Boxes.clear();
+		UIInit();
+	}
+
 
 }
 

@@ -12,6 +12,19 @@ enum UI_SizeKind
 
 because of that we need to traverse element differently
 
+
+Pass 1 — "standalone" sizes (any order): Pixels and TextContent. These need nothing from anyone else — a 100px size is just 100px, a text-content size is just "measure the string." So you can compute these for every widget in any order, first, since they're self-contained.
+
+Pass 2 — "upwards-dependent" sizes (pre-order = parent before children): PercentOfParent. To know "I'm 50% of my parent," you obviously need to already know the parent's size — so you must process parents before their children (pre-order traversal). This pass runs after Pass 1 because a parent's own size might itself have come from Pass 1 (e.g., parent is Pixels, 400, and this pass computes the child as 50% of 400 = 200).
+
+Pass 3 — "downwards-dependent" sizes (post-order = children before parent): ChildrenSum. To know "I'm the sum of my children's sizes," you obviously need the children already resolved — so this must run children-first, parent-last (post-order). This is the auto-sizing-panel case from before.
+
+Why passes 2 and 3 need to be separate, opposite-order passes, rather than one pass: a tree can have both kinds of dependency mixed together (some widgets sized as % of parent, others sized as sum of children) — pre-order and post-order are fundamentally different traversal directions, so you can't satisfy both in a single walk. Hence: two distinct passes.
+
+Pass 4 — "solve violations" (pre-order): after passes 1-3, you know everyone's desired size — but what if children's total desired size is bigger than the parent's actual size (e.g., 3 buttons wanting 100px each = 300px, but the parent panel is only 250px wide)? This pass detects that overflow and shrinks children proportionally, using exactly the strictness value from last message — widgets with low strictness give up more space, high-strictness widgets get protected. This is why strictness exists at all — it's the input to this specific pass.
+
+Pass 5 — "compute final positions" (pre-order): now that every widget's size is fully resolved (through all the shrinking/violation-solving), actually lay them out left-to-right/top-to-bottom (or however the parent specifies), computing each widget's final computed_rel_position and the absolute rect (by adding up all its ancestors' positions).
+
 alone elements
 parent before children
 chilren before parent

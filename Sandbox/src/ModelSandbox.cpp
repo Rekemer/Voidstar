@@ -61,6 +61,7 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 #if MODEL
 		m_DefaultShader = LoadProgram("model.vert", "model.frag");
 		m_FontShader = LoadProgram("render_batch_quad.vert", "font.frag");
+		m_UIShader = LoadProgram("render_batch_quad.vert", "solid_color.frag");
 		m_CompositeShader = LoadProgram("composite.vert", "composite.frag");
 		m_Model = LoadModel("DamagedHelmet/glTF-Binary/DamagedHelmet.glb");
 
@@ -102,6 +103,7 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 
 		GetCamera()->LookAt({ 0,0,0 });
 		ExecuteFrame(0);
+		UIInit();
 	}
 
 	void ModelSandbox::Update(float deltaTime)
@@ -223,17 +225,27 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 		auto size = 64;
 		auto startY = screenHeight/2;
 		float scale = 0.5;
-		SubmitText("AVATAR WAVE TAO", 200, startY, m_Font, scale,glm::vec4{ 0,1,1,1 });
-		SubmitText("Avatar wave tao", 200, startY + size, m_Font, scale, glm::vec4{1,1,0,1});
+		//SubmitText("AVATAR WAVE TAO", 200, startY, m_Font, scale,glm::vec4{ 0,1,1,1 });
+		//SubmitText("Avatar wave tao", 200, startY + size, m_Font, scale, glm::vec4{1,1,0,1});
 		SubmitText("Voidstar Vulkan", 0, 10, m_Font, scale, glm::vec4{1,0,1,1});
 
 
-		//BlendMode state;
-		//state.enabled = false;
-		//SetBlendState(0, state);
 
 		SetDepthTest(false);
 		Submit(1, m_FontShader);
+
+		BindVertexBuffer(0, g_QuadBatchVertexBuffer);
+		BindIndexBuffer(g_IndexQuadBuffer);
+		
+		BeginWindow("Window",200,200,200,400);
+		//Text("Hello Voidstar");
+		//Button("Change");
+		EndWindow();
+		BuildUI();
+		RenderUI(m_Font);
+
+		Submit(1, m_UIShader);
+
 		SetOverlay(0, 1, m_CompositeShader);
 #endif
 #endif
