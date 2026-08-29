@@ -1244,9 +1244,31 @@ namespace Voidstar
 		CurrentRenderItemIndex++;
 		CurrentRenderItem = &m_renderItem[CurrentRenderItemIndex];
 	}
-
-
 	
+}
+
+namespace Voidstar
+{
+	glm::vec2 MeasureText(std::string_view txt, FontHandle handle, int pixelSize)
+	{
+		auto font = Renderer::Instance()->GetFont(handle, pixelSize);
+		glm::vec2 size = {0,0};
+		char prevChar = 0;
+		for (auto symbol : txt)
+		{
+			auto& character = font->Characters.at(symbol);
+			if (prevChar != 0)
+			{
+				auto it = font->Kerning.find({ prevChar, symbol });
+				if (it != font->Kerning.end()) size.x += it->second ;
+			}
+			size.x += character.Advance;
+			prevChar = symbol;
+		}
+		size.y = font->Ascent;
+		return size;
+
+	}
 }
 
 

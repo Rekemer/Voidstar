@@ -88,7 +88,8 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 		
 		//m_Font = LoadFont("Fonts/Inter/static/Inter_24pt-Regular.ttf");
 		//m_Font = LoadFont("Fonts/ARIAL.ttf");
-		m_Font = LoadFont("Fonts/DejaVu/ttf/DejaVuSerif-Italic.ttf",{12,24,64});
+		m_Font = LoadFont("Fonts/DejaVu/ttf/DejaVuSerif-Italic.ttf",{12,24,32,64});
+		m_BoldFont = LoadFont("Fonts/DejaVu/ttf/DejaVuSerif-Bold.ttf",{12,24,32,64});
 		GetCamera()->SetCameraControl(CameraControlMode::DIRECT_CONTROL);
 		
 
@@ -242,7 +243,7 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 		//Button("Change");
 		EndWindow();
 		BuildUI();
-	    RenderUI(m_Font, m_UIShader, m_FontShader);
+	    RenderUI(m_BoldFont, m_UIShader, m_FontShader);
 
 		//Submit(1, m_UIShader);
 

@@ -1560,14 +1560,13 @@ namespace Voidstar
 		if (FT_New_Face(ft, fontPath.data(), 0, &face) != 0)
 			Log::GetLog()->error("ERROR::FREETYPE: Failed to load font {0}", fontPath);
 
-		// Loop over every requested pixel size — everything below is exactly your existing per-size logic,
-		// just now repeated once per entry in pixelHeights
+		
 		for (size_t sizeIdx = 0; sizeIdx < pixelHeights.size(); sizeIdx++)
 		{
 			int pixelHeight = pixelHeights[sizeIdx];
 			TextureHandle atlasHandle = atlasHandles[sizeIdx];
 
-			auto error = FT_Set_Pixel_Sizes(face, 0, pixelHeight); // re-set size for THIS iteration
+			auto error = FT_Set_Pixel_Sizes(face, 0, pixelHeight); 
 
 			int width = 0;
 			int maxWidthTexture = 0;
@@ -1599,7 +1598,7 @@ namespace Voidstar
 			maxWidthTexture = (maxWidthTexture + charactersPerRow * padding) + 10;
 			auto usage = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled;
 
-			auto& fontAtlas = m_Fonts[{handle, pixelHeight}]; // keyed by (handle, size) now
+			auto& fontAtlas = m_Fonts[{handle, pixelHeight}]; 
 			auto atlasImage = Image::CreateEmptyImage(maxWidthTexture, maxHeightTexture, vk::Format::eR8Unorm, usage);
 			fontAtlas.Atlas = atlasHandle;
 			fontAtlas.LineSpacing = face->height / 64.0f;

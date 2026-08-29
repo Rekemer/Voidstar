@@ -764,10 +764,8 @@ namespace Voidstar
 	{
 
 	}
-	inline void MeasureString(std::string_view txt, FontHandle font, float scale)
-	{
-
-	}
+	glm::vec2 MeasureText(std::string_view txt, FontHandle handle, int pixelSize);
+	
 	inline void RenderBox(int idx, FontHandle font, ProgramHandle ui, ProgramHandle fontShader)
 	{
 		UIBox& box = Boxes[idx];
@@ -780,12 +778,16 @@ namespace Voidstar
 
 		if (HasFlag(box.Features, Feats::DrawTitleBar))
 		{
-			SubmitQuad({ box.Rect.x, box.Rect.y }, { box.Rect.z, 24 }, glm::vec4(0.15f, 0.15f, 0.15f, 1)); 
+
+			int pixelSize = 12;
+			glm::vec2 quadSize = MeasureText(box.Caption.data(), font, pixelSize);
+			float titleBarPaddingY = 12.0f;
+			SubmitQuad({ box.Rect.x ,box.Rect.y } , { box.Rect.z, quadSize.y + titleBarPaddingY }, glm::vec4(0.15f, 0.15f, 0.15f, 1));
 			Submit(1, ui);
 
 			BindVertexBuffer(0, g_QuadBatchVertexBuffer);
 			BindIndexBuffer(g_IndexQuadBuffer);
-			SubmitText(box.Caption, box.Rect.x, box.Rect.y, font, 24);
+			SubmitText(box.Caption, box.Rect.x + 6, box.Rect.y + titleBarPaddingY * 0.25f, font, pixelSize);
 			Submit(1, fontShader);
 		}
 

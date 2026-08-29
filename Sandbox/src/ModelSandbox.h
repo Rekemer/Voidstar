@@ -11,6 +11,7 @@ public:
 private:
 	SPtr<Model> m_Model;
 	FontHandle m_Font;
+	FontHandle m_BoldFont;
 	PassID m_DefaultRenderPass;
 	VertexBufferHandle m_VertexHandle;
 	IndexBufferHandle m_IndexHandle;
