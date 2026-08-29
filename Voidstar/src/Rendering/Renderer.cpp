@@ -1547,24 +1547,27 @@ namespace Voidstar
 		}
 	}
 
-	void Renderer::LoadFont(FontHandle handle,TextureHandle atlasHandle, std::string path)
+	void Renderer::LoadFont(FontHandle handle,std::vector<TextureHandle> atlasHandles, std::string path, std::vector<int> pixelHeights)
 	{
-		
-			std::filesystem::path filePath{ path };
-			auto fontPath = BASE_RES_PATH + path.data();
-			assert(std::filesystem::exists(fontPath));
-			FT_Library ft;
-			if (FT_Init_FreeType(&ft) != 0)
-			{
-				Log::GetLog()->error("ERROR::FREETYPE: Could not init FreeType Library");
-			}
+		auto fontPath = BASE_RES_PATH + path.data();
+		assert(std::filesystem::exists(fontPath));
 
-			FT_Face face;
-			if (FT_New_Face(ft, fontPath.data(), 0, &face) != 0)
-			{
-				Log::GetLog()->error("ERROR::FREETYPE: Failed to load font {0}", fontPath);
-			}
-			auto error = FT_Set_Pixel_Sizes(face, 0, 64);
+		FT_Library ft;
+		if (FT_Init_FreeType(&ft) != 0)
+			Log::GetLog()->error("ERROR::FREETYPE: Could not init FreeType Library");
+
+		FT_Face face;
+		if (FT_New_Face(ft, fontPath.data(), 0, &face) != 0)
+			Log::GetLog()->error("ERROR::FREETYPE: Failed to load font {0}", fontPath);
+
+		// Loop over every requested pixel size — everything below is exactly your existing per-size logic,
+		// just now repeated once per entry in pixelHeights
+		for (size_t sizeIdx = 0; sizeIdx < pixelHeights.size(); sizeIdx++)
+		{
+			int pixelHeight = pixelHeights[sizeIdx];
+			TextureHandle atlasHandle = atlasHandles[sizeIdx];
+
+			auto error = FT_Set_Pixel_Sizes(face, 0, pixelHeight); // re-set size for THIS iteration
 
 			int width = 0;
 			int maxWidthTexture = 0;
@@ -1574,14 +1577,12 @@ namespace Voidstar
 			int rowNumber = 0;
 			const int charactersPerRow = 10;
 			const int padding = 15;
+
 			for (unsigned char c = 32; c < 127; c++)
 			{
-				// load character glyph 
 				if (FT_Load_Char(face, c, FT_LOAD_RENDER) != 0)
-				{
-					Log::GetLog()->error("RROR::FREETYTPE: Failed to load Glyph {}", c);
-				}
-				// calculate image size
+					Log::GetLog()->error("ERROR::FREETYPE: Failed to load Glyph {}", c);
+
 				width += face->glyph->bitmap.width;
 				maxGlyphHeight = std::max((unsigned)maxGlyphHeight, face->glyph->bitmap.rows);
 				maxGlyphWidth = std::max((unsigned)maxGlyphWidth, face->glyph->bitmap.width);
@@ -1598,11 +1599,12 @@ namespace Voidstar
 			maxWidthTexture = (maxWidthTexture + charactersPerRow * padding) + 10;
 			auto usage = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled;
 
-
-
-			auto& fontAtlas = m_Fonts[handle];
+			auto& fontAtlas = m_Fonts[{handle, pixelHeight}]; // keyed by (handle, size) now
 			auto atlasImage = Image::CreateEmptyImage(maxWidthTexture, maxHeightTexture, vk::Format::eR8Unorm, usage);
 			fontAtlas.Atlas = atlasHandle;
+			fontAtlas.LineSpacing = face->height / 64.0f;
+			fontAtlas.Ascent = face->size->metrics.ascender / 64.0f;
+
 			m_Textures[atlasHandle] = atlasImage;
 			auto computeCommandBuffer = Renderer::Instance()->GetComputeCommandBuffer(0);
 
@@ -1620,32 +1622,27 @@ namespace Voidstar
 			inputBuffer.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
 			inputBuffer.usage = vk::BufferUsageFlagBits::eTransferSrc;
 			auto buffer = CreateUPtr<Buffer>(inputBuffer);
-			
-			
+
 			size_t writeOffset = 0;
 			auto ptr = RenderContext::GetDevice()->GetDevice().mapMemory(buffer->GetMemory(), writeOffset, bufferSize);
+
 			for (unsigned char c = 32; c < 127; c++)
 			{
-				// load character glyph 
 				auto error = FT_Load_Char(face, c, FT_LOAD_RENDER);
-				if (error)
-				{
-					std::cout << "ERROR: failed to load character" << c << "\n";
-					continue;
-				}
+				if (error) { std::cout << "ERROR: failed to load character" << c << "\n"; continue; }
 
 				auto characterTextureSize = face->glyph->bitmap.width * face->glyph->bitmap.rows;
 				assert(MAX_CHARACTER_TEXTURE_SIZE >= characterTextureSize);
+
 				float texCoordLeft = increment_x;
 				float texCoordRight = increment_x + face->glyph->bitmap.width;
 				float texCoordBottom = increment_y + face->glyph->bitmap.rows;
 				float texCoordTop = increment_y;
+
 				if (characterTextureSize > 0)
 				{
 					memcpy(static_cast<uint8_t*>(ptr) + writeOffset, face->glyph->bitmap.buffer, characterTextureSize);
-					
-					//glTexSubImage2D(GL_TEXTURE_2D, 0, increment_x, increment_y, glyph->bitmap.width, glyph->bitmap.rows, GL_RED, GL_UNSIGNED_BYTE, glyph->bitmap.buffer); 
-					computeCommandBuffer.CopyBufferToImage(*buffer.get(), atlasImage->GetImage(), face->glyph->bitmap.width, face->glyph->bitmap.rows, writeOffset,{ increment_x,increment_y,0 });
+					computeCommandBuffer.CopyBufferToImage(*buffer.get(), atlasImage->GetImage(), face->glyph->bitmap.width, face->glyph->bitmap.rows, writeOffset, { increment_x, increment_y, 0 });
 
 					increment_x += face->glyph->bitmap.width + padding;
 					character_count++;
@@ -1658,20 +1655,17 @@ namespace Voidstar
 					}
 				}
 
-
 				Character character;
-				character.minUv = { texCoordLeft / maxWidthTexture,  texCoordTop / maxHeightTexture };
+				character.minUv = { texCoordLeft / maxWidthTexture, texCoordTop / maxHeightTexture };
 				character.maxUv = { texCoordRight / maxWidthTexture, texCoordBottom / maxHeightTexture };
 				character.Advance = face->glyph->advance.x / 64.0f;
-				character.Size = { face->glyph->bitmap.width ,face->glyph->bitmap.rows };
-				character.Bearing = { face->glyph->bitmap_left,face->glyph->bitmap_top };
-				fontAtlas.LineSpacing = face->height / 64.0f;
+				character.Size = { face->glyph->bitmap.width, face->glyph->bitmap.rows };
+				character.Bearing = { face->glyph->bitmap_left, face->glyph->bitmap_top };
+
 				fontAtlas.Characters.insert(std::make_pair(c, character));
 			}
 			RenderContext::GetDevice()->GetDevice().unmapMemory(buffer->GetMemory());
 
-
-			// fill kerning table
 			for (unsigned char a = 32; a < 127; a++)
 			{
 				for (unsigned char b = 32; b < 127; b++)
@@ -1684,11 +1678,13 @@ namespace Voidstar
 				}
 			}
 
-			FT_Done_Face(face);
-			FT_Done_FreeType(ft);
 			computeCommandBuffer.ChangeImageLayout(atlasImage.get(), vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal);
 			computeCommandBuffer.EndTransfering();
 			computeCommandBuffer.SubmitSingle();
+		} // end pixelHeights loop
+
+		FT_Done_Face(face);
+		FT_Done_FreeType(ft);
 	}
 
 	void Renderer::CreateVertexBuffer(Memory& mem, VertexBufferHandle vertHandle, ResourceUsage usage)

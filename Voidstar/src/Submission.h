@@ -633,10 +633,10 @@ namespace Voidstar
 
 	size_t GetSize(TextureHandle handle);
 
-	FontHandle LoadFont(std::string_view path);
+	FontHandle LoadFont(std::string_view path, std::vector<int> pixelHeights);
 
-	void SubmitText(std::string_view txt, int x, int y, FontHandle font,
-		float scale = 1.0f,
+	void SubmitText(std::string_view txt, int leftX, int topY, FontHandle font,
+		int pixelSize,
 		const glm::vec4& color = {1,1,1,1});
 
 	void WakeUpRender_();
@@ -768,7 +768,7 @@ namespace Voidstar
 	{
 
 	}
-	inline void RenderBox(int idx, FontHandle font)
+	inline void RenderBox(int idx, FontHandle font, ProgramHandle ui, ProgramHandle fontShader)
 	{
 		UIBox& box = Boxes[idx];
 
@@ -781,23 +781,28 @@ namespace Voidstar
 		if (HasFlag(box.Features, Feats::DrawTitleBar))
 		{
 			SubmitQuad({ box.Rect.x, box.Rect.y }, { box.Rect.z, 24 }, glm::vec4(0.15f, 0.15f, 0.15f, 1)); 
-			//SubmitText(box.Caption, box.Rect.x + 4, box.Rect.y + 4, font);
+			Submit(1, ui);
+
+			BindVertexBuffer(0, g_QuadBatchVertexBuffer);
+			BindIndexBuffer(g_IndexQuadBuffer);
+			SubmitText(box.Caption, box.Rect.x, box.Rect.y, font, 24);
+			Submit(1, fontShader);
 		}
 
 		if (HasFlag(box.Features, Feats::DrawText))
-			SubmitText(box.Caption, box.Rect.x + 4, box.Rect.y + 4, font);
+			SubmitText(box.Caption, box.Rect.x + 4, box.Rect.y + 4, font,12);
 
 		int child = box.First;
 		while (child != -1)
 		{
-			RenderBox(child, font);
+			RenderBox(child, font,ui,fontShader);
 			child = Boxes[child].Sibling;
 		}
 	}
 
-	inline void RenderUI(FontHandle handle)
+	inline void RenderUI(FontHandle handle, ProgramHandle ui, ProgramHandle font)
 	{
-		RenderBox(CurrentBoxIndex, handle);
+		RenderBox(CurrentBoxIndex, handle, ui,font);
 		Boxes.clear();
 		UIInit();
 	}

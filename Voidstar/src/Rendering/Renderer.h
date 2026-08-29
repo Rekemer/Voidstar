@@ -69,6 +69,18 @@ namespace std {
 			return h1 ^ (h2 + 0x9e3779b97f4a7c15ULL + (h1 << 6) + (h1 >> 2));
 		}
 	};
+
+	template<>
+	struct hash<std::pair<Voidstar::FontHandle, int>>
+	{
+		size_t operator()(const std::pair<Voidstar::FontHandle, int>& key) const 
+		{
+			size_t h1 = std::hash<Voidstar::FontHandle>{}(key.first);
+			size_t h2 = std::hash<int>{}(key.second);
+			return h1 ^ (h2 << 1); 
+		}
+	};
+	
 } 
 
 namespace Voidstar
@@ -162,7 +174,7 @@ namespace Voidstar
 		void CreateTextureFrom(TextureHandle handle, Memory& mem, int w, int h);
 		void CreateAttachment(AttachmentHandle handle, AttachmentInfo_ info);
 		void CreateFramebuffer(FrameBufferHandle handle, const std::vector<AttachmentHandle>& info);
-		void LoadFont(FontHandle handle,TextureHandle atlasHandle, std::string path);
+		void LoadFont(FontHandle handle, std::vector<TextureHandle> atlasHandles, std::string path, std::vector<int> pixelHeight );
 
 		void CreateBuffer(BufferHandle handle, Memory mem, ResourceUsage usage);
 		
@@ -185,9 +197,9 @@ namespace Voidstar
 
 		void* GetMappedPtr(ResourceType type, Handle<void>::Type handle);
 		
-		Font* GetFont(FontHandle handle)
+		Font* GetFont(FontHandle handle, int pixelSize)
 		{
-			return &m_Fonts.at(handle);
+			return &m_Fonts.at({ handle,pixelSize });
 		}
 
 		void BeginFrame(Frame* frame);
@@ -312,7 +324,8 @@ namespace Voidstar
 
 		Map<TextureHandle, SPtr<Image>> m_Textures;
 		
-		Map<FontHandle, Font> m_Fonts;
+		// font and pixel size
+		Map<std::pair<FontHandle,int>, Font> m_Fonts;
 		
 		
 		std::vector<CommandBuffer> m_RenderCommandBuffer,

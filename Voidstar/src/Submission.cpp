@@ -440,9 +440,12 @@ namespace Voidstar
 				case Voidstar::ResourceCommand::LoadFont:
 				{
 					auto handle = commandBuffer.ReadObject<FontHandle>();
-					auto atlasHandle = commandBuffer.ReadObject<TextureHandle>();
+					std::vector<TextureHandle> atlases;
+					commandBuffer.ReadVector(atlases);
 					auto path = commandBuffer.ReadString();
-					Renderer::Instance()->LoadFont(handle, atlasHandle, std::string{ path });
+					std::vector<int> pixelHeights;
+					commandBuffer.ReadVector(pixelHeights);
+					Renderer::Instance()->LoadFont(handle, atlases, std::string{ path }, pixelHeights);
 
 				}
 					break;
@@ -1156,27 +1159,31 @@ namespace Voidstar
 	}
 
 
-	FontHandle LoadFont(std::string_view path)
+	FontHandle LoadFont(std::string_view path, std::vector<int> pixelHeights)
 	{
 		auto font = g_FontHandleAllocator.GetId();
-		auto atlasHandle = g_TextureHandleAllocator.GetId();
+		std::vector<TextureHandle> atlasHandles;
 		auto& cmd = g_Submission->GetCommandBuffer(ResourceCommand::LoadFont);
+		for(auto i = 0; i < pixelHeights.size(); i++)
+		{ 
+			atlasHandles.push_back(g_TextureHandleAllocator.GetId());
+		}
 		cmd.WriteObject(font);
-		cmd.WriteObject(atlasHandle);
+		cmd.WriteVector(atlasHandles);
 		cmd.WriteString(path.data());
+		cmd.WriteVector(pixelHeights);
 		return font;
 	}
 
-	void SubmitText(std::string_view txt, int leftX, int topY, FontHandle fontHandle,float scale, const glm::vec4& color)
+	void SubmitText(std::string_view txt, int leftX, int topY, FontHandle fontHandle, int pixelSize, const glm::vec4& color)
 	{
 		std::vector<QuadEntry> quads;
 		quads.reserve(txt.size());
-
-		scale = glm::clamp(scale, 0.0f,1.0f);
-
-		auto font = Renderer::Instance()->GetFont(fontHandle);
+		float scale = 1;
+		
+		auto font = Renderer::Instance()->GetFont(fontHandle, pixelSize);
 		float startX = leftX;
-		float startY = topY + font->LineSpacing * scale;
+		float startY = topY + font->Ascent* scale;
 		float cursorX = startX;
 		float baselineY = startY;
 		char prevChar = 0;
@@ -1195,14 +1202,10 @@ namespace Voidstar
 				baselineY - ch.Bearing.y * scale  // Bearing.y is height above baseline
 			};
 
-			pos = glm::round(pos);
-
 			glm::vec2 size = glm::vec2{ (float)ch.Size.x,(float)ch.Size.y } * scale;
-
-			size = glm::round(size);
-
+			
 			glm::vec4 minMaxUv = glm::vec4{ ch.minUv.x,ch.minUv.y,ch.maxUv.x,ch.maxUv.y };
-			QuadEntry quad{ pos,size,minMaxUv,color };
+			QuadEntry quad{ pos,size,color, minMaxUv};
 			quads.push_back(quad);
 			cursorX += ch.Advance * scale;
 

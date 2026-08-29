@@ -88,7 +88,7 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 		
 		//m_Font = LoadFont("Fonts/Inter/static/Inter_24pt-Regular.ttf");
 		//m_Font = LoadFont("Fonts/ARIAL.ttf");
-		m_Font = LoadFont("Fonts/DejaVu/ttf/DejaVuSerif-Italic.ttf");
+		m_Font = LoadFont("Fonts/DejaVu/ttf/DejaVuSerif-Italic.ttf",{12,24,64});
 		GetCamera()->SetCameraControl(CameraControlMode::DIRECT_CONTROL);
 		
 
@@ -224,10 +224,10 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 		SubmitQuads(quads);*/
 		auto size = 64;
 		auto startY = screenHeight/2;
-		float scale = 0.5;
+		float scale = 1;
 		//SubmitText("AVATAR WAVE TAO", 200, startY, m_Font, scale,glm::vec4{ 0,1,1,1 });
 		//SubmitText("Avatar wave tao", 200, startY + size, m_Font, scale, glm::vec4{1,1,0,1});
-		SubmitText("Voidstar Vulkan", 0, 10, m_Font, scale, glm::vec4{1,0,1,1});
+		SubmitText("Voidstar Vulkan", 0, 0, m_Font, 64, glm::vec4{1,0,1,1});
 
 
 
@@ -242,9 +242,9 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 		//Button("Change");
 		EndWindow();
 		BuildUI();
-		RenderUI(m_Font);
+	    RenderUI(m_Font, m_UIShader, m_FontShader);
 
-		Submit(1, m_UIShader);
+		//Submit(1, m_UIShader);
 
 		SetOverlay(0, 1, m_CompositeShader);
 #endif
