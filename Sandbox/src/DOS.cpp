@@ -671,7 +671,7 @@ void DOS::Update(float deltaTime)
 	auto screenWidth = Application::GetScreenWidth();
 	auto screenHeight = Application::GetScreenHeight();
 
-	Ray ray = ScreenPointToRay(std::get<0>(mousePos), std::get<1>(mousePos), screenWidth, screenHeight, GetCamera()->GetView(), GetCamera()->GetProj());
+	Ray ray = ScreenPointToRay(mousePos.x, mousePos.y, screenWidth, screenHeight, GetCamera()->GetView(), GetCamera()->GetProj());
 
 	glm::vec3 localHit;
 	bool hit = IntersectPlane(

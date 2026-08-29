@@ -16,7 +16,7 @@ namespace Voidstar
 		static void SetMousePos(float x, float y);
 		static double GetMouseDeltaX();
 		static double GetMouseDeltaY();
-		static std::tuple<float,float> GetMousePos();
+		static glm::vec2 GetMousePos();
 	private:
 		friend static void KeyCallback(GLFWwindow* window, int key, int scancode, int action,int mods);
 		friend static void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset);

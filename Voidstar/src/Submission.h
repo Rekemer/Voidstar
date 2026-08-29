@@ -18,6 +18,8 @@
 #include "Memory.h"
 #include "FixedArray.h"
 #include "Rendering/Generation.h"
+#include "Log.h"
+#include "Input.h"
 
 namespace Voidstar
 {
@@ -697,7 +699,7 @@ namespace Voidstar
 
 	inline int CurrentBoxIndex;
 	inline std::vector<UIBox> Boxes;
-
+	inline Map<std::string, glm::vec2> g_WindowPositions;
 	inline int GetLastChild(int parent)
 	{
 		assert(Boxes.size() > parent);
@@ -740,7 +742,20 @@ namespace Voidstar
 	inline void BeginWindow(const std::string& caption, int x, int y, int w, int h)
 	{
 		int id = CreateBox(caption, Feats::Draggable | Feats::Resizable | Feats::DrawBackground | Feats::DrawBorder | Feats::DrawTitleBar);
-		Boxes[id].Rect = { x, y, w, h }; 
+		
+		glm::vec2 pos;
+		auto it = g_WindowPositions.find(caption);
+		if (it != g_WindowPositions.end())
+		{
+			pos = it->second; 
+		}
+		else
+		{
+			pos = { x, y}; 
+			g_WindowPositions[caption] = pos;
+		}
+		
+		Boxes[id].Rect = { pos.x, pos.y, w, h };
 		Boxes[id].Kind = UISizeKind::Pixels;
 	}
 
@@ -766,6 +781,37 @@ namespace Voidstar
 	}
 	glm::vec2 MeasureText(std::string_view txt, FontHandle handle, int pixelSize);
 	
+	
+	void inline DragWindow(UIBox& window, int titleHeight)
+	{
+		auto mousePos = Input::GetMousePos();
+		static bool isDragging = false;
+		bool inTitle = mousePos.x >= window.Rect.x 
+			&& mousePos.x <= (window.Rect.x + window.Rect.z)
+			&& mousePos.y >= window.Rect.y
+			 && mousePos.y <= window.Rect.y+ titleHeight;
+		if (Input::IsMousePressed(VS_MOUSE_LEFT))
+		{
+			if (inTitle && !isDragging)
+			{
+				isDragging = true;
+			}
+		}
+		else
+		{
+			isDragging = false;
+		}
+
+		if (isDragging)
+		{
+			auto xDelta = Input::GetMouseDeltaX();
+			auto yDelta = Input::GetMouseDeltaY();
+			window.Rect.x += xDelta;
+			window.Rect.y += yDelta;
+			g_WindowPositions[window.Caption] = { window.Rect.x, window.Rect.y };
+		}
+	}
+	
 	inline void RenderBox(int idx, FontHandle font, ProgramHandle ui, ProgramHandle fontShader)
 	{
 		UIBox& box = Boxes[idx];
@@ -781,7 +827,10 @@ namespace Voidstar
 
 			int pixelSize = 12;
 			glm::vec2 quadSize = MeasureText(box.Caption.data(), font, pixelSize);
-			float titleBarPaddingY = 12.0f;
+			int titleBarPaddingY = 12;
+
+
+
 			SubmitQuad({ box.Rect.x ,box.Rect.y } , { box.Rect.z, quadSize.y + titleBarPaddingY }, glm::vec4(0.15f, 0.15f, 0.15f, 1));
 			Submit(1, ui);
 
@@ -789,6 +838,11 @@ namespace Voidstar
 			BindIndexBuffer(g_IndexQuadBuffer);
 			SubmitText(box.Caption, box.Rect.x + 6, box.Rect.y + titleBarPaddingY * 0.25f, font, pixelSize);
 			Submit(1, fontShader);
+			
+			if (HasFlag(box.Features, Feats::Draggable))
+			{
+				DragWindow(box, quadSize.y + titleBarPaddingY);
+			}
 		}
 
 		if (HasFlag(box.Features, Feats::DrawText))

@@ -86,7 +86,7 @@ namespace Voidstar {
 	{
 		return m_MouseCurrentPosY - m_MouseLastPosY;
 	}
-	std::tuple<float, float> Input::GetMousePos()
+	glm::vec2 Input::GetMousePos()
 	{
 		return { m_MouseCurrentPosX,m_MouseCurrentPosY };
 	}
