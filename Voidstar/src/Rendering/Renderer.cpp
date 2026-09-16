@@ -2115,8 +2115,10 @@ namespace Voidstar
 			{
 				auto startIndex = item->QuadIndex - (item->ObjectCount - 1);
 				assert(startIndex >= 0);
+				auto vertexBufferHandle = item->VertexBindings[0].VertexHandle;
+				assert(vertexBufferHandle.Valid());
+				auto start = static_cast<VertexQuad_*>(GetMappedPtr(ResourceType::VertexBuffer, vertexBufferHandle.idx));
 
-				auto start = static_cast<VertexQuad_*>(GetMappedPtr(ResourceType::VertexBuffer, item->VertexBindings[0].VertexHandle.idx));
 				auto batchQuad = start + m_CurrentQuadVertexOffset;
 				for (size_t q = 0; q < renderItem.ObjectCount; q++)
 				{

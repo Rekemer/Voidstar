@@ -235,16 +235,17 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 		SetDepthTest(false);
 		Submit(1, m_FontShader);
 
-		BindVertexBuffer(0, g_QuadBatchVertexBuffer);
-		BindIndexBuffer(g_IndexQuadBuffer);
 		
-		BeginWindow("Window",200,200,200,400);
+		
+		BeginWindow("Window",{200,200},200,400);
+		auto value = Slider("asdSlider", { 10, 100 }, 0, 10);
+
 		//Text("Hello Voidstar");
 		//Button("Change");
 		EndWindow();
 		BuildUI();
 	    RenderUI(m_BoldFont, m_UIShader, m_FontShader);
-
+		
 		//Submit(1, m_UIShader);
 
 		SetOverlay(0, 1, m_CompositeShader);

@@ -20,6 +20,7 @@
 #include "Rendering/Generation.h"
 #include "Log.h"
 #include "Input.h"
+#include <stack>
 
 namespace Voidstar
 {
@@ -603,6 +604,7 @@ namespace Voidstar
 
 	void SubmitModel(SPtr<Model> model, int location, PassID pass, ProgramHandle program, const std::vector< glm::mat4>& worlds);
 	
+	// top left is the origin
 	void SubmitQuads(std::vector<QuadEntry>& quads);
 	void SubmitQuad(const glm::vec2& pos, const glm::vec2& scale, const glm::vec4& color);
 
@@ -661,6 +663,8 @@ namespace Voidstar
 		DrawBorder = 1 << 4,
 		DrawText = 1 << 5,
 		DrawTitleBar = 1 << 6,
+
+		SliderLine = 1 << 7,
 	};
 	inline Feats operator|(Feats a, Feats b)
 	{
@@ -692,12 +696,14 @@ namespace Voidstar
 		glm::vec4 RelPos;
 		// final screen position
 		glm::vec4 Rect;
+		glm::vec4 Color;
 		std::string Caption;
 		Feats Features = Feats::None;
 		UISizeKind Kind;
 	};
 
-	inline int CurrentBoxIndex;
+	inline std::stack<int>	g_Parents;
+
 	inline std::vector<UIBox> Boxes;
 	inline Map<std::string, glm::vec2> g_WindowPositions;
 	inline int GetLastChild(int parent)
@@ -720,10 +726,10 @@ namespace Voidstar
 		Boxes.push_back(box);
 		int newIndex = (int)Boxes.size() - 1;
 
-		int lastChild = GetLastChild(CurrentBoxIndex);
+		int lastChild = GetLastChild(g_Parents.top());
 		if (lastChild == -1)
 		// if first child
-			Boxes.at(CurrentBoxIndex).First = newIndex;
+			Boxes.at(g_Parents.top()).First = newIndex;
 		else
 		// if we already have children
 			Boxes.at(lastChild).Sibling = newIndex;
@@ -736,27 +742,76 @@ namespace Voidstar
 	inline void UIInit()
 	{
 		UIBox root;
-		CurrentBoxIndex = 0;
 		Boxes.push_back(root);
+		g_Parents.push(0);
 	}
-	inline void BeginWindow(const std::string& caption, int x, int y, int w, int h)
+
+
+	inline void UpdatePosition(const std::string& caption, glm::vec2& pos )
 	{
-		int id = CreateBox(caption, Feats::Draggable | Feats::Resizable | Feats::DrawBackground | Feats::DrawBorder | Feats::DrawTitleBar);
-		
-		glm::vec2 pos;
 		auto it = g_WindowPositions.find(caption);
 		if (it != g_WindowPositions.end())
 		{
-			pos = it->second; 
+			pos = it->second;
 		}
 		else
 		{
-			pos = { x, y}; 
 			g_WindowPositions[caption] = pos;
 		}
+	}
+
+	inline glm::vec2 ResolvePosition(glm::vec2 relOffset)
+	{
+		auto parent = Boxes.at(g_Parents.top());
+
+		return relOffset + glm::vec2{ parent.Rect };
+	}
+
+	inline double Slider(const std::string& caption,
+		glm::vec2 relativePos,
+		double start,
+		double end)
+	{
+		const float trackHeight = 4.0f;
+		const float trackWidth = 100.0f;
+		const float handleWidth = 4.0f;
+		const float handleHeight = 12.0f;
+
+		auto absPos = ResolvePosition(relativePos);
+		// drag line
+		{
+			auto id = CreateBox("", Feats::DrawBackground | Feats::SliderLine);
+			Boxes[id].Rect = { absPos.x, absPos.y, trackWidth , trackHeight };
+			Boxes[id].Kind = UISizeKind::Pixels;
+			//Boxes[id].Color = glm::vec4(0.1f, 0.1f, 0.1f, 0.5);
+			Boxes[id].Color = glm::vec4(1);
+			g_Parents.push(id);
+		}
+		//// drag box
+		{
+			auto id = CreateBox("", Feats::SliderLine | Feats::Draggable | Feats::DrawBackground);
+			auto sliderString = caption + "_slider";
+			auto sliderPos = ResolvePosition({0,0});
+			Boxes[id].Rect = { sliderPos.x, sliderPos.y, handleWidth , handleHeight };
+			Boxes[id].Kind = UISizeKind::Pixels;
+
+			Boxes[id].Color = glm::vec4(1,0,1,1);
+			g_Parents.pop();
+		}
+
+		return 0;
+	}
+
+	inline void BeginWindow(const std::string& caption, glm::vec2 pos, int w, int h)
+	{
+		int id = CreateBox(caption, Feats::Draggable | Feats::Resizable | Feats::DrawBackground | Feats::DrawBorder | Feats::DrawTitleBar);
 		
-		Boxes[id].Rect = { pos.x, pos.y, w, h };
-		Boxes[id].Kind = UISizeKind::Pixels;
+		UpdatePosition(caption, pos);
+		Boxes[id].Rect  = { pos.x, pos.y, w, h };
+		Boxes[id].Kind  = UISizeKind::Pixels;
+		Boxes[id].Color = glm::vec4(0.2f, 0.2f, 0.2f, 1);
+
+		g_Parents.push(id);
 	}
 
 	inline void Text(const std::string& text)
@@ -772,7 +827,7 @@ namespace Voidstar
 	}
 	inline void EndWindow()
 	{
-
+		g_Parents.pop();
 	}
 
 	inline void BuildUI()
@@ -806,6 +861,7 @@ namespace Voidstar
 		{
 			auto xDelta = Input::GetMouseDeltaX();
 			auto yDelta = Input::GetMouseDeltaY();
+			
 			window.Rect.x += xDelta;
 			window.Rect.y += yDelta;
 			g_WindowPositions[window.Caption] = { window.Rect.x, window.Rect.y };
@@ -815,12 +871,31 @@ namespace Voidstar
 	inline void RenderBox(int idx, FontHandle font, ProgramHandle ui, ProgramHandle fontShader)
 	{
 		UIBox& box = Boxes[idx];
+		
 
 		if (HasFlag(box.Features, Feats::DrawBackground))
-			SubmitQuad({ box.Rect.x, box.Rect.y }, { box.Rect.z, box.Rect.w }, glm::vec4(0.2f, 0.2f, 0.2f, 1));
+		{
+			BindVertexBuffer(0, g_QuadBatchVertexBuffer);
+			BindIndexBuffer(g_IndexQuadBuffer);
+			SubmitQuad({ box.Rect.x, box.Rect.y }, { box.Rect.z, box.Rect.w }, box.Color);
+			Submit(1, ui);
+		}
 
-		//if (HasFlag(box.Features, Feats::DrawBorder))
-		//	
+		if (HasFlag(box.Features, Feats::Draggable) && 
+			HasFlag(box.Features, Feats::SliderLine))
+		{
+			DragWindow(box,0);
+
+			BindVertexBuffer(0, g_QuadBatchVertexBuffer);
+			BindIndexBuffer(g_IndexQuadBuffer);
+
+
+			SubmitQuad({ box.Rect.x ,box.Rect.y }, { box.Rect.z,  box.Rect.w }, box.Color);
+			Submit(1, ui);
+
+		}
+
+
 
 		if (HasFlag(box.Features, Feats::DrawTitleBar))
 		{
@@ -830,19 +905,22 @@ namespace Voidstar
 			int titleBarPaddingY = 12;
 
 
-
-			SubmitQuad({ box.Rect.x ,box.Rect.y } , { box.Rect.z, quadSize.y + titleBarPaddingY }, glm::vec4(0.15f, 0.15f, 0.15f, 1));
-			Submit(1, ui);
-
-			BindVertexBuffer(0, g_QuadBatchVertexBuffer);
-			BindIndexBuffer(g_IndexQuadBuffer);
-			SubmitText(box.Caption, box.Rect.x + 6, box.Rect.y + titleBarPaddingY * 0.25f, font, pixelSize);
-			Submit(1, fontShader);
-			
 			if (HasFlag(box.Features, Feats::Draggable))
 			{
 				DragWindow(box, quadSize.y + titleBarPaddingY);
 			}
+
+			BindVertexBuffer(0, g_QuadBatchVertexBuffer);
+			BindIndexBuffer(g_IndexQuadBuffer);
+			SubmitQuad({ box.Rect.x ,box.Rect.y } , { box.Rect.z, quadSize.y + titleBarPaddingY }, glm::vec4(0.05f, 0.05f, 0.05f, 1));
+			Submit(1, ui);
+
+			BindVertexBuffer(0, g_QuadBatchVertexBuffer);
+			BindIndexBuffer(g_IndexQuadBuffer);
+			
+			SubmitText(box.Caption, box.Rect.x + 6, box.Rect.y + titleBarPaddingY * 0.25f, font, pixelSize);
+			Submit(1, fontShader);
+			
 		}
 
 		if (HasFlag(box.Features, Feats::DrawText))
@@ -858,9 +936,9 @@ namespace Voidstar
 
 	inline void RenderUI(FontHandle handle, ProgramHandle ui, ProgramHandle font)
 	{
-		RenderBox(CurrentBoxIndex, handle, ui,font);
+		RenderBox(0, handle, ui,font);
 		Boxes.clear();
-		UIInit();
+		Boxes.push_back(UIBox{});
 	}
 
 
