@@ -665,6 +665,7 @@ namespace Voidstar
 		DrawTitleBar = 1 << 6,
 
 		SliderLine = 1 << 7,
+		SliderDrag = 1 << 8,
 	};
 	inline Feats operator|(Feats a, Feats b)
 	{
@@ -789,7 +790,7 @@ namespace Voidstar
 		}
 		//// drag box
 		{
-			auto id = CreateBox("", Feats::SliderLine | Feats::Draggable | Feats::DrawBackground);
+			auto id = CreateBox("", Feats::SliderDrag | Feats::DrawBackground);
 			auto sliderString = caption + "_slider";
 			auto sliderPos = ResolvePosition({0,0});
 			Boxes[id].Rect = { sliderPos.x, sliderPos.y, handleWidth , handleHeight };
@@ -872,6 +873,29 @@ namespace Voidstar
 	{
 		UIBox& box = Boxes[idx];
 		
+		
+		if (HasFlag(box.Features, Feats::Draggable))
+		{
+
+			int pixelSize = 12;
+			glm::vec2 quadSize = MeasureText(box.Caption.data(), font, pixelSize);
+			int titleBarPaddingY = 12;
+			if (HasFlag(box.Features, Feats::DrawTitleBar))
+			{
+				DragWindow(box, quadSize.y + titleBarPaddingY);
+			}
+		}
+
+		if (HasFlag(box.Features, Feats::SliderDrag))
+		{
+
+			BindVertexBuffer(0, g_QuadBatchVertexBuffer);
+			BindIndexBuffer(g_IndexQuadBuffer);
+
+			SubmitQuad({ box.Rect.x ,box.Rect.y }, { box.Rect.z,  box.Rect.w }, box.Color);
+			Submit(1, ui);
+
+		}
 
 		if (HasFlag(box.Features, Feats::DrawBackground))
 		{
@@ -881,21 +905,6 @@ namespace Voidstar
 			Submit(1, ui);
 		}
 
-		if (HasFlag(box.Features, Feats::Draggable) && 
-			HasFlag(box.Features, Feats::SliderLine))
-		{
-			DragWindow(box,0);
-
-			BindVertexBuffer(0, g_QuadBatchVertexBuffer);
-			BindIndexBuffer(g_IndexQuadBuffer);
-
-
-			SubmitQuad({ box.Rect.x ,box.Rect.y }, { box.Rect.z,  box.Rect.w }, box.Color);
-			Submit(1, ui);
-
-		}
-
-
 
 		if (HasFlag(box.Features, Feats::DrawTitleBar))
 		{
@@ -904,11 +913,6 @@ namespace Voidstar
 			glm::vec2 quadSize = MeasureText(box.Caption.data(), font, pixelSize);
 			int titleBarPaddingY = 12;
 
-
-			if (HasFlag(box.Features, Feats::Draggable))
-			{
-				DragWindow(box, quadSize.y + titleBarPaddingY);
-			}
 
 			BindVertexBuffer(0, g_QuadBatchVertexBuffer);
 			BindIndexBuffer(g_IndexQuadBuffer);
@@ -924,7 +928,14 @@ namespace Voidstar
 		}
 
 		if (HasFlag(box.Features, Feats::DrawText))
+		{
+			BindVertexBuffer(0, g_QuadBatchVertexBuffer);
+			BindIndexBuffer(g_IndexQuadBuffer);
 			SubmitText(box.Caption, box.Rect.x + 4, box.Rect.y + 4, font,12);
+		}
+
+
+		
 
 		int child = box.First;
 		while (child != -1)
