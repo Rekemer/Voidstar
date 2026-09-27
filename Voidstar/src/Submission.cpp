@@ -1269,9 +1269,11 @@ namespace Voidstar
 		return size;
 
 	}
-	inline std::stack<int>	g_Parents;
-	inline std::vector<UIBox> Boxes;
-	inline Map<std::string, glm::vec2> g_WindowPositions;
+	static  std::stack<int>	g_Parents;
+	static  std::vector<UIBox> Boxes;
+	static  Map<std::string, glm::vec2> g_WindowPositions;
+	static  Map<std::string, glm::vec2> g_SliderPositions;
+	static Map<std::string, bool> g_Dragging;
 
 	inline int GetLastChild(int parent)
 	{
@@ -1290,6 +1292,8 @@ namespace Voidstar
 		UIBox box;
 		box.Caption = caption;
 		box.Features = features;
+		auto it = g_Dragging.find(caption);
+		box.IsDragging = (it != g_Dragging.end()) ? it->second : false;
 		Boxes.push_back(box);
 		int newIndex = (int)Boxes.size() - 1;
 
@@ -1334,6 +1338,32 @@ namespace Voidstar
 		return relOffset + glm::vec2{ parent.Rect };
 	}
 
+	bool IsMouseWithin(glm::vec2 mousePos, glm::vec4 rect)
+	{
+		return mousePos.x >= rect.x
+			&& mousePos.x <= (rect.x + rect.z)
+			&& mousePos.y >= rect.y
+			&& mousePos.y <= rect.y + rect.w;
+	}
+
+	void UpdateDrag(const std::string& caption, bool& isDragging ,const glm::vec2& mousePos, const glm::vec4& rectDrag)
+	{
+		bool inTitle = IsMouseWithin(mousePos, rectDrag);
+		if (Input::IsMousePressed(VS_MOUSE_LEFT))
+		{
+			if (inTitle && !isDragging)
+			{
+				isDragging = true;
+			}
+		}
+		else
+		{
+			isDragging = false;
+		}
+
+		g_Dragging[caption] = isDragging;
+	}
+
 	double Slider(const std::string& caption,
 		glm::vec2 relativePos,
 		double start,
@@ -1356,16 +1386,39 @@ namespace Voidstar
 		}
 		// drag box
 		{
-			auto id = CreateBox("", Feats::SliderDrag | Feats::DrawBackground);
 			auto sliderString = caption + "_slider";
-			auto sliderPos = ResolvePosition({0,-(handleHeight - trackHeight)/2});
-			Boxes[id].Rect = { sliderPos.x, sliderPos.y, handleWidth , handleHeight };
-			Boxes[id].Kind = UISizeKind::Pixels;
-		
-			Boxes[id].Color = glm::vec4(1,0,1,1);
-			
-		
+			auto id = CreateBox(sliderString, Feats::SliderDrag | Feats::DrawBackground);
+			auto sliderBasePos = ResolvePosition({0,-(handleHeight - trackHeight)/2});
 
+
+
+			glm::vec2 relativeOffset = { 0, 0 };
+			auto it = g_WindowPositions.find(sliderString);
+			if (it != g_WindowPositions.end())
+				relativeOffset = it->second;
+
+			auto sliderPosX = glm::clamp(sliderBasePos.x + relativeOffset.x,
+				sliderBasePos.x, 
+				sliderBasePos.x + trackWidth);
+			auto dragBoxRect = Boxes[id].Rect = { sliderPosX, sliderBasePos.y, handleWidth , handleHeight };
+
+			auto& isDragging = Boxes[id].IsDragging;
+
+			UpdateDrag(sliderString, isDragging,Input::GetMousePos(),dragBoxRect);
+
+			if (isDragging)
+			{
+				auto xDelta = Input::GetMouseDeltaX();
+				auto yDelta = Input::GetMouseDeltaY();
+
+				dragBoxRect.x += xDelta;
+				// update offset
+				g_WindowPositions[sliderString] = { dragBoxRect.x - sliderBasePos.x, sliderBasePos.y };
+			}
+	
+
+			Boxes[id].Kind = UISizeKind::Pixels;
+			Boxes[id].Color = glm::vec4(1,0,1,1);
 			g_Parents.pop();
 		}
 
@@ -1376,22 +1429,13 @@ namespace Voidstar
 	void DragWindow(UIBox& window, int titleHeight)
 	{
 		auto mousePos = Input::GetMousePos();
-		static bool isDragging = false;
-		bool inTitle = mousePos.x >= window.Rect.x
-			&& mousePos.x <= (window.Rect.x + window.Rect.z)
-			&& mousePos.y >= window.Rect.y
-			&& mousePos.y <= window.Rect.y + titleHeight;
-		if (Input::IsMousePressed(VS_MOUSE_LEFT))
-		{
-			if (inTitle && !isDragging)
-			{
-				isDragging = true;
-			}
-		}
-		else
-		{
-			isDragging = false;
-		}
+		auto& isDragging = window.IsDragging;
+		
+		glm::vec4 titleRect = window.Rect;
+		// replace window height with title height
+		titleRect.w = titleHeight;
+
+		UpdateDrag(window.Caption, isDragging,mousePos, titleRect);
 
 		if (isDragging)
 		{

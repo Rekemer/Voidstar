@@ -699,6 +699,8 @@ namespace Voidstar
 		std::string Caption;
 		Feats Features = Feats::None;
 		UISizeKind Kind;
+
+		bool IsDragging = false;
 	};
 
 	int GetLastChild(int parent);
