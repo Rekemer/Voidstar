@@ -703,11 +703,18 @@ namespace Voidstar
 		bool IsDragging = false;
 	};
 
+	inline FontHandle g_TitleFont;
+	inline FontHandle g_TextFont;
+
 	int GetLastChild(int parent);
 	int  CreateBox(const std::string& caption, Feats features);
 	void UIInit();
 	void UpdatePosition(const std::string& caption, glm::vec2& pos);
 	glm::vec2 ResolvePosition(glm::vec2 relOffset);
+
+
+	bool Checkbox(const std::string& caption);
+
 	double Slider(const std::string& caption,
 		glm::vec2 relativePos,
 		double start,
@@ -717,14 +724,14 @@ namespace Voidstar
 	glm::vec2 MeasureText(std::string_view txt, FontHandle handle, int pixelSize);
 
 	void BeginWindow(const std::string& caption, glm::vec2 pos,
-		int w, int h, FontHandle font);
-	void Text(const std::string& text);
+		int w, int h);
+	void Text(const std::string& text, const glm::vec2& relativePos);
 	void Button(const std::string& text);
 	void EndWindow();
 	void BuildUI();
-	void RenderBox(int idx, FontHandle font, ProgramHandle ui, ProgramHandle fontShader);
+	void RenderBox(int idx, ProgramHandle ui, ProgramHandle fontShader);
 
-	void RenderUI(FontHandle handle, ProgramHandle ui, ProgramHandle font);
+	void RenderUI (ProgramHandle ui, ProgramHandle fontShader);
 
 
 }

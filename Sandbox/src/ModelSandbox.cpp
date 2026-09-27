@@ -88,7 +88,7 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 		
 		//m_Font = LoadFont("Fonts/Inter/static/Inter_24pt-Regular.ttf");
 		//m_Font = LoadFont("Fonts/ARIAL.ttf");
-		m_Font = LoadFont("Fonts/DejaVu/ttf/DejaVuSerif-Italic.ttf",{12,24,32,64});
+		m_Font = LoadFont("Fonts/DejaVu/ttf/DejaVuSerif.ttf",{12,24,32,64});
 		m_BoldFont = LoadFont("Fonts/DejaVu/ttf/DejaVuSerif-Bold.ttf",{12,24,32,64});
 		GetCamera()->SetCameraControl(CameraControlMode::DIRECT_CONTROL);
 		
@@ -107,148 +107,150 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 		UIInit();
 	}
 
-	void ModelSandbox::Update(float deltaTime)
-	{
-		SetViewRect(0, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
-		SetViewTransform(0, GetCamera()->GetView(), GetCamera()->GetProj());
-		auto screenWidth = GetScreenWidth();
-		auto screenHeight = GetScreenHeight();
+void ModelSandbox::Update(float deltaTime)
+{
+	SetViewRect(0, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
+	SetViewTransform(0, GetCamera()->GetView(), GetCamera()->GetProj());
+	auto screenWidth = GetScreenWidth();
+	auto screenHeight = GetScreenHeight();
 #if MODEL 
-		glm::mat4 world = glm::mat4(1.0f);
-		glm::mat4 world2 = glm::translate(glm::mat4(1.0f), glm::vec3(1,0,0));
-		glm::mat4 world3 = glm::translate(glm::mat4(1.0f), glm::vec3(3,0,0));
-		glm::mat4 world4 = glm::translate(glm::mat4(1.0f), glm::vec3(5,0,0));
-		static float m_Yaw = 0, m_Pitch = glm::radians(-90.0);
-		static float time = 0;
-		time += deltaTime;
-		auto offset = glm::sin(time * 4000) ;
-		auto move = offset * 3;
-		glm::vec3 pos= { 0,0, 0 };
-		pos.x += move;
-		//std::println("{} ",pos.x);
-		world = glm::translate(world, pos);
-		Rotate(deltaTime,0.005,m_Yaw,m_Pitch, world);
-		//auto pos = GetCamera()->GetPosition();
-		//std::println("{} {} {}", pos.x, pos.y, pos.z);
-		BindVertexBuffer(0, m_Model->m_VertexBuffer);
-		BindIndexBuffer(m_Model->m_IndexBuffer);
-		SubmitModel(m_Model, 0, 0, m_DefaultShader, { world, world2,world3, world4 });
-		Submit(0, m_DefaultShader);
+	glm::mat4 world = glm::mat4(1.0f);
+	glm::mat4 world2 = glm::translate(glm::mat4(1.0f), glm::vec3(1, 0, 0));
+	glm::mat4 world3 = glm::translate(glm::mat4(1.0f), glm::vec3(3, 0, 0));
+	glm::mat4 world4 = glm::translate(glm::mat4(1.0f), glm::vec3(5, 0, 0));
+	static float m_Yaw = 0, m_Pitch = glm::radians(-90.0);
+	static float time = 0;
+	time += deltaTime;
+	auto offset = glm::sin(time * 4000);
+	auto move = offset * 3;
+	glm::vec3 pos = { 0,0, 0 };
+	pos.x += move;
+	//std::println("{} ",pos.x);
+	world = glm::translate(world, pos);
+	Rotate(deltaTime, 0.005, m_Yaw, m_Pitch, world);
+	//auto pos = GetCamera()->GetPosition();
+	//std::println("{} {} {}", pos.x, pos.y, pos.z);
+	BindVertexBuffer(0, m_Model->m_VertexBuffer);
+	BindIndexBuffer(m_Model->m_IndexBuffer);
+	SubmitModel(m_Model, 0, 0, m_DefaultShader, { world, world2,world3, world4 });
+	Submit(0, m_DefaultShader);
 
-	
-		//ExecuteFrame(deltaTime);
+
+	//ExecuteFrame(deltaTime);
 #if TEXT
-		
+
 #if 0
-		for (auto i = 1; i <= iterLen; i++)
-		{
-			glm::mat4 proj = glm::ortho(0.0f, (float)screenWidth, (float)screenHeight, 0.0f, -1.0f, 1.0f);
-			SetViewTransform(i, GetCamera()->GetView(), proj);
-			SetFramebuffer(i, m_UILayerFrameBuffers[i-1]);
-			SetViewRect(i, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
-		
-			BindVertexBuffer(0, g_QuadBatchVertexBuffer);
-			BindIndexBuffer(g_IndexQuadBuffer);
-
-			float offsetX = (i)  * 20.0f; 
-			float offsetY = (i)  * 20.0f; 
-
-			auto startX = screenWidth / 2;
-			auto startY = screenHeight / 2;
-			float scale = 10;
-			std::vector<QuadEntry> quads = {
-			QuadEntry{ glm::vec2(startX + offsetX, startY + offsetY), glm::vec2(scale), glm::vec4(1, 1, 1,	1) },
-			QuadEntry{ glm::vec2(startX - offsetX, startY + offsetY), glm::vec2(scale), glm::vec4(1, 0, 1,	1) },
-			QuadEntry{ glm::vec2(startX + offsetX, startY - offsetY), glm::vec2(scale), glm::vec4(1, 1, 0,	1) },
-			QuadEntry{ glm::vec2(startX - offsetX, startY - offsetY), glm::vec2(scale), glm::vec4(0, 1, 1, 1) },
-			};
-
-			SubmitQuads(quads);
-			//SubmitText("Voidstar", screenWidth - width, 0, m_Font);
-
-
-			//BlendMode state;
-			//state.enabled = false;
-			//SetBlendState(0, state);
-
-			SetDepthTest(false);
-			Submit(i, m_FontShader);
-			SetOverlay(i-1,i,m_CompositeShader);
-		}
-#else
-		glm::mat4 proj = glm::ortho(0.0f, (float)screenWidth, 0.0f, (float)screenHeight, -1.0f, 1.0f);
-		SetViewTransform(1, GetCamera()->GetView(), proj);
-		SetFramebuffer(1, m_UILayerFrameBuffers[0]);
-		SetViewRect(1, 0, 0, (float)screenWidth, (float)screenHeight);
+	for (auto i = 1; i <= iterLen; i++)
+	{
+		glm::mat4 proj = glm::ortho(0.0f, (float)screenWidth, (float)screenHeight, 0.0f, -1.0f, 1.0f);
+		SetViewTransform(i, GetCamera()->GetView(), proj);
+		SetFramebuffer(i, m_UILayerFrameBuffers[i - 1]);
+		SetViewRect(i, 0, 0, Application::GetScreenWidth(), Application::GetScreenHeight());
 
 		BindVertexBuffer(0, g_QuadBatchVertexBuffer);
 		BindIndexBuffer(g_IndexQuadBuffer);
 
-		
+		float offsetX = (i) * 20.0f;
+		float offsetY = (i) * 20.0f;
 
-		/*const int cols = 50;
-		const int rows = 28;
-		const float padding = 4.0f;
-		const float cellW = screenWidth / (float)cols;
-		const float cellH = screenHeight / (float)rows;
+		auto startX = screenWidth / 2;
+		auto startY = screenHeight / 2;
+		float scale = 10;
+		std::vector<QuadEntry> quads = {
+		QuadEntry{ glm::vec2(startX + offsetX, startY + offsetY), glm::vec2(scale), glm::vec4(1, 1, 1,	1) },
+		QuadEntry{ glm::vec2(startX - offsetX, startY + offsetY), glm::vec2(scale), glm::vec4(1, 0, 1,	1) },
+		QuadEntry{ glm::vec2(startX + offsetX, startY - offsetY), glm::vec2(scale), glm::vec4(1, 1, 0,	1) },
+		QuadEntry{ glm::vec2(startX - offsetX, startY - offsetY), glm::vec2(scale), glm::vec4(0, 1, 1, 1) },
+		};
 
-		std::vector<QuadEntry> quads;
-		quads.reserve(cols * rows);
-
-		for (int y = 0; y < rows; y++)
-		{
-			for (int x = 0; x < cols; x++)
-			{
-				float phase = (x + y) * 0.15f;
-				float pulse = 0.6f + 0.4f * (sin(time * 3.0f + phase) * 0.5f + 0.5f);
-				glm::vec2 size = glm::vec2(cellW - padding, cellH - padding) * pulse;
-
-				float wave = sin(time * 2.0f + x * 0.3f) * 6.0f;
-				glm::vec2 pos = {
-					x * cellW + padding * 0.5f + (cellW - padding - size.x) * 0.5f,
-					y * cellH + padding * 0.5f + wave + (cellH - padding - size.y) * 0.5f
-				};
-
-				glm::vec4 color;
-				switch ((x + y) % 4)
-				{
-				case 0: color = glm::vec4(1, 0, 0, 1); break;
-				case 1: color = glm::vec4(0, 1, 0, 1); break;
-				case 2: color = glm::vec4(0, 0, 1, 1); break;
-				case 3: color = glm::vec4(1, 1, 0, 1); break;
-				}
-
-				quads.push_back(QuadEntry{ pos, size, color });
-			}
-		}
-
-		SubmitQuads(quads);*/
-		auto size = 64;
-		auto startY = screenHeight/2;
-		float scale = 1;
-		//SubmitText("AVATAR WAVE TAO", 200, startY, m_Font, scale,glm::vec4{ 0,1,1,1 });
-		//SubmitText("Avatar wave tao", 200, startY + size, m_Font, scale, glm::vec4{1,1,0,1});
-		SubmitText("Voidstar Vulkan", 0, 0, m_Font, 64, glm::vec4{1,0,1,1});
+		SubmitQuads(quads);
+		//SubmitText("Voidstar", screenWidth - width, 0, m_Font);
 
 
+		//BlendMode state;
+		//state.enabled = false;
+		//SetBlendState(0, state);
 
 		SetDepthTest(false);
-		Submit(1, m_FontShader);
+		Submit(i, m_FontShader);
+		SetOverlay(i - 1, i, m_CompositeShader);
+	}
+#else
+	glm::mat4 proj = glm::ortho(0.0f, (float)screenWidth, 0.0f, (float)screenHeight, -1.0f, 1.0f);
+	SetViewTransform(1, GetCamera()->GetView(), proj);
+	SetFramebuffer(1, m_UILayerFrameBuffers[0]);
+	SetViewRect(1, 0, 0, (float)screenWidth, (float)screenHeight);
 
-		
-		
-		BeginWindow("Window",{200,200},200,400, m_BoldFont);
-		auto value = Slider("asdSlider", { 10, 100 }, 0, 10);
-		std::cout << value << std::endl;
-		//Text("Hello Voidstar");
-		//Button("Change");
-		EndWindow();
-		BuildUI();
-	    RenderUI(m_BoldFont, m_UIShader, m_FontShader);
-		
-		//Submit(1, m_UIShader);
+	BindVertexBuffer(0, g_QuadBatchVertexBuffer);
+	BindIndexBuffer(g_IndexQuadBuffer);
 
-		SetOverlay(0, 1, m_CompositeShader);
+
+
+	/*const int cols = 50;
+	const int rows = 28;
+	const float padding = 4.0f;
+	const float cellW = screenWidth / (float)cols;
+	const float cellH = screenHeight / (float)rows;
+
+	std::vector<QuadEntry> quads;
+	quads.reserve(cols * rows);
+
+	for (int y = 0; y < rows; y++)
+	{
+		for (int x = 0; x < cols; x++)
+		{
+			float phase = (x + y) * 0.15f;
+			float pulse = 0.6f + 0.4f * (sin(time * 3.0f + phase) * 0.5f + 0.5f);
+			glm::vec2 size = glm::vec2(cellW - padding, cellH - padding) * pulse;
+
+			float wave = sin(time * 2.0f + x * 0.3f) * 6.0f;
+			glm::vec2 pos = {
+				x * cellW + padding * 0.5f + (cellW - padding - size.x) * 0.5f,
+				y * cellH + padding * 0.5f + wave + (cellH - padding - size.y) * 0.5f
+			};
+
+			glm::vec4 color;
+			switch ((x + y) % 4)
+			{
+			case 0: color = glm::vec4(1, 0, 0, 1); break;
+			case 1: color = glm::vec4(0, 1, 0, 1); break;
+			case 2: color = glm::vec4(0, 0, 1, 1); break;
+			case 3: color = glm::vec4(1, 1, 0, 1); break;
+			}
+
+			quads.push_back(QuadEntry{ pos, size, color });
+		}
+	}
+
+	SubmitQuads(quads);*/
+	auto size = 64;
+	auto startY = screenHeight / 2;
+	float scale = 1;
+	//SubmitText("AVATAR WAVE TAO", 200, startY, m_Font, scale,glm::vec4{ 0,1,1,1 });
+	//SubmitText("Avatar wave tao", 200, startY + size, m_Font, scale, glm::vec4{1,1,0,1});
+	SubmitText("Voidstar Vulkan", 0, 0, m_Font, 64, glm::vec4{ 1,0,1,1 });
+
+
+
+	SetDepthTest(false);
+	Submit(1, m_FontShader);
+
+
+	g_TitleFont = m_BoldFont;
+	g_TextFont = m_Font;
+
+	BeginWindow("Window", { 200,200 }, 200, 400);
+	auto value = Slider("Test slider", { 10, 100 }, 0, 10);
+	Text("Hello Voidstar", { 10 ,50});
+
+	auto check = Checkbox("check box");
+
+	//Button("Change");
+	EndWindow();
+	BuildUI();
+	RenderUI(m_UIShader, m_FontShader);
+	//Submit(1, m_UIShader);
+	SetOverlay(0, 1, m_CompositeShader);
 #endif
 #endif
 

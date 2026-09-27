@@ -1273,7 +1273,11 @@ namespace Voidstar
 	static  std::vector<UIBox> Boxes;
 	static  Map<std::string, glm::vec2> g_WindowPositions;
 	static  Map<std::string, glm::vec2> g_SliderPositions;
-	static Map<std::string, bool> g_Dragging;
+	static  Map<std::string, bool> g_Dragging;
+
+	
+	
+
 
 	inline int GetLastChild(int parent)
 	{
@@ -1374,6 +1378,19 @@ namespace Voidstar
 		t = std::clamp(t, 0.0, 1.0);
 		return (1.0 - t) * a + t * b;
 	}
+	void Text(const std::string& text, const glm::vec2& relativePos)
+	{
+		auto id = CreateBox(text, Feats::DrawText);
+		auto pos = ResolvePosition(relativePos);
+		Boxes[id].Rect = { pos.x, pos.y, 0,0 };
+		Boxes[id].Kind = UISizeKind::TextContent;
+	}
+
+	bool Checkbox(const std::string& caption)
+	{
+
+	}
+
 	double Slider(const std::string& caption,
 		glm::vec2 relativePos,
 		double start,
@@ -1429,8 +1446,19 @@ namespace Voidstar
 
 			Boxes[id].Kind = UISizeKind::Pixels;
 			Boxes[id].Color = glm::vec4(1,0,1,1);
+			
+			// annotation
+			{
+				float pixelSize = 12; 
+				glm::vec2 textSize = MeasureText(caption, g_TextFont, pixelSize); 
+
+				float textOffsetY = -(textSize.y - trackHeight) / 2.0f; 
+
+				Text(caption,{trackWidth + 2, textOffsetY });
+			}
 			g_Parents.pop();
 		}
+
 		return Lerp(start,end,t);
 	}
 
@@ -1458,7 +1486,7 @@ namespace Voidstar
 	}
 
 	void BeginWindow(const std::string& caption, glm::vec2 pos,
-		int w, int h, FontHandle font)
+		int w, int h)
 	{
 		int id = CreateBox(caption, Feats::Draggable | Feats::Resizable | Feats::DrawBackground | Feats::DrawBorder | Feats::DrawTitleBar);
 
@@ -1471,7 +1499,7 @@ namespace Voidstar
 		if (HasFlag(box.Features, Feats::Draggable))
 		{
 			int pixelSize = 12;
-			glm::vec2 quadSize = MeasureText(box.Caption.data(), font, pixelSize);
+			glm::vec2 quadSize = MeasureText(box.Caption.data(), g_TitleFont, pixelSize);
 			int titleBarPaddingY = 12;
 			if (HasFlag(box.Features, Feats::DrawTitleBar))
 			{
@@ -1482,11 +1510,7 @@ namespace Voidstar
 		g_Parents.push(id);
 	}
 
-	void Text(const std::string& text)
-	{
-		auto id = CreateBox(text, Feats::DrawText);
-		Boxes[id].Kind = UISizeKind::TextContent;
-	}
+	
 
 	void Button(const std::string& text)
 	{
@@ -1502,7 +1526,7 @@ namespace Voidstar
 	{
 
 	}
-	void RenderBox(int idx, FontHandle font, ProgramHandle ui, ProgramHandle fontShader)
+	void RenderBox(int idx, ProgramHandle ui, ProgramHandle fontShader)
 	{
 		UIBox& box = Boxes[idx];
 
@@ -1531,7 +1555,7 @@ namespace Voidstar
 		{
 
 			int pixelSize = 12;
-			glm::vec2 quadSize = MeasureText(box.Caption.data(), font, pixelSize);
+			glm::vec2 quadSize = MeasureText(box.Caption.data(), g_TitleFont, pixelSize);
 			int titleBarPaddingY = 12;
 
 
@@ -1543,7 +1567,7 @@ namespace Voidstar
 			BindVertexBuffer(0, g_QuadBatchVertexBuffer);
 			BindIndexBuffer(g_IndexQuadBuffer);
 
-			SubmitText(box.Caption, box.Rect.x + 6, box.Rect.y + titleBarPaddingY * 0.25f, font, pixelSize);
+			SubmitText(box.Caption, box.Rect.x + 6, box.Rect.y + titleBarPaddingY * 0.25f, g_TitleFont, pixelSize);
 			Submit(1, fontShader);
 
 		}
@@ -1552,7 +1576,8 @@ namespace Voidstar
 		{
 			BindVertexBuffer(0, g_QuadBatchVertexBuffer);
 			BindIndexBuffer(g_IndexQuadBuffer);
-			SubmitText(box.Caption, box.Rect.x + 4, box.Rect.y + 4, font, 12);
+			SubmitText(box.Caption, box.Rect.x, box.Rect.y, g_TextFont, 12);
+			Submit(1, fontShader);
 		}
 
 
@@ -1561,14 +1586,14 @@ namespace Voidstar
 		int child = box.First;
 		while (child != -1)
 		{
-			RenderBox(child, font, ui, fontShader);
+			RenderBox(child, ui, fontShader);
 			child = Boxes[child].Sibling;
 		}
 	}
 
-	void RenderUI(FontHandle handle, ProgramHandle ui, ProgramHandle font)
+	void RenderUI(ProgramHandle ui, ProgramHandle font)
 	{
-		RenderBox(0, handle, ui, font);
+		RenderBox(0, ui, font);
 		Boxes.clear();
 		Boxes.push_back(UIBox{});
 	}
