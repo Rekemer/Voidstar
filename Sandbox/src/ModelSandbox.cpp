@@ -239,7 +239,7 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 		
 		BeginWindow("Window",{200,200},200,400, m_BoldFont);
 		auto value = Slider("asdSlider", { 10, 100 }, 0, 10);
-
+		std::cout << value << std::endl;
 		//Text("Hello Voidstar");
 		//Button("Change");
 		EndWindow();

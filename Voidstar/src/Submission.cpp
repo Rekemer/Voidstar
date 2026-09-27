@@ -1364,6 +1364,16 @@ namespace Voidstar
 		g_Dragging[caption] = isDragging;
 	}
 
+	
+	double InverseLerp(double  a, double b, double value)
+	{
+		return (value - a) / (b - a);
+	}
+	double Lerp(double a, double b, double t)
+	{
+		t = std::clamp(t, 0.0, 1.0);
+		return (1.0 - t) * a + t * b;
+	}
 	double Slider(const std::string& caption,
 		glm::vec2 relativePos,
 		double start,
@@ -1373,7 +1383,7 @@ namespace Voidstar
 		const float trackWidth = 100.0f;
 		const float handleWidth = 6.0f;
 		const float handleHeight = 10.0f;
-
+		double t = 0;
 		auto absPos = ResolvePosition(relativePos);
 		// drag line
 		{
@@ -1404,7 +1414,7 @@ namespace Voidstar
 
 			auto& isDragging = Boxes[id].IsDragging;
 
-			UpdateDrag(sliderString, isDragging,Input::GetMousePos(),dragBoxRect);
+			UpdateDrag(sliderString, isDragging, Input::GetMousePos(), dragBoxRect);
 
 			if (isDragging)
 			{
@@ -1415,14 +1425,13 @@ namespace Voidstar
 				// update offset
 				g_WindowPositions[sliderString] = { dragBoxRect.x - sliderBasePos.x, sliderBasePos.y };
 			}
-	
+			t = InverseLerp(sliderBasePos.x, sliderBasePos.x + trackWidth, dragBoxRect.x);
 
 			Boxes[id].Kind = UISizeKind::Pixels;
 			Boxes[id].Color = glm::vec4(1,0,1,1);
 			g_Parents.pop();
 		}
-
-		return 0;
+		return Lerp(start,end,t);
 	}
 
 
