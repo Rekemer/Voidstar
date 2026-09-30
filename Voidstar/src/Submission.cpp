@@ -1274,7 +1274,7 @@ namespace Voidstar
 	static  Map<std::string, glm::vec2> g_WindowPositions;
 	static  Map<std::string, glm::vec2> g_SliderPositions;
 	static  Map<std::string, bool> g_Dragging;
-
+	static  Map<std::string, bool> g_Checkbox;
 	
 	
 
@@ -1386,9 +1386,26 @@ namespace Voidstar
 		Boxes[id].Kind = UISizeKind::TextContent;
 	}
 
-	bool Checkbox(const std::string& caption)
+	bool Checkbox(const std::string& caption, const glm::vec2& pos)
 	{
+		auto id = CreateBox(caption, Feats::DrawBackground);
+		auto absPos = ResolvePosition(pos);
 
+		const float width = 10;
+		const float height = 10;
+		
+		auto rect = glm::vec4{ absPos.x,absPos.y,
+			width, height };
+		if (IsMouseWithin(Input::GetMousePos(), rect) && Input::IsMouseClicked(VS_MOUSE_LEFT))
+		{
+			g_Checkbox[caption] = !g_Checkbox[caption];
+		}
+
+		Boxes[id].Rect = rect;
+		Boxes[id].Color = g_Checkbox[caption] ? glm::vec4(0.6f, 0.7f, 0.6f, 1) : glm::vec4(0.0f, 0.0f, 0.0f, 1);
+		Boxes[id].Kind = UISizeKind::Pixels;
+
+		return g_Checkbox[caption];
 	}
 
 	double Slider(const std::string& caption,
@@ -1404,7 +1421,7 @@ namespace Voidstar
 		auto absPos = ResolvePosition(relativePos);
 		// drag line
 		{
-			auto id = CreateBox("", Feats::DrawBackground | Feats::SliderLine);
+			auto id = CreateBox("", Feats::DrawBackground);
 			Boxes[id].Rect = { absPos.x, absPos.y, trackWidth , trackHeight };
 			Boxes[id].Kind = UISizeKind::Pixels;
 			//Boxes[id].Color = glm::vec4(0.1f, 0.1f, 0.1f, 0.5);
@@ -1414,7 +1431,7 @@ namespace Voidstar
 		// drag box
 		{
 			auto sliderString = caption + "_slider";
-			auto id = CreateBox(sliderString, Feats::SliderDrag | Feats::DrawBackground);
+			auto id = CreateBox(sliderString, Feats::DrawBackground);
 			auto sliderBasePos = ResolvePosition({0,-(handleHeight - trackHeight)/2});
 
 
@@ -1488,7 +1505,7 @@ namespace Voidstar
 	void BeginWindow(const std::string& caption, glm::vec2 pos,
 		int w, int h)
 	{
-		int id = CreateBox(caption, Feats::Draggable | Feats::Resizable | Feats::DrawBackground | Feats::DrawBorder | Feats::DrawTitleBar);
+		int id = CreateBox(caption, Feats::Resizable | Feats::DrawBackground | Feats::DrawBorder | Feats::DrawTitleBar);
 
 		UpdatePosition(caption, pos);
 		Boxes[id].Rect = { pos.x, pos.y, w, h };
@@ -1496,17 +1513,13 @@ namespace Voidstar
 		Boxes[id].Color = glm::vec4(0.2f, 0.2f, 0.2f, 1);
 
 		auto& box = Boxes[id];
-		if (HasFlag(box.Features, Feats::Draggable))
+		int pixelSize = 12;
+		glm::vec2 quadSize = MeasureText(box.Caption.data(), g_TitleFont, pixelSize);
+		int titleBarPaddingY = 12;
+		if (HasFlag(box.Features, Feats::DrawTitleBar))
 		{
-			int pixelSize = 12;
-			glm::vec2 quadSize = MeasureText(box.Caption.data(), g_TitleFont, pixelSize);
-			int titleBarPaddingY = 12;
-			if (HasFlag(box.Features, Feats::DrawTitleBar))
-			{
-				DragWindow(box, quadSize.y + titleBarPaddingY);
-			}
+			DragWindow(box, quadSize.y + titleBarPaddingY);
 		}
-
 		g_Parents.push(id);
 	}
 
@@ -1531,16 +1544,9 @@ namespace Voidstar
 		UIBox& box = Boxes[idx];
 
 
-		if (HasFlag(box.Features, Feats::SliderDrag))
-		{
 
-			BindVertexBuffer(0, g_QuadBatchVertexBuffer);
-			BindIndexBuffer(g_IndexQuadBuffer);
+		
 
-			SubmitQuad({ box.Rect.x ,box.Rect.y }, { box.Rect.z,  box.Rect.w }, box.Color);
-			Submit(1, ui);
-
-		}
 
 		if (HasFlag(box.Features, Feats::DrawBackground))
 		{
@@ -1570,6 +1576,27 @@ namespace Voidstar
 			SubmitText(box.Caption, box.Rect.x + 6, box.Rect.y + titleBarPaddingY * 0.25f, g_TitleFont, pixelSize);
 			Submit(1, fontShader);
 
+		}
+
+		if (HasFlag(box.Features, Feats::DrawBorder))
+		{
+			const float borderThickness = 5.0f;
+			glm::vec4 borderColor = glm::vec4(0.05f, 0.05f, 0.05f, 1);
+			BindVertexBuffer(0, g_QuadBatchVertexBuffer);
+			BindIndexBuffer(g_IndexQuadBuffer);
+
+
+			// top 
+			if (!HasFlag(box.Features, Feats::DrawTitleBar))
+				SubmitQuad({ box.Rect.x, box.Rect.y }, { box.Rect.z, borderThickness }, borderColor);
+			// bottom 
+			SubmitQuad({ box.Rect.x, box.Rect.y + box.Rect.w - borderThickness }, { box.Rect.z, borderThickness }, borderColor);
+			// left 
+			SubmitQuad({ box.Rect.x, box.Rect.y }, { borderThickness, box.Rect.w }, borderColor);
+			// right 
+			SubmitQuad({ box.Rect.x + box.Rect.z - borderThickness, box.Rect.y }, { borderThickness, box.Rect.w }, borderColor);
+
+			Submit(1, ui);
 		}
 
 		if (HasFlag(box.Features, Feats::DrawText))

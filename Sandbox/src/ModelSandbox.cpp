@@ -240,10 +240,10 @@ void ModelSandbox::Update(float deltaTime)
 	g_TextFont = m_Font;
 
 	BeginWindow("Window", { 200,200 }, 200, 400);
-	auto value = Slider("Test slider", { 10, 100 }, 0, 10);
 	Text("Hello Voidstar", { 10 ,50});
+	auto value = Slider("Test slider", { 10, 100 }, 0, 10);
 
-	auto check = Checkbox("check box");
+	auto check = Checkbox("check box", { 10,110 });
 
 	//Button("Change");
 	EndWindow();

@@ -654,7 +654,6 @@ namespace Voidstar
 	enum class Feats : uint32_t
 	{
 		None = 0,
-		Draggable = 1 << 0,
 		Resizable = 1 << 1,
 		Clickable = 1 << 2,
 		DrawBackground = 1 << 3,
@@ -662,8 +661,6 @@ namespace Voidstar
 		DrawText = 1 << 5,
 		DrawTitleBar = 1 << 6,
 
-		SliderLine = 1 << 7,
-		SliderDrag = 1 << 8,
 	};
 	inline Feats operator|(Feats a, Feats b)
 	{
@@ -713,7 +710,7 @@ namespace Voidstar
 	glm::vec2 ResolvePosition(glm::vec2 relOffset);
 
 
-	bool Checkbox(const std::string& caption);
+	bool Checkbox(const std::string& caption, const glm::vec2& pos);
 
 	double Slider(const std::string& caption,
 		glm::vec2 relativePos,
