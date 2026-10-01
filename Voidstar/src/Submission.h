@@ -697,6 +697,8 @@ namespace Voidstar
 		Feats Features = Feats::None;
 		UISizeKind Kind;
 
+
+		float BorderWidth = 5.f;
 		bool IsDragging = false;
 	};
 

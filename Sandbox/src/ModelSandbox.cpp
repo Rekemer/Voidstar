@@ -103,7 +103,7 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 		}
 
 		GetCamera()->LookAt({ 0,0,0 });
-		ExecuteFrame(0);
+		ExecuteFrame(0,true);
 		UIInit();
 	}
 
@@ -243,8 +243,7 @@ void ModelSandbox::Update(float deltaTime)
 	Text("Hello Voidstar", { 10 ,50});
 	auto value = Slider("Test slider", { 10, 100 }, 0, 10);
 
-	auto check = Checkbox("check box", { 10,110 });
-
+	auto check = Checkbox("check box", { 10,140 });
 	//Button("Change");
 	EndWindow();
 	BuildUI();

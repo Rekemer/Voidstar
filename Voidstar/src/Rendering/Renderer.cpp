@@ -1603,6 +1603,7 @@ namespace Voidstar
 			fontAtlas.Atlas = atlasHandle;
 			fontAtlas.LineSpacing = face->height / 64.0f;
 			fontAtlas.Ascent = face->size->metrics.ascender / 64.0f;
+			fontAtlas.Descent = face->size->metrics.descender/ 64.0f;
 
 			m_Textures[atlasHandle] = atlasImage;
 			auto computeCommandBuffer = Renderer::Instance()->GetComputeCommandBuffer(0);

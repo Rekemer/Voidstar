@@ -1386,11 +1386,15 @@ namespace Voidstar
 		Boxes[id].Kind = UISizeKind::TextContent;
 	}
 
+	int GetFontHeight(FontHandle fontHandle, int pixelSize)
+	{
+		auto font = Renderer::Instance()->GetFont(fontHandle, pixelSize);
+		return font->Ascent + font->Descent;
+	}
 	bool Checkbox(const std::string& caption, const glm::vec2& pos)
 	{
-		auto id = CreateBox(caption, Feats::DrawBackground);
+		auto id = CreateBox(caption, Feats::DrawBackground | Feats::DrawBorder);
 		auto absPos = ResolvePosition(pos);
-
 		const float width = 10;
 		const float height = 10;
 		
@@ -1401,12 +1405,25 @@ namespace Voidstar
 			g_Checkbox[caption] = !g_Checkbox[caption];
 		}
 
+
+
 		Boxes[id].Rect = rect;
-		Boxes[id].Color = g_Checkbox[caption] ? glm::vec4(0.6f, 0.7f, 0.6f, 1) : glm::vec4(0.0f, 0.0f, 0.0f, 1);
+		Boxes[id].BorderWidth = 2;
+		Boxes[id].Color = g_Checkbox[caption] ? glm::vec4(0.6f, 0.7f, 0.6f, 1) : glm::vec4(0.3f, 0.3f, 0.3f, 1);
 		Boxes[id].Kind = UISizeKind::Pixels;
+		g_Parents.push(id);
+		
+		auto fontHeight = GetFontHeight(g_TextFont, 12);
+		float textOffsetY = -(fontHeight - height) / 2.0f;
+		Text(caption, { width + 5, textOffsetY });
+		
+		g_Parents.pop();
 
 		return g_Checkbox[caption];
 	}
+
+
+	
 
 	double Slider(const std::string& caption,
 		glm::vec2 relativePos,
@@ -1467,11 +1484,14 @@ namespace Voidstar
 			// annotation
 			{
 				float pixelSize = 12; 
-				glm::vec2 textSize = MeasureText(caption, g_TextFont, pixelSize); 
+				auto fontHeight = GetFontHeight(g_TextFont,pixelSize);
+				float textOffsetY = -(fontHeight - trackHeight) / 2.0f;
 
-				float textOffsetY = -(textSize.y - trackHeight) / 2.0f; 
+				Text(caption,{trackWidth + 4, textOffsetY });
 
-				Text(caption,{trackWidth + 2, textOffsetY });
+
+				Text(std::to_string(int(start)), { 0, trackHeight + fontHeight  });
+				Text(std::to_string(int(end)), { trackWidth, trackHeight + fontHeight });
 			}
 			g_Parents.pop();
 		}
@@ -1580,7 +1600,7 @@ namespace Voidstar
 
 		if (HasFlag(box.Features, Feats::DrawBorder))
 		{
-			const float borderThickness = 5.0f;
+			const float borderThickness = box.BorderWidth;
 			glm::vec4 borderColor = glm::vec4(0.05f, 0.05f, 0.05f, 1);
 			BindVertexBuffer(0, g_QuadBatchVertexBuffer);
 			BindIndexBuffer(g_IndexQuadBuffer);
