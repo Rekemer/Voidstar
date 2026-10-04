@@ -250,7 +250,10 @@ void ModelSandbox::Update(float deltaTime)
 		value3.y << " " <<
 		value3.z << "\n";
 
-	//Button("Change");
+	if (Button("Change", {10,200}))
+	{
+		std::cout << "Button Clicked!\n";
+	}
 	EndWindow();
 	BuildUI();
 	RenderUI(m_UIShader, m_FontShader);

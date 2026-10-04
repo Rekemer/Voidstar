@@ -732,7 +732,8 @@ namespace Voidstar
 	
 	
 	
-	void Button(const std::string& text);
+	bool Button(const std::string& text, 
+		const glm::vec2& relativePos);
 
 
 

@@ -1534,8 +1534,6 @@ namespace Voidstar
 			Boxes[id].Color = glm::vec4(1, 0, 1, 1);
 			
 			g_Parents.push(id);
-
-			
 			
 			auto& isDragging = Boxes[id].IsDragging;
 			UpdateDrag(caption, isDragging,
@@ -1608,10 +1606,30 @@ namespace Voidstar
 
 	
 
-	void Button(const std::string& text)
+	bool Button(const std::string& text, const glm::vec2& relativePos)
 	{
-		auto id = CreateBox(text, Feats::Clickable | Feats::DrawBackground | Feats::DrawBorder | Feats::DrawText);
-		Boxes[id].Kind = UISizeKind::TextContent;
+		auto id = CreateBox(text, Feats::DrawBackground);
+		auto absPos = ResolvePosition(relativePos);
+		glm::vec2 textSize = MeasureText(text, g_TextFont, 12);
+
+		const float padding = 10.0f;
+		glm::vec4 rect = { absPos.x, absPos.y, textSize.x + padding, textSize.y + padding };
+		Boxes[id].Rect = rect;
+		Boxes[id].Kind = UISizeKind::Pixels;
+		Boxes[id].Color = glm::vec4(1, 0, 1, 1);
+
+		g_Parents.push(id);
+
+		float boxHeight = rect.w; 
+		float textOffsetY = -(textSize.y - boxHeight) / 2.0f; 
+
+		auto textPos = glm::vec2(padding / 2.0f, textOffsetY); 
+
+		Text(text, textPos);
+
+		g_Parents.pop();
+
+		return Input::IsMouseClicked(VS_MOUSE_LEFT) && IsMouseWithin(Input::GetMousePos(),rect);
 	}
 	void EndWindow()
 	{
