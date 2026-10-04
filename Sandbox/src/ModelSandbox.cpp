@@ -242,8 +242,14 @@ void ModelSandbox::Update(float deltaTime)
 	BeginWindow("Window", { 200,200 }, 200, 400);
 	Text("Hello Voidstar", { 10 ,50});
 	auto value = Slider("Test slider", { 10, 100 }, 0, 10);
+	auto check = Checkbox("Checkbox", { 10,140 });
+	
+	auto value3 = Vector3({ 10,10,10 }, "Position", {10,160});
 
-	auto check = Checkbox("check box", { 10,140 });
+	std::cout << value3.x << " " << 
+		value3.y << " " <<
+		value3.z << "\n";
+
 	//Button("Change");
 	EndWindow();
 	BuildUI();

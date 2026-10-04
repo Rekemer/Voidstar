@@ -1275,7 +1275,7 @@ namespace Voidstar
 	static  Map<std::string, glm::vec2> g_SliderPositions;
 	static  Map<std::string, bool> g_Dragging;
 	static  Map<std::string, bool> g_Checkbox;
-	
+	static  Map<std::string, float > g_VectorValues;
 	
 
 
@@ -1350,12 +1350,16 @@ namespace Voidstar
 			&& mousePos.y <= rect.y + rect.w;
 	}
 
-	void UpdateDrag(const std::string& caption, bool& isDragging ,const glm::vec2& mousePos, const glm::vec4& rectDrag)
+	void UpdateDrag(
+		const std::string& caption,
+		bool& isDragging,
+		const glm::vec2& mousePos,
+		const glm::vec4& rectDrag)
 	{
-		bool inTitle = IsMouseWithin(mousePos, rectDrag);
+		bool inRect = IsMouseWithin(mousePos, rectDrag);
 		if (Input::IsMousePressed(VS_MOUSE_LEFT))
 		{
-			if (inTitle && !isDragging)
+			if (inRect && Input::IsMouseClicked(VS_MOUSE_LEFT))
 			{
 				isDragging = true;
 			}
@@ -1414,8 +1418,7 @@ namespace Voidstar
 		g_Parents.push(id);
 		
 		auto fontHeight = GetFontHeight(g_TextFont, 12);
-		float textOffsetY = -(fontHeight - height) / 2.0f;
-		Text(caption, { width + 5, textOffsetY });
+		Text(caption, { width + 5, -(std::abs(height - fontHeight)) / 2 });
 		
 		g_Parents.pop();
 
@@ -1485,9 +1488,8 @@ namespace Voidstar
 			{
 				float pixelSize = 12; 
 				auto fontHeight = GetFontHeight(g_TextFont,pixelSize);
-				float textOffsetY = -(fontHeight - trackHeight) / 2.0f;
-
-				Text(caption,{trackWidth + 4, textOffsetY });
+				
+				Text(caption, { trackWidth + 5, -(std::abs(fontHeight - trackHeight))/2 });
 
 
 				Text(std::to_string(int(start)), { 0, trackHeight + fontHeight  });
@@ -1500,6 +1502,67 @@ namespace Voidstar
 	}
 
 
+
+	std::string CutValueToString(float value, int precision = 1)
+	{
+		std::ostringstream stream;
+		stream << std::fixed << std::setprecision(precision) << value;
+		return stream.str();
+	}
+
+	glm::vec3 Vector3(glm::vec3 range,
+		const std::string& label,
+		const glm::vec2& pos)
+	{
+		float offsetX = 50;
+
+		const float width = 30;
+		const float height= 20;
+
+		glm::vec3 result;
+
+		for (auto i = 0; i < 3; i++)
+		{
+			auto caption = label + std::to_string(i);
+			auto id = CreateBox( caption, Feats::DrawBackground);
+			auto absPos = ResolvePosition(pos);
+			absPos.x += offsetX * i;
+
+			glm::vec4 rect = { absPos.x, absPos.y, width , height };
+			Boxes[id].Rect = rect;
+			Boxes[id].Kind = UISizeKind::Pixels;
+			Boxes[id].Color = glm::vec4(1, 0, 1, 1);
+			
+			g_Parents.push(id);
+
+			
+			
+			auto& isDragging = Boxes[id].IsDragging;
+			UpdateDrag(caption, isDragging,
+				Input::GetMousePos(),rect);
+
+			if (isDragging)
+			{
+				auto delta = Input::GetMouseDeltaX();
+				g_VectorValues[caption] += delta / 4;
+
+				g_VectorValues[caption] =
+					glm::clamp(g_VectorValues[caption], -range.x, range.x);
+			}
+			result[i] = g_VectorValues[caption];
+
+			auto valueText = CutValueToString(g_VectorValues[caption]);
+			glm::vec2 textSize = MeasureText(valueText, g_TextFont, 12);
+			auto textPos = 
+				glm::vec2(width / 2 - textSize.x / 2,
+				height / 2 - textSize.y / 2);
+			Text(valueText, textPos);
+			g_Parents.pop();
+		}
+
+		return result;
+	}
+	
 	void DragWindow(UIBox& window, int titleHeight)
 	{
 		auto mousePos = Input::GetMousePos();
@@ -1509,7 +1572,7 @@ namespace Voidstar
 		// replace window height with title height
 		titleRect.w = titleHeight;
 
-		UpdateDrag(window.Caption, isDragging,mousePos, titleRect);
+		UpdateDrag(window.Caption, isDragging, mousePos, titleRect);
 
 		if (isDragging)
 		{
@@ -1562,11 +1625,6 @@ namespace Voidstar
 	void RenderBox(int idx, ProgramHandle ui, ProgramHandle fontShader)
 	{
 		UIBox& box = Boxes[idx];
-
-
-
-		
-
 
 		if (HasFlag(box.Features, Feats::DrawBackground))
 		{

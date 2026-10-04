@@ -719,13 +719,23 @@ namespace Voidstar
 		double start,
 		double end);
 
+	glm::vec3 Vector3(glm::vec3 range,
+		const std::string& label,
+		const glm::vec2& pos);
+
 	void DragWindow(UIBox& window, int titleHeight);
 	glm::vec2 MeasureText(std::string_view txt, FontHandle handle, int pixelSize);
 
 	void BeginWindow(const std::string& caption, glm::vec2 pos,
 		int w, int h);
 	void Text(const std::string& text, const glm::vec2& relativePos);
+	
+	
+	
 	void Button(const std::string& text);
+
+
+
 	void EndWindow();
 	void BuildUI();
 	void RenderBox(int idx, ProgramHandle ui, ProgramHandle fontShader);
