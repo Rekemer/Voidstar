@@ -1276,6 +1276,7 @@ namespace Voidstar
 	static  Map<std::string, bool> g_Dragging;
 	static  Map<std::string, bool> g_Checkbox;
 	static  Map<std::string, float > g_VectorValues;
+	static  Map<std::string, bool > g_WindowOpen;
 	
 
 
@@ -1382,6 +1383,12 @@ namespace Voidstar
 		t = std::clamp(t, 0.0, 1.0);
 		return (1.0 - t) * a + t * b;
 	}
+
+	bool IsClicked(glm::vec4 rect)
+	{
+		return IsMouseWithin(Input::GetMousePos(), rect) && Input::IsMouseClicked(VS_MOUSE_LEFT);
+	}
+
 	void Text(const std::string& text, const glm::vec2& relativePos)
 	{
 		auto id = CreateBox(text, Feats::DrawText);
@@ -1404,7 +1411,7 @@ namespace Voidstar
 		
 		auto rect = glm::vec4{ absPos.x,absPos.y,
 			width, height };
-		if (IsMouseWithin(Input::GetMousePos(), rect) && Input::IsMouseClicked(VS_MOUSE_LEFT))
+		if (IsClicked(rect))
 		{
 			g_Checkbox[caption] = !g_Checkbox[caption];
 		}
@@ -1560,6 +1567,36 @@ namespace Voidstar
 
 		return result;
 	}
+
+	glm::vec4 ColorPicker(const std::string& text,
+		const glm::vec2& pos)
+	{
+		auto id = CreateBox(text, Feats::DrawBackground);
+
+		const float width = 10;
+		const float height = 10;
+
+		auto absPos = ResolvePosition(pos);
+
+		glm::vec4 rect = { absPos.x, absPos.y, width , height };
+		Boxes[id].Rect = rect;
+		Boxes[id].Kind = UISizeKind::Pixels;
+		Boxes[id].Color = glm::vec4(0, 1, 1, 1);
+
+
+		auto windowCaption = "Color picker";
+		if (IsClicked(rect) || g_WindowOpen[windowCaption])
+		{
+			BeginWindow(windowCaption, {40,200},150,300);
+			g_WindowOpen[windowCaption] = true;
+
+			EndWindow();
+		}
+
+		return { };
+
+	}
+
 	
 	void DragWindow(UIBox& window, int titleHeight)
 	{

@@ -246,14 +246,17 @@ void ModelSandbox::Update(float deltaTime)
 	
 	auto value3 = Vector3({ 10,10,10 }, "Position", {10,160});
 
-	std::cout << value3.x << " " << 
-		value3.y << " " <<
-		value3.z << "\n";
 
 	if (Button("Change", {10,200}))
 	{
 		std::cout << "Button Clicked!\n";
 	}
+
+
+	//BeginWindow("window_color", { 40,200 }, 100, 300);
+	//EndWindow();
+	auto color = ColorPicker("Color", { 10,240 });
+
 	EndWindow();
 	BuildUI();
 	RenderUI(m_UIShader, m_FontShader);

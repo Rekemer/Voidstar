@@ -735,7 +735,8 @@ namespace Voidstar
 	bool Button(const std::string& text, 
 		const glm::vec2& relativePos);
 
-
+	glm::vec4 ColorPicker(const std::string& text,
+		const glm::vec2& relativePos);
 
 	void EndWindow();
 	void BuildUI();
