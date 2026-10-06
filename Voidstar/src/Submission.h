@@ -428,6 +428,7 @@ namespace Voidstar
 			internalOffset = 0;
 			Bindings.Reset();
 			isQuadBatch = false;
+			IndexBuffer.MakeInvalid();
 		}
 
 	};

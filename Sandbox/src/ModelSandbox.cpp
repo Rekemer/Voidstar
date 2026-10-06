@@ -241,12 +241,13 @@ void ModelSandbox::Update(float deltaTime)
 
 	BeginWindow("Window", { 200,200 }, 200, 400);
 	Text("Hello Voidstar", { 10 ,50});
+	auto color = ColorPicker("Color", { 10,240 });
 	auto value = Slider("Test slider", { 10, 100 }, 0, 10);
 	auto check = Checkbox("Checkbox", { 10,140 });
 	
 	auto value3 = Vector3({ 10,10,10 }, "Position", {10,160});
-
-
+	
+	
 	if (Button("Change", {10,200}))
 	{
 		std::cout << "Button Clicked!\n";
@@ -255,7 +256,6 @@ void ModelSandbox::Update(float deltaTime)
 
 	//BeginWindow("window_color", { 40,200 }, 100, 300);
 	//EndWindow();
-	auto color = ColorPicker("Color", { 10,240 });
 
 	EndWindow();
 	BuildUI();

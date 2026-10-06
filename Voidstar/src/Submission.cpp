@@ -1277,7 +1277,7 @@ namespace Voidstar
 	static  Map<std::string, bool> g_Checkbox;
 	static  Map<std::string, float > g_VectorValues;
 	static  Map<std::string, bool > g_WindowOpen;
-	
+	static  std::vector<int> g_WindowsToClose;
 
 	// back to front
 	static std::vector<int> g_WindowOrder;
@@ -1715,7 +1715,7 @@ namespace Voidstar
 
 			if (IsClicked(g_ActiveWindow, Boxes[id].Rect))
 			{
-				
+				g_WindowsToClose.push_back(WindowID);
 			}
 
 		}
@@ -1812,6 +1812,15 @@ namespace Voidstar
 		{
 			RenderBox(window, ui, font);
 		}
+
+		for (int w : g_WindowsToClose)
+		{
+			std::erase(g_WindowOrder, w);
+			g_WindowOpen[Boxes[w].Caption] = false;
+		}
+
+		g_WindowsToClose.clear();
+		
 		Boxes.clear();
 		Boxes.push_back(UIBox{});
 	}

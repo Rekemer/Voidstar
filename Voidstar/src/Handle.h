@@ -11,7 +11,10 @@ namespace Voidstar
 
 		// validity
 		bool Valid() const { return idx != INVALID_ID; }
-
+		void MakeInvalid() 
+		{
+			idx = INVALID_ID;
+		}
 		bool operator==(const Handle& other) const {
 			return idx == other.idx;
 		}
