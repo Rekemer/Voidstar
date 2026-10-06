@@ -707,10 +707,7 @@ namespace Voidstar
 	inline FontHandle g_TitleFont;
 	inline FontHandle g_TextFont;
 
-	int GetLastChild(int parent);
-	int  CreateBox(const std::string& caption, Feats features);
 	void UIInit();
-	void UpdatePosition(const std::string& caption, glm::vec2& pos);
 	glm::vec2 ResolvePosition(glm::vec2 relOffset);
 
 

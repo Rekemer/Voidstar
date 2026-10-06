@@ -1271,7 +1271,7 @@ namespace Voidstar
 	}
 	static  std::stack<int>	g_Parents;
 	static  std::vector<UIBox> Boxes;
-	static  Map<int, glm::vec4> g_WindowRects;
+	static  Map<int, glm::vec4> g_BoxRects;
 	static  Map<std::string, glm::vec2> g_SliderPositions;
 	static  Map<std::string, bool> g_Dragging;
 	static  Map<std::string, bool> g_Checkbox;
@@ -1297,7 +1297,7 @@ namespace Voidstar
 		return current;
 	}
 
-	int CreateBox(const std::string& caption, Feats features)
+	int CreateBox(const std::string& caption, Feats features, bool isWindow = false)
 	{
 		UIBox box;
 		box.Caption = caption;
@@ -1308,13 +1308,16 @@ namespace Voidstar
 		Boxes.push_back(box);
 		int newIndex = (int)Boxes.size() - 1;
 
-		int lastChild = GetLastChild(g_Parents.top());
-		if (lastChild == -1)
-			// if first child
-			Boxes.at(g_Parents.top()).First = newIndex;
-		else
-			// if we already have children
-			Boxes.at(lastChild).Sibling = newIndex;
+		if (!isWindow)
+		{
+			int lastChild = GetLastChild(g_Parents.top());
+			if (lastChild == -1)
+				// if first child
+				Boxes.at(g_Parents.top()).First = newIndex;
+			else
+				// if we already have children
+				Boxes.at(lastChild).Sibling = newIndex;
+		}
 
 		return newIndex;
 	}
@@ -1328,17 +1331,17 @@ namespace Voidstar
 		g_Parents.push(0);
 	}
 
-
+	// update position from cache if user dragged the element
 	void UpdatePosition (int id, glm::vec4& rect)
 	{
-		auto it = g_WindowRects.find(id);
-		if (it != g_WindowRects.end())
+		auto it = g_BoxRects.find(id);
+		if (it != g_BoxRects.end())
 		{
 			rect = it->second;
 		}
 		else
 		{
-			g_WindowRects[id] = rect;
+			g_BoxRects[id] = rect;
 		}
 	}
 
@@ -1359,14 +1362,24 @@ namespace Voidstar
 	bool IsClicked(int windowID, glm::vec4 rect)
 	{
 		auto iter = std::find(g_WindowOrder.begin(), g_WindowOrder.end(), windowID);
-		assert(iter != g_WindowOrder.end());
+		// no active windows
+		if (iter == g_WindowOrder.end()) return false;
+		
 		for (auto i = iter + 1; i != g_WindowOrder.end(); i++)
 		{
-			auto windowRect = g_WindowRects[*i];
+			auto windowRect = g_BoxRects[*i];
 			auto nextWindowIntercepts = IsMouseWithin(Input::GetMousePos(), windowRect);
 			if (nextWindowIntercepts) return false;
 		}
-		return IsMouseWithin(Input::GetMousePos(), rect) && Input::IsMouseClicked(VS_MOUSE_LEFT);
+		auto click = IsMouseWithin(Input::GetMousePos(), rect) && Input::IsMouseClicked(VS_MOUSE_LEFT);
+
+		if (click)
+		{
+			// move window to the front
+			std::erase(g_WindowOrder, windowID);
+			g_WindowOrder.push_back(windowID);
+		}
+		return click;
 	}
 
 	void UpdateDrag(
@@ -1478,14 +1491,14 @@ namespace Voidstar
 
 
 			glm::vec2 relativeOffset = { 0, 0 };
-			auto it = g_WindowRects.find(id);
-			if (it != g_WindowRects.end())
+			auto it = g_BoxRects.find(id);
+			if (it != g_BoxRects.end())
 				relativeOffset = it->second;
 
 			auto sliderPosX = glm::clamp(sliderBasePos.x + relativeOffset.x,
 				sliderBasePos.x, 
 				sliderBasePos.x + trackWidth);
-			auto dragBoxRect = Boxes[id].Rect = { sliderPosX, sliderBasePos.y, handleWidth , handleHeight };
+			auto& dragBoxRect = Boxes[id].Rect = { sliderPosX, sliderBasePos.y, handleWidth , handleHeight };
 
 			auto& isDragging = Boxes[id].IsDragging;
 
@@ -1498,7 +1511,7 @@ namespace Voidstar
 
 				dragBoxRect.x += xDelta;
 				// update offset
-				g_WindowRects[id] = glm::vec4 {dragBoxRect.x - sliderBasePos.x, sliderBasePos.y, handleWidth, handleHeight};
+				g_BoxRects[id] = glm::vec4 {dragBoxRect.x - sliderBasePos.x, sliderBasePos.y, handleWidth, handleHeight};
 			}
 			t = InverseLerp(sliderBasePos.x, sliderBasePos.x + trackWidth, dragBoxRect.x);
 
@@ -1602,7 +1615,7 @@ namespace Voidstar
 		if (IsClicked(g_ActiveWindow,rect) || g_WindowOpen[windowCaption])
 		{
 			BeginWindow(windowCaption, {40,200},150,300);
-			g_WindowOpen[windowCaption] = true;
+			
 
 			EndWindow();
 		}
@@ -1630,7 +1643,7 @@ namespace Voidstar
 
 			window.Rect.x += xDelta;
 			window.Rect.y += yDelta;
-			g_WindowRects[id] = window.Rect;
+			g_BoxRects[id] = window.Rect;
 		}
 	}	
 
@@ -1663,29 +1676,49 @@ namespace Voidstar
 	void BeginWindow(const std::string& caption, glm::vec2 pos,
 		int w, int h)
 	{
-		int id = CreateBox(caption, Feats::Resizable | Feats::DrawBackground | Feats::DrawBorder | Feats::DrawTitleBar);
+		int WindowID = CreateBox(caption, Feats::Resizable | Feats::DrawBackground | Feats::DrawBorder | Feats::DrawTitleBar, true);
+		g_WindowOpen[caption] = true;
+		Boxes[WindowID].Rect = { pos.x, pos.y, w, h };
+		UpdatePosition(WindowID, Boxes[WindowID].Rect);
+		Boxes[WindowID].Kind = UISizeKind::Pixels;
+		Boxes[WindowID].Color = glm::vec4(0.2f, 0.2f, 0.2f, 1);
 
-		Boxes[id].Rect = { pos.x, pos.y, w, h };
-		UpdatePosition(id, Boxes[id].Rect);
-		Boxes[id].Kind = UISizeKind::Pixels;
-		Boxes[id].Color = glm::vec4(0.2f, 0.2f, 0.2f, 1);
-
-		auto& box = Boxes[id];
-		int pixelSize = 12;
-		glm::vec2 quadSize = MeasureText(box.Caption.data(), g_TitleFont, pixelSize);
-		int titleBarPaddingY = 12;
-		if (std::find(g_WindowOrder.begin(),g_WindowOrder.end(), id) 
+		
+		if (std::find(g_WindowOrder.begin(),g_WindowOrder.end(), WindowID)
 			== 
 			g_WindowOrder.end())
-			g_WindowOrder.push_back(id);
+			g_WindowOrder.push_back(WindowID);
 
-		g_ActiveWindow = id;
-		g_Parents.push(id);
+		g_ActiveWindow = WindowID;
+		auto prevWindow = g_Parents.top();
+		g_Parents.push(WindowID);
+
+		auto& box = Boxes[WindowID];
+		int pixelSize = 12;
+		int titleBarPaddingY = 12;
+		glm::vec2 quadSize = MeasureText(box.Caption.data(), g_TitleFont, pixelSize);
+
 		if (HasFlag(box.Features, Feats::DrawTitleBar))
 		{
-			DragWindow(id , box, quadSize.y + titleBarPaddingY);
+			DragWindow(WindowID, box, quadSize.y + titleBarPaddingY);
 		}
+		{
+			auto id = CreateBox("close_button" + caption, Feats::DrawBackground);
 
+			const int buttonWidth = 20;
+			const int buttonHeight = 20;
+
+			auto pos = ResolvePosition({ w - buttonWidth, 0 });
+			Boxes[id].Rect = { pos.x,pos.y , buttonWidth, buttonHeight };
+			Boxes[id].Kind = UISizeKind::Pixels;
+			Boxes[id].Color = glm::vec4(1, 0, 0, 1);
+
+			if (IsClicked(g_ActiveWindow, Boxes[id].Rect))
+			{
+				
+			}
+
+		}
 	}
 
 	void EndWindow()
@@ -1773,7 +1806,12 @@ namespace Voidstar
 
 	void RenderUI(ProgramHandle ui, ProgramHandle font)
 	{
-		RenderBox(0, ui, font);
+		//if (g_WindowOrder.size() > 1)
+		//RenderBox(g_WindowOrder[0], ui, font);
+		for (auto window : g_WindowOrder)
+		{
+			RenderBox(window, ui, font);
+		}
 		Boxes.clear();
 		Boxes.push_back(UIBox{});
 	}
