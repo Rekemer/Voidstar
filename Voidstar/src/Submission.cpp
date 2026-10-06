@@ -1285,6 +1285,8 @@ namespace Voidstar
 	static int g_ActiveWindow;
 
 
+	const int g_TextSize = 12;
+	const int g_TitlePadding = 12;
 	inline int GetLastChild(int parent)
 	{
 		assert(Boxes.size() > parent);
@@ -1322,7 +1324,41 @@ namespace Voidstar
 		return newIndex;
 	}
 
+	glm::vec4 RectAt(glm::vec2 relPos, glm::vec2 size)
+	{
+		auto p = ResolvePosition(relPos);
+		return { p.x, p.y, size.x, size.y };
+	}
 
+	int AddBox(const std::string& caption, Feats f, glm::vec4 rect, glm::vec4 color = glm::vec4(1))
+	{
+		int id = CreateBox(caption, f);
+		Boxes[id].Rect = rect;
+		Boxes[id].Kind = UISizeKind::Pixels;
+		Boxes[id].Color = color;
+		return id;
+	}
+	float CenterOffset(float container, float content) 
+	{
+		return (container - content) * 0.5f;
+	}
+	
+	int GetFontHeight(FontHandle fontHandle, int pixelSize)
+	{
+		auto font = Renderer::Instance()->GetFont(fontHandle, pixelSize);
+		return font->Ascent + font->Descent;
+	}
+	void LabelBeside(int boxId, const std::string& caption)
+	{
+		g_Parents.push(boxId);
+		auto& r = Boxes[boxId].Rect;
+		Text(caption, { r.z + 5, CenterOffset(r.w, (float)GetFontHeight(g_TextFont, g_TextSize)) });
+		g_Parents.pop();
+	}
+
+
+
+	
 
 	void UIInit()
 	{
@@ -1424,43 +1460,34 @@ namespace Voidstar
 		Boxes[id].Kind = UISizeKind::TextContent;
 	}
 
-	int GetFontHeight(FontHandle fontHandle, int pixelSize)
-	{
-		auto font = Renderer::Instance()->GetFont(fontHandle, pixelSize);
-		return font->Ascent + font->Descent;
-	}
+
+
+
 	bool Checkbox(const std::string& caption, const glm::vec2& pos)
 	{
-		auto id = CreateBox(caption,  Feats::DrawBackground | Feats::DrawBorder);
-		auto absPos = ResolvePosition(pos);
-		const float width = 10;
-		const float height = 10;
-		
-		auto rect = glm::vec4{ absPos.x,absPos.y,
-			width, height };
-		if (IsClicked(g_ActiveWindow, rect))
-		{
-			g_Checkbox[caption] = !g_Checkbox[caption];
-		}
+		auto rect = RectAt(pos, { 10, 10 });
+		int id = AddBox(caption, Feats::DrawBackground | Feats::DrawBorder, rect);
 
+		bool& checked = g_Checkbox[caption];
+		if (IsClicked(g_ActiveWindow, rect)) checked = !checked;
 
-
-		Boxes[id].Rect = rect;
 		Boxes[id].BorderWidth = 2;
-		Boxes[id].Color = g_Checkbox[caption] ? glm::vec4(0.6f, 0.7f, 0.6f, 1) : glm::vec4(0.3f, 0.3f, 0.3f, 1);
-		Boxes[id].Kind = UISizeKind::Pixels;
-		g_Parents.push(id);
-		
-		auto fontHeight = GetFontHeight(g_TextFont, 12);
-		Text(caption, { width + 5, -(std::abs(height - fontHeight)) / 2 });
-		
-		g_Parents.pop();
-
-		return g_Checkbox[caption];
+		Boxes[id].Color = checked ? glm::vec4(0.6f, 0.7f, 0.6f, 1) : glm::vec4(0.3f, 0.3f, 0.3f, 1);;
+		LabelBeside(id, caption);
+		return checked;
 	}
 
-
-	
+	bool Button(const std::string& text, const glm::vec2& pos)
+	{
+		auto size = MeasureText(text, g_TextFont, g_TextSize) + glm::vec2(10);
+		auto rect = RectAt(pos, size);
+		int id = AddBox(text, Feats::DrawBackground, rect, glm::vec4{1,0,1,1});
+		{
+			g_Parents.push(id);
+			Text(text, { 5, 5 });          // padding / 2 on both axes
+		}
+		return IsClicked(g_ActiveWindow, rect);
+	}
 
 	double Slider(const std::string& caption,
 		glm::vec2 relativePos,
@@ -1554,62 +1581,51 @@ namespace Voidstar
 		const float height= 20;
 
 		glm::vec3 result;
-
+		
 		for (auto i = 0; i < 3; i++)
 		{
 			auto caption = label + std::to_string(i);
-			auto id = CreateBox( caption, Feats::DrawBackground);
-			auto absPos = ResolvePosition(pos);
-			absPos.x += offsetX * i;
-
-			glm::vec4 rect = { absPos.x, absPos.y, width , height };
-			Boxes[id].Rect = rect;
-			Boxes[id].Kind = UISizeKind::Pixels;
-			Boxes[id].Color = glm::vec4(1, 0, 1, 1);
+			auto rect = RectAt(pos, {width,height});
+			
+			auto id = AddBox(caption, Feats::DrawBackground, rect, glm::vec4(1, 0, 1, 1));
+			Boxes[id].Rect.x += offsetX * i;
 			
 			g_Parents.push(id);
 			
 			auto& isDragging = Boxes[id].IsDragging;
 			UpdateDrag(caption, isDragging,
-				Input::GetMousePos(),rect);
+				Input::GetMousePos(), Boxes[id].Rect);
 
 			if (isDragging)
 			{
 				auto delta = Input::GetMouseDeltaX();
 				g_VectorValues[caption] += delta / 4;
 
-				g_VectorValues[caption] =
-					glm::clamp(g_VectorValues[caption], -range.x, range.x);
+				g_VectorValues[caption] = glm::clamp(g_VectorValues[caption], -range.x, range.x);
 			}
 			result[i] = g_VectorValues[caption];
 
 			auto valueText = CutValueToString(g_VectorValues[caption]);
 			glm::vec2 textSize = MeasureText(valueText, g_TextFont, 12);
-			auto textPos = 
-				glm::vec2(width / 2 - textSize.x / 2,
-				height / 2 - textSize.y / 2);
+			
+			auto textPos = glm::vec2( CenterOffset(width, textSize.x),
+				CenterOffset(height,  textSize.y)
+				);
+
 			Text(valueText, textPos);
 			g_Parents.pop();
 		}
-
 		return result;
 	}
 
 	glm::vec4 ColorPicker(const std::string& text,
 		const glm::vec2& pos)
 	{
-		auto id = CreateBox(text, Feats::DrawBackground);
-
 		const float width = 10;
 		const float height = 10;
 
-		auto absPos = ResolvePosition(pos);
-
-		glm::vec4 rect = { absPos.x, absPos.y, width , height };
-		Boxes[id].Rect = rect;
-		Boxes[id].Kind = UISizeKind::Pixels;
-		Boxes[id].Color = glm::vec4(0, 1, 1, 1);
-
+		auto rect = RectAt(pos, {width,height});
+		auto id = AddBox(text, Feats::DrawBackground,rect, glm::vec4(0, 1, 1, 1));
 
 		auto windowCaption = "Color picker";
 		if (IsClicked(g_ActiveWindow,rect) || g_WindowOpen[windowCaption])
@@ -1646,32 +1662,6 @@ namespace Voidstar
 			g_BoxRects[id] = window.Rect;
 		}
 	}	
-
-	bool Button(const std::string& text, const glm::vec2& relativePos)
-	{
-		auto id = CreateBox(text, Feats::DrawBackground);
-		auto absPos = ResolvePosition(relativePos);
-		glm::vec2 textSize = MeasureText(text, g_TextFont, 12);
-
-		const float padding = 10.0f;
-		glm::vec4 rect = { absPos.x, absPos.y, textSize.x + padding, textSize.y + padding };
-		Boxes[id].Rect = rect;
-		Boxes[id].Kind = UISizeKind::Pixels;
-		Boxes[id].Color = glm::vec4(1, 0, 1, 1);
-
-		g_Parents.push(id);
-
-		float boxHeight = rect.w; 
-		float textOffsetY = -(textSize.y - boxHeight) / 2.0f; 
-
-		auto textPos = glm::vec2(padding / 2.0f, textOffsetY); 
-
-		Text(text, textPos);
-
-		g_Parents.pop();
-
-		return IsClicked(g_ActiveWindow, rect);
-	}
 
 	void BeginWindow(const std::string& caption, glm::vec2 pos,
 		int w, int h)

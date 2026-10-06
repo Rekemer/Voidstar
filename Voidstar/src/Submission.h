@@ -712,7 +712,8 @@ namespace Voidstar
 	glm::vec2 ResolvePosition(glm::vec2 relOffset);
 
 
-	bool Checkbox(const std::string& caption, const glm::vec2& pos);
+	bool Checkbox(const std::string& caption,
+		const glm::vec2& pos);
 
 	double Slider(const std::string& caption,
 		glm::vec2 relativePos,
