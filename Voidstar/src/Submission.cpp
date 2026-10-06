@@ -1271,13 +1271,18 @@ namespace Voidstar
 	}
 	static  std::stack<int>	g_Parents;
 	static  std::vector<UIBox> Boxes;
-	static  Map<std::string, glm::vec2> g_WindowPositions;
+	static  Map<int, glm::vec4> g_WindowRects;
 	static  Map<std::string, glm::vec2> g_SliderPositions;
 	static  Map<std::string, bool> g_Dragging;
 	static  Map<std::string, bool> g_Checkbox;
 	static  Map<std::string, float > g_VectorValues;
 	static  Map<std::string, bool > g_WindowOpen;
 	
+
+	// back to front
+	static std::vector<int> g_WindowOrder;
+	// current window, which handles mouse
+	static int g_ActiveWindow;
 
 
 	inline int GetLastChild(int parent)
@@ -1297,6 +1302,7 @@ namespace Voidstar
 		UIBox box;
 		box.Caption = caption;
 		box.Features = features;
+		//box.RootWindow = rootWindow;
 		auto it = g_Dragging.find(caption);
 		box.IsDragging = (it != g_Dragging.end()) ? it->second : false;
 		Boxes.push_back(box);
@@ -1323,16 +1329,16 @@ namespace Voidstar
 	}
 
 
-	void UpdatePosition(const std::string& caption, glm::vec2& pos)
+	void UpdatePosition (int id, glm::vec4& rect)
 	{
-		auto it = g_WindowPositions.find(caption);
-		if (it != g_WindowPositions.end())
+		auto it = g_WindowRects.find(id);
+		if (it != g_WindowRects.end())
 		{
-			pos = it->second;
+			rect = it->second;
 		}
 		else
 		{
-			g_WindowPositions[caption] = pos;
+			g_WindowRects[id] = rect;
 		}
 	}
 
@@ -1350,6 +1356,18 @@ namespace Voidstar
 			&& mousePos.y >= rect.y
 			&& mousePos.y <= rect.y + rect.w;
 	}
+	bool IsClicked(int windowID, glm::vec4 rect)
+	{
+		auto iter = std::find(g_WindowOrder.begin(), g_WindowOrder.end(), windowID);
+		assert(iter != g_WindowOrder.end());
+		for (auto i = iter + 1; i != g_WindowOrder.end(); i++)
+		{
+			auto windowRect = g_WindowRects[*i];
+			auto nextWindowIntercepts = IsMouseWithin(Input::GetMousePos(), windowRect);
+			if (nextWindowIntercepts) return false;
+		}
+		return IsMouseWithin(Input::GetMousePos(), rect) && Input::IsMouseClicked(VS_MOUSE_LEFT);
+	}
 
 	void UpdateDrag(
 		const std::string& caption,
@@ -1357,10 +1375,10 @@ namespace Voidstar
 		const glm::vec2& mousePos,
 		const glm::vec4& rectDrag)
 	{
-		bool inRect = IsMouseWithin(mousePos, rectDrag);
+		//bool inRect = IsMouseWithin(mousePos, rectDrag);
 		if (Input::IsMousePressed(VS_MOUSE_LEFT))
 		{
-			if (inRect && Input::IsMouseClicked(VS_MOUSE_LEFT))
+			if (IsClicked(g_ActiveWindow, rectDrag))
 			{
 				isDragging = true;
 			}
@@ -1384,11 +1402,7 @@ namespace Voidstar
 		return (1.0 - t) * a + t * b;
 	}
 
-	bool IsClicked(glm::vec4 rect)
-	{
-		return IsMouseWithin(Input::GetMousePos(), rect) && Input::IsMouseClicked(VS_MOUSE_LEFT);
-	}
-
+	
 	void Text(const std::string& text, const glm::vec2& relativePos)
 	{
 		auto id = CreateBox(text, Feats::DrawText);
@@ -1404,14 +1418,14 @@ namespace Voidstar
 	}
 	bool Checkbox(const std::string& caption, const glm::vec2& pos)
 	{
-		auto id = CreateBox(caption, Feats::DrawBackground | Feats::DrawBorder);
+		auto id = CreateBox(caption,  Feats::DrawBackground | Feats::DrawBorder);
 		auto absPos = ResolvePosition(pos);
 		const float width = 10;
 		const float height = 10;
 		
 		auto rect = glm::vec4{ absPos.x,absPos.y,
 			width, height };
-		if (IsClicked(rect))
+		if (IsClicked(g_ActiveWindow, rect))
 		{
 			g_Checkbox[caption] = !g_Checkbox[caption];
 		}
@@ -1464,8 +1478,8 @@ namespace Voidstar
 
 
 			glm::vec2 relativeOffset = { 0, 0 };
-			auto it = g_WindowPositions.find(sliderString);
-			if (it != g_WindowPositions.end())
+			auto it = g_WindowRects.find(id);
+			if (it != g_WindowRects.end())
 				relativeOffset = it->second;
 
 			auto sliderPosX = glm::clamp(sliderBasePos.x + relativeOffset.x,
@@ -1484,7 +1498,7 @@ namespace Voidstar
 
 				dragBoxRect.x += xDelta;
 				// update offset
-				g_WindowPositions[sliderString] = { dragBoxRect.x - sliderBasePos.x, sliderBasePos.y };
+				g_WindowRects[id] = glm::vec4 {dragBoxRect.x - sliderBasePos.x, sliderBasePos.y, handleWidth, handleHeight};
 			}
 			t = InverseLerp(sliderBasePos.x, sliderBasePos.x + trackWidth, dragBoxRect.x);
 
@@ -1585,7 +1599,7 @@ namespace Voidstar
 
 
 		auto windowCaption = "Color picker";
-		if (IsClicked(rect) || g_WindowOpen[windowCaption])
+		if (IsClicked(g_ActiveWindow,rect) || g_WindowOpen[windowCaption])
 		{
 			BeginWindow(windowCaption, {40,200},150,300);
 			g_WindowOpen[windowCaption] = true;
@@ -1598,7 +1612,7 @@ namespace Voidstar
 	}
 
 	
-	void DragWindow(UIBox& window, int titleHeight)
+	void DragWindow(int id, UIBox& window, int titleHeight)
 	{
 		auto mousePos = Input::GetMousePos();
 		auto& isDragging = window.IsDragging;
@@ -1616,32 +1630,9 @@ namespace Voidstar
 
 			window.Rect.x += xDelta;
 			window.Rect.y += yDelta;
-			g_WindowPositions[window.Caption] = { window.Rect.x, window.Rect.y };
+			g_WindowRects[id] = window.Rect;
 		}
-	}
-
-	void BeginWindow(const std::string& caption, glm::vec2 pos,
-		int w, int h)
-	{
-		int id = CreateBox(caption, Feats::Resizable | Feats::DrawBackground | Feats::DrawBorder | Feats::DrawTitleBar);
-
-		UpdatePosition(caption, pos);
-		Boxes[id].Rect = { pos.x, pos.y, w, h };
-		Boxes[id].Kind = UISizeKind::Pixels;
-		Boxes[id].Color = glm::vec4(0.2f, 0.2f, 0.2f, 1);
-
-		auto& box = Boxes[id];
-		int pixelSize = 12;
-		glm::vec2 quadSize = MeasureText(box.Caption.data(), g_TitleFont, pixelSize);
-		int titleBarPaddingY = 12;
-		if (HasFlag(box.Features, Feats::DrawTitleBar))
-		{
-			DragWindow(box, quadSize.y + titleBarPaddingY);
-		}
-		g_Parents.push(id);
-	}
-
-	
+	}	
 
 	bool Button(const std::string& text, const glm::vec2& relativePos)
 	{
@@ -1666,8 +1657,37 @@ namespace Voidstar
 
 		g_Parents.pop();
 
-		return Input::IsMouseClicked(VS_MOUSE_LEFT) && IsMouseWithin(Input::GetMousePos(),rect);
+		return IsClicked(g_ActiveWindow, rect);
 	}
+
+	void BeginWindow(const std::string& caption, glm::vec2 pos,
+		int w, int h)
+	{
+		int id = CreateBox(caption, Feats::Resizable | Feats::DrawBackground | Feats::DrawBorder | Feats::DrawTitleBar);
+
+		Boxes[id].Rect = { pos.x, pos.y, w, h };
+		UpdatePosition(id, Boxes[id].Rect);
+		Boxes[id].Kind = UISizeKind::Pixels;
+		Boxes[id].Color = glm::vec4(0.2f, 0.2f, 0.2f, 1);
+
+		auto& box = Boxes[id];
+		int pixelSize = 12;
+		glm::vec2 quadSize = MeasureText(box.Caption.data(), g_TitleFont, pixelSize);
+		int titleBarPaddingY = 12;
+		if (std::find(g_WindowOrder.begin(),g_WindowOrder.end(), id) 
+			== 
+			g_WindowOrder.end())
+			g_WindowOrder.push_back(id);
+
+		g_ActiveWindow = id;
+		g_Parents.push(id);
+		if (HasFlag(box.Features, Feats::DrawTitleBar))
+		{
+			DragWindow(id , box, quadSize.y + titleBarPaddingY);
+		}
+
+	}
+
 	void EndWindow()
 	{
 		g_Parents.pop();

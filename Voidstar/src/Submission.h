@@ -688,6 +688,8 @@ namespace Voidstar
 	{
 		int First = -1;
 		int Sibling = -1;
+		int RootWindow = 0;
+
 		// relative to parent position
 		glm::vec4 RelPos;
 		// final screen position
@@ -723,8 +725,9 @@ namespace Voidstar
 		const std::string& label,
 		const glm::vec2& pos);
 
-	void DragWindow(UIBox& window, int titleHeight);
+	
 	glm::vec2 MeasureText(std::string_view txt, FontHandle handle, int pixelSize);
+
 
 	void BeginWindow(const std::string& caption, glm::vec2 pos,
 		int w, int h);
