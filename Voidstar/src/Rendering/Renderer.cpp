@@ -2131,28 +2131,28 @@ namespace Voidstar
 					auto posLB = proj * glm::vec4(quad.pos.x,quad.pos.y + quad.scale.y, 0, 1);
 					batchQuad->Position = glm::vec3{ posLB.x, posLB.y, 0 };
 					batchQuad->UV = quad.minMaxUv.x > 0 ? glm::vec2{quad.minMaxUv.x, quad.minMaxUv.w } : glm::vec2{ 0.0f, 1.0f };
-					batchQuad->Color = quad.color;
+					batchQuad->Color = quad.colorPerVertex[0];
 					batchQuad++;
 
 					// right bottom
 					auto posRB = proj * glm::vec4(quad.pos.x + quad.scale.x, quad.pos.y + quad.scale.y, 0, 1);
 					batchQuad->Position = glm::vec3{ posRB.x, posRB.y, 0 };
 					batchQuad->UV = quad.minMaxUv.x > 0 ? glm::vec2{ quad.minMaxUv.z, quad.minMaxUv.w } : glm::vec2{ 1.0f, 1.0f };
-					batchQuad->Color = quad.color;
+					batchQuad->Color = quad.colorPerVertex[1];
 					batchQuad++;
 
 					// right top
 					auto posRT = proj * glm::vec4(quad.pos.x + quad.scale.x, quad.pos.y, 0, 1);
 					batchQuad->Position = glm::vec3{ posRT.x, posRT.y, 0 };
 					batchQuad->UV = quad.minMaxUv.x > 0 ? glm::vec2{ quad.minMaxUv.z, quad.minMaxUv.y } : glm::vec2{ 1.0f, 0.0f };
-					batchQuad->Color = quad.color;
+					batchQuad->Color = quad.colorPerVertex[2];
 					batchQuad++;
 
 					// left top
 					auto posLT = proj * glm::vec4(quad.pos.x, quad.pos.y, 0, 1);
 					batchQuad->Position = glm::vec3{ posLT.x, posLT.y, 0 };
 					batchQuad->UV = quad.minMaxUv.x > 0 ? glm::vec2{ quad.minMaxUv.x, quad.minMaxUv.y } : glm::vec2{ 0.0f, 0.0f };
-					batchQuad->Color = quad.color;
+					batchQuad->Color = quad.colorPerVertex[3];
 					batchQuad++;
 				}
 				renderItem.internalOffset = m_CurrentQuadVertexOffset;

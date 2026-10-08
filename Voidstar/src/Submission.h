@@ -462,11 +462,14 @@ namespace Voidstar
 	{
 		glm::vec2 pos;
 		glm::vec2 scale;
-		glm::vec4 color;
 		// if minMaxUv.x is -1 then
 		// use only quad uv 
 		// instead of atlas uv
 		glm::vec4 minMaxUv; 
+
+		std::array<glm::vec4,4> colorPerVertex;
+
+
 	};
 
 	struct Frame
@@ -607,7 +610,7 @@ namespace Voidstar
 	
 	// top left is the origin
 	void SubmitQuads(std::vector<QuadEntry>& quads);
-	void SubmitQuad(const glm::vec2& pos, const glm::vec2& scale, const glm::vec4& color);
+	void SubmitQuadSolidColor(const glm::vec2& pos, const glm::vec2& scale, const glm::vec4& color);
 
 	void SubmitCompute(PassID id, ProgramHandle program, size_t x, size_t y,size_t z);
 	
@@ -695,7 +698,7 @@ namespace Voidstar
 		glm::vec4 RelPos;
 		// final screen position
 		glm::vec4 Rect;
-		glm::vec4 Color;
+		std::array<glm::vec4, 4> Color;
 		std::string Caption;
 		Feats Features = Feats::None;
 		UISizeKind Kind;
@@ -728,7 +731,7 @@ namespace Voidstar
 	glm::vec2 MeasureText(std::string_view txt, FontHandle handle, int pixelSize);
 
 
-	void BeginWindow(const std::string& caption, glm::vec2 pos,
+	int BeginWindow(const std::string& caption, glm::vec2 pos,
 		int w, int h);
 	void Text(const std::string& text, const glm::vec2& relativePos);
 	
