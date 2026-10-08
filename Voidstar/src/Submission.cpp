@@ -1122,11 +1122,19 @@ namespace Voidstar
 		g_Submission->Submit->CurrentRenderItem->isQuadBatch = true;
 		AddQuads(quads);
 	}
-
-	void SubmitQuad(const glm::vec2& pos, const glm::vec2& scale, const glm::vec4& color)
+	void SubmitQuad(const glm::vec2& pos, const glm::vec2& scale, std::array<glm::vec4,4>& color)
 	{
 		g_Submission->Submit->CurrentRenderItem->isQuadBatch = true;
-		AddQuads({ QuadEntry{ pos,scale,color } });
+		auto quad = QuadEntry{ pos,scale};
+		quad.colorPerVertex = color;
+		AddQuads({ quad });
+	}
+	void SubmitQuadSolidColor(const glm::vec2& pos,
+		const glm::vec2& scale, const glm::vec4& color)
+	{
+		std::array<glm::vec4, 4> array;
+		array.fill(color);
+		SubmitQuad(pos,scale, array);
 	}
 	static void AddQuads(const std::vector<QuadEntry>& quads)
 	{
@@ -1205,7 +1213,8 @@ namespace Voidstar
 			glm::vec2 size = glm::vec2{ (float)ch.Size.x,(float)ch.Size.y } * scale;
 			
 			glm::vec4 minMaxUv = glm::vec4{ ch.minUv.x,ch.minUv.y,ch.maxUv.x,ch.maxUv.y };
-			QuadEntry quad{ pos,size,color, minMaxUv};
+			QuadEntry quad{ pos,size, minMaxUv};
+			quad.colorPerVertex.fill(color);
 			quads.push_back(quad);
 			cursorX += ch.Advance * scale;
 
@@ -1285,6 +1294,35 @@ namespace Voidstar
 	static int g_ActiveWindow;
 
 
+
+	struct HSV
+	{
+		// which color it is 
+		// red, orange, yellow, green, cyan, blue, purple, back to red
+		// it is an angle
+		float Hue = 0;
+		// how vivid color is 
+		// 0 is gray or white
+		// 1 is the strongest color
+		float Saturation = 1;
+		// how bright it is
+		// 0 is black
+		float Value = 1;
+	};
+	static Map<std::string, HSV> g_Colors;
+
+	glm::vec3 HsvToRgb(float h, float s, float v)
+	{
+		float c = v * s;
+		float hp = h / 60.0f;
+		float x = c * (1.0f - std::fabs(std::fmod(hp, 2.0f) - 1.0f));
+		glm::vec3 rgb = hp < 1 ? glm::vec3(c, x, 0) : hp < 2 ? glm::vec3(x, c, 0) :
+			hp < 3 ? glm::vec3(0, c, x) : hp < 4 ? glm::vec3(0, x, c) :
+			hp < 5 ? glm::vec3(x, 0, c) : glm::vec3(c, 0, x);
+		return rgb + glm::vec3(v - c);
+	}
+
+
 	const int g_TextSize = 12;
 	const int g_TitlePadding = 12;
 	inline int GetLastChild(int parent)
@@ -1330,12 +1368,29 @@ namespace Voidstar
 		return { p.x, p.y, size.x, size.y };
 	}
 
+	void FillColorWith(std::array<glm::vec4, 4>& colors, glm::vec4 color)
+	{
+		for (auto& c : colors)
+		{
+			c = color;
+		}
+	}
+
+	int AddBoxWithColors(const std::string& caption, Feats f, glm::vec4 rect, std::array<glm::vec4,4> & colors )
+	{
+		int id = CreateBox(caption, f);
+		Boxes[id].Rect = rect;
+		Boxes[id].Kind = UISizeKind::Pixels;
+		Boxes[id].Color = colors;
+		return id;
+	}
+
 	int AddBox(const std::string& caption, Feats f, glm::vec4 rect, glm::vec4 color = glm::vec4(1))
 	{
 		int id = CreateBox(caption, f);
 		Boxes[id].Rect = rect;
 		Boxes[id].Kind = UISizeKind::Pixels;
-		Boxes[id].Color = color;
+		FillColorWith(Boxes[id].Color, color);
 		return id;
 	}
 	float CenterOffset(float container, float content) 
@@ -1472,7 +1527,7 @@ namespace Voidstar
 		if (IsClicked(g_ActiveWindow, rect)) checked = !checked;
 
 		Boxes[id].BorderWidth = 2;
-		Boxes[id].Color = checked ? glm::vec4(0.6f, 0.7f, 0.6f, 1) : glm::vec4(0.3f, 0.3f, 0.3f, 1);;
+		FillColorWith(Boxes[id].Color, checked ? glm::vec4(0.6f, 0.7f, 0.6f, 1) : glm::vec4(0.3f, 0.3f, 0.3f, 1));
 		LabelBeside(id, caption);
 		return checked;
 	}
@@ -1506,7 +1561,7 @@ namespace Voidstar
 			Boxes[id].Rect = { absPos.x, absPos.y, trackWidth , trackHeight };
 			Boxes[id].Kind = UISizeKind::Pixels;
 			//Boxes[id].Color = glm::vec4(0.1f, 0.1f, 0.1f, 0.5);
-			Boxes[id].Color = glm::vec4(1);
+			FillColorWith(Boxes[id].Color, glm::vec4(1));
 			g_Parents.push(id);
 		}
 		// drag box
@@ -1543,7 +1598,7 @@ namespace Voidstar
 			t = InverseLerp(sliderBasePos.x, sliderBasePos.x + trackWidth, dragBoxRect.x);
 
 			Boxes[id].Kind = UISizeKind::Pixels;
-			Boxes[id].Color = glm::vec4(1,0,1,1);
+			FillColorWith(Boxes[id].Color, glm::vec4(1, 0, 1, 1));
 			
 			// annotation
 			{
@@ -1621,17 +1676,39 @@ namespace Voidstar
 	glm::vec4 ColorPicker(const std::string& text,
 		const glm::vec2& pos)
 	{
-		const float width = 10;
-		const float height = 10;
+		const float buttonWidth = 10;
+		const float buttonHeight = 10;
 
-		auto rect = RectAt(pos, {width,height});
-		auto id = AddBox(text, Feats::DrawBackground,rect, glm::vec4(0, 1, 1, 1));
+		// button
+		auto rect = RectAt(pos, { buttonWidth,buttonHeight });
+		auto id = AddBox("button_" + text, Feats::DrawBackground, rect, glm::vec4(0, 1, 1, 1));
 
 		auto windowCaption = "Color picker";
 		if (IsClicked(g_ActiveWindow,rect) || g_WindowOpen[windowCaption])
 		{
-			BeginWindow(windowCaption, {40,200},150,300);
+			auto titleHeight = BeginWindow(windowCaption, {40,200},300,300);
 			
+			// hue bar
+			glm::vec4 colors[7] = { {1,0,0,1},{1,1,0,1},{0,1,0,1},{0,1,1,1},{0,0,1,1},{1,0,1,1},{1,0,0,1} };
+
+			glm::vec2 start{ 10, titleHeight  + 10};
+
+			const float barWidth = 20;
+			const float barHeight = 120;
+
+			for (int i = 0; i < 6; i++)
+			{
+				float topEdge = start.y + barHeight * i / 6.0f;
+				float bottomEdge = start.y + barHeight * (i+1) / 6.0f;
+
+				auto rect = RectAt({ start.x,bottomEdge }, { barWidth, bottomEdge - topEdge});
+				std::array<glm::vec4, 4> quadColors = {
+					colors[(i + 1)]  , colors[(i + 1)],
+					colors[i], colors[i]
+				};
+				auto id = AddBoxWithColors("bar_quad_" + text, Feats::DrawBackground, rect, quadColors);
+				
+			}
 
 			EndWindow();
 		}
@@ -1663,7 +1740,7 @@ namespace Voidstar
 		}
 	}	
 
-	void BeginWindow(const std::string& caption, glm::vec2 pos,
+	int BeginWindow(const std::string& caption, glm::vec2 pos,
 		int w, int h)
 	{
 		int WindowID = CreateBox(caption, Feats::Resizable | Feats::DrawBackground | Feats::DrawBorder | Feats::DrawTitleBar, true);
@@ -1671,7 +1748,7 @@ namespace Voidstar
 		Boxes[WindowID].Rect = { pos.x, pos.y, w, h };
 		UpdatePosition(WindowID, Boxes[WindowID].Rect);
 		Boxes[WindowID].Kind = UISizeKind::Pixels;
-		Boxes[WindowID].Color = glm::vec4(0.2f, 0.2f, 0.2f, 1);
+		FillColorWith(Boxes[WindowID].Color, glm::vec4(0.2f, 0.2f, 0.2f, 1));
 
 		
 		if (std::find(g_WindowOrder.begin(),g_WindowOrder.end(), WindowID)
@@ -1687,10 +1764,10 @@ namespace Voidstar
 		int pixelSize = 12;
 		int titleBarPaddingY = 12;
 		glm::vec2 quadSize = MeasureText(box.Caption.data(), g_TitleFont, pixelSize);
-
+		auto titleHeight = quadSize.y + titleBarPaddingY;
 		if (HasFlag(box.Features, Feats::DrawTitleBar))
 		{
-			DragWindow(WindowID, box, quadSize.y + titleBarPaddingY);
+			DragWindow(WindowID, box, titleHeight);
 		}
 		{
 			auto id = CreateBox("close_button" + caption, Feats::DrawBackground);
@@ -1701,7 +1778,7 @@ namespace Voidstar
 			auto pos = ResolvePosition({ w - buttonWidth, 0 });
 			Boxes[id].Rect = { pos.x,pos.y , buttonWidth, buttonHeight };
 			Boxes[id].Kind = UISizeKind::Pixels;
-			Boxes[id].Color = glm::vec4(1, 0, 0, 1);
+			FillColorWith(Boxes[id].Color, glm::vec4(1, 0, 0, 1));
 
 			if (IsClicked(g_ActiveWindow, Boxes[id].Rect))
 			{
@@ -1709,6 +1786,7 @@ namespace Voidstar
 			}
 
 		}
+		return titleHeight;
 	}
 
 	void EndWindow()
@@ -1743,7 +1821,7 @@ namespace Voidstar
 
 			BindVertexBuffer(0, g_QuadBatchVertexBuffer);
 			BindIndexBuffer(g_IndexQuadBuffer);
-			SubmitQuad({ box.Rect.x ,box.Rect.y }, { box.Rect.z, quadSize.y + titleBarPaddingY }, glm::vec4(0.05f, 0.05f, 0.05f, 1));
+			SubmitQuadSolidColor({ box.Rect.x ,box.Rect.y }, { box.Rect.z, quadSize.y + titleBarPaddingY }, glm::vec4(0.05f, 0.05f, 0.05f, 1));
 			Submit(1, ui);
 
 			BindVertexBuffer(0, g_QuadBatchVertexBuffer);
@@ -1764,13 +1842,13 @@ namespace Voidstar
 
 			// top 
 			if (!HasFlag(box.Features, Feats::DrawTitleBar))
-				SubmitQuad({ box.Rect.x, box.Rect.y }, { box.Rect.z, borderThickness }, borderColor);
+				SubmitQuadSolidColor({ box.Rect.x, box.Rect.y }, { box.Rect.z, borderThickness }, borderColor);
 			// bottom 
-			SubmitQuad({ box.Rect.x, box.Rect.y + box.Rect.w - borderThickness }, { box.Rect.z, borderThickness }, borderColor);
+			SubmitQuadSolidColor({ box.Rect.x, box.Rect.y + box.Rect.w - borderThickness }, { box.Rect.z, borderThickness }, borderColor);
 			// left 
-			SubmitQuad({ box.Rect.x, box.Rect.y }, { borderThickness, box.Rect.w }, borderColor);
+			SubmitQuadSolidColor({ box.Rect.x, box.Rect.y }, { borderThickness, box.Rect.w }, borderColor);
 			// right 
-			SubmitQuad({ box.Rect.x + box.Rect.z - borderThickness, box.Rect.y }, { borderThickness, box.Rect.w }, borderColor);
+			SubmitQuadSolidColor({ box.Rect.x + box.Rect.z - borderThickness, box.Rect.y }, { borderThickness, box.Rect.w }, borderColor);
 
 			Submit(1, ui);
 		}
