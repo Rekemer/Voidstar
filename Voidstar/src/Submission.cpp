@@ -1708,6 +1708,7 @@ namespace Voidstar
 				};
 				auto id = AddBoxWithColors("bar_quad_" + text, Feats::DrawBackground, rect, quadColors);
 
+
 			}
 
 
