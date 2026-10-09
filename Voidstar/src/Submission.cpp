@@ -1554,21 +1554,18 @@ namespace Voidstar
 		const float handleWidth = 6.0f;
 		const float handleHeight = 10.0f;
 		double t = 0;
-		auto absPos = ResolvePosition(relativePos);
+		auto absPos = RectAt(relativePos, { trackWidth , trackHeight });
 		// drag line
 		{
-			auto id = CreateBox("", Feats::DrawBackground);
-			Boxes[id].Rect = { absPos.x, absPos.y, trackWidth , trackHeight };
-			Boxes[id].Kind = UISizeKind::Pixels;
-			//Boxes[id].Color = glm::vec4(0.1f, 0.1f, 0.1f, 0.5);
+			auto id = AddBox("", Feats::DrawBackground, absPos);
 			FillColorWith(Boxes[id].Color, glm::vec4(1));
 			g_Parents.push(id);
 		}
 		// drag box
 		{
 			auto sliderString = caption + "_slider";
-			auto id = CreateBox(sliderString, Feats::DrawBackground);
-			auto sliderBasePos = ResolvePosition({0,-(handleHeight - trackHeight)/2});
+			auto sliderBasePos = RectAt({ 0,-(handleHeight - trackHeight) / 2 }, { handleWidth,handleHeight });
+			auto id = AddBox(sliderString, Feats::DrawBackground,sliderBasePos);
 
 
 
@@ -1673,67 +1670,55 @@ namespace Voidstar
 		return result;
 	}
 
+	static Map<std::string, float> g_HueMarker;   // from the top of the bar
 	glm::vec4 ColorPicker(const std::string& text,
 		const glm::vec2& pos)
 	{
 		const float buttonWidth = 10;
 		const float buttonHeight = 10;
 
-		// button
-		auto rect = RectAt(pos, { buttonWidth,buttonHeight });
-		auto id = AddBox("button_" + text, Feats::DrawBackground, rect, glm::vec4(0, 1, 1, 1));
+
+		auto rectButton = RectAt(pos, { buttonWidth,buttonHeight });
+		{
+			// button
+			auto id = AddBox("button_" + text, Feats::DrawBackground, rectButton, glm::vec4(0, 1, 1, 1));
+		}
 
 		auto windowCaption = "Color picker";
-		if (IsClicked(g_ActiveWindow,rect) || g_WindowOpen[windowCaption])
+		if (IsClicked(g_ActiveWindow, rectButton) || g_WindowOpen[windowCaption])
 		{
 			auto titleHeight = BeginWindow(windowCaption, {40,200},300,300);
-			
+
 			// hue bar
+
+			const float barWidth = 20, barHeight = 120, markerH = 5;
+			glm::vec2 start{ 10, titleHeight + 10 };
+			auto bar = RectAt(start, { barWidth, barHeight });      
+
 			glm::vec4 colors[7] = { {1,0,0,1},{1,1,0,1},{0,1,0,1},{0,1,1,1},{0,0,1,1},{1,0,1,1},{1,0,0,1} };
-
-			glm::vec2 start{ 10, titleHeight  + 10};
-
-			const float barWidth = 20;
-			const float barHeight = 120;
-
 			for (int i = 0; i < 6; i++)
 			{
-				float topEdge = start.y + barHeight * i / 6.0f;
-				float bottomEdge = start.y + barHeight * (i+1) / 6.0f;
-
-				auto rect = RectAt({ start.x, bottomEdge }, { barWidth, bottomEdge - topEdge});
-				std::array<glm::vec4, 4> quadColors = {
-					colors[(i + 1)]  , colors[(i + 1)],
-					colors[i], colors[i]
-				};
-				auto id = AddBoxWithColors("bar_quad_" + text, Feats::DrawBackground, rect, quadColors);
-
-
+				float topEdge = start.y + barHeight * i / 6.0f;          
+				float bottomEdge = start.y + barHeight * (i + 1) / 6.0f;
+				auto seg = RectAt({ start.x, topEdge }, { barWidth, bottomEdge - topEdge });
+				std::array<glm::vec4, 4> c = { colors[i + 1], colors[i + 1], colors[i], colors[i] };
+				AddBoxWithColors("bar_quad_" + text + std::to_string(i), Feats::DrawBackground, seg, c);
 			}
-
-
-
+			// hue picker
 			auto pickerName = "hue_picker_" + text;
 			auto id = CreateBox(pickerName, Feats::DrawBackground);
-			glm::vec2 relativeOffset = { 0, 0 };
-			auto it = g_BoxRects.find(id);
-			if (it != g_BoxRects.end())
-				relativeOffset = it->second;
-			std::cout << relativeOffset.y << "\n";
-			auto rect = RectAt({ start.x,start.y + barHeight/6 + relativeOffset.y}, { barWidth, 5 });
-
-			Boxes[id].Rect = rect;
-			FillColorWith(Boxes[id].Color, glm::vec4{1,1,1,1});
-
 			bool& isDragging = Boxes[id].IsDragging;
-			UpdateDrag(pickerName, isDragging, Input::GetMousePos(), rect);
+			float& markerY = g_HueMarker[pickerName];
 
+			UpdateDrag(pickerName, isDragging, Input::GetMousePos(), bar);      
 			if (isDragging)
-			{
-				rect.y += Input::GetMouseDeltaY();
-				g_BoxRects[id] = {0,rect.y -start.y, barWidth, 5 };
-			}
+				markerY = glm::clamp(Input::GetMousePos().y - bar.y, 0.0f, barHeight);
 
+			Boxes[id].Rect = { bar.x, bar.y + markerY, barWidth, markerH };
+			Boxes[id].Kind = UISizeKind::Pixels;
+			FillColorWith(Boxes[id].Color, glm::vec4{ 1, 1, 1, 1 });
+
+                      
 			EndWindow();
 		}
 
