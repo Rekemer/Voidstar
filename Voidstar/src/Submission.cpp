@@ -1395,6 +1395,10 @@ namespace Voidstar
 		FillColorWith(Boxes[id].Color, color);
 		return id;
 	}
+
+	// two object of width container and content
+	//returns how much we need to move object so it ends up 
+	// in center of container
 	float CenterOffset(float container, float content) 
 	{
 		return (container - content) * 0.5f;
@@ -1542,6 +1546,7 @@ namespace Voidstar
 		{
 			g_Parents.push(id);
 			Text(text, { 5, 5 });          // padding / 2 on both axes
+			g_Parents.pop();
 		}
 		return IsClicked(g_ActiveWindow, rect);
 	}
@@ -1667,18 +1672,22 @@ namespace Voidstar
 	glm::vec4 ColorPicker(const std::string& text,
 		const glm::vec2& pos)
 	{
-		const float buttonWidth = 10;
-		const float buttonHeight = 10;
+		const float showColorWidth = 10;
+		const float showColorHeight = 10;
+		
+		static auto chosenRGBColor = glm::vec4(0, 1, 1, 1);
 
-
-		auto rectButton = RectAt(pos, { buttonWidth,buttonHeight });
+		auto chosenColor = RectAt(pos, { showColorWidth ,showColorHeight});
 		{
-			// button
-			auto id = AddBox("button_" + text, Feats::DrawBackground, rectButton, glm::vec4(0, 1, 1, 1));
+			auto id = AddBox("chosenColor_" + text, Feats::DrawBackground, chosenColor, chosenRGBColor);
+			g_Parents.push(id);
 		}
+		
+		auto clicked = Button("Change color", {pos.x + 10, -showColorHeight/2 });
+		g_Parents.pop();
 
 		auto windowCaption = "Color picker";
-		if (IsClicked(g_ActiveWindow, rectButton) || g_WindowOpen[windowCaption])
+		if (clicked || g_WindowOpen[windowCaption])
 		{
 			auto titleHeight = BeginWindow(windowCaption, {40,200},300,300);
 
@@ -1710,11 +1719,14 @@ namespace Voidstar
 			Boxes[id].Kind = UISizeKind::Pixels;
 			FillColorWith(Boxes[id].Color, glm::vec4{ 1, 1, 1, 1 });
 
-                      
+			float t = markerY / barHeight;   
+			float hue = t * 360.0f;            
+			glm::vec3 rgb = HsvToRgb(hue, 1.0f, 1.0f);   // full saturation, full brightness 
+			chosenRGBColor = glm::vec4{ rgb.x,rgb.y,rgb.z,1 };
 			EndWindow();
 		}
 
-		return { };
+		return chosenRGBColor;
 
 	}
 
