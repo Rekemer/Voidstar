@@ -1287,6 +1287,8 @@ namespace Voidstar
 	static  Map<std::string, float > g_VectorValues;
 	static  Map<std::string, bool > g_WindowOpen;
 	static  std::vector<int> g_WindowsToClose;
+	// offset from slide oringin for slider pickers 
+	static  Map<std::string, float> g_SliderValues;   
 
 	// back to front
 	static std::vector<int> g_WindowOrder;
@@ -1569,33 +1571,24 @@ namespace Voidstar
 
 
 
-			glm::vec2 relativeOffset = { 0, 0 };
-			auto it = g_BoxRects.find(id);
-			if (it != g_BoxRects.end())
-				relativeOffset = it->second;
-
-			auto sliderPosX = glm::clamp(sliderBasePos.x + relativeOffset.x,
-				sliderBasePos.x, 
-				sliderBasePos.x + trackWidth);
-			auto& dragBoxRect = Boxes[id].Rect = { sliderPosX, sliderBasePos.y, handleWidth , handleHeight };
-
+			auto& markerX = g_SliderValues[sliderString];
 			auto& isDragging = Boxes[id].IsDragging;
 
-			UpdateDrag(sliderString, isDragging, Input::GetMousePos(), dragBoxRect);
+			UpdateDrag(sliderString, isDragging, Input::GetMousePos(), absPos);
 
 			if (isDragging)
 			{
 				auto xDelta = Input::GetMouseDeltaX();
 				auto yDelta = Input::GetMouseDeltaY();
-
-				dragBoxRect.x += xDelta;
+				auto mousePos = Input::GetMousePos();
+				auto difference = mousePos.x - absPos.x;
+				difference = std::clamp(difference, 0.0f, trackWidth);
 				// update offset
-				g_BoxRects[id] = glm::vec4 {dragBoxRect.x - sliderBasePos.x, sliderBasePos.y, handleWidth, handleHeight};
+				markerX = difference;
 			}
-			t = InverseLerp(sliderBasePos.x, sliderBasePos.x + trackWidth, dragBoxRect.x);
+			Boxes[id].Rect = { sliderBasePos.x + markerX, sliderBasePos.y, handleWidth , handleHeight };
+			t = InverseLerp(sliderBasePos.x, sliderBasePos.x + trackWidth, Boxes[id].Rect.x);
 
-			Boxes[id].Kind = UISizeKind::Pixels;
-			FillColorWith(Boxes[id].Color, glm::vec4(1, 0, 1, 1));
 			
 			// annotation
 			{
@@ -1670,7 +1663,7 @@ namespace Voidstar
 		return result;
 	}
 
-	static Map<std::string, float> g_HueMarker;   // from the top of the bar
+	
 	glm::vec4 ColorPicker(const std::string& text,
 		const glm::vec2& pos)
 	{
@@ -1690,7 +1683,6 @@ namespace Voidstar
 			auto titleHeight = BeginWindow(windowCaption, {40,200},300,300);
 
 			// hue bar
-
 			const float barWidth = 20, barHeight = 120, markerH = 5;
 			glm::vec2 start{ 10, titleHeight + 10 };
 			auto bar = RectAt(start, { barWidth, barHeight });      
@@ -1708,7 +1700,7 @@ namespace Voidstar
 			auto pickerName = "hue_picker_" + text;
 			auto id = CreateBox(pickerName, Feats::DrawBackground);
 			bool& isDragging = Boxes[id].IsDragging;
-			float& markerY = g_HueMarker[pickerName];
+			float& markerY = g_SliderValues[pickerName];
 
 			UpdateDrag(pickerName, isDragging, Input::GetMousePos(), bar);      
 			if (isDragging)
