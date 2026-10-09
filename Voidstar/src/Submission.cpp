@@ -1689,12 +1689,14 @@ namespace Voidstar
 		auto windowCaption = "Color picker";
 		if (clicked || g_WindowOpen[windowCaption])
 		{
-			auto titleHeight = BeginWindow(windowCaption, {40,200},300,300);
+			auto titleHeight = BeginWindow(windowCaption, {40,200},400,300);
 
 			// hue bar
 			const float barWidth = 20, barHeight = 120, markerH = 5;
-			glm::vec2 start{ 10, titleHeight + 10 };
-			auto bar = RectAt(start, { barWidth, barHeight });      
+			
+			glm::vec4 start { 10.0f, titleHeight + 10.0f, barWidth, barHeight };
+
+			auto bar = RectAt(glm::vec2{ start}, { barWidth, barHeight });
 
 			glm::vec4 colors[7] = { {1,0,0,1},{1,1,0,1},{0,1,0,1},{0,1,1,1},{0,0,1,1},{1,0,1,1},{1,0,0,1} };
 			for (int i = 0; i < 6; i++)
@@ -1719,9 +1721,52 @@ namespace Voidstar
 			Boxes[id].Kind = UISizeKind::Pixels;
 			FillColorWith(Boxes[id].Color, glm::vec4{ 1, 1, 1, 1 });
 
+			{
+				// brightness and saturation 
+				
+				auto bsRect = RectAt(glm::vec2{ start.x + start.z + 10, start.y}, { 150 ,100});
+
+				std::array <glm::vec4, 4> colors
+				{
+					glm::vec4{0,0,0,1},
+					glm::vec4{0,0,0,1},
+					chosenRGBColor,
+					glm::vec4{1},
+				};
+				auto id = AddBoxWithColors("bsColor_" + text, Feats::DrawBackground, bsRect, colors);
+				
+				{
+					g_Parents.push(id);
+					// picker
+					auto bsPickerRect = RectAt(glm::vec2{ bsRect.x, bsRect.y }, { 10, 10 });
+					auto id = AddBox("bsPicker", Feats::DrawBackground, bsPickerRect, { 1,0,1,1 });
+					
+					auto& isDragging = Boxes[id].IsDragging;
+					auto mousePos = Input::GetMousePos();
+					UpdateDrag("bsPicker", isDragging, mousePos, bsRect);
+
+					if (isDragging)
+					{
+
+						float relNormPosX = glm::clamp((mousePos.x - bsRect.x) / bsRect.z, 0.f, 1.f);
+						float relNormPosY = glm::clamp((mousePos.y - bsRect.y) / bsRect.w, 0.f, 1.f);
+
+						g_BoxRects[id] = { relNormPosX, relNormPosY,0,1};
+					}
+					Boxes[id].Rect = {
+						bsRect.x + g_BoxRects[id].x * bsRect.z,
+						bsRect.y + g_BoxRects[id].y * bsRect.w,
+						10,
+						10};
+					
+					g_Parents.pop();
+				}
+				
+			}
+
 			float t = markerY / barHeight;   
 			float hue = t * 360.0f;            
-			glm::vec3 rgb = HsvToRgb(hue, 1.0f, 1.0f);   // full saturation, full brightness 
+			glm::vec3 rgb = HsvToRgb(hue, 1.0f, 1.0f);   // full saturation, full brightness
 			chosenRGBColor = glm::vec4{ rgb.x,rgb.y,rgb.z,1 };
 			EndWindow();
 		}
