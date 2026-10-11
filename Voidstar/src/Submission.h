@@ -705,7 +705,6 @@ namespace Voidstar
 
 
 		float BorderWidth = 5.f;
-		bool IsDragging = false;
 	};
 
 	inline FontHandle g_TitleFont;

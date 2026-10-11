@@ -239,7 +239,7 @@ void ModelSandbox::Update(float deltaTime)
 	g_TitleFont = m_BoldFont;
 	g_TextFont = m_Font;
 
-	BeginWindow("Window", { 200,200 }, 200, 400);
+	BeginWindow("Window", { 200,200 }, 220, 400);
 	Text("Hello Voidstar", { 10 ,50});
 	auto value = Slider("Test slider", { 10, 100 }, 0, 10);
 	auto check = Checkbox("Checkbox", { 10,140 });

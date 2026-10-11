@@ -1289,6 +1289,7 @@ namespace Voidstar
 		// offset from slide origin for slider pickers 
 		float SliderValue;
 
+		bool IsDragging;
 		bool IsFirstFrame = true;
 	};
 
@@ -1355,9 +1356,6 @@ namespace Voidstar
 		UIBox box;
 		box.Caption = caption;
 		box.Features = features;
-		//box.RootWindow = rootWindow;
-		auto it = g_State.find(caption);
-		box.IsDragging = (it != g_State.end()) ? it->second.Dragging : false;
 		Boxes.push_back(box);
 		int newIndex = (int)Boxes.size() - 1;
 
@@ -1420,12 +1418,11 @@ namespace Voidstar
 		auto font = Renderer::Instance()->GetFont(fontHandle, pixelSize);
 		return font->Ascent + font->Descent;
 	}
-	void LabelBeside(int boxId, const std::string& caption)
+	void LabelRight(const std::string& caption)
 	{
-		g_Parents.push(boxId);
+		auto boxId = g_Parents.top();
 		auto& r = Boxes[boxId].Rect;
 		Text(caption, { r.z + 5, CenterOffset(r.w, (float)GetFontHeight(g_TextFont, g_TextSize)) });
-		g_Parents.pop();
 	}
 
 
@@ -1479,9 +1476,8 @@ namespace Voidstar
 		return click;
 	}
 
-	void UpdateDrag(
+	bool UpdateDrag(
 		const std::string& caption,
-		bool& isDragging,
 		const glm::vec2& mousePos,
 		const glm::vec4& rectDrag)
 	{
@@ -1490,15 +1486,14 @@ namespace Voidstar
 		{
 			if (IsClicked(g_ActiveWindow, rectDrag))
 			{
-				isDragging = true;
+				g_State[caption].IsDragging = true;
 			}
 		}
 		else
 		{
-			isDragging = false;
+			g_State[caption].IsDragging = false;
 		}
-
-		g_State[caption].Dragging = isDragging;
+		return g_State[caption].IsDragging;
 	}
 
 	
@@ -1528,13 +1523,15 @@ namespace Voidstar
 	{
 		auto rect = RectAt(pos, { 10, 10 });
 		int id = AddBox(caption, Feats::DrawBackground | Feats::DrawBorder, rect);
+		Boxes[id].BorderWidth = 2;
 
 		bool& checked = g_State[caption].Checkbox;
 		if (IsClicked(g_ActiveWindow, rect)) checked = !checked;
 
-		Boxes[id].BorderWidth = 2;
 		FillColorWith(Boxes[id].Color, checked ? glm::vec4(0.6f, 0.7f, 0.6f, 1) : glm::vec4(0.3f, 0.3f, 0.3f, 1));
-		LabelBeside(id, caption);
+		g_Parents.push(id);
+		LabelRight(caption);
+		g_Parents.pop();
 		return checked;
 	}
 
@@ -1574,9 +1571,8 @@ namespace Voidstar
 			auto sliderBasePos = RectAt({ 0,-(handleHeight - trackHeight) / 2 }, { handleWidth,handleHeight });
 			auto id = AddBox(sliderString, Feats::DrawBackground,sliderBasePos);
 			auto& markerX = g_State[sliderString].SliderValue;
-			auto& isDragging = Boxes[id].IsDragging;
-
-			UpdateDrag(sliderString, isDragging, Input::GetMousePos(), absPos);
+			
+			auto isDragging  = UpdateDrag(sliderString, Input::GetMousePos(), absPos);
 
 			if (isDragging)
 			{
@@ -1597,7 +1593,8 @@ namespace Voidstar
 				float pixelSize = 12; 
 				auto fontHeight = GetFontHeight(g_TextFont,pixelSize);
 				
-				Text(caption, { trackWidth + 5, -(std::abs(fontHeight - trackHeight))/2 });
+				LabelRight(caption);
+				//Text(caption, { trackWidth + 5, -(std::abs(fontHeight - trackHeight))/2 });
 
 
 				Text(std::to_string(int(start)), { 0, trackHeight + fontHeight  });
@@ -1629,19 +1626,17 @@ namespace Voidstar
 
 		glm::vec3 result;
 		
+		int lastId = 0;
 		for (auto i = 0; i < 3; i++)
 		{
 			auto caption = label + std::to_string(i);
 			auto rect = RectAt(pos, {width,height});
 			
 			auto id = AddBox(caption, Feats::DrawBackground, rect, glm::vec4(1, 0, 1, 1));
+			lastId = id;
 			Boxes[id].Rect.x += offsetX * i;
 			
-			g_Parents.push(id);
-			
-			auto& isDragging = Boxes[id].IsDragging;
-			UpdateDrag(caption, isDragging,
-				Input::GetMousePos(), Boxes[id].Rect);
+			auto isDragging = UpdateDrag(caption, Input::GetMousePos(), Boxes[id].Rect);
 
 			auto& VecValue = g_State[caption].VectorValue;
 			if (isDragging)
@@ -1659,9 +1654,15 @@ namespace Voidstar
 				CenterOffset(height,  textSize.y)
 				);
 
+			g_Parents.push(id);
 			Text(valueText, textPos);
 			g_Parents.pop();
 		}
+
+		g_Parents.push(lastId);
+		LabelRight(label);
+		g_Parents.pop();
+
 		return result;
 	}
 
@@ -1706,17 +1707,15 @@ namespace Voidstar
 			}
 			// hue picker
 			auto pickerName = "hue_picker_" + text;
-			auto id = CreateBox(pickerName, Feats::DrawBackground);
-			bool& isDragging = Boxes[id].IsDragging;
 			float& markerY = g_State[pickerName].SliderValue;
 
-			UpdateDrag(pickerName, isDragging, Input::GetMousePos(), bar);      
+			auto isDragging = UpdateDrag(pickerName, Input::GetMousePos(), bar);
+
 			if (isDragging)
 				markerY = glm::clamp(Input::GetMousePos().y - bar.y, 0.0f, barHeight);
 
-			Boxes[id].Rect = { bar.x, bar.y + markerY, barWidth, markerH };
-			Boxes[id].Kind = UISizeKind::Pixels;
-			FillColorWith(Boxes[id].Color, glm::vec4{ 1, 1, 1, 1 });
+			AddBox(pickerName, Feats::DrawBackground,
+				{ bar.x, bar.y + markerY, barWidth, markerH });
 
 			{
 				// brightness and saturation 
@@ -1738,9 +1737,8 @@ namespace Voidstar
 					auto bsPickerRect = RectAt(glm::vec2{ bsRect.x, bsRect.y }, { 10, 10 });
 					auto id = AddBox("bsPicker", Feats::DrawBackground, bsPickerRect, { 1,0,1,1 });
 					
-					auto& isDragging = Boxes[id].IsDragging;
 					auto mousePos = Input::GetMousePos();
-					UpdateDrag("bsPicker", isDragging, mousePos, bsRect);
+					auto isDragging  = UpdateDrag("bsPicker", mousePos, bsRect);
 
 					if (isDragging)
 					{
@@ -1781,8 +1779,7 @@ namespace Voidstar
 		// replace window height with title height
 		titleRect.w = titleHeight;
 
-		auto& isDragging = window.IsDragging;
-		UpdateDrag(window.Caption, isDragging, mousePos, titleRect);
+		auto isDragging = UpdateDrag(window.Caption, mousePos, titleRect);
 
 		if (isDragging)
 		{
