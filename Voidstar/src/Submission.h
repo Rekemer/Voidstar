@@ -664,6 +664,7 @@ namespace Voidstar
 		DrawBorder = 1 << 4,
 		DrawText = 1 << 5,
 		DrawTitleBar = 1 << 6,
+		DrawTexture = 1 << 7,
 
 	};
 	inline Feats operator|(Feats a, Feats b)
@@ -703,12 +704,16 @@ namespace Voidstar
 		Feats Features = Feats::None;
 		UISizeKind Kind;
 
+		TextureHandle Texture;
 
 		float BorderWidth = 5.f;
 	};
 
 	inline FontHandle g_TitleFont;
 	inline FontHandle g_TextFont;
+	inline ProgramHandle g_UIShader;
+	inline ProgramHandle g_UITextureShader;
+	inline ProgramHandle g_FontShader;
 
 	void UIInit();
 	glm::vec2 ResolvePosition(glm::vec2 relOffset);
@@ -744,9 +749,8 @@ namespace Voidstar
 
 	void EndWindow();
 	void BuildUI();
-	void RenderBox(int idx, ProgramHandle ui, ProgramHandle fontShader);
 
-	void RenderUI (ProgramHandle ui, ProgramHandle fontShader);
+	void RenderUI ();
 
 
 }

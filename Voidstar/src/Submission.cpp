@@ -1298,14 +1298,13 @@ namespace Voidstar
 	static  std::vector<std::string> g_WindowsToClose;
 	static  Map<std::string, BoxState> g_State;
 	// name of window and index in Boxes
+	// back to front
 	static std::vector<std::pair<std::string,int>> g_WindowOrder;
 	// current window index, which handles mouse
 	static int g_ActiveWindow;
 	
+	static TextureHandle g_CloseIcon;
 
-	
-
-	// back to front
 
 
 
@@ -1396,11 +1395,15 @@ namespace Voidstar
 		return id;
 	}
 
-	int AddBox(const std::string& caption, Feats f, glm::vec4 rect, glm::vec4 color = glm::vec4(1), bool isWindow = false)
+	int AddBox(const std::string& caption, Feats f, glm::vec4 rect,
+		glm::vec4 color = glm::vec4(1),
+		bool isWindow = false,
+		TextureHandle texture = TextureHandle{ TextureHandle::INVALID_ID })
 	{
 		int id = CreateBox(caption, f);
 		Boxes[id].Rect = rect;
 		Boxes[id].Kind = UISizeKind::Pixels;
+		Boxes[id].Texture = texture;
 		FillColorWith(Boxes[id].Color, color);
 		return id;
 	}
@@ -1434,6 +1437,8 @@ namespace Voidstar
 		UIBox root;
 		Boxes.push_back(root);
 		g_Parents.push(0);
+
+		g_CloseIcon = LoadTexture("close_icon.png");
 	}
 
 
@@ -1673,7 +1678,20 @@ namespace Voidstar
 		const float showColorWidth = 10;
 		const float showColorHeight = 10;
 		
+		static float hue = 1.f;
+		// init saturation
+		static float saturation = 1;
+		// init brightness
+		static float bright = 1;
 		static auto chosenRGBColor = glm::vec4(0, 1, 1, 1);
+
+		// to have picker at the top right corner of
+		// saturation and brigthness tab so it matches red hue color
+		// make it adjust to any init color?
+		if (g_State["bsPicker"].Rect.w == 0)
+		{
+			g_State["bsPicker"].Rect = { 1,0,0,1 };
+		}
 
 		auto chosenColor = RectAt(pos, { showColorWidth ,showColorHeight});
 		{
@@ -1717,6 +1735,10 @@ namespace Voidstar
 			AddBox(pickerName, Feats::DrawBackground,
 				{ bar.x, bar.y + markerY, barWidth, markerH });
 
+			float  t = markerY / barHeight;
+			hue = t * 360.0f;
+
+
 			{
 				// brightness and saturation 
 				
@@ -1726,7 +1748,7 @@ namespace Voidstar
 				{
 					glm::vec4{0,0,0,1},
 					glm::vec4{0,0,0,1},
-					chosenRGBColor,
+					glm::vec4{HsvToRgb(hue, 1.0f, 1.0f), 1},
 					glm::vec4{1},
 				};
 				auto id = AddBoxWithColors("bsColor_" + text, Feats::DrawBackground, bsRect, colors);
@@ -1734,8 +1756,9 @@ namespace Voidstar
 				{
 					g_Parents.push(id);
 					// picker
-					auto bsPickerRect = RectAt(glm::vec2{ bsRect.x, bsRect.y }, { 10, 10 });
-					auto id = AddBox("bsPicker", Feats::DrawBackground, bsPickerRect, { 1,0,1,1 });
+					//auto bsPickerRect = RectAt(glm::vec2{ bsRect.x, bsRect.y }, { 10, 10 });
+					auto bsPickerRect = RectAt(glm::vec2{ bsRect.z,0}, { 10, 10 });
+					auto id = AddBox("bsPicker", Feats::DrawBackground, bsPickerRect, glm::vec4{ 1,0,1,1 });
 					
 					auto mousePos = Input::GetMousePos();
 					auto isDragging  = UpdateDrag("bsPicker", mousePos, bsRect);
@@ -1745,7 +1768,8 @@ namespace Voidstar
 
 						float relNormPosX = glm::clamp((mousePos.x - bsRect.x) / bsRect.z, 0.f, 1.f);
 						float relNormPosY = glm::clamp((mousePos.y - bsRect.y) / bsRect.w, 0.f, 1.f);
-
+						saturation = relNormPosX;
+						bright = 1 - relNormPosY;
 						g_State["bsPicker"].Rect = { relNormPosX, relNormPosY,0,1};
 					}
 					Boxes[id].Rect = {
@@ -1753,15 +1777,13 @@ namespace Voidstar
 						bsRect.y + g_State["bsPicker"].Rect.y * bsRect.w,
 						10,
 						10};
-					
 					g_Parents.pop();
 				}
 				
 			}
 
-			float t = markerY / barHeight;   
-			float hue = t * 360.0f;            
-			glm::vec3 rgb = HsvToRgb(hue, 1.0f, 1.0f);   // full saturation, full brightness
+			      
+			glm::vec3 rgb = HsvToRgb(hue, saturation, bright);   // full saturation, full brightness
 			chosenRGBColor = glm::vec4{ rgb.x,rgb.y,rgb.z,1 };
 			EndWindow();
 		}
@@ -1836,7 +1858,7 @@ namespace Voidstar
 			const int buttonWidth = 20;
 			const int buttonHeight = 20;
 			auto pos = RectAt({ w - buttonWidth, 0 }, { buttonWidth, buttonHeight });
-			auto id = AddBox("close_button" + caption, Feats::DrawBackground,pos,glm::vec4(1, 0, 0, 1));
+			auto id = AddBox("close_button" + caption, Feats::DrawBackground | Feats::DrawTexture,pos,glm::vec4(1, 0, 0, 1),false, g_CloseIcon);
 			if (IsClicked(g_ActiveWindow, Boxes[id].Rect))
 			{
 				g_WindowsToClose.push_back(caption);
@@ -1855,7 +1877,7 @@ namespace Voidstar
 	{
 
 	}
-	void RenderBox(int idx, ProgramHandle ui, ProgramHandle fontShader)
+	void RenderBox(int idx)
 	{
 		UIBox& box = Boxes[idx];
 
@@ -1863,10 +1885,23 @@ namespace Voidstar
 		{
 			BindVertexBuffer(0, g_QuadBatchVertexBuffer);
 			BindIndexBuffer(g_IndexQuadBuffer);
+
+			if (HasFlag(box.Features, Feats::DrawTexture))
+			{
+				assert(box.Texture.Valid());
+				BindTexture("u_Texture" ,box.Texture);
+			}
+
 			SubmitQuad({ box.Rect.x, box.Rect.y }, { box.Rect.z, box.Rect.w }, box.Color);
-			Submit(1, ui);
+
+			if (HasFlag(box.Features, Feats::DrawTexture))
+			{
+				Submit(1, g_UITextureShader);
+			}
+			else Submit(1, g_UIShader);
 		}
 
+		
 
 		if (HasFlag(box.Features, Feats::DrawTitleBar))
 		{
@@ -1879,13 +1914,13 @@ namespace Voidstar
 			BindVertexBuffer(0, g_QuadBatchVertexBuffer);
 			BindIndexBuffer(g_IndexQuadBuffer);
 			SubmitQuadSolidColor({ box.Rect.x ,box.Rect.y }, { box.Rect.z, quadSize.y + titleBarPaddingY }, glm::vec4(0.05f, 0.05f, 0.05f, 1));
-			Submit(1, ui);
+			Submit(1, g_UIShader);
 
 			BindVertexBuffer(0, g_QuadBatchVertexBuffer);
 			BindIndexBuffer(g_IndexQuadBuffer);
 
 			SubmitText(box.Caption, box.Rect.x + 6, box.Rect.y + titleBarPaddingY * 0.25f, g_TitleFont, pixelSize);
-			Submit(1, fontShader);
+			Submit(1, g_FontShader);
 
 		}
 
@@ -1907,7 +1942,7 @@ namespace Voidstar
 			// right 
 			SubmitQuadSolidColor({ box.Rect.x + box.Rect.z - borderThickness, box.Rect.y }, { borderThickness, box.Rect.w }, borderColor);
 
-			Submit(1, ui);
+			Submit(1, g_UIShader);
 		}
 
 		if (HasFlag(box.Features, Feats::DrawText))
@@ -1915,7 +1950,7 @@ namespace Voidstar
 			BindVertexBuffer(0, g_QuadBatchVertexBuffer);
 			BindIndexBuffer(g_IndexQuadBuffer);
 			SubmitText(box.Caption, box.Rect.x, box.Rect.y, g_TextFont, 12);
-			Submit(1, fontShader);
+			Submit(1, g_FontShader);
 		}
 
 
@@ -1924,19 +1959,19 @@ namespace Voidstar
 		int child = box.First;
 		while (child != -1)
 		{
-			RenderBox(child, ui, fontShader);
+			RenderBox(child);
 			child = Boxes[child].Sibling;
 		}
 	}
 
-	void RenderUI(ProgramHandle ui, ProgramHandle font)
+	void RenderUI()
 	{
 		//if (g_WindowOrder.size() > 1)
 		//RenderBox(g_WindowOrder[0], ui, font);
 		for (auto p: g_WindowOrder)
 		{
 			auto windowId = p.second;
-			RenderBox(windowId, ui, font);
+			RenderBox(windowId);
 		}
 
 		for (auto w : g_WindowsToClose)

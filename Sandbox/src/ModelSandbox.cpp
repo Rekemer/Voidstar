@@ -63,6 +63,7 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 		m_FontShader = LoadProgram("render_batch_quad.vert", "font.frag");
 		m_UIShader = LoadProgram("render_batch_quad.vert", "solid_color.frag");
 		m_CompositeShader = LoadProgram("composite.vert", "composite.frag");
+		m_UITextureShader = LoadProgram("render_batch_quad.vert", "UITexture.frag");
 		m_Model = LoadModel("DamagedHelmet/glTF-Binary/DamagedHelmet.glb");
 
 #else
@@ -103,8 +104,8 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 		}
 
 		GetCamera()->LookAt({ 0,0,0 });
-		ExecuteFrame(0,true);
 		UIInit();
+		ExecuteFrame(0,true);
 	}
 
 void ModelSandbox::Update(float deltaTime)
@@ -257,7 +258,11 @@ void ModelSandbox::Update(float deltaTime)
 
 	EndWindow();
 	BuildUI();
-	RenderUI(m_UIShader, m_FontShader);
+
+	g_UIShader = m_UIShader;
+	g_FontShader = m_FontShader;
+	g_UITextureShader = m_UITextureShader;
+	RenderUI();
 	//Submit(1, m_UIShader);
 	SetOverlay(0, 1, m_CompositeShader);
 #endif
