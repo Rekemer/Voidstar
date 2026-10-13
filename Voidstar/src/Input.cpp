@@ -77,7 +77,10 @@ namespace Voidstar {
 		glfwSetCursorPos(m_currentWindow->GetRaw(), x, y);
 	}
 
-
+	glm::vec2 Input::GetMouseDelta()
+	{
+		return { Input::GetMouseDeltaX() , Input::GetMouseDeltaY() };
+	}
 	double Input::GetMouseDeltaX()
 	{
 		return m_MouseCurrentPosX - m_MouseLastPosX;

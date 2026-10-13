@@ -14,6 +14,7 @@ namespace Voidstar
 		static bool IsMousePressed(int mouse);
 		static bool IsMouseClicked(int button);
 		static void SetMousePos(float x, float y);
+		static glm::vec2 GetMouseDelta();
 		static double GetMouseDeltaX();
 		static double GetMouseDeltaY();
 		static glm::vec2 GetMousePos();

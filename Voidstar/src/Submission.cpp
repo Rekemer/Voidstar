@@ -1457,10 +1457,10 @@ namespace Voidstar
 			&& mousePos.y >= rect.y
 			&& mousePos.y <= rect.y + rect.w;
 	}
-	bool IsClicked(int boxId, glm::vec4 rect)
+	bool IsClicked(int windowID, glm::vec4 rect)
 	{
-		auto windowName = Boxes[boxId].Caption;
-		auto iter = std::find(g_WindowOrder.begin(), g_WindowOrder.end(), std::pair{windowName, boxId});
+		auto windowName = Boxes[windowID].Caption;
+		auto iter = std::find(g_WindowOrder.begin(), g_WindowOrder.end(), std::pair{windowName, windowID });
 		// no active windows
 		if (iter == g_WindowOrder.end()) return false;
 		
@@ -1476,7 +1476,7 @@ namespace Voidstar
 		{
 			// move window to the front
 			std::erase_if(g_WindowOrder, [&](std::pair <std::string, int> arg) { return arg.first == windowName; });
-			g_WindowOrder.push_back({ windowName,boxId });
+			g_WindowOrder.push_back({ windowName,windowID });
 		}
 		return click;
 	}
@@ -1835,6 +1835,8 @@ namespace Voidstar
 		int WindowID = AddBox(caption, Feats::Resizable | Feats::DrawBackground | Feats::DrawBorder | Feats::DrawTitleBar, { pos.x, pos.y, w, h }, glm::vec4(0.2f, 0.2f, 0.2f, 1), true);
 		g_State[caption].WindowOpen = true;
 		HandleFirstFrame(caption, Boxes[WindowID].Rect);
+		w = Boxes[WindowID].Rect.z;
+		h = Boxes[WindowID].Rect.w;
 		
 		if (std::find(g_WindowOrder.begin(), g_WindowOrder.end(), std::pair{ caption, WindowID })
 			== 
@@ -1842,7 +1844,6 @@ namespace Voidstar
 			g_WindowOrder.push_back({caption, WindowID });
 
 		g_ActiveWindow = WindowID;
-		auto prevWindow = g_Parents.top();
 		g_Parents.push(WindowID);
 
 		auto& box = Boxes[WindowID];
@@ -1853,6 +1854,21 @@ namespace Voidstar
 		if (HasFlag(box.Features, Feats::DrawTitleBar))
 		{
 			DragWindow(WindowID, box, titleHeight);
+		}
+		if (HasFlag(box.Features, Feats::Resizable))
+		{
+			auto rect = RectAt({ w - 20,h - 20}, {20,20});
+			auto resPointCaption = caption + "window_resize_point";
+			auto resizePointID = AddBox(resPointCaption,Feats::DrawBackground, rect);
+			auto isDragging = UpdateDrag(resPointCaption,Input::GetMousePos(),rect);
+			if (isDragging)
+			{
+				auto mouseDelta= Input::GetMouseDelta();
+				g_State[caption].Rect.z += mouseDelta.x;
+				g_State[caption].Rect.w += mouseDelta.y;
+
+			}
+
 		}
 		{
 			const int buttonWidth = 20;
