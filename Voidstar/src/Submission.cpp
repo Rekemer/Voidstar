@@ -1560,8 +1560,8 @@ namespace Voidstar
 	{
 		const float trackHeight = 4.0f;
 		const float trackWidth = 100.0f;
-		const float handleWidth = 6.0f;
-		const float handleHeight = 10.0f;
+		const float handleWidth = 14.0f;
+		const float handleHeight = 14.0f;
 		double t = 0;
 		auto absPos = RectAt(relativePos, { trackWidth , trackHeight });
 		// drag line
@@ -1574,7 +1574,7 @@ namespace Voidstar
 		{
 			auto sliderString = caption + "_slider";
 			auto sliderBasePos = RectAt({ 0,-(handleHeight - trackHeight) / 2 }, { handleWidth,handleHeight });
-			auto id = AddBox(sliderString, Feats::DrawBackground,sliderBasePos);
+			auto id = AddBox(sliderString, Feats::DrawBackground | Feats::DrawCircle,sliderBasePos);
 			auto& markerX = g_State[sliderString].SliderValue;
 			
 			auto isDragging  = UpdateDrag(sliderString, Input::GetMousePos(), absPos);
@@ -1758,7 +1758,7 @@ namespace Voidstar
 					// picker
 					//auto bsPickerRect = RectAt(glm::vec2{ bsRect.x, bsRect.y }, { 10, 10 });
 					auto bsPickerRect = RectAt(glm::vec2{ bsRect.z,0}, { 10, 10 });
-					auto id = AddBox("bsPicker", Feats::DrawBackground, bsPickerRect, glm::vec4{ 1,0,1,1 });
+					auto id = AddBox("bsPicker", Feats::DrawBackground | Feats::DrawRing, bsPickerRect, glm::vec4{ 1,0,1,1 });
 					
 					auto mousePos = Input::GetMousePos();
 					auto isDragging  = UpdateDrag("bsPicker", mousePos, bsRect);
@@ -1897,6 +1897,14 @@ namespace Voidstar
 			if (HasFlag(box.Features, Feats::DrawTexture))
 			{
 				Submit(1, g_UITextureShader);
+			}
+			else if (HasFlag(box.Features, Feats::DrawCircle))
+			{
+				Submit(1, g_CircleShader);
+			}
+			else if (HasFlag(box.Features, Feats::DrawRing))
+			{
+				Submit(1, g_RingShader);
 			}
 			else Submit(1, g_UIShader);
 		}

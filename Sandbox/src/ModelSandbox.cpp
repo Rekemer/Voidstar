@@ -60,11 +60,14 @@ ModelSandbox:: ModelSandbox(std::string appName, size_t screenWidth, size_t scre
 	{
 #if MODEL
 		m_DefaultShader = LoadProgram("model.vert", "model.frag");
-		m_FontShader = LoadProgram("render_batch_quad.vert", "font.frag");
-		m_UIShader = LoadProgram("render_batch_quad.vert", "solid_color.frag");
 		m_CompositeShader = LoadProgram("composite.vert", "composite.frag");
-		m_UITextureShader = LoadProgram("render_batch_quad.vert", "UITexture.frag");
 		m_Model = LoadModel("DamagedHelmet/glTF-Binary/DamagedHelmet.glb");
+		
+		g_FontShader = LoadProgram("render_batch_quad.vert", "font.frag");
+		g_UIShader = LoadProgram("render_batch_quad.vert", "solid_color.frag");
+		g_UITextureShader = LoadProgram("render_batch_quad.vert", "UITexture.frag");
+		g_CircleShader = LoadProgram("render_batch_quad.vert", "circle.frag");
+		g_RingShader = LoadProgram("render_batch_quad.vert", "ring.frag");
 
 #else
 		// MO MODEL
@@ -234,7 +237,7 @@ void ModelSandbox::Update(float deltaTime)
 
 
 	SetDepthTest(false);
-	Submit(1, m_FontShader);
+	Submit(1, g_FontShader);
 
 
 	g_TitleFont = m_BoldFont;
@@ -259,9 +262,6 @@ void ModelSandbox::Update(float deltaTime)
 	EndWindow();
 	BuildUI();
 
-	g_UIShader = m_UIShader;
-	g_FontShader = m_FontShader;
-	g_UITextureShader = m_UITextureShader;
 	RenderUI();
 	//Submit(1, m_UIShader);
 	SetOverlay(0, 1, m_CompositeShader);

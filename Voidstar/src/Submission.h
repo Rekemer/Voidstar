@@ -665,6 +665,8 @@ namespace Voidstar
 		DrawText = 1 << 5,
 		DrawTitleBar = 1 << 6,
 		DrawTexture = 1 << 7,
+		DrawCircle = 1 << 8,
+		DrawRing = 1 << 9,
 
 	};
 	inline Feats operator|(Feats a, Feats b)
@@ -714,6 +716,8 @@ namespace Voidstar
 	inline ProgramHandle g_UIShader;
 	inline ProgramHandle g_UITextureShader;
 	inline ProgramHandle g_FontShader;
+	inline ProgramHandle g_CircleShader;
+	inline ProgramHandle g_RingShader;
 
 	void UIInit();
 	glm::vec2 ResolvePosition(glm::vec2 relOffset);
