@@ -1317,9 +1317,10 @@ namespace Voidstar
 	
 	static TextureHandle g_CloseIcon;
 
-
-
-
+	const float g_LeftTitlePadding = 6;
+	const float g_TopTitlePadding = 12;
+	const int g_TextSize = 12;
+	
 	struct HSV
 	{
 		// which color it is 
@@ -1348,8 +1349,7 @@ namespace Voidstar
 	}
 
 
-	const int g_TextSize = 12;
-	const int g_TitlePadding = 12;
+	
 	inline int GetLastChild(int parent)
 	{
 		assert(Boxes.size() > parent);
@@ -1864,6 +1864,10 @@ namespace Voidstar
 		int titleBarPaddingY = 12;
 		glm::vec2 textSize = MeasureText(box.Caption.data(), g_TitleFont, pixelSize);
 		auto titleHeight = textSize.y + titleBarPaddingY;
+
+		const int closeButtonWidth = 20;
+		const int closeButtonHeight = 20;
+
 		if (HasFlag(box.Features, Feats::DrawTitleBar))
 		{
 			DragWindow(WindowID, box, titleHeight);
@@ -1877,24 +1881,16 @@ namespace Voidstar
 			if (isDragging)
 			{
 				auto mouseDelta= Input::GetMouseDelta();
-				g_State[caption].Rect.z += mouseDelta.x - 2;
-				g_State[caption].Rect.w += mouseDelta.y - 2;
-
-				if (g_State[caption].Rect.z <  textSize.x)
-				{
-					g_State[caption].Rect.z = textSize.x + 5;
-				}
-				//if (g_State[caption].Rect.w < titleHeight)
-				//{
-				//	g_State[caption].Rect.w = titleHeight;
-				//}
+				auto minW = g_LeftTitlePadding + textSize.x + closeButtonWidth + 2;
+				auto minH = g_TopTitlePadding + textSize.y;
+				g_State[caption].Rect.z = std::max(g_State[caption].Rect.z + mouseDelta.x,minW);
+				g_State[caption].Rect.w = std::max(g_State[caption].Rect.w + mouseDelta.y,minH);
 			}
 
 		}
 		{
-			const int buttonWidth = 20;
-			const int buttonHeight = 20;
-			auto pos = RectAt({ w - buttonWidth, 0 }, { buttonWidth, buttonHeight });
+			
+			auto pos = RectAt({ w - closeButtonWidth, 0 }, { closeButtonWidth, closeButtonHeight });
 			auto id = AddBox("close_button" + caption, Feats::DrawBackground | Feats::DrawTexture,pos,glm::vec4(1, 0, 0, 1),false, g_CloseIcon);
 			if (IsClicked(g_ActiveWindow, Boxes[id].Rect))
 			{
@@ -1958,18 +1954,18 @@ namespace Voidstar
 
 			int pixelSize = 12;
 			glm::vec2 quadSize = MeasureText(box.Caption.data(), g_TitleFont, pixelSize);
-			int titleBarPaddingY = 12;
+			
 
 
 			BindVertexBuffer(0, g_QuadBatchVertexBuffer);
 			BindIndexBuffer(g_IndexQuadBuffer);
-			SubmitQuadSolidColor({ box.Rect.x ,box.Rect.y }, { box.Rect.z, quadSize.y + titleBarPaddingY }, glm::vec4(0.05f, 0.05f, 0.05f, 1));
+			SubmitQuadSolidColor({ box.Rect.x ,box.Rect.y }, { box.Rect.z, quadSize.y + g_TopTitlePadding }, glm::vec4(0.05f, 0.05f, 0.05f, 1));
 			Submit(1, g_UIShader);
 
 			BindVertexBuffer(0, g_QuadBatchVertexBuffer);
 			BindIndexBuffer(g_IndexQuadBuffer);
 
-			SubmitText(box.Caption, box.Rect.x + 6, box.Rect.y + titleBarPaddingY * 0.25f, g_TitleFont, pixelSize);
+			SubmitText(box.Caption, box.Rect.x + g_LeftTitlePadding, box.Rect.y + g_TopTitlePadding * 0.25f, g_TitleFont, pixelSize);
 			Submit(1, g_FontShader);
 
 		}
