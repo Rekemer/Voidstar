@@ -409,8 +409,12 @@ namespace Voidstar
 		// Compute
 		glm::vec3 GroupCount;
 		
-		glm::vec4 ClipRect; // x y w h
 		RenderMode renderMode = RenderMode::WORLD;
+		glm::vec4 ClipRect; // x y w h
+
+		// if x is -1 set view instead
+		glm::vec4 Scissor = {-1,-1,-1,-1}; // x y (offsets) w h (extents) 
+		
 		size_t ObjectCount = 0;
 		// the last entry in array
 		size_t MatrixIndex = 0;
@@ -429,6 +433,7 @@ namespace Voidstar
 			Bindings.Reset();
 			isQuadBatch = false;
 			IndexBuffer.MakeInvalid();
+			Scissor = { -1,-1,-1,-1};
 		}
 
 	};
@@ -465,7 +470,7 @@ namespace Voidstar
 		// if minMaxUv.x is -1 then
 		// use only quad uv 
 		// instead of atlas uv
-		glm::vec4 minMaxUv; 
+		glm::vec4 minMaxUv = {-1,-1,-1,-1};
 
 		std::array<glm::vec4,4> colorPerVertex;
 
@@ -595,6 +600,8 @@ namespace Voidstar
 	void SubmitInit(InitParams);
 
 	void SetTransform(const glm::mat4& world);
+
+	void SetScissor(glm::vec4 scissor);
 
 	void SetClipRect(int x,int y,int w, int h);
 	void SetRenderMode(RenderMode mode);

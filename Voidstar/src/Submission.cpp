@@ -327,9 +327,15 @@ namespace Voidstar
 		auto renderItem =g_Submission->Submit->CurrentRenderItem;
 		renderItem->Program = programHandle;
 		renderItem->View =viewID;
-		
+
+		if (renderItem->Scissor.x < 0)
+		{
+			// not init by user then it is defined by view
+			renderItem->Scissor = g_Submission->Submit->Views[viewID].Rect;
+		}
 		g_Submission->Submit->Views[viewID].Type = ItemType::RENDER;
 		
+
 		g_Submission->Submit->NextItem(viewID);
 		//g_Submission->Submit->CurrentRenderItem->MatrixIndex = g_Submission->Submit->CurrentFreeMatrix;
 	}
@@ -771,6 +777,12 @@ namespace Voidstar
 	{
 		auto item = g_Submission->Submit->CurrentRenderItem;
 		item->ClipRect = glm::vec4{x,y,w,h};
+	}
+
+	void SetScissor(glm::vec4 scissor)
+	{
+		auto item = g_Submission->Submit->CurrentRenderItem;
+		item->Scissor = scissor;
 	}
 
 	void SetDepthWrite(bool write)
@@ -1350,7 +1362,7 @@ namespace Voidstar
 		return current;
 	}
 
-	int CreateBox(const std::string& caption, Feats features, bool isWindow = false)
+	int CreateBox(const std::string& caption, Feats features, bool isWindow)
 	{
 		UIBox box;
 		box.Caption = caption;
@@ -1388,7 +1400,7 @@ namespace Voidstar
 
 	int AddBoxWithColors(const std::string& caption, Feats f, glm::vec4 rect, std::array<glm::vec4,4> & colors )
 	{
-		int id = CreateBox(caption, f);
+		int id = CreateBox(caption, f, false);
 		Boxes[id].Rect = rect;
 		Boxes[id].Kind = UISizeKind::Pixels;
 		Boxes[id].Color = colors;
@@ -1400,7 +1412,7 @@ namespace Voidstar
 		bool isWindow = false,
 		TextureHandle texture = TextureHandle{ TextureHandle::INVALID_ID })
 	{
-		int id = CreateBox(caption, f);
+		int id = CreateBox(caption, f, isWindow);
 		Boxes[id].Rect = rect;
 		Boxes[id].Kind = UISizeKind::Pixels;
 		Boxes[id].Texture = texture;
@@ -1459,6 +1471,7 @@ namespace Voidstar
 	}
 	bool IsClicked(int windowID, glm::vec4 rect)
 	{
+		windowID = g_ActiveWindow;
 		auto windowName = Boxes[windowID].Caption;
 		auto iter = std::find(g_WindowOrder.begin(), g_WindowOrder.end(), std::pair{windowName, windowID });
 		// no active windows
@@ -1515,7 +1528,7 @@ namespace Voidstar
 	
 	void Text(const std::string& text, const glm::vec2& relativePos)
 	{
-		auto id = CreateBox(text, Feats::DrawText);
+		auto id = CreateBox(text, Feats::DrawText,false);
 		auto pos = ResolvePosition(relativePos);
 		Boxes[id].Rect = { pos.x, pos.y, 0,0 };
 		Boxes[id].Kind = UISizeKind::TextContent;
@@ -1849,8 +1862,8 @@ namespace Voidstar
 		auto& box = Boxes[WindowID];
 		int pixelSize = 12;
 		int titleBarPaddingY = 12;
-		glm::vec2 quadSize = MeasureText(box.Caption.data(), g_TitleFont, pixelSize);
-		auto titleHeight = quadSize.y + titleBarPaddingY;
+		glm::vec2 textSize = MeasureText(box.Caption.data(), g_TitleFont, pixelSize);
+		auto titleHeight = textSize.y + titleBarPaddingY;
 		if (HasFlag(box.Features, Feats::DrawTitleBar))
 		{
 			DragWindow(WindowID, box, titleHeight);
@@ -1864,9 +1877,17 @@ namespace Voidstar
 			if (isDragging)
 			{
 				auto mouseDelta= Input::GetMouseDelta();
-				g_State[caption].Rect.z += mouseDelta.x;
-				g_State[caption].Rect.w += mouseDelta.y;
+				g_State[caption].Rect.z += mouseDelta.x - 2;
+				g_State[caption].Rect.w += mouseDelta.y - 2;
 
+				if (g_State[caption].Rect.z <  textSize.x)
+				{
+					g_State[caption].Rect.z = textSize.x + 5;
+				}
+				//if (g_State[caption].Rect.w < titleHeight)
+				//{
+				//	g_State[caption].Rect.w = titleHeight;
+				//}
 			}
 
 		}
@@ -1893,9 +1914,14 @@ namespace Voidstar
 	{
 
 	}
+
+	std::stack<glm::vec4> g_Scissors;
+
 	void RenderBox(int idx)
 	{
 		UIBox& box = Boxes[idx];
+
+		SetScissor(g_Scissors.top());
 
 		if (HasFlag(box.Features, Feats::DrawBackground))
 		{
@@ -1978,8 +2004,6 @@ namespace Voidstar
 		}
 
 
-
-
 		int child = box.First;
 		while (child != -1)
 		{
@@ -1990,12 +2014,14 @@ namespace Voidstar
 
 	void RenderUI()
 	{
-		//if (g_WindowOrder.size() > 1)
-		//RenderBox(g_WindowOrder[0], ui, font);
-		for (auto p: g_WindowOrder)
+		for (auto i =0; i < g_WindowOrder.size(); i++)
 		{
+			auto p = g_WindowOrder[i];
 			auto windowId = p.second;
+			auto& box = Boxes[windowId];
+			g_Scissors.push(box.Rect);
 			RenderBox(windowId);
+			g_Scissors.pop();
 		}
 
 		for (auto w : g_WindowsToClose)

@@ -2302,14 +2302,33 @@ namespace Voidstar
 					);
 				}
 
+				glm::ivec2 scissorOffsets = { 
+					item->Scissor.x ,
+					item->Scissor.y 
+					//view.Rect.x,
+					//view.Rect.y,
+				};
+				glm::ivec2 scissorExtents = {
+					item->Scissor.z ,
+					item->Scissor.w 
+					//view.Rect.z,
+					//view.Rect.w,
+				};
+
 				vk::Rect2D scissors;
+				assert(scissorOffsets.x >= 0);
+				assert(scissorOffsets.y >= 0);
+
+				assert(scissorExtents.x >= 0);
+				assert(scissorExtents.y >= 0);
+				
 				scissors.offset = vk::Offset2D{
-					static_cast<int32_t>(view.Rect[0]),
-					static_cast<int32_t>(view.Rect[1])
+					static_cast<int32_t>(scissorOffsets.x),
+					static_cast<int32_t>(scissorOffsets.y)
 				};
 				scissors.extent = vk::Extent2D{
-					static_cast<uint32_t>(view.Rect[2]),
-					static_cast<uint32_t>(view.Rect[3])
+					static_cast<uint32_t>(scissorExtents.x),
+					static_cast<uint32_t>(scissorExtents.y)
 				};
 
 				vkCmd.setViewport(0, 1, &viewport);
