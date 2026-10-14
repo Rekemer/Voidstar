@@ -1320,6 +1320,9 @@ namespace Voidstar
 	const float g_LeftTitlePadding = 6;
 	const float g_TopTitlePadding = 12;
 	const int g_TextSize = 12;
+
+	const int g_CloseButtonWidth = 20;
+	const int g_CloseButtonHeight = 20;
 	
 	struct HSV
 	{
@@ -1862,35 +1865,16 @@ namespace Voidstar
 		auto& box = Boxes[WindowID];
 		int pixelSize = 12;
 		int titleBarPaddingY = 12;
-		glm::vec2 textSize = MeasureText(box.Caption.data(), g_TitleFont, pixelSize);
-		auto titleHeight = textSize.y + titleBarPaddingY;
-
-		const int closeButtonWidth = 20;
-		const int closeButtonHeight = 20;
+		glm::vec2 textSize = MeasureText(box.Caption.data(), g_TitleFont, g_TextSize);
+		auto titleHeight = textSize.y + g_TopTitlePadding;
 
 		if (HasFlag(box.Features, Feats::DrawTitleBar))
 		{
 			DragWindow(WindowID, box, titleHeight);
 		}
-		if (HasFlag(box.Features, Feats::Resizable))
-		{
-			auto rect = RectAt({ w - 20,h - 20}, {20,20});
-			auto resPointCaption = caption + "window_resize_point";
-			auto resizePointID = AddBox(resPointCaption,Feats::DrawBackground, rect);
-			auto isDragging = UpdateDrag(resPointCaption,Input::GetMousePos(),rect);
-			if (isDragging)
-			{
-				auto mouseDelta= Input::GetMouseDelta();
-				auto minW = g_LeftTitlePadding + textSize.x + closeButtonWidth + 2;
-				auto minH = g_TopTitlePadding + textSize.y;
-				g_State[caption].Rect.z = std::max(g_State[caption].Rect.z + mouseDelta.x,minW);
-				g_State[caption].Rect.w = std::max(g_State[caption].Rect.w + mouseDelta.y,minH);
-			}
-
-		}
 		{
 			
-			auto pos = RectAt({ w - closeButtonWidth, 0 }, { closeButtonWidth, closeButtonHeight });
+			auto pos = RectAt({ w - g_CloseButtonWidth, 0 }, { g_CloseButtonWidth, g_CloseButtonHeight });
 			auto id = AddBox("close_button" + caption, Feats::DrawBackground | Feats::DrawTexture,pos,glm::vec4(1, 0, 0, 1),false, g_CloseIcon);
 			if (IsClicked(g_ActiveWindow, Boxes[id].Rect))
 			{
@@ -1903,6 +1887,26 @@ namespace Voidstar
 
 	void EndWindow()
 	{
+		auto box = Boxes[g_Parents.top()];
+		auto& caption = box.Caption;
+		glm::vec2 textSize = MeasureText(box.Caption.data(), g_TitleFont, g_TextSize);
+		if (HasFlag(box.Features, Feats::Resizable))
+		{
+			auto rect = RectAt({ box.Rect.z - 20,box.Rect.w - 20 }, { 20,20 });
+			auto resPointCaption = caption + "window_resize_point";
+			auto resizePointID = AddBox(resPointCaption, Feats::DrawBackground, rect);
+			auto isDragging = UpdateDrag(resPointCaption, Input::GetMousePos(), rect);
+			if (isDragging)
+			{
+				auto mouseDelta = Input::GetMouseDelta();
+				auto minW = g_LeftTitlePadding + textSize.x + g_CloseButtonWidth + 2;
+				auto minH = g_TopTitlePadding + textSize.y;
+				g_State[caption].Rect.z = std::max(g_State[caption].Rect.z + mouseDelta.x, minW);
+				g_State[caption].Rect.w = std::max(g_State[caption].Rect.w + mouseDelta.y, minH);
+			}
+
+		}
+
 		g_Parents.pop();
 	}
 
