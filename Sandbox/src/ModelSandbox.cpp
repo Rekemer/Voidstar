@@ -254,12 +254,10 @@ void ModelSandbox::Update(float deltaTime)
 		std::cout << "Button Clicked!\n";
 	}
 	auto color = ColorPicker("Color", { 10,240 });
-
-
-	//BeginWindow("window_color", { 40,200 }, 100, 300);
-	//EndWindow();
-
 	EndWindow();
+
+	//BeginWindow("window_color", { 40,200 }, 100, /300);
+	//EndWindow();
 	BuildUI();
 
 	RenderUI();

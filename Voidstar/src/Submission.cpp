@@ -1294,7 +1294,6 @@ namespace Voidstar
 	struct BoxState
 	{
 		glm::vec4 Rect;
-		bool Dragging;
 		bool Checkbox;
 		float VectorValue; // Vector3
 		bool WindowOpen;
@@ -1311,9 +1310,10 @@ namespace Voidstar
 	static  Map<std::string, BoxState> g_State;
 	// name of window and index in Boxes
 	// back to front
-	static std::vector<std::pair<std::string,int>> g_WindowOrder;
+	static std::vector<std::string> g_WindowOrder;
+	static Map<std::string, int > g_WindowIndex;
 	// current window index, which handles mouse
-	static int g_ActiveWindow;
+	static std::stack<std::string> g_BuildingWindows;
 	
 	static TextureHandle g_CloseIcon;
 
@@ -1472,27 +1472,27 @@ namespace Voidstar
 			&& mousePos.y >= rect.y
 			&& mousePos.y <= rect.y + rect.w;
 	}
-	bool IsClicked(int windowID, glm::vec4 rect)
+	bool IsClicked(glm::vec4 rect)
 	{
-		windowID = g_ActiveWindow;
+		auto windowID = g_WindowIndex[g_BuildingWindows.top()];
+
 		auto windowName = Boxes[windowID].Caption;
-		auto iter = std::find(g_WindowOrder.begin(), g_WindowOrder.end(), std::pair{windowName, windowID });
+		auto iter = std::find(g_WindowOrder.begin(), g_WindowOrder.end(), windowName);
 		// no active windows
 		if (iter == g_WindowOrder.end()) return false;
 		
 		for (auto i = iter + 1; i != g_WindowOrder.end(); i++)
 		{
-			auto windowRect = g_State[i->first].Rect;
+			auto windowRect = g_State[*i].Rect;
 			auto nextWindowIntercepts = IsMouseWithin(Input::GetMousePos(), windowRect);
 			if (nextWindowIntercepts) return false;
 		}
 		auto click = IsMouseWithin(Input::GetMousePos(), rect) && Input::IsMouseClicked(VS_MOUSE_LEFT);
-
 		if (click)
 		{
 			// move window to the front
-			std::erase_if(g_WindowOrder, [&](std::pair <std::string, int> arg) { return arg.first == windowName; });
-			g_WindowOrder.push_back({ windowName,windowID });
+			std::erase_if(g_WindowOrder, [&](auto arg) { return arg == windowName; });
+			g_WindowOrder.push_back(windowName);
 		}
 		return click;
 	}
@@ -1505,7 +1505,7 @@ namespace Voidstar
 		//bool inRect = IsMouseWithin(mousePos, rectDrag);
 		if (Input::IsMousePressed(VS_MOUSE_LEFT))
 		{
-			if (IsClicked(g_ActiveWindow, rectDrag))
+			if (IsClicked(rectDrag))
 			{
 				g_State[caption].IsDragging = true;
 			}
@@ -1547,7 +1547,7 @@ namespace Voidstar
 		Boxes[id].BorderWidth = 2;
 
 		bool& checked = g_State[caption].Checkbox;
-		if (IsClicked(g_ActiveWindow, rect)) checked = !checked;
+		if (IsClicked(rect)) checked = !checked;
 
 		FillColorWith(Boxes[id].Color, checked ? glm::vec4(0.6f, 0.7f, 0.6f, 1) : glm::vec4(0.3f, 0.3f, 0.3f, 1));
 		g_Parents.push(id);
@@ -1566,7 +1566,7 @@ namespace Voidstar
 			Text(text, { 5, 5 });          // padding / 2 on both axes
 			g_Parents.pop();
 		}
-		return IsClicked(g_ActiveWindow, rect);
+		return IsClicked(rect);
 	}
 
 	double Slider(const std::string& caption,
@@ -1854,12 +1854,14 @@ namespace Voidstar
 		w = Boxes[WindowID].Rect.z;
 		h = Boxes[WindowID].Rect.w;
 		
-		if (std::find(g_WindowOrder.begin(), g_WindowOrder.end(), std::pair{ caption, WindowID })
+		g_WindowIndex[caption] = WindowID;
+
+		if (std::find(g_WindowOrder.begin(), g_WindowOrder.end(), caption)
 			== 
 			g_WindowOrder.end())
-			g_WindowOrder.push_back({caption, WindowID });
+			g_WindowOrder.push_back(caption);
 
-		g_ActiveWindow = WindowID;
+		g_BuildingWindows.push(caption);
 		g_Parents.push(WindowID);
 
 		auto& box = Boxes[WindowID];
@@ -1876,7 +1878,7 @@ namespace Voidstar
 			
 			auto pos = RectAt({ w - g_CloseButtonWidth, 0 }, { g_CloseButtonWidth, g_CloseButtonHeight });
 			auto id = AddBox("close_button" + caption, Feats::DrawBackground | Feats::DrawTexture,pos,glm::vec4(1, 0, 0, 1),false, g_CloseIcon);
-			if (IsClicked(g_ActiveWindow, Boxes[id].Rect))
+			if (IsClicked(Boxes[id].Rect))
 			{
 				g_WindowsToClose.push_back(caption);
 			}
@@ -1887,7 +1889,9 @@ namespace Voidstar
 
 	void EndWindow()
 	{
+
 		auto box = Boxes[g_Parents.top()];
+
 		auto& caption = box.Caption;
 		glm::vec2 textSize = MeasureText(box.Caption.data(), g_TitleFont, g_TextSize);
 		if (HasFlag(box.Features, Feats::Resizable))
@@ -1906,7 +1910,7 @@ namespace Voidstar
 			}
 
 		}
-
+		g_BuildingWindows.pop();
 		g_Parents.pop();
 	}
 
@@ -2017,7 +2021,7 @@ namespace Voidstar
 		for (auto i =0; i < g_WindowOrder.size(); i++)
 		{
 			auto p = g_WindowOrder[i];
-			auto windowId = p.second;
+			auto windowId = g_WindowIndex[p];
 			auto& box = Boxes[windowId];
 			g_Scissors.push(box.Rect);
 			RenderBox(windowId);
@@ -2026,12 +2030,11 @@ namespace Voidstar
 
 		for (auto w : g_WindowsToClose)
 		{
-			std::erase_if(g_WindowOrder, [&](auto arg) {return arg.first == w; });
+			std::erase_if(g_WindowOrder, [&](auto arg) {return arg == w; });
 			g_State[w].WindowOpen = false;
 		}
-
+		g_WindowIndex.clear();
 		g_WindowsToClose.clear();
-		
 		Boxes.clear();
 		Boxes.push_back(UIBox{});
 	}
