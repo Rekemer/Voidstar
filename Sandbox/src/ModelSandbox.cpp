@@ -232,7 +232,7 @@ void ModelSandbox::Update(float deltaTime)
 	float scale = 1;
 	//SubmitText("AVATAR WAVE TAO", 200, startY, m_Font, scale,glm::vec4{ 0,1,1,1 });
 	//SubmitText("Avatar wave tao", 200, startY + size, m_Font, scale, glm::vec4{1,1,0,1});
-	SubmitText("Voidstar Vulkan", 0, 0, m_Font, 64, glm::vec4{ 1,0,1,1 });
+	SubmitText("Voidstar Vulkan", 0, 0, m_Font, 64, g_Theme.Text);
 
 
 
@@ -244,7 +244,7 @@ void ModelSandbox::Update(float deltaTime)
 	g_TextFont = m_Font;
 
 	BeginWindow("Window", { 200,200 }, 220, 400);
-	Text("Hello Voidstar", { 10 ,50});
+	Text("Hello Voidstar", { 10 ,50}, g_Theme.Text);
 	auto value = Slider("Test slider", { 10, 100 }, 0, 10);
 	auto check = Checkbox("Checkbox", { 10,140 });
 	//

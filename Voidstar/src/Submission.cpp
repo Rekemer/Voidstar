@@ -1324,14 +1324,7 @@ namespace Voidstar
 	const int g_CloseButtonWidth = 20;
 	const int g_CloseButtonHeight = 20;
 
-	struct Theme {
-		glm::vec4 WindowBg{ 0.12f, 0.12f, 0.13f, 1 };  // window body
-		glm::vec4 TitleBar{ 0.07f, 0.07f, 0.08f, 1 };  // darker than the body
-		glm::vec4 WidgetBg{ 0.20f, 0.20f, 0.22f, 1 };  // checkbox, slider track, number fields
-		glm::vec4 InteractColor{ 0.26f, 0.59f, 0.98f, 1 };    // buttons, slider handle, checked state
-		glm::vec4 Text{ 0.92f, 0.92f, 0.93f, 1 };
-		glm::vec4 TextDim{ 0.60f, 0.60f, 0.62f, 1 };  // "0", "10", placeholders
-	} g_Theme;
+
 	// title bar glm::vec4(0.05f, 0.05f, 0.05f, 1)
 	
 	struct HSV
@@ -1450,7 +1443,7 @@ namespace Voidstar
 	{
 		auto boxId = g_Parents.top();
 		auto& r = Boxes[boxId].Rect;
-		Text(caption, { r.z + 5, CenterOffset(r.w, (float)GetFontHeight(g_TextFont, g_TextSize)) });
+		Text(caption, { r.z + 5, CenterOffset(r.w, (float)GetFontHeight(g_TextFont, g_TextSize)) }, g_Theme.Text);
 	}
 
 
@@ -1510,8 +1503,10 @@ namespace Voidstar
 	bool UpdateDrag(
 		const std::string& caption,
 		const glm::vec2& mousePos,
-		const glm::vec4& rectDrag)
+		glm::vec4 rectDrag)
 	{
+		// to have more space for dragging
+		rectDrag.w += 5;
 		//bool inRect = IsMouseWithin(mousePos, rectDrag);
 		if (Input::IsMousePressed(VS_MOUSE_LEFT))
 		{
@@ -1539,11 +1534,10 @@ namespace Voidstar
 	}
 
 	
-	void Text(const std::string& text, const glm::vec2& relativePos)
+	void Text(const std::string& text, const glm::vec2& relativePos, const glm::vec4& color)
 	{
-		auto id = CreateBox(text, Feats::DrawText,false);
-		auto pos = ResolvePosition(relativePos);
-		Boxes[id].Rect = { pos.x, pos.y, 0,0 };
+		auto rect = RectAt(relativePos, {0,0});
+		auto id = AddBox(text, Feats::DrawText,rect,color);
 		Boxes[id].Kind = UISizeKind::TextContent;
 	}
 
@@ -1555,6 +1549,7 @@ namespace Voidstar
 		auto rect = RectAt(pos, { 10, 10 });
 		int id = AddBox(caption, Feats::DrawBackground | Feats::DrawBorder, rect);
 		Boxes[id].BorderWidth = 2;
+		Boxes[id].BorderColor = g_Theme.ControlBorder;
 
 		bool& checked = g_State[caption].Checkbox;
 		if (IsClicked(rect)) checked = !checked;
@@ -1573,7 +1568,7 @@ namespace Voidstar
 		int id = AddBox(text, Feats::DrawBackground, rect, g_Theme.InteractColor);
 		{
 			g_Parents.push(id);
-			Text(text, { 5, 5 });          // padding / 2 on both axes
+			Text(text, { 5, 5 }, g_Theme.Text);          // padding / 2 on both axes
 			g_Parents.pop();
 		}
 		return IsClicked(rect);
@@ -1619,6 +1614,12 @@ namespace Voidstar
 			Boxes[id].Rect = { sliderBasePos.x + markerX, sliderBasePos.y, handleWidth , handleHeight };
 			t = InverseLerp(sliderBasePos.x, sliderBasePos.x + trackWidth, Boxes[id].Rect.x);
 
+			{
+				// draw filled track
+				auto rect = glm::vec4{ sliderBasePos.x,Boxes[id].Rect.y + handleHeight/2, Boxes[id].Rect.x- sliderBasePos.x, trackHeight};
+				AddBox(sliderString + "filled_track", Feats::DrawBackground,
+					rect, g_Theme.InteractColor);
+			}
 			
 			// annotation
 			{
@@ -1629,8 +1630,8 @@ namespace Voidstar
 				//Text(caption, { trackWidth + 5, -(std::abs(fontHeight - trackHeight))/2 });
 
 
-				Text(std::to_string(int(start)), { 0, trackHeight + fontHeight  });
-				Text(std::to_string(int(end)), { trackWidth, trackHeight + fontHeight });
+				Text(std::to_string(int(start)), { 0, trackHeight + fontHeight  }, g_Theme.TextDim);
+				Text(std::to_string(int(end)), { trackWidth, trackHeight + fontHeight }, g_Theme.TextDim);
 			}
 			g_Parents.pop();
 		}
@@ -1687,7 +1688,7 @@ namespace Voidstar
 				);
 
 			g_Parents.push(id);
-			Text(valueText, textPos);
+			Text(valueText, textPos, g_Theme.Text);
 			g_Parents.pop();
 		}
 
@@ -1785,7 +1786,7 @@ namespace Voidstar
 					// picker
 					//auto bsPickerRect = RectAt(glm::vec2{ bsRect.x, bsRect.y }, { 10, 10 });
 					auto bsPickerRect = RectAt(glm::vec2{ bsRect.z,0}, { 10, 10 });
-					auto id = AddBox("bsPicker", Feats::DrawBackground | Feats::DrawRing, bsPickerRect, glm::vec4{ 1,0,1,1 });
+					auto id = AddBox("bsPicker", Feats::DrawBackground | Feats::DrawRing, bsPickerRect, glm::vec4{ 1,1,1,1 });
 					
 					auto mousePos = Input::GetMousePos();
 					auto isDragging  = UpdateDrag("bsPicker", mousePos, bsRect);
@@ -1863,6 +1864,7 @@ namespace Voidstar
 		int WindowID = AddBox(caption, Feats::Resizable | Feats::DrawBackground | Feats::DrawBorder | Feats::DrawTitleBar, { pos.x, pos.y, w, h }, 
 			g_Theme.WindowBg, true);
 		g_State[caption].WindowOpen = true;
+		Boxes[WindowID].BorderColor = g_Theme.WndowBorder;
 		HandleFirstFrame(caption, Boxes[WindowID].Rect);
 		w = Boxes[WindowID].Rect.z;
 		h = Boxes[WindowID].Rect.w;
@@ -1890,7 +1892,7 @@ namespace Voidstar
 		{
 			
 			auto pos = RectAt({ w - g_CloseButtonWidth, 0 }, { g_CloseButtonWidth, g_CloseButtonHeight });
-			auto id = AddBox("close_button" + caption, Feats::DrawBackground | Feats::DrawTexture,pos,glm::vec4(1, 0, 0, 1),false, g_CloseIcon);
+			auto id = AddBox("close_button" + caption, Feats::DrawBackground | Feats::DrawTexture,pos,g_Theme.CloseButton,false, g_CloseIcon);
 			if (IsClicked(Boxes[id].Rect))
 			{
 				g_WindowsToClose.push_back(caption);
@@ -1911,7 +1913,7 @@ namespace Voidstar
 		{
 			auto rect = RectAt({ box.Rect.z - 20,box.Rect.w - 20 }, { 20,20 });
 			auto resPointCaption = caption + "window_resize_point";
-			auto resizePointID = AddBox(resPointCaption, Feats::DrawBackground, rect);
+			auto resizePointID = AddBox(resPointCaption, Feats::DrawBackground, rect,g_Theme.ResizeButtonNormal);
 			auto isDragging = UpdateDrag(resPointCaption, Input::GetMousePos(), rect);
 			if (isDragging)
 			{
@@ -1920,7 +1922,15 @@ namespace Voidstar
 				auto minH = g_TopTitlePadding + textSize.y;
 				g_State[caption].Rect.z = std::max(g_State[caption].Rect.z + mouseDelta.x, minW);
 				g_State[caption].Rect.w = std::max(g_State[caption].Rect.w + mouseDelta.y, minH);
+				
+				FillColorWith(Boxes[resizePointID].Color, g_Theme.ResizeButtonDragging);
 			}
+			else 
+			if (IsMouseWithin(Input::GetMousePos(), rect))
+			{
+				FillColorWith(Boxes[resizePointID].Color, g_Theme.ResizeButtonHover);
+			}
+
 
 		}
 		g_BuildingWindows.pop();
@@ -1994,7 +2004,7 @@ namespace Voidstar
 		if (HasFlag(box.Features, Feats::DrawBorder))
 		{
 			const float borderThickness = box.BorderWidth;
-			glm::vec4 borderColor = glm::vec4(0.05f, 0.05f, 0.05f, 1);
+			glm::vec4 borderColor = box.BorderColor;
 			BindVertexBuffer(0, g_QuadBatchVertexBuffer);
 			BindIndexBuffer(g_IndexQuadBuffer);
 
@@ -2016,7 +2026,7 @@ namespace Voidstar
 		{
 			BindVertexBuffer(0, g_QuadBatchVertexBuffer);
 			BindIndexBuffer(g_IndexQuadBuffer);
-			SubmitText(box.Caption, box.Rect.x, box.Rect.y, g_TextFont, 12);
+			SubmitText(box.Caption, box.Rect.x, box.Rect.y, g_TextFont, 12, box.Color[0]);
 			Submit(1, g_FontShader);
 		}
 

@@ -716,6 +716,7 @@ namespace Voidstar
 		TextureHandle Texture;
 
 		float BorderWidth = 5.f;
+		glm::vec4 BorderColor = {1,0,1,1};
 	};
 
 	inline FontHandle g_TitleFont;
@@ -725,6 +726,26 @@ namespace Voidstar
 	inline ProgramHandle g_FontShader;
 	inline ProgramHandle g_CircleShader;
 	inline ProgramHandle g_RingShader;
+
+	inline struct Theme {
+		glm::vec4 WindowBg{ 0.12f, 0.12f, 0.13f, 1 };  // window body
+		glm::vec4 TitleBar{ 0.07f, 0.07f, 0.08f, 1 };  // darker than the body
+		glm::vec4 WidgetBg{ 0.20f, 0.20f, 0.22f, 1 };  // checkbox, slider track, number fields
+		glm::vec4 InteractColor{ 0.26f, 0.59f, 0.98f, 1 };    // buttons, slider handle, checked state
+		glm::vec4 Text{ 0.92f, 0.92f, 0.93f, 1 };
+		glm::vec4 TextDim{ 0.60f, 0.60f, 0.62f, 1 };  // "0", "10", placeholders
+
+		glm::vec4 WndowBorder{ 0.07f, 0.07f, 0.08f, 1 };
+		glm::vec4 ControlBorder{ 0.45f, 0.45f, 0.48f, 1 };   // checkbox, fields, anything small
+
+		glm::vec4 ResizeButtonNormal{ 0.30, 0.30, 0.32,1 };
+		glm::vec4 ResizeButtonHover { 0.45, 0.45, 0.48,1 };
+		glm::vec4 ResizeButtonDragging { 0.26, 0.59, 0.98, 1 };
+
+		glm::vec4 CloseButton{ 0.80, 0.25, 0.25 ,1 };
+
+
+	} g_Theme;
 
 	void UIInit();
 	glm::vec2 ResolvePosition(glm::vec2 relOffset);
@@ -748,7 +769,8 @@ namespace Voidstar
 
 	int BeginWindow(const std::string& caption, glm::vec2 pos,
 		int w, int h);
-	void Text(const std::string& text, const glm::vec2& relativePos);
+	void Text(const std::string& text, const glm::vec2& relativePos,
+		const glm::vec4& color);
 	
 	
 	
