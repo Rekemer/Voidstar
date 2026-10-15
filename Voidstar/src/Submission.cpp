@@ -1323,6 +1323,16 @@ namespace Voidstar
 
 	const int g_CloseButtonWidth = 20;
 	const int g_CloseButtonHeight = 20;
+
+	struct Theme {
+		glm::vec4 WindowBg{ 0.12f, 0.12f, 0.13f, 1 };  // window body
+		glm::vec4 TitleBar{ 0.07f, 0.07f, 0.08f, 1 };  // darker than the body
+		glm::vec4 WidgetBg{ 0.20f, 0.20f, 0.22f, 1 };  // checkbox, slider track, number fields
+		glm::vec4 InteractColor{ 0.26f, 0.59f, 0.98f, 1 };    // buttons, slider handle, checked state
+		glm::vec4 Text{ 0.92f, 0.92f, 0.93f, 1 };
+		glm::vec4 TextDim{ 0.60f, 0.60f, 0.62f, 1 };  // "0", "10", placeholders
+	} g_Theme;
+	// title bar glm::vec4(0.05f, 0.05f, 0.05f, 1)
 	
 	struct HSV
 	{
@@ -1548,8 +1558,8 @@ namespace Voidstar
 
 		bool& checked = g_State[caption].Checkbox;
 		if (IsClicked(rect)) checked = !checked;
-
-		FillColorWith(Boxes[id].Color, checked ? glm::vec4(0.6f, 0.7f, 0.6f, 1) : glm::vec4(0.3f, 0.3f, 0.3f, 1));
+		//glm::vec4(0.6f, 0.7f, 0.6f, 1) : glm::vec4(0.3f, 0.3f, 0.3f, 1)
+		FillColorWith(Boxes[id].Color, checked ? g_Theme.InteractColor : g_Theme.WidgetBg);
 		g_Parents.push(id);
 		LabelRight(caption);
 		g_Parents.pop();
@@ -1560,7 +1570,7 @@ namespace Voidstar
 	{
 		auto size = MeasureText(text, g_TextFont, g_TextSize) + glm::vec2(10);
 		auto rect = RectAt(pos, size);
-		int id = AddBox(text, Feats::DrawBackground, rect, glm::vec4{1,0,1,1});
+		int id = AddBox(text, Feats::DrawBackground, rect, g_Theme.InteractColor);
 		{
 			g_Parents.push(id);
 			Text(text, { 5, 5 });          // padding / 2 on both axes
@@ -1583,14 +1593,15 @@ namespace Voidstar
 		// drag line
 		{
 			auto id = AddBox("", Feats::DrawBackground, absPos);
-			FillColorWith(Boxes[id].Color, glm::vec4(1));
+			FillColorWith(Boxes[id].Color, g_Theme.WidgetBg);
 			g_Parents.push(id);
 		}
 		// drag box
 		{
 			auto sliderString = caption + "_slider";
 			auto sliderBasePos = RectAt({ 0,-(handleHeight - trackHeight) / 2 }, { handleWidth,handleHeight });
-			auto id = AddBox(sliderString, Feats::DrawBackground | Feats::DrawCircle,sliderBasePos);
+			auto id = AddBox(sliderString, Feats::DrawBackground | Feats::DrawCircle,
+				sliderBasePos, g_Theme.InteractColor);
 			auto& markerX = g_State[sliderString].SliderValue;
 			
 			auto isDragging  = UpdateDrag(sliderString, Input::GetMousePos(), absPos);
@@ -1653,7 +1664,7 @@ namespace Voidstar
 			auto caption = label + std::to_string(i);
 			auto rect = RectAt(pos, {width,height});
 			
-			auto id = AddBox(caption, Feats::DrawBackground, rect, glm::vec4(1, 0, 1, 1));
+			auto id = AddBox(caption, Feats::DrawBackground, rect, g_Theme.InteractColor);
 			lastId = id;
 			Boxes[id].Rect.x += offsetX * i;
 			
@@ -1848,7 +1859,9 @@ namespace Voidstar
 	int BeginWindow(const std::string& caption, glm::vec2 pos,
 		int w, int h)
 	{
-		int WindowID = AddBox(caption, Feats::Resizable | Feats::DrawBackground | Feats::DrawBorder | Feats::DrawTitleBar, { pos.x, pos.y, w, h }, glm::vec4(0.2f, 0.2f, 0.2f, 1), true);
+		// glm::vec4(0.2f, 0.2f, 0.2f, 1)
+		int WindowID = AddBox(caption, Feats::Resizable | Feats::DrawBackground | Feats::DrawBorder | Feats::DrawTitleBar, { pos.x, pos.y, w, h }, 
+			g_Theme.WindowBg, true);
 		g_State[caption].WindowOpen = true;
 		HandleFirstFrame(caption, Boxes[WindowID].Rect);
 		w = Boxes[WindowID].Rect.z;
@@ -1967,13 +1980,13 @@ namespace Voidstar
 
 			BindVertexBuffer(0, g_QuadBatchVertexBuffer);
 			BindIndexBuffer(g_IndexQuadBuffer);
-			SubmitQuadSolidColor({ box.Rect.x ,box.Rect.y }, { box.Rect.z, quadSize.y + g_TopTitlePadding }, glm::vec4(0.05f, 0.05f, 0.05f, 1));
+			SubmitQuadSolidColor({ box.Rect.x ,box.Rect.y }, { box.Rect.z, quadSize.y + g_TopTitlePadding },g_Theme.TitleBar );
 			Submit(1, g_UIShader);
 
 			BindVertexBuffer(0, g_QuadBatchVertexBuffer);
 			BindIndexBuffer(g_IndexQuadBuffer);
 
-			SubmitText(box.Caption, box.Rect.x + g_LeftTitlePadding, box.Rect.y + g_TopTitlePadding * 0.25f, g_TitleFont, pixelSize);
+			SubmitText(box.Caption, box.Rect.x + g_LeftTitlePadding, box.Rect.y + g_TopTitlePadding * 0.25f, g_TitleFont, pixelSize,g_Theme.Text);
 			Submit(1, g_FontShader);
 
 		}
