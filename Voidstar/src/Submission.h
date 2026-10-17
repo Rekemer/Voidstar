@@ -727,6 +727,20 @@ namespace Voidstar
 	inline ProgramHandle g_CircleShader;
 	inline ProgramHandle g_RingShader;
 
+
+
+	enum class InteractionState : int
+	{
+		Normal = 0,
+		Hover,
+		Dragging
+	};
+	struct Interaction 
+	{ 
+		InteractionState State;
+		// Normal, Hover, Active
+		std::array <glm::vec4,3> StateColors;
+	};
 	inline struct Theme {
 		glm::vec4 WindowBg{ 0.12f, 0.12f, 0.13f, 1 };  // window body
 		glm::vec4 TitleBar{ 0.07f, 0.07f, 0.08f, 1 };  // darker than the body
@@ -739,12 +753,39 @@ namespace Voidstar
 		glm::vec4 ControlBorder{ 0.45f, 0.45f, 0.48f, 1 };   // checkbox, fields, anything small
 
 		glm::vec4 ResizeButtonNormal{ 0.30, 0.30, 0.32,1 };
-		glm::vec4 ResizeButtonHover { 0.45, 0.45, 0.48,1 };
-		glm::vec4 ResizeButtonDragging { 0.26, 0.59, 0.98, 1 };
+		glm::vec4 ResizeButtonHover{ 0.45, 0.45, 0.48,1 };
+		glm::vec4 ResizeButtonDragging{ 0.26, 0.59, 0.98, 1 };
 
 		glm::vec4 CloseButton{ 0.80, 0.25, 0.25 ,1 };
 
-
+		Interaction Button{
+		InteractionState::Normal, {
+		glm::vec4{0.26f, 0.59f, 0.98f, 1.f},
+		glm::vec4{0.36f, 0.67f, 1.00f, 1.f},
+		glm::vec4{0.18f, 0.48f, 0.86f, 1.f}
+		}
+		};
+		Interaction Field{
+			InteractionState::Normal, {
+				glm::vec4{0.20f, 0.20f, 0.22f, 1.f},
+				glm::vec4{0.26f, 0.26f, 0.28f, 1.f},
+				glm::vec4{0.30f, 0.30f, 0.34f, 1.f}
+			}
+		};
+		Interaction Resize{
+			InteractionState::Normal, {
+				glm::vec4{0.30f, 0.30f, 0.32f, 1.f},
+				glm::vec4{0.45f, 0.45f, 0.48f, 1.f},
+				glm::vec4{0.26f, 0.59f, 0.98f, 1.f}
+			}
+		};
+		Interaction Close{
+			InteractionState::Normal, {
+				glm::vec4{0.80f, 0.25f, 0.25f, 1.f},
+				glm::vec4{0.95f, 0.30f, 0.30f, 1.f},
+				glm::vec4{0.65f, 0.18f, 0.18f, 1.f}
+			}
+		};
 	} g_Theme;
 
 	void UIInit();

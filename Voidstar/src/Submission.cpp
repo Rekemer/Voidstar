@@ -1347,6 +1347,31 @@ namespace Voidstar
 	};
 	static Map<std::string, HSV> g_Colors;
 
+	bool AnyWindowCovers(std::string window);
+	bool IsMouseWithin(const glm::vec2& mousePos, const glm::vec4& rect);
+
+	InteractionState GetState(const std::string& boxKey, const glm::vec4& boxRect)
+	{
+		if (g_State[boxKey].IsDragging) return InteractionState::Dragging;
+
+		auto currentWindow = g_BuildingWindows.top();
+
+		if (IsMouseWithin(Input::GetMousePos(), boxRect) && !AnyWindowCovers(currentWindow))
+		{
+			return InteractionState::Hover;
+		}
+		return InteractionState::Normal;
+	}
+
+	glm::vec4 Pick(Interaction& interaction,
+		const std::string& boxKey, 
+		const glm::vec4& boxRect)
+	{
+		interaction.State = GetState(boxKey, boxRect);
+		return interaction.StateColors[static_cast<int>(interaction.State)];
+	}
+	
+
 	glm::vec3 HsvToRgb(float h, float s, float v)
 	{
 		float c = v * s;
@@ -1472,27 +1497,39 @@ namespace Voidstar
 		return relOffset + glm::vec2{ parent.Rect };
 	}
 
-	bool IsMouseWithin(glm::vec2 mousePos, glm::vec4 rect)
+	bool IsMouseWithin(const glm::vec2& mousePos, const glm::vec4& rect)
 	{
 		return mousePos.x >= rect.x
 			&& mousePos.x <= (rect.x + rect.z)
 			&& mousePos.y >= rect.y
 			&& mousePos.y <= rect.y + rect.w;
 	}
+
+	bool AnyWindowCovers(std::string window)
+	{
+		auto iter = std::find(g_WindowOrder.begin(), g_WindowOrder.end(), window);
+		// no active windows
+		if (iter == g_WindowOrder.end()) return true;
+
+		for (auto i = iter + 1; i != g_WindowOrder.end(); i++)
+		{
+			auto windowRect = g_State[*i].Rect;
+			auto nextWindowIntercepts = IsMouseWithin(Input::GetMousePos(), windowRect);
+			if (nextWindowIntercepts) return true;
+		}
+
+		return false;
+	}
+
 	bool IsClicked(glm::vec4 rect)
 	{
 		auto windowID = g_WindowIndex[g_BuildingWindows.top()];
 
 		auto windowName = Boxes[windowID].Caption;
-		auto iter = std::find(g_WindowOrder.begin(), g_WindowOrder.end(), windowName);
-		// no active windows
-		if (iter == g_WindowOrder.end()) return false;
 		
-		for (auto i = iter + 1; i != g_WindowOrder.end(); i++)
+		if (AnyWindowCovers(windowName))
 		{
-			auto windowRect = g_State[*i].Rect;
-			auto nextWindowIntercepts = IsMouseWithin(Input::GetMousePos(), windowRect);
-			if (nextWindowIntercepts) return false;
+			return false;
 		}
 		auto click = IsMouseWithin(Input::GetMousePos(), rect) && Input::IsMouseClicked(VS_MOUSE_LEFT);
 		if (click)
@@ -1901,8 +1938,12 @@ namespace Voidstar
 		}
 		{
 			
-			auto pos = RectAt({ w - g_CloseButtonWidth, 0 }, { g_CloseButtonWidth, g_CloseButtonHeight });
-			auto id = AddBox("close_button" + caption, Feats::DrawBackground | Feats::DrawTexture,pos,g_Theme.CloseButton,false, g_CloseIcon);
+			auto rect = RectAt({ w - g_CloseButtonWidth, 0 }, { g_CloseButtonWidth, g_CloseButtonHeight });
+
+			auto closeCaption = "close_button" + caption;
+			auto color = Pick(g_Theme.Close, closeCaption, rect);
+
+			auto id = AddBox(closeCaption, Feats::DrawBackground | Feats::DrawTexture, rect, color,false, g_CloseIcon);
 			if (IsClicked(Boxes[id].Rect))
 			{
 				g_WindowsToClose.push_back(caption);
@@ -1923,24 +1964,20 @@ namespace Voidstar
 		{
 			auto rect = RectAt({ box.Rect.z - 20,box.Rect.w - 20 }, { 20,20 });
 			auto resPointCaption = caption + "window_resize_point";
-			auto resizePointID = AddBox(resPointCaption, Feats::DrawBackground, rect,g_Theme.ResizeButtonNormal);
+
 			auto isDragging = UpdateDrag(resPointCaption, Input::GetMousePos(), rect);
+
+			
 			if (isDragging)
 			{
 				auto mouseDelta = Input::GetMouseDelta();
 				auto minW = g_LeftTitlePadding + textSize.x + g_CloseButtonWidth + 2;
 				auto minH = g_TopTitlePadding + textSize.y;
-				g_State[caption].Rect.z = std::max(g_State[caption].Rect.z + mouseDelta.x, minW);
-				g_State[caption].Rect.w = std::max(g_State[caption].Rect.w + mouseDelta.y, minH);
-				
-				FillColorWith(Boxes[resizePointID].Color, g_Theme.ResizeButtonDragging);
+				rect.z = g_State[caption].Rect.z = std::max(g_State[caption].Rect.z + mouseDelta.x, minW);
+				rect.w = g_State[caption].Rect.w = std::max(g_State[caption].Rect.w + mouseDelta.y, minH);
 			}
-			else 
-			if (IsMouseWithin(Input::GetMousePos(), rect))
-			{
-				FillColorWith(Boxes[resizePointID].Color, g_Theme.ResizeButtonHover);
-			}
-
+			auto color = Pick(g_Theme.Resize, resPointCaption, rect);
+			auto resizePointID = AddBox(resPointCaption, Feats::DrawBackground, rect, color);
 
 		}
 		g_BuildingWindows.pop();
