@@ -1301,6 +1301,10 @@ namespace Voidstar
 		float SliderValue;
 
 		bool IsDragging;
+		bool WasDragging;
+
+		glm::vec2 GrabOffset;
+
 		bool IsFirstFrame = true;
 	};
 
@@ -1600,7 +1604,6 @@ namespace Voidstar
 			auto& markerX = g_State[sliderString].SliderValue;
 			
 			auto isDragging  = UpdateDrag(sliderString, Input::GetMousePos(), absPos);
-
 			if (isDragging)
 			{
 				auto xDelta = Input::GetMouseDeltaX();
@@ -1829,15 +1832,22 @@ namespace Voidstar
 		// replace window height with title height
 		titleRect.w = titleHeight;
 
+		auto& st = g_State[window.Caption];
+		bool wasDragging = st.IsDragging;
 		auto isDragging = UpdateDrag(window.Caption, mousePos, titleRect);
+
+		// first frame
+		if (isDragging && !wasDragging)
+			st.GrabOffset = mousePos - glm::vec2(window.Rect.x, window.Rect.y);
+
 
 		if (isDragging)
 		{
 			auto xDelta = Input::GetMouseDeltaX();
 			auto yDelta = Input::GetMouseDeltaY();
 
-			window.Rect.x += xDelta;
-			window.Rect.y += yDelta;
+			window.Rect.x = mousePos.x - st.GrabOffset.x;
+			window.Rect.y = mousePos.y - st.GrabOffset.y;
 			g_State[window.Caption].Rect = window.Rect;
 		}
 	}
