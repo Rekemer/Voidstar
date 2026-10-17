@@ -758,6 +758,8 @@ namespace Voidstar
 
 		glm::vec4 CloseButton{ 0.80, 0.25, 0.25 ,1 };
 
+		const glm::vec4 Accent{ 0.26f, 0.59f, 0.98f, 1.f };
+
 		Interaction Button{
 		InteractionState::Normal, {
 		glm::vec4{0.26f, 0.59f, 0.98f, 1.f},
@@ -765,18 +767,18 @@ namespace Voidstar
 		glm::vec4{0.18f, 0.48f, 0.86f, 1.f}
 		}
 		};
-		Interaction Field{
+		Interaction VectorField{
 			InteractionState::Normal, {
-				glm::vec4{0.20f, 0.20f, 0.22f, 1.f},
-				glm::vec4{0.26f, 0.26f, 0.28f, 1.f},
-				glm::vec4{0.30f, 0.30f, 0.34f, 1.f}
+			glm::vec4{0.20f, 0.20f, 0.22f, 1.f},
+			glm::vec4{0.27f, 0.27f, 0.30f, 1.f},
+			Accent,
 			}
 		};
 		Interaction Resize{
 			InteractionState::Normal, {
 				glm::vec4{0.30f, 0.30f, 0.32f, 1.f},
 				glm::vec4{0.45f, 0.45f, 0.48f, 1.f},
-				glm::vec4{0.26f, 0.59f, 0.98f, 1.f}
+				Accent
 			}
 		};
 		Interaction Close{
@@ -786,6 +788,13 @@ namespace Voidstar
 				glm::vec4{0.65f, 0.18f, 0.18f, 1.f}
 			}
 		};
+		Interaction SliderHandle{
+			InteractionState::Normal, {
+			glm::vec4{0.85f, 0.85f, 0.88f, 1.f},
+			glm::vec4{1.00f, 1.00f, 1.00f, 1.f},
+			Accent
+		}
+	};
 	} g_Theme;
 
 	void UIInit();

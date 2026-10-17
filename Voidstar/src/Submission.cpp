@@ -1606,7 +1606,9 @@ namespace Voidstar
 	{
 		auto size = MeasureText(text, g_TextFont, g_TextSize) + glm::vec2(10);
 		auto rect = RectAt(pos, size);
-		int id = AddBox(text, Feats::DrawBackground, rect, g_Theme.InteractColor);
+
+
+		int id = AddBox(text, Feats::DrawBackground, rect, Pick(g_Theme.Button,text,rect));
 		{
 			g_Parents.push(id);
 			Text(text, { 5, 5 }, g_Theme.Text);          // padding / 2 on both axes
@@ -1636,8 +1638,8 @@ namespace Voidstar
 		{
 			auto sliderString = caption + "_slider";
 			auto sliderBasePos = RectAt({ 0,-(handleHeight - trackHeight) / 2 }, { handleWidth,handleHeight });
-			auto id = AddBox(sliderString, Feats::DrawBackground | Feats::DrawCircle,
-				sliderBasePos, g_Theme.InteractColor);
+
+			
 			auto& markerX = g_State[sliderString].SliderValue;
 			
 			auto isDragging  = UpdateDrag(sliderString, Input::GetMousePos(), absPos);
@@ -1651,6 +1653,9 @@ namespace Voidstar
 				// update offset
 				markerX = difference;
 			}
+			auto id = AddBox(sliderString, Feats::DrawBackground | Feats::DrawCircle,
+				sliderBasePos, Pick(g_Theme.SliderHandle, sliderString, sliderBasePos));
+
 			Boxes[id].Rect = { sliderBasePos.x + markerX, sliderBasePos.y, handleWidth , handleHeight };
 			t = InverseLerp(sliderBasePos.x, sliderBasePos.x + trackWidth, Boxes[id].Rect.x);
 
@@ -1703,11 +1708,11 @@ namespace Voidstar
 		for (auto i = 0; i < 3; i++)
 		{
 			auto caption = label + std::to_string(i);
-			auto rect = RectAt(pos, {width,height});
+			auto rect = RectAt({ pos.x + offsetX * i,pos.y}, {width,height});
 			
-			auto id = AddBox(caption, Feats::DrawBackground, rect, g_Theme.InteractColor);
+			auto id = AddBox(caption, Feats::DrawBackground, rect, Pick(g_Theme.VectorField, caption, rect));
+			
 			lastId = id;
-			Boxes[id].Rect.x += offsetX * i;
 			
 			auto isDragging = UpdateDrag(caption, Input::GetMousePos(), Boxes[id].Rect);
 
@@ -2101,7 +2106,7 @@ namespace Voidstar
 		for (auto w : g_WindowsToClose)
 		{
 			std::erase_if(g_WindowOrder, [&](auto arg) {return arg == w; });
-			g_State[w].WindowOpen = false;
+			g_State.erase(w);
 		}
 		g_WindowIndex.clear();
 		g_WindowsToClose.clear();
