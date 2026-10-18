@@ -117,9 +117,17 @@ void ModelSandbox::Update(float deltaTime)
 	SetViewTransform(0, GetCamera()->GetView(), GetCamera()->GetProj());
 	auto screenWidth = GetScreenWidth();
 	auto screenHeight = GetScreenHeight();
+
+	static bool polygonLine = false;
+	static glm::vec3 value3 = glm::vec3(1, 0, 0);
+	static float valueRot = 180;
 #if MODEL 
 	glm::mat4 world = glm::mat4(1.0f);
-	glm::mat4 world2 = glm::translate(glm::mat4(1.0f), glm::vec3(1, 0, 0));
+	glm::mat4 world2 = glm::translate(glm::mat4(1.0f), value3);
+	world2 = glm::rotate(world2, glm::radians(valueRot), glm::vec3(0, 1, 0));
+	world2 = glm::rotate(world2, glm::radians(-90.0f), glm::vec3(1,0, 0));
+
+
 	glm::mat4 world3 = glm::translate(glm::mat4(1.0f), glm::vec3(3, 0, 0));
 	glm::mat4 world4 = glm::translate(glm::mat4(1.0f), glm::vec3(5, 0, 0));
 	static float m_Yaw = 0, m_Pitch = glm::radians(-90.0);
@@ -131,9 +139,14 @@ void ModelSandbox::Update(float deltaTime)
 	pos.x += move;
 	//std::println("{} ",pos.x);
 	world = glm::translate(world, pos);
-	Rotate(deltaTime, 0.005, m_Yaw, m_Pitch, world);
+	world = glm::rotate(world, m_Yaw, glm::vec3(0, 1, 0));
+	world = glm::rotate(world, m_Pitch, glm::vec3(1, 0, 0));
+	world = glm::scale(world, glm::vec3(2.0f));
+	//Rotate(deltaTime, 0.005, m_Yaw, m_Pitch, world);
 	//auto pos = GetCamera()->GetPosition();
 	//std::println("{} {} {}", pos.x, pos.y, pos.z);
+	SetPolygon(polygonLine ? Polygon::Line :  Polygon::Fill);
+
 	BindVertexBuffer(0, m_Model->m_VertexBuffer);
 	BindIndexBuffer(m_Model->m_IndexBuffer);
 	SubmitModel(m_Model, 0, 0, m_DefaultShader, { world, world2,world3, world4 });
@@ -232,7 +245,10 @@ void ModelSandbox::Update(float deltaTime)
 	float scale = 1;
 	//SubmitText("AVATAR WAVE TAO", 200, startY, m_Font, scale,glm::vec4{ 0,1,1,1 });
 	//SubmitText("Avatar wave tao", 200, startY + size, m_Font, scale, glm::vec4{1,1,0,1});
-	SubmitText("Voidstar Vulkan", 0, 0, m_Font, 64, g_Theme.Text);
+
+	auto& color = g_Theme.Text;
+
+	SubmitText("Voidstar Vulkan", 0, 0, m_Font, 32, color);
 
 
 
@@ -245,15 +261,11 @@ void ModelSandbox::Update(float deltaTime)
 
 	BeginWindow("Window", { 200,200 }, 220, 400);
 	Text("Hello Voidstar", { 10 ,50}, g_Theme.Text);
-	auto value = Slider("Test slider", { 10, 100 }, 0, 10);
-	auto check = Checkbox("Checkbox", { 10,140 });
+	valueRot = Slider("Rotation", { 10, 100 }, 0, 360);
+	polygonLine = Checkbox("Polygon line mode", { 10,140 });
 	//
-	auto value3 = Vector3({ 10,10,10 }, "Position", {10,160});
-	if (Button("Change", {10,200}))
-	{
-		std::cout << "Button Clicked!\n";
-	}
-	auto color = ColorPicker("Color", { 10,240 });
+	value3 = Vector3({ 10,10,10 }, "Position", {10,160});
+	color = ColorPicker("Color picker", { 10,200 });
 	EndWindow();
 
 	//BeginWindow("window_color", { 40,200 }, 100, /300);

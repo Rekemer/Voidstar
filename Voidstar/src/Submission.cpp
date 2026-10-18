@@ -793,6 +793,10 @@ namespace Voidstar
 	{
 		g_Submission->Submit->CurrentRenderItem->State.depthTest = test;
 	}
+	void SetPolygon(Polygon p)
+	{
+		g_Submission->Submit->CurrentRenderItem->State.polygon = p;
+	}
 	void SetTransform(const glm::mat4& world)
 	{
 		//assert(false);
@@ -1744,6 +1748,25 @@ namespace Voidstar
 		return result;
 	}
 
+
+	glm::vec3 RgbToHsv(glm::vec3 c)
+	{
+		float maxc = std::max({ c.r, c.g, c.b });
+		float minc = std::min({ c.r, c.g, c.b });
+		float d = maxc - minc;
+
+		float h = 0.f;
+		if (d > 0.f)
+		{
+			if (maxc == c.r)      h = std::fmod((c.g - c.b) / d, 6.f);
+			else if (maxc == c.g) h = (c.b - c.r) / d + 2.f;
+			else                  h = (c.r - c.g) / d + 4.f;
+			h /= 6.f;
+			if (h < 0.f) h += 1.f;
+		}
+		float s = maxc > 0.f ? d / maxc : 0.f;
+		return { h, s, maxc };
+	}
 	
 	glm::vec4 ColorPicker(const std::string& text,
 		const glm::vec2& pos)
@@ -1751,19 +1774,21 @@ namespace Voidstar
 		const float showColorWidth = 10;
 		const float showColorHeight = 10;
 		
-		static float hue = 1.f;
+
+		static auto chosenRGBColor = g_Theme.Text;
+		static auto hsv = RgbToHsv(glm::vec3(g_Theme.Text));
+		static float hue = hsv.x;
 		// init saturation
-		static float saturation = 1;
+		static float saturation = hsv.y;
 		// init brightness
-		static float bright = 1;
-		static auto chosenRGBColor = glm::vec4(0, 1, 1, 1);
+		static float bright = hsv.z;
 
 		// to have picker at the top right corner of
 		// saturation and brigthness tab so it matches red hue color
 		// make it adjust to any init color?
 		if (g_State["bsPicker"].Rect.w == 0)
 		{
-			g_State["bsPicker"].Rect = { 1,0,0,1 };
+			g_State["bsPicker"].Rect = { saturation, 1 - bright ,0,bright };
 		}
 
 		auto chosenColor = RectAt(pos, { showColorWidth ,showColorHeight});
@@ -1772,7 +1797,7 @@ namespace Voidstar
 			g_Parents.push(id);
 		}
 		
-		auto clicked = Button("Change color", {pos.x + 10, -showColorHeight/2 });
+		auto clicked = Button("Change text color", {pos.x + 10, -showColorHeight/2 });
 		g_Parents.pop();
 
 		auto windowCaption = "Color picker";
@@ -1885,9 +1910,6 @@ namespace Voidstar
 
 		if (isDragging)
 		{
-			auto xDelta = Input::GetMouseDeltaX();
-			auto yDelta = Input::GetMouseDeltaY();
-
 			window.Rect.x = mousePos.x - st.GrabOffset.x;
 			window.Rect.y = mousePos.y - st.GrabOffset.y;
 			g_State[window.Caption].Rect = window.Rect;
@@ -1970,16 +1992,22 @@ namespace Voidstar
 			auto rect = RectAt({ box.Rect.z - 20,box.Rect.w - 20 }, { 20,20 });
 			auto resPointCaption = caption + "window_resize_point";
 
+
+			auto& st = g_State[resPointCaption];
+			bool wasDragging = st.IsDragging;
 			auto isDragging = UpdateDrag(resPointCaption, Input::GetMousePos(), rect);
 
-			
+			auto mousePos = Input::GetMousePos();
+			// first frame
+			if (isDragging && !wasDragging)
+				st.GrabOffset =  mousePos - glm::vec2(rect.x, rect.y);
+
 			if (isDragging)
 			{
-				auto mouseDelta = Input::GetMouseDelta();
-				auto minW = g_LeftTitlePadding + textSize.x + g_CloseButtonWidth + 2;
-				auto minH = g_TopTitlePadding + textSize.y;
-				rect.z = g_State[caption].Rect.z = std::max(g_State[caption].Rect.z + mouseDelta.x, minW);
-				rect.w = g_State[caption].Rect.w = std::max(g_State[caption].Rect.w + mouseDelta.y, minH);
+				const auto minW = g_LeftTitlePadding + textSize.x + g_CloseButtonWidth + 2;
+				const auto minH = g_TopTitlePadding + textSize.y;
+				rect.z = g_State[caption].Rect.z = std::max( -g_State[caption].Rect.x + mousePos.x,  minW);
+				rect.w = g_State[caption].Rect.w = std::max( -g_State[caption].Rect.y + mousePos.y,  minH);
 			}
 			auto color = Pick(g_Theme.Resize, resPointCaption, rect);
 			auto resizePointID = AddBox(resPointCaption, Feats::DrawBackground, rect, color);
@@ -2000,10 +2028,10 @@ namespace Voidstar
 	{
 		UIBox& box = Boxes[idx];
 
-		SetScissor(g_Scissors.top());
 
 		if (HasFlag(box.Features, Feats::DrawBackground))
 		{
+			SetScissor(g_Scissors.top());
 			BindVertexBuffer(0, g_QuadBatchVertexBuffer);
 			BindIndexBuffer(g_IndexQuadBuffer);
 
@@ -2055,6 +2083,7 @@ namespace Voidstar
 
 		if (HasFlag(box.Features, Feats::DrawBorder))
 		{
+			SetScissor(g_Scissors.top());
 			const float borderThickness = box.BorderWidth;
 			glm::vec4 borderColor = box.BorderColor;
 			BindVertexBuffer(0, g_QuadBatchVertexBuffer);
@@ -2076,6 +2105,7 @@ namespace Voidstar
 
 		if (HasFlag(box.Features, Feats::DrawText))
 		{
+			SetScissor(g_Scissors.top());
 			BindVertexBuffer(0, g_QuadBatchVertexBuffer);
 			BindIndexBuffer(g_IndexQuadBuffer);
 			SubmitText(box.Caption, box.Rect.x, box.Rect.y, g_TextFont, 12, box.Color[0]);

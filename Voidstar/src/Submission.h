@@ -393,6 +393,7 @@ namespace Voidstar
 
 	void SetDepthWrite(bool write);
 	void SetDepthTest(bool test);
+	void SetPolygon(Polygon p);
 
 	// render items learns about the view at submit
 	struct Item
