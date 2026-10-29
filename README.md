@@ -1,14 +1,6 @@
 # Voidstar
 A [project](https://www.youtube.com/playlist?list=PLF_V0mPHXtuJKMe45rwgXtpii-B2kfCOH)-driven Vulkan Renderer
 
-### Description
-
-The game thread builds the frame and a separate render thread executes it
-
-| Virtual texture (65536x32768) | Page rendering |
-| ---- | ---- |
-| ![](./screenshots/virt.gif) | ![](./screenshots/page.gif) |
-
 ---
 ### Divinity: OS surface
 <p align="center">
@@ -24,6 +16,10 @@ The game thread builds the frame and a separate render thread executes it
 </p>
 
 ---
+
+| Virtual texture (65536x32768) | Page rendering |
+| ---- | ---- |
+| ![](./screenshots/virt.gif) | ![](./screenshots/page.gif) |
 
 | cloud rendering | cloud rendering |
 | ---- | ---- |
