@@ -136,7 +136,7 @@ void ModelSandbox::Update(float deltaTime)
 	auto offset = glm::sin(time * 4000);
 	auto move = offset * 3;
 	glm::vec3 pos = { 0,0, 0 };
-	pos.x += move;
+	//pos.x += move;
 	//std::println("{} ",pos.x);
 	world = glm::translate(world, pos);
 	world = glm::rotate(world, m_Yaw, glm::vec3(0, 1, 0));
@@ -149,7 +149,7 @@ void ModelSandbox::Update(float deltaTime)
 
 	BindVertexBuffer(0, m_Model->m_VertexBuffer);
 	BindIndexBuffer(m_Model->m_IndexBuffer);
-	SubmitModel(m_Model, 0, 0, m_DefaultShader, { world, world2,world3, world4 });
+	SubmitModel(m_Model, 0, 0, m_DefaultShader, { world2,world3, world4 });
 	Submit(0, m_DefaultShader);
 
 
